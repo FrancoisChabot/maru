@@ -42,16 +42,8 @@ typedef struct MARU_DiagnosticInfo {
   MARU_Diagnostic diagnostic;
   const char *message;
   MARU_Context *context;
-  MARU_Window *window;
+  struct MARU_Window *window; // Window handles don't exist yet, but we'll need this.
 } MARU_DiagnosticInfo;
-
-/** @brief Convenience setter for context diagnostic callback.
-
-  The message string is only valid during the callback handle.
-*/
-MARU_Status maru_setDiagnosticCallback(MARU_Context *context,
-                                                  MARU_DiagnosticCallback callback,
-                                                  void *userdata);
 
 #ifdef __cplusplus
 }

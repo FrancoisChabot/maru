@@ -15,13 +15,7 @@ extern "C" {
 */
 typedef struct MARU_WindowExposed {
   void *userdata;
-  MARU_Context *context;
   uint64_t flags;
-  const MARU_WindowMetrics *metrics;
-
-  const MARU_ButtonState8 *keyboard_state;
-  uint32_t keyboard_key_count;
-  MARU_EventMask event_mask;
 } MARU_WindowExposed;
 
 static inline void *maru_getWindowUserdata(const MARU_Window *window) {
@@ -30,10 +24,6 @@ static inline void *maru_getWindowUserdata(const MARU_Window *window) {
 
 static inline void maru_setWindowUserdata(MARU_Window *window, void *userdata) {
   ((MARU_WindowExposed *)window)->userdata = userdata;
-}
-
-static inline MARU_Context *maru_getWindowContext(const MARU_Window *window) {
-  return ((const MARU_WindowExposed *)window)->context;
 }
 
 static inline bool maru_isWindowLost(const MARU_Window *window) {
@@ -54,14 +44,6 @@ static inline bool maru_isWindowMaximized(const MARU_Window *window) {
 
 static inline bool maru_isWindowFullscreen(const MARU_Window *window) {
   return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
-}
-
-static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window) {
-  return ((const MARU_WindowExposed *)window)->event_mask;
-}
-
-static inline const MARU_WindowMetrics *maru_getWindowMetrics(const MARU_Window *window) {
-  return ((const MARU_WindowExposed *)window)->metrics;
 }
 
 #ifdef __cplusplus

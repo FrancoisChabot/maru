@@ -1,0 +1,124 @@
+# 1. Determine which backends are enabled
+if (NOT WIN32)
+  find_package(Threads REQUIRED)
+endif()
+
+if (WIN32)
+  set(MARU_ENABLE_BACKEND_WINDOWS ON)
+elseif (APPLE)
+  set(MARU_ENABLE_BACKEND_COCOA ON)
+else()
+  set(MARU_ENABLE_BACKEND_WAYLAND ON)
+  set(MARU_ENABLE_BACKEND_X11 ON)
+endif()
+
+# 2. Configure the public config header
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/include/maru/c/details")
+configure_file(
+    "core/maru_config.h.in"
+    "${PROJECT_BINARY_DIR}/include/maru/c/details/maru_config.h"
+)
+
+# 3. Base interfaces
+# Common settings: C11 standard and aggressive warnings
+add_library(maru_common_settings INTERFACE)
+target_compile_features(maru_common_settings INTERFACE c_std_11)
+
+if(MSVC)
+  target_compile_options(maru_common_settings INTERFACE /W4 /WX /wd4100 /wd4189)
+else()
+  target_compile_options(maru_common_settings INTERFACE
+    -Wall
+    -Wextra
+    -Werror
+    -Wpedantic
+    -Wshadow
+    -Wcast-align
+    -Wunused
+    -Wconversion
+    -Wsign-conversion
+    -Wnull-dereference
+    -Wdouble-promotion
+    -Wformat=2
+    -Wno-unused-parameter
+    -Wno-unused-variable
+  )
+endif()
+
+# Public interface: only public headers
+add_library(maru_iface INTERFACE)
+target_include_directories(maru_iface INTERFACE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(maru_iface INTERFACE maru_common_settings)
+
+# Internal interface: public headers + private core headers
+add_library(maru_core_iface INTERFACE)
+target_link_libraries(maru_core_iface INTERFACE maru_iface)
+target_include_directories(maru_core_iface INTERFACE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core>
+)
+
+# 4. Precision-specific interfaces (Public)
+add_library(maru_iface_d INTERFACE)
+target_link_libraries(maru_iface_d INTERFACE maru_iface)
+
+add_library(maru_iface_f INTERFACE)
+target_link_libraries(maru_iface_f INTERFACE maru_iface)
+target_compile_definitions(maru_iface_f INTERFACE MARU_USE_FLOAT)
+
+# Precision-specific interfaces (Internal)
+add_library(maru_core_iface_d INTERFACE)
+target_link_libraries(maru_core_iface_d INTERFACE maru_core_iface maru_iface_d)
+
+add_library(maru_core_iface_f INTERFACE)
+target_link_libraries(maru_core_iface_f INTERFACE maru_core_iface maru_iface_f)
+
+install(TARGETS maru_iface maru_iface_d maru_iface_f maru_common_settings EXPORT MaruTargets)
+
+# 5. Specialized interfaces for direct vs indirect (for BOTH precisions)
+macro(define_flavor_interfaces suffix)
+    set(target_direct "maru_iface${suffix}_direct")
+    set(target_indirect "maru_iface${suffix}_indirect")
+    set(core_iface "maru_core_iface${suffix}")
+
+    # Public flavor interfaces
+    add_library(${target_direct} INTERFACE)
+    target_link_libraries(${target_direct} INTERFACE "maru_iface${suffix}")
+
+    add_library(${target_indirect} INTERFACE)
+    target_link_libraries(${target_indirect} INTERFACE "maru_iface${suffix}")
+    target_compile_definitions(${target_indirect} INTERFACE MARU_INDIRECT_BACKEND)
+
+    install(TARGETS ${target_direct} ${target_indirect} EXPORT MaruTargets)
+
+    # Base objects for this flavor (using internal interfaces)
+    add_library("maru_base${suffix}_obj" OBJECT core/core.c)
+    target_link_libraries("maru_base${suffix}_obj" PRIVATE ${core_iface})
+
+    add_library("maru_base${suffix}_indirect_obj" OBJECT core/core.c)
+    target_link_libraries("maru_base${suffix}_indirect_obj" PRIVATE ${core_iface})
+    target_compile_definitions("maru_base${suffix}_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
+
+    if (NOT WIN32)
+      target_link_libraries("maru_base${suffix}_obj" PRIVATE Threads::Threads)
+      target_link_libraries("maru_base${suffix}_indirect_obj" PRIVATE Threads::Threads)
+    endif()
+    
+    set_property(TARGET "maru_base${suffix}_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
+    set_property(TARGET "maru_base${suffix}_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
+endmacro()
+
+define_flavor_interfaces("_d")
+define_flavor_interfaces("_f")
+
+# 6. Add platform-specific subdirectories
+if (WIN32)
+  add_subdirectory(core/windows)
+elseif (APPLE)
+  add_subdirectory(core/macos)
+else()
+  add_subdirectory(core/linux)
+endif()

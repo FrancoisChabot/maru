@@ -13,6 +13,18 @@
  * @brief Core types, versioning, and memory management.
  */
 
+#ifndef MARU_API
+#ifdef _WIN32
+#ifdef MARU_BUILD_DLL
+#define MARU_API __declspec(dllexport)
+#else
+#define MARU_API __declspec(dllimport)
+#endif
+#else
+#define MARU_API __attribute__((visibility("default")))
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,7 +37,7 @@ typedef struct MARU_Version {
 } MARU_Version;
 
 /** @brief Retrieves the linked version of the MARU library. */
-MARU_Version maru_getVersion(void);
+MARU_API MARU_Version maru_getVersion(void);
 
 /** @brief Function pointer for memory allocation. */
 typedef void *(*MARU_AllocationFunction)(size_t size, void *userdata);
