@@ -1,6 +1,7 @@
 set(MARU_VULKAN_LINUX_SOURCES linux.c)
 set(MARU_VULKAN_WAYLAND_SOURCES wayland.c)
 set(MARU_VULKAN_X11_SOURCES x11.c)
+set(MARU_VULKAN_WINDOWS_SOURCES windows.c)
 
 macro(define_vulkan_flavor_targets suffix)
     set(core_iface "maru_core_iface${suffix}")
@@ -31,6 +32,16 @@ macro(define_vulkan_flavor_targets suffix)
         target_link_libraries("maru_vulkan_x11${suffix}_indirect_obj" PRIVATE ${core_iface})
         target_compile_definitions("maru_vulkan_x11${suffix}_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
         set_property(TARGET "maru_vulkan_x11${suffix}_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
+
+        # Windows implementation
+        add_library("maru_vulkan_windows${suffix}_obj" OBJECT ${MARU_VULKAN_WINDOWS_SOURCES})
+        target_link_libraries("maru_vulkan_windows${suffix}_obj" PRIVATE ${core_iface})
+        set_property(TARGET "maru_vulkan_windows${suffix}_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
+
+        add_library("maru_vulkan_windows${suffix}_indirect_obj" OBJECT ${MARU_VULKAN_WINDOWS_SOURCES})
+        target_link_libraries("maru_vulkan_windows${suffix}_indirect_obj" PRIVATE ${core_iface})
+        target_compile_definitions("maru_vulkan_windows${suffix}_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
+        set_property(TARGET "maru_vulkan_windows${suffix}_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
     endif()
 endmacro()
 
