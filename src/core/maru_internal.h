@@ -28,6 +28,11 @@ void _maru_default_free(void *ptr, void *userdata);
 typedef uint64_t MARU_ThreadId;
 #endif
 
+typedef struct MARU_External_Lib_Base {
+  void *handle;
+  bool available;
+} MARU_External_Lib_Base;
+
 typedef struct MARU_Context_Base {
   MARU_ContextExposed pub;
 #ifdef MARU_INDIRECT_BACKEND

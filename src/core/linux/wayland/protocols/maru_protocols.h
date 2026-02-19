@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
+#ifndef MARU_WAYLAND_PROTOCOLS_H_INCLUDED
+#define MARU_WAYLAND_PROTOCOLS_H_INCLUDED
+
+// Necessary so that the API calls get rerouted to our dynamic table
+#include "dlib/wayland-client.h"
+
+#include "generated/wayland-client-protocol.h"
+#include "generated/xdg-shell-client-protocol.h"
+#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
+
+// Required interfaces
+#define MARU_WL_REGISTRY_REQUIRED_BINDINGS                                 \
+  MARU_WL_REGISTRY_BINDING_ENTRY(wl_compositor, 4, NULL)                   \
+  MARU_WL_REGISTRY_BINDING_ENTRY(wl_shm, 1, NULL)                          \
+  MARU_WL_REGISTRY_BINDING_ENTRY(wl_seat, 5, NULL)                         \
+  MARU_WL_REGISTRY_BINDING_ENTRY(xdg_wm_base, 1, NULL)
+
+// Optional interfaces
+#define MARU_WL_REGISTRY_OPTIONAL_BINDINGS                                 \
+  MARU_WL_REGISTRY_BINDING_ENTRY(zxdg_decoration_manager_v1, 1, NULL)
+
+#define MARU_WL_REGISTRY_BINDING_ENTRY(name, version, listener) struct name *name;
+typedef struct MARU_Wayland_Protocols_WL {
+  MARU_WL_REGISTRY_REQUIRED_BINDINGS
+  struct {
+    MARU_WL_REGISTRY_OPTIONAL_BINDINGS
+  } opt;
+} MARU_Wayland_Protocols_WL;
+#undef MARU_WL_REGISTRY_BINDING_ENTRY
+
+#endif
