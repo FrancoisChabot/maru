@@ -13,6 +13,7 @@
 #include "wayland-client.h"
 #include "wayland-cursor.h"
 #include "libdecor.h"
+#include "linux_loader.h"
 
 #ifdef MARU_VALIDATE_API_CALLS
 static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...) {
@@ -128,24 +129,30 @@ static bool decor_load(struct MARU_Context_Base* ctx, MARU_Lib_Decor *lib) {
 bool maru_load_wayland_symbols(struct MARU_Context_Base *ctx, 
                                MARU_Lib_WaylandClient *wl, 
                                MARU_Lib_WaylandCursor *wlc, 
+                               MARU_Lib_Xkb *xkb,
                                MARU_Lib_Decor *decor) {
   if (!wl_load(ctx, wl)) goto failure_wl;
   if (!wlc_load(ctx, wlc)) goto failure_wlc;
+  if (!maru_linux_xkb_load(ctx, xkb)) goto failure_xkb;
 
   decor_load(ctx, decor);  // Optional
 
   return true;
 
-failure_wlc:
+failure_xkb:
   _wl_unload_lib_base(&wlc->base);
+failure_wlc:
+  _wl_unload_lib_base(&wl->base);
 failure_wl:
   return false;
 }
 
 void maru_unload_wayland_symbols(MARU_Lib_WaylandClient *wl, 
                                  MARU_Lib_WaylandCursor *wlc, 
+                                 MARU_Lib_Xkb *xkb,
                                  MARU_Lib_Decor *decor) {
   _wl_unload_lib_base(&decor->base);
+  maru_linux_xkb_unload(xkb);
   _wl_unload_lib_base(&wlc->base);
   _wl_unload_lib_base(&wl->base);
 }

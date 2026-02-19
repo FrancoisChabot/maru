@@ -1,5 +1,7 @@
 set(MARU_WAYLAND_SOURCES 
     wayland_entry.c
+    wayland_context.c
+    wayland_utils.c
     dlib/loader.c
     protocols/maru_protocols.c
 )
@@ -14,6 +16,8 @@ macro(define_wayland_flavor_targets suffix)
     target_link_libraries("maru_wayland${suffix}_obj" PRIVATE ${core_iface})
     target_include_directories("maru_wayland${suffix}_obj" PRIVATE 
         .
+        ..
+        ../dlib
         dlib/vendor
         protocols/generated
     )
@@ -24,6 +28,8 @@ macro(define_wayland_flavor_targets suffix)
     target_link_libraries("maru_wayland${suffix}_indirect_obj" PRIVATE ${core_iface} ${CMAKE_DL_LIBS})
     target_include_directories("maru_wayland${suffix}_indirect_obj" PRIVATE 
         .
+        ..
+        ../dlib
         dlib/vendor
         protocols/generated
     )

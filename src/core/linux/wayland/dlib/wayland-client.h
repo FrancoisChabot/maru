@@ -33,7 +33,7 @@ typedef struct MARU_Lib_WaylandClient {
 #undef MARU_LIB_FN
 } MARU_Lib_WaylandClient;
 
-#ifdef MARU_VALIDATE_API_CALLS
+#ifdef MARU_ENABLE_INTERNAL_CHECKS
 void _maru_wayland_symbol_poison_trap(void);
 #define MARU_WL_TRAP() _maru_wayland_symbol_poison_trap()
 

@@ -9,16 +9,19 @@
 #include "wayland-client.h"
 #include "wayland-cursor.h"
 #include "libdecor.h"
+#include "dlib/xkbcommon.h"
 
 struct MARU_Context_Base;
 
 bool maru_load_wayland_symbols(struct MARU_Context_Base *ctx, 
                                MARU_Lib_WaylandClient *wl, 
                                MARU_Lib_WaylandCursor *wlc, 
+                               MARU_Lib_Xkb *xkb,
                                MARU_Lib_Decor *decor);
 
 void maru_unload_wayland_symbols(MARU_Lib_WaylandClient *wl, 
                                  MARU_Lib_WaylandCursor *wlc, 
+                                 MARU_Lib_Xkb *xkb,
                                  MARU_Lib_Decor *decor);
 
 #endif
