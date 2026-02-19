@@ -44,6 +44,43 @@ static inline MARU_Status _maru_validate_updateContext(MARU_Context *context, ui
     return MARU_SUCCESS;
 }
 
+static inline MARU_Status _maru_validate_pumpEvents(MARU_Context *context, uint32_t timeout_ms) {
+    MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
+    (void)timeout_ms;
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_createWindow(MARU_Context *context,
+                                                     const MARU_WindowCreateInfo *create_info,
+                                                     MARU_Window **out_window) {
+    MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(create_info != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_window != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_destroyWindow(MARU_Window *window) {
+    MARU_CONSTRAINT_CHECK(window != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+#ifdef MARU_ENABLE_VULKAN
+static inline MARU_Status _maru_validate_getVkExtensions(MARU_Context *context, MARU_ExtensionList *out_list) {
+    MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_list != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_createVkSurface(MARU_Window *window, 
+                                 VkInstance instance,
+                                 VkSurfaceKHR *out_surface) {
+    MARU_CONSTRAINT_CHECK(window != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(instance != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_surface != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+#endif
+
 #define MARU_API_VALIDATE(fn, ...) \
     do { \
         MARU_Status _res = _maru_validate_##fn(__VA_ARGS__); \

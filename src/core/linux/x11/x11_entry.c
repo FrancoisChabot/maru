@@ -1,4 +1,5 @@
 #include "maru_internal.h"
+#include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 
 MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
@@ -43,15 +44,72 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
+MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms) {
+  (void)context;
+  (void)timeout_ms;
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_createWindow_X11(MARU_Context *context,
+                                 const MARU_WindowCreateInfo *create_info,
+                                 MARU_Window **out_window) {
+  (void)context;
+  (void)create_info;
+  (void)out_window;
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
+  (void)window;
+  return MARU_SUCCESS;
+}
+
+#ifdef MARU_ENABLE_VULKAN
+extern MARU_Status maru_getVkExtensions_X11(MARU_Context *context, MARU_ExtensionList *out_list);
+extern MARU_Status maru_createVkSurface_X11(MARU_Window *window, 
+                                 VkInstance instance,
+                                 VkSurfaceKHR *out_surface);
+#endif
+
 #ifdef MARU_INDIRECT_BACKEND
-const MARU_Backend maru_backend_X11 = {.destroyContext = maru_destroyContext_X11};
+const MARU_Backend maru_backend_X11 = {
+  .destroyContext = maru_destroyContext_X11,
+  .pumpEvents = maru_pumpEvents_X11,
+  .createWindow = maru_createWindow_X11,
+  .destroyWindow = maru_destroyWindow_X11,
+#ifdef MARU_ENABLE_VULKAN
+  .getVkExtensions = maru_getVkExtensions_X11,
+  .createVkSurface = maru_createVkSurface_X11,
+#endif
+};
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
                                         MARU_Context **out_context) {
+  MARU_API_VALIDATE(createContext, create_info, out_context);
   return maru_createContext_X11(create_info, out_context);
 }
 
 MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
+  MARU_API_VALIDATE(destroyContext, context);
   return maru_destroyContext_X11(context);
 }
+
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms) {
+  MARU_API_VALIDATE(pumpEvents, context, timeout_ms);
+  return maru_pumpEvents_X11(context, timeout_ms);
+}
+
+MARU_API MARU_Status maru_createWindow(MARU_Context *context,
+                                       const MARU_WindowCreateInfo *create_info,
+                                       MARU_Window **out_window) {
+  MARU_API_VALIDATE(createWindow, context, create_info, out_window);
+  return maru_createWindow_X11(context, create_info, out_window);
+}
+
+MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
+  MARU_API_VALIDATE(destroyWindow, window);
+  return maru_destroyWindow_X11(window);
+}
 #endif
+
+

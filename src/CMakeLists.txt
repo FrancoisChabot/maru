@@ -122,3 +122,5 @@ elseif (APPLE)
 else()
   add_subdirectory(core/linux)
 endif()
+
+add_subdirectory(ext-vulkan)

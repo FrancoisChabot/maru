@@ -37,4 +37,24 @@ MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
   return ctx_base->backend->destroyContext(context);
 }
 
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms) {
+  MARU_API_VALIDATE(pumpEvents, context, timeout_ms);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend->pumpEvents(context, timeout_ms);
+}
+
+MARU_API MARU_Status maru_createWindow(MARU_Context *context,
+                                       const MARU_WindowCreateInfo *create_info,
+                                       MARU_Window **out_window) {
+  MARU_API_VALIDATE(createWindow, context, create_info, out_window);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend->createWindow(context, create_info, out_window);
+}
+
+MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
+  MARU_API_VALIDATE(destroyWindow, window);
+  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+  return win_base->backend->destroyWindow(window);
+}
+
 #endif

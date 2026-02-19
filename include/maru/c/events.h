@@ -13,8 +13,12 @@ extern "C" {
 typedef uint64_t MARU_EventMask;
 #define MARU_ALL_EVENTS (0xFFFFFFFFFFFFFFFFULL)
 
+typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Event MARU_Event;
 typedef struct MARU_Window MARU_Window;
+
+/** @brief Synchronizes the event queue with the OS and dispatches events. */
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms);
 
 typedef void (*MARU_EventCallback)(MARU_Window *window, const MARU_Event *event, void *userdata);
 

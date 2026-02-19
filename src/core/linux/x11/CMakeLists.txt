@@ -20,6 +20,7 @@ macro(define_x11_flavor_targets suffix)
     add_library("maru_x11${suffix}" ${MARU_LIB_TYPE}
         $<TARGET_OBJECTS:maru_x11${suffix}_obj>
         $<TARGET_OBJECTS:${base_obj}>
+        $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_x11${suffix}_obj>>
     )
     target_link_libraries("maru_x11${suffix}" PUBLIC ${iface_direct})
 endmacro()

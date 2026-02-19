@@ -18,7 +18,14 @@ static MARU_Status _mock_destroyContext(MARU_Context* context) {
 
 #ifdef MARU_INDIRECT_BACKEND
 static const MARU_Backend _maru_mock_backend = {
-    .destroyContext = _mock_destroyContext
+    .destroyContext = _mock_destroyContext,
+    .pumpEvents = NULL,
+    .createWindow = NULL,
+    .destroyWindow = NULL,
+#ifdef MARU_ENABLE_VULKAN
+    .getVkExtensions = NULL,
+    .createVkSurface = NULL
+#endif
 };
 #endif
 

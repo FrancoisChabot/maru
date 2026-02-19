@@ -19,9 +19,9 @@ This document tracks the implementation status of the Maru API across different 
 ### Functions
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_createContext()`                        |   🏗️    |   ❌    |   ❌    |   ❌    |
-| `maru_destroyContext()`                       |   🏗️    |   ❌    |   ❌    |   ❌    |
-| `maru_updateContext()`                        |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_createContext()`                        |   🏗️    |   🏗️    |   ❌    |   ❌    |
+| `maru_destroyContext()`                       |   🏗️    |   🏗️    |   ❌    |   ❌    |
+| `maru_updateContext()`                        |   🏗️    |   🏗️    |   🏗️    |   🏗️    |
 | `maru_resetContextMetrics()`                  |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_wakeContext()`                          |   ❌    |   ❌    |   ❌    |   ❌    |
 
@@ -223,8 +223,8 @@ This document tracks the implementation status of the Maru API across different 
 ### Vulkan
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_getVkExtensions()`                      |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_createVkSurface()`                      |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_getVkExtensions()`                      |   🏗️    |   🏗️    |   ❌    |   ❌    |
+| `maru_createVkSurface()`                      |   🏗️    |   🏗️    |   ❌    |   ❌    |
 
 ## 11. Convenience Functions
 

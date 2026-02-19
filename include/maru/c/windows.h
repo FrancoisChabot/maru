@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 
 /** @brief Runtime state flags for a window. */
@@ -40,6 +41,14 @@ typedef struct MARU_WindowCreateInfo {
   MARU_WindowAttributes attributes;
   void *userdata;
 } MARU_WindowCreateInfo;
+
+/** @brief Creates a new window. */
+MARU_API MARU_Status maru_createWindow(MARU_Context *context,
+                                         const MARU_WindowCreateInfo *create_info,
+                                         MARU_Window **out_window);
+
+/** @brief Destroys a window. */
+MARU_API MARU_Status maru_destroyWindow(MARU_Window *window);
 
 /** @brief Default initialization macro for MARU_WindowCreateInfo. */
 #define MARU_WINDOW_CREATE_INFO_DEFAULT                         \

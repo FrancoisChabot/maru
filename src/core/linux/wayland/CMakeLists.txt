@@ -20,6 +20,7 @@ macro(define_wayland_flavor_targets suffix)
     add_library("maru_wayland${suffix}" ${MARU_LIB_TYPE}
         $<TARGET_OBJECTS:maru_wayland${suffix}_obj>
         $<TARGET_OBJECTS:${base_obj}>
+        $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_wayland${suffix}_obj>>
     )
     target_link_libraries("maru_wayland${suffix}" PUBLIC ${iface_direct})
 endmacro()

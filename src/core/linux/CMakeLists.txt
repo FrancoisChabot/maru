@@ -24,6 +24,9 @@ add_library(maru_linux ${MARU_LIB_TYPE}
     $<TARGET_OBJECTS:maru_base_d_indirect_obj>
     $<TARGET_OBJECTS:maru_wayland_d_indirect_obj>
     $<TARGET_OBJECTS:maru_x11_d_indirect_obj>
+    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_linux_d_obj>>
+    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_wayland_d_indirect_obj>>
+    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_x11_d_indirect_obj>>
 )
 target_link_libraries(maru_linux PUBLIC maru_iface_d_indirect)
 if(MARU_BUILD_SHARED)
@@ -35,6 +38,9 @@ add_library(maru_linux_f ${MARU_LIB_TYPE}
     $<TARGET_OBJECTS:maru_base_f_indirect_obj>
     $<TARGET_OBJECTS:maru_wayland_f_indirect_obj>
     $<TARGET_OBJECTS:maru_x11_f_indirect_obj>
+    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_linux_f_obj>>
+    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_wayland_f_indirect_obj>>
+    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_x11_f_indirect_obj>>
 )
 target_link_libraries(maru_linux_f PUBLIC maru_iface_f_indirect)
 if(MARU_BUILD_SHARED)
