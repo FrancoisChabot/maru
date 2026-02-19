@@ -14,6 +14,7 @@ const MARU_Backend maru_backend_WL = {
   .pumpEvents = maru_pumpEvents_WL,
   .createWindow = maru_createWindow_WL,
   .destroyWindow = maru_destroyWindow_WL,
+  .getWindowGeometry = maru_getWindowGeometry_WL,
 #ifdef MARU_ENABLE_VULKAN
   .getVkExtensions = maru_getVkExtensions_WL,
   .createVkSurface = maru_createVkSurface_WL,
@@ -46,5 +47,11 @@ MARU_API MARU_Status maru_createWindow(MARU_Context *context,
 MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
   MARU_API_VALIDATE(destroyWindow, window);
   return maru_destroyWindow_WL(window);
+}
+
+MARU_API MARU_Status maru_getWindowGeometry(MARU_Window *window,
+                                              MARU_WindowGeometry *out_geometry) {
+  MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
+  return maru_getWindowGeometry_WL(window, out_geometry);
 }
 #endif

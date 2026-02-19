@@ -32,6 +32,23 @@ typedef struct MARU_Context_WL {
   } dlib;
 } MARU_Context_WL;
 
+typedef struct MARU_Window_WL {
+  MARU_Window_Base base;
+
+  struct {
+    struct wl_surface *surface;
+  } wl;
+
+  struct {
+    struct xdg_surface *surface;
+    struct xdg_toplevel *toplevel;
+    struct zxdg_toplevel_decoration_v1 *decoration;
+  } xdg;
+
+  MARU_Vec2Dip size;
+  MARU_WaylandDecorationMode decor_mode;
+} MARU_Window_WL;
+
 /* wayland-client core helpers */
 
 static inline struct wl_display *
@@ -76,6 +93,24 @@ maru_wl_display_flush(MARU_Context_WL *ctx, struct wl_display *wl_display)
 	return ctx->dlib.wl.display_flush(wl_display);
 }
 
+static inline int
+maru_wl_display_prepare_read(MARU_Context_WL *ctx, struct wl_display *wl_display)
+{
+	return ctx->dlib.wl.display_prepare_read(wl_display);
+}
+
+static inline int
+maru_wl_display_read_events(MARU_Context_WL *ctx, struct wl_display *wl_display)
+{
+	return ctx->dlib.wl.display_read_events(wl_display);
+}
+
+static inline void
+maru_wl_display_cancel_read(MARU_Context_WL *ctx, struct wl_display *wl_display)
+{
+	ctx->dlib.wl.display_cancel_read(wl_display);
+}
+
 /* wayland-cursor helpers */
 
 static inline struct wl_cursor_theme *maru_wl_cursor_theme_load(const MARU_Context_WL *ctx,
@@ -108,6 +143,11 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
                                 const MARU_WindowCreateInfo *create_info,
                                 MARU_Window **out_window);
 MARU_Status maru_destroyWindow_WL(MARU_Window *window);
+MARU_Status maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
+
+bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
+                                            const MARU_WindowCreateInfo *create_info);
+void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 
 #include "protocols/generated/maru-wayland-helpers.h"
 #include "protocols/generated/maru-xdg-shell-helpers.h"

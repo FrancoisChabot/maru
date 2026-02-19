@@ -15,6 +15,7 @@ extern "C" {
 */
 typedef struct MARU_WindowExposed {
   void *userdata;
+  MARU_Context *context;
   uint64_t flags;
 } MARU_WindowExposed;
 
@@ -24,6 +25,10 @@ static inline void *maru_getWindowUserdata(const MARU_Window *window) {
 
 static inline void maru_setWindowUserdata(MARU_Window *window, void *userdata) {
   ((MARU_WindowExposed *)window)->userdata = userdata;
+}
+
+static inline MARU_Context *maru_getWindowContext(const MARU_Window *window) {
+  return ((const MARU_WindowExposed *)window)->context;
 }
 
 static inline bool maru_isWindowLost(const MARU_Window *window) {

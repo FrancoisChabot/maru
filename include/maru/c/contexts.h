@@ -8,6 +8,8 @@
 #include <stdint.h>
 
 #include "maru/c/core.h"
+#include "maru/c/tuning.h"
+#include "maru/c/events.h"
 
 /**
  * @file contexts.h
@@ -33,6 +35,8 @@ typedef void (*MARU_DiagnosticCallback)(const struct MARU_DiagnosticInfo *info, 
 /** @brief Bitmask for selecting which attributes to update in maru_updateContext(). */
 typedef enum MARU_ContextAttributesField {
   MARU_CONTEXT_ATTR_DIAGNOSTICS = 1ULL << 1,
+  MARU_CONTEXT_ATTR_EVENT_MASK = 1ULL << 2,
+  MARU_CONTEXT_ATTR_EVENT_CALLBACK = 1ULL << 3,
 
   MARU_CONTEXT_ATTR_ALL = 0x7FFFFFFF,
 } MARU_ContextAttributesField;
@@ -41,6 +45,9 @@ typedef enum MARU_ContextAttributesField {
 typedef struct MARU_ContextAttributes {
   MARU_DiagnosticCallback diagnostic_cb;  ///< Optional callback for library diagnostics.
   void *diagnostic_userdata;              ///< Passed to the diagnostic callback.
+  MARU_EventMask event_mask;              ///< Bitmask of events to receive.
+  MARU_EventCallback event_cb;            ///< Callback for receiving events.
+  void *event_userdata;                   ///< Passed to the event callback.
 } MARU_ContextAttributes;
 
 /** @brief Supported windowing backends. */
@@ -58,6 +65,7 @@ typedef struct MARU_ContextCreateInfo {
   void *userdata;
   MARU_BackendType backend;
   MARU_ContextAttributes attributes;
+  const MARU_ContextTuning *tuning;
 } MARU_ContextCreateInfo;
 
 #define MARU_CONTEXT_CREATE_INFO_DEFAULT                                       \
@@ -69,7 +77,11 @@ typedef struct MARU_ContextCreateInfo {
     .userdata = NULL, .backend = MARU_BACKEND_UNKNOWN, .attributes = {         \
       .diagnostic_cb = NULL,                                                   \
       .diagnostic_userdata = NULL,                                             \
-    }                                                                          \
+      .event_mask = 0,                                                         \
+      .event_cb = NULL,                                                        \
+      .event_userdata = NULL                                                   \
+    },                                                                         \
+    .tuning = NULL                                                             \
   }
 
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,

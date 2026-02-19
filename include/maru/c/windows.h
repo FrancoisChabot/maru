@@ -34,6 +34,7 @@ typedef enum MARU_WindowStateFlagBits {
 /** @brief Live-updatable window properties. */
 typedef struct MARU_WindowAttributes {
   const char *title;
+  MARU_Vec2Dip logical_size;
 } MARU_WindowAttributes;
 
 /** @brief Parameters for maru_createWindow(). */
@@ -49,6 +50,10 @@ MARU_API MARU_Status maru_createWindow(MARU_Context *context,
 
 /** @brief Destroys a window. */
 MARU_API MARU_Status maru_destroyWindow(MARU_Window *window);
+
+/** @brief Returns window geometry. */
+MARU_API MARU_Status maru_getWindowGeometry(MARU_Window *window,
+                                              MARU_WindowGeometry *out_geometry);
 
 /** @brief Default initialization macro for MARU_WindowCreateInfo. */
 #define MARU_WINDOW_CREATE_INFO_DEFAULT                         \

@@ -22,6 +22,7 @@ static const MARU_Backend _maru_mock_backend = {
     .pumpEvents = NULL,
     .createWindow = NULL,
     .destroyWindow = NULL,
+    .getWindowGeometry = NULL,
 #ifdef MARU_ENABLE_VULKAN
     .getVkExtensions = NULL,
     .createVkSurface = NULL

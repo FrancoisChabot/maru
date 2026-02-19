@@ -13,6 +13,7 @@ typedef struct MARU_Backend {
 
   __typeof__(maru_createWindow) *createWindow;
   __typeof__(maru_destroyWindow) *destroyWindow;
+  __typeof__(maru_getWindowGeometry) *getWindowGeometry;
 
 #ifdef MARU_ENABLE_VULKAN
   __typeof__(maru_getVkExtensions) *getVkExtensions;

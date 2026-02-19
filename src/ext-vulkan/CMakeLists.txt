@@ -14,11 +14,11 @@ macro(define_vulkan_flavor_targets suffix)
 
         # Wayland implementation
         add_library("maru_vulkan_wayland${suffix}_obj" OBJECT ${MARU_VULKAN_WAYLAND_SOURCES})
-        target_link_libraries("maru_vulkan_wayland${suffix}_obj" PRIVATE ${core_iface})
+        target_link_libraries("maru_vulkan_wayland${suffix}_obj" PRIVATE ${core_iface} maru_wayland_internal_iface)
         set_property(TARGET "maru_vulkan_wayland${suffix}_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
 
         add_library("maru_vulkan_wayland${suffix}_indirect_obj" OBJECT ${MARU_VULKAN_WAYLAND_SOURCES})
-        target_link_libraries("maru_vulkan_wayland${suffix}_indirect_obj" PRIVATE ${core_iface})
+        target_link_libraries("maru_vulkan_wayland${suffix}_indirect_obj" PRIVATE ${core_iface} maru_wayland_internal_iface)
         target_compile_definitions("maru_vulkan_wayland${suffix}_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
         set_property(TARGET "maru_vulkan_wayland${suffix}_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
 

@@ -1,10 +1,19 @@
 set(MARU_WAYLAND_SOURCES 
     wayland_entry.c
     wayland_context.c
+    wayland_window.c
     wayland_utils.c
     dlib/loader.c
     protocols/maru_protocols.c
 )
+
+add_library(maru_wayland_internal_iface INTERFACE)
+target_include_directories(maru_wayland_internal_iface INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/dlib/vendor>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/protocols/generated>
+)
+target_link_libraries(maru_wayland_internal_iface INTERFACE maru_linux_internal_iface)
 
 macro(define_wayland_flavor_targets suffix)
     set(iface_direct "maru_iface${suffix}_direct")
@@ -13,26 +22,12 @@ macro(define_wayland_flavor_targets suffix)
 
     # Direct target objects
     add_library("maru_wayland${suffix}_obj" OBJECT ${MARU_WAYLAND_SOURCES})
-    target_link_libraries("maru_wayland${suffix}_obj" PRIVATE ${core_iface})
-    target_include_directories("maru_wayland${suffix}_obj" PRIVATE 
-        .
-        ..
-        ../dlib
-        dlib/vendor
-        protocols/generated
-    )
+    target_link_libraries("maru_wayland${suffix}_obj" PRIVATE ${core_iface} maru_wayland_internal_iface)
     set_property(TARGET "maru_wayland${suffix}_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
 
     # Indirect target objects
     add_library("maru_wayland${suffix}_indirect_obj" OBJECT ${MARU_WAYLAND_SOURCES})
-    target_link_libraries("maru_wayland${suffix}_indirect_obj" PRIVATE ${core_iface} ${CMAKE_DL_LIBS})
-    target_include_directories("maru_wayland${suffix}_indirect_obj" PRIVATE 
-        .
-        ..
-        ../dlib
-        dlib/vendor
-        protocols/generated
-    )
+    target_link_libraries("maru_wayland${suffix}_indirect_obj" PRIVATE ${core_iface} maru_wayland_internal_iface ${CMAKE_DL_LIBS})
     target_compile_definitions("maru_wayland${suffix}_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
     set_property(TARGET "maru_wayland${suffix}_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
 

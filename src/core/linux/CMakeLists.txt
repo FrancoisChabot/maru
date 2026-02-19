@@ -3,6 +3,12 @@ set(MARU_LINUX_COMMON_SOURCES
     dlib/linux_loader.c
 )
 
+add_library(maru_linux_internal_iface INTERFACE)
+target_include_directories(maru_linux_internal_iface INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/dlib>
+)
+
 macro(define_linux_flavor_targets suffix)
     set(core_iface "maru_core_iface${suffix}")
 

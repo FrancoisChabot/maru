@@ -44,6 +44,12 @@ typedef struct MARU_Context_Base {
   MARU_DiagnosticCallback diagnostic_cb;
   void *diagnostic_userdata;
 
+  MARU_ContextTuning tuning;
+
+  MARU_EventCallback event_cb;
+  void *event_userdata;
+  MARU_EventMask event_mask;
+
 #ifdef MARU_VALIDATE_API_CALLS
   MARU_ThreadId creator_thread;
 #endif
@@ -51,6 +57,7 @@ typedef struct MARU_Context_Base {
 } MARU_Context_Base;
 
 void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const char *msg);
+void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type, MARU_Window *window, const MARU_Event *event);
 
 typedef struct MARU_Window_Base {
   MARU_WindowExposed pub;

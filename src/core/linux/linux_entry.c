@@ -57,4 +57,11 @@ MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
   return win_base->backend->destroyWindow(window);
 }
 
+MARU_API MARU_Status maru_getWindowGeometry(MARU_Window *window,
+                                              MARU_WindowGeometry *out_geometry) {
+  MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
+  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+  return win_base->backend->getWindowGeometry(window, out_geometry);
+}
+
 #endif
