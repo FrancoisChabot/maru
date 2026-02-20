@@ -42,7 +42,7 @@ static void _maru_wayland_disconnect_display(MARU_Context_WL *ctx) {
 static bool _maru_wayland_connect_display(MARU_Context_WL *ctx) {
   ctx->wl.display = maru_wl_display_connect(ctx, NULL);
   if (!ctx->wl.display) {
-    _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to connect to Wayland display");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to connect to Wayland display");
     return false;
   }
   return true;
@@ -561,6 +561,8 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   memset(((uint8_t*)ctx) + sizeof(MARU_Context_Base), 0, sizeof(MARU_Context_WL) - sizeof(MARU_Context_Base));
 
+  ctx->base.backend_type = MARU_BACKEND_WAYLAND;
+
   if (create_info->allocator.alloc_cb) {
     ctx->base.allocator = create_info->allocator;
   } else {
@@ -573,7 +575,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   ctx->base.pub.userdata = create_info->userdata;
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_cb = create_info->attributes.event_callback;
   ctx->base.event_mask = create_info->attributes.event_mask;
 
   if (create_info->tuning) {
@@ -602,7 +603,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   ctx->linux_common.xkb.ctx = maru_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
   if (!ctx->linux_common.xkb.ctx) {
-    _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to create XKB context");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to create XKB context");
     goto cleanup_symbols;
   }
 
@@ -612,14 +613,14 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   ctx->wl.registry = maru_wl_display_get_registry(ctx, ctx->wl.display);
   if (!ctx->wl.registry) {
-    _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to obtain Wayland registry");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to obtain Wayland registry");
     goto cleanup_display;
   }
 
   maru_wl_registry_add_listener(ctx, ctx->wl.registry, &_registry_listener, ctx);
   
   if (maru_wl_display_roundtrip(ctx, ctx->wl.display) < 0) {
-    _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
     goto cleanup_registry;
   }
 
@@ -631,13 +632,13 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 #undef MARU_WL_REGISTRY_BINDING_ENTRY
 
   if (missing_required) {
-    _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED, "Required Wayland interfaces missing");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED, "Required Wayland interfaces missing");
     goto cleanup_registry;
   }
 
   // Second roundtrip to process additional events
   if (maru_wl_display_roundtrip(ctx, ctx->wl.display) < 0) {
-    _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure (second pass)");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure (second pass)");
     goto cleanup_registry;
   }
 
@@ -688,12 +689,12 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
 #define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener) \
   if (ctx->protocols.iface_name) { maru_##iface_name##_destroy(ctx, ctx->protocols.iface_name); }
   MARU_WL_REGISTRY_REQUIRED_BINDINGS
-#undef MARU_WL_REGISTRY_BINDING_ENTRY
+#undef MARU_WL_REGISTRY_REQUIRED_BINDINGS
 
 #define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener) \
   if (ctx->protocols.opt.iface_name) { maru_##iface_name##_destroy(ctx, ctx->protocols.opt.iface_name); }
   MARU_WL_REGISTRY_OPTIONAL_BINDINGS
-#undef MARU_WL_REGISTRY_BINDING_ENTRY
+#undef MARU_WL_REGISTRY_OPTIONAL_BINDINGS
 
   if (ctx->wl.registry) {
     maru_wl_registry_destroy(ctx, ctx->wl.registry);
@@ -713,8 +714,14 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms) {
+MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
+
+  MARU_PumpContext pump_ctx = {
+    .callback = callback,
+    .userdata = userdata
+  };
+  ctx->base.pump_ctx = &pump_ctx;
 
   // TODO: Implement frame collapsing for Wayland events.
   // Currently, we dispatch all events as they arrive (direct-dispatch model).
@@ -722,15 +729,19 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms) {
   // (e.g., multiple pointer motion events, or motion + button + scroll within a frame)
   // using the wl_pointer.frame, wl_keyboard.enter/leave events to identify event groups.
 
+  MARU_Status status = MARU_SUCCESS;
+
   // 1. Dispatch any pending events
   if (maru_wl_display_dispatch_pending(ctx, ctx->wl.display) < 0) {
-    return MARU_FAILURE;
+    status = MARU_FAILURE;
+    goto cleanup;
   }
 
   // 2. Prepare to read from the display socket
   while (maru_wl_display_prepare_read(ctx, ctx->wl.display) != 0) {
       if (maru_wl_display_dispatch_pending(ctx, ctx->wl.display) < 0) {
-          return MARU_FAILURE;
+          status = MARU_FAILURE;
+          goto cleanup;
       }
   }
 
@@ -739,7 +750,8 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms) {
   int flush_ret = maru_wl_display_flush(ctx, ctx->wl.display);
   if (flush_ret < 0 && errno != EAGAIN) {
       maru_wl_display_cancel_read(ctx, ctx->wl.display);
-      return MARU_FAILURE;
+      status = MARU_FAILURE;
+      goto cleanup;
   }
 
   // 4. Poll
@@ -756,7 +768,8 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms) {
       // If we have data to read
       if (pfd.revents & POLLIN) {
           if (maru_wl_display_read_events(ctx, ctx->wl.display) < 0) {
-              return MARU_FAILURE;
+              status = MARU_FAILURE;
+              goto cleanup;
           }
       } else {
           // Only writable or other event, cancel read since we didn't read
@@ -766,16 +779,19 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms) {
       // Timeout or Error
       maru_wl_display_cancel_read(ctx, ctx->wl.display);
       if (ret < 0 && errno != EINTR) {
-          return MARU_FAILURE;
+          status = MARU_FAILURE;
+          goto cleanup;
       }
   }
 
   // 5. Dispatch any events we just read
   if (maru_wl_display_dispatch_pending(ctx, ctx->wl.display) < 0) {
-      return MARU_FAILURE;
+    status = MARU_FAILURE;
   }
 
-  return MARU_SUCCESS;
+cleanup:
+  ctx->base.pump_ctx = NULL;
+  return status;
 }
 
 MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape shape,
@@ -887,4 +903,9 @@ MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor) {
 
   maru_context_free(cursor_wl->base.ctx_base, cursor_wl);
   return MARU_SUCCESS;
+}
+
+void *_maru_getContextNativeHandle_WL(MARU_Context *context) {
+  MARU_Context_WL *ctx = (MARU_Context_WL *)context;
+  return ctx->wl.display;
 }

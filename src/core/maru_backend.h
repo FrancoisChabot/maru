@@ -8,46 +8,30 @@
 
 #ifdef MARU_INDIRECT_BACKEND
 typedef struct MARU_Backend {
-  MARU_Status (*destroyContext)(MARU_Context *context);
-  MARU_Status (*pumpEvents)(MARU_Context *context, uint32_t timeout_ms);
-  MARU_Status (*updateContext)(MARU_Context *context, uint64_t field_mask,
-                               const MARU_ContextAttributes *attributes);
+  __typeof__(maru_destroyContext) *destroyContext;
+  __typeof__(maru_pumpEvents) *pumpEvents;
+  __typeof__(maru_updateContext) *updateContext;
 
-  MARU_Status (*createWindow)(MARU_Context *context,
-                              const MARU_WindowCreateInfo *create_info,
-                              MARU_Window **out_window);
-  MARU_Status (*destroyWindow)(MARU_Window *window);
-  MARU_Status (*getWindowGeometry)(MARU_Window *window,
-                                   MARU_WindowGeometry *out_geometry);
-  MARU_Status (*updateWindow)(MARU_Window *window, uint64_t field_mask,
-                               const MARU_WindowAttributes *attributes);
-  MARU_Status (*requestWindowFocus)(MARU_Window *window);
-  MARU_Status (*getWindowBackendHandle)(MARU_Window *window,
-                                         MARU_BackendType *out_type,
-                                         MARU_BackendHandle *out_handle);
+  __typeof__(maru_createWindow) *createWindow;
+  __typeof__(maru_destroyWindow) *destroyWindow;
+  __typeof__(maru_getWindowGeometry) *getWindowGeometry;
+  __typeof__(maru_updateWindow) *updateWindow;
+  __typeof__(maru_requestWindowFocus) *requestWindowFocus;
+  __typeof__(maru_getWindowBackendHandle) *getWindowBackendHandle;
 
-  MARU_Status (*getStandardCursor)(MARU_Context *context, MARU_CursorShape shape,
-                                   MARU_Cursor **out_cursor);
-  MARU_Status (*createCursor)(MARU_Context *context,
-                              const MARU_CursorCreateInfo *create_info,
-                              MARU_Cursor **out_cursor);
-  MARU_Status (*destroyCursor)(MARU_Cursor *cursor);
-  MARU_Status (*wakeContext)(MARU_Context *context);
+  __typeof__(maru_getStandardCursor) *getStandardCursor;
+  __typeof__(maru_createCursor) *createCursor;
+  __typeof__(maru_destroyCursor) *destroyCursor;
+  __typeof__(maru_wakeContext) *wakeContext;
 
   MARU_Status (*updateMonitors)(MARU_Context *context);
-  MARU_Status (*destroyMonitor)(MARU_Monitor *monitor);
-  MARU_Status (*getMonitorModes)(const MARU_Monitor *monitor,
-                                 MARU_VideoModeList *out_list);
-  MARU_Status (*setMonitorMode)(const MARU_Monitor *monitor,
-                                MARU_VideoMode mode);
-  MARU_Status (*resetMonitorMetrics)(MARU_Monitor *monitor);
+  void (*destroyMonitor)(MARU_Monitor *monitor);
+  __typeof__(maru_getMonitorModes) *getMonitorModes;
+  __typeof__(maru_setMonitorMode) *setMonitorMode;
+  __typeof__(maru_resetMonitorMetrics) *resetMonitorMetrics;
 
-#ifdef MARU_ENABLE_VULKAN
-  MARU_Status (*getVkExtensions)(MARU_Context *context,
-                                 MARU_ExtensionList *out_list);
-  MARU_Status (*createVkSurface)(MARU_Window *window, VkInstance instance,
-                                 VkSurfaceKHR *out_surface);
-#endif
+  void *(*getContextNativeHandle)(MARU_Context *context);
+  void *(*getWindowNativeHandle)(MARU_Window *window);
 
   // More to be added directly here
 } MARU_Backend;

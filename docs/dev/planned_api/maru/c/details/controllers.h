@@ -1,3 +1,6 @@
+/**
+ * @note THIS API HAS BEEN SUPERSEDED AND IS KEPT FOR REFERENCE ONLY.
+ */
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 

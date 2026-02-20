@@ -1,11 +1,9 @@
-# MacOS double flavor
-add_library(maru_macos ${MARU_LIB_TYPE} macos_entry.c macos_context.c macos_window.c $<TARGET_OBJECTS:maru_base_d_obj>)
-target_link_libraries(maru_macos PRIVATE maru_core_iface_d)
-target_link_libraries(maru_macos PUBLIC maru_iface_d_direct)
-target_link_libraries(maru_macos PRIVATE "-framework Cocoa")
-
-# MacOS float flavor
-add_library(maru_macos_f ${MARU_LIB_TYPE} macos_entry.c macos_context.c macos_window.c $<TARGET_OBJECTS:maru_base_f_obj>)
-target_link_libraries(maru_macos_f PRIVATE maru_core_iface_f)
-target_link_libraries(maru_macos_f PUBLIC maru_iface_f_direct)
-target_link_libraries(maru_macos_f PRIVATE "-framework Cocoa")
+add_library(maru_macos${MARU_LIB_SUFFIX} ${MARU_LIB_TYPE} 
+    macos_entry.c 
+    macos_context.c 
+    macos_window.c 
+    $<TARGET_OBJECTS:maru_base_obj>
+)
+target_link_libraries(maru_macos${MARU_LIB_SUFFIX} PRIVATE ${MARU_ACTIVE_CORE_IFACE})
+target_link_libraries(maru_macos${MARU_LIB_SUFFIX} PUBLIC maru_iface${MARU_LIB_SUFFIX}_direct)
+target_link_libraries(maru_macos${MARU_LIB_SUFFIX} PRIVATE "-framework Cocoa")

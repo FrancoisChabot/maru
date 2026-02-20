@@ -2,6 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "maru/maru.h"
+#include "maru/c/ext/vulkan.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -62,7 +63,8 @@ struct VulkanState {
 } vk;
 
 static void handle_event(MARU_EventType type, MARU_Window *window,
-                         const MARU_Event *event) {
+                         const MARU_Event *event, void *userdata) {
+  (void)userdata;
   EventViewer_HandleEvent(type, event, frame_id);
   WindowManager_HandleEvent(type, window, event);
 
@@ -235,13 +237,16 @@ static void cleanup_swap_chain() {
 }
 
 int main() {
-  MARU_ContextCreateInfo create_info;
+  MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+#ifdef _WIN32
+  create_info.backend = MARU_BACKEND_WINDOWS;
+#else
   create_info.backend = MARU_BACKEND_WAYLAND;
+#endif
   create_info.attributes.inhibit_idle = false;
   create_info.attributes.diagnostic_cb = NULL;
   create_info.attributes.diagnostic_userdata = NULL;
   create_info.attributes.event_mask = MARU_ALL_EVENTS;
-  create_info.attributes.event_callback = (MARU_EventCallback)handle_event;
   create_info.allocator.alloc_cb = NULL;
   create_info.allocator.realloc_cb = NULL;
   create_info.allocator.free_cb = NULL;
@@ -249,7 +254,6 @@ int main() {
   create_info.userdata = NULL;
   
   MARU_ContextTuning tuning = MARU_CONTEXT_TUNING_DEFAULT;
-  tuning.vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
   create_info.tuning = &tuning;
 
   MARU_Context *context = NULL;
@@ -259,12 +263,12 @@ int main() {
       return 1;
   }
 
-  MARU_ExtensionList vk_extensions;
-  vk_extensions.count = 0;
-  vk_extensions.extensions = NULL;
-  maru_getVkExtensions(context, &vk_extensions);
+  maru_vulkan_enable(context, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr);
 
-  create_vulkan_instance(vk_extensions.count, (const char **)vk_extensions.extensions);
+  uint32_t vk_extension_count = 0;
+  const char **vk_extensions = maru_vulkan_getVkExtensions(context, &vk_extension_count);
+
+  create_vulkan_instance(vk_extension_count, vk_extensions);
   pick_physical_device();
 
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
@@ -281,14 +285,14 @@ int main() {
   }
 
   while (keep_running && !window_ready) {
-      maru_pumpEvents(context, 16);
+      maru_pumpEvents(context, 16, handle_event, NULL);
   }
   if (!window_ready) {
       fprintf(stderr, "Window failed to become ready\n");
       return 1;
   }
 
-  maru_createVkSurface(main_window, vk.instance, &vk.surface);
+  maru_vulkan_createVkSurface(main_window, vk.instance, &vk.surface);
   create_logical_device();
   vk.swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
   create_render_pass();
@@ -366,7 +370,7 @@ int main() {
 
   while (keep_running) {
     frame_id++;
-    maru_pumpEvents(context, 0);
+    maru_pumpEvents(context, 0, handle_event, NULL);
 
     if (framebuffer_resized) {
         cleanup_swap_chain();

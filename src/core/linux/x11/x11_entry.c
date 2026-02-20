@@ -14,6 +14,8 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     return MARU_FAILURE;
   }
 
+  ctx->backend_type = MARU_BACKEND_X11;
+
   if (create_info->allocator.alloc_cb) {
     ctx->allocator = create_info->allocator;
   } else {
@@ -48,9 +50,11 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms) {
+MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
   (void)context;
   (void)timeout_ms;
+  (void)callback;
+  (void)userdata;
   return MARU_SUCCESS;
 }
 
@@ -67,13 +71,6 @@ MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
   (void)window;
   return MARU_SUCCESS;
 }
-
-#ifdef MARU_ENABLE_VULKAN
-extern MARU_Status maru_getVkExtensions_X11(MARU_Context *context, MARU_ExtensionList *out_list);
-extern MARU_Status maru_createVkSurface_X11(MARU_Window *window, 
-                                 VkInstance instance,
-                                 VkSurfaceKHR *out_surface);
-#endif
 
 #ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_X11 = {
@@ -94,10 +91,6 @@ const MARU_Backend maru_backend_X11 = {
   .getMonitorModes = NULL,
   .setMonitorMode = NULL,
   .resetMonitorMetrics = NULL,
-#ifdef MARU_ENABLE_VULKAN
-  .getVkExtensions = maru_getVkExtensions_X11,
-  .createVkSurface = maru_createVkSurface_X11,
-#endif
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
@@ -111,9 +104,9 @@ MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
   return maru_destroyContext_X11(context);
 }
 
-MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms) {
-  MARU_API_VALIDATE(pumpEvents, context, timeout_ms);
-  return maru_pumpEvents_X11(context, timeout_ms);
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
+  MARU_API_VALIDATE(pumpEvents, context, timeout_ms, callback, userdata);
+  return maru_pumpEvents_X11(context, timeout_ms, callback, userdata);
 }
 
 MARU_API MARU_Status maru_createWindow(MARU_Context *context,
@@ -128,10 +121,9 @@ MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
   return maru_destroyWindow_X11(window);
 }
 
-MARU_API MARU_Status maru_getWindowGeometry(MARU_Window *window,
+MARU_API void maru_getWindowGeometry(MARU_Window *window,
                                               MARU_WindowGeometry *out_geometry) {
   MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
-  return MARU_FAILURE; // Not implemented in X11 yet
 }
 
 MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
@@ -177,30 +169,30 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   return MARU_FAILURE;
 }
 
-MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
-  MARU_API_VALIDATE(getMonitors, context, out_list);
-  return MARU_FAILURE;
+MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
+  MARU_API_VALIDATE(getMonitors, context, out_count);
+  *out_count = 0;
+  return NULL;
 }
 
-MARU_API MARU_Status maru_retainMonitor(MARU_Monitor *monitor) {
+MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(retainMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   mon_base->ref_count++;
-  return MARU_SUCCESS;
 }
 
-MARU_API MARU_Status maru_releaseMonitor(MARU_Monitor *monitor) {
+MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(releaseMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   if (mon_base->ref_count > 0) {
     mon_base->ref_count--;
   }
-  return MARU_SUCCESS;
 }
 
-MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
-  MARU_API_VALIDATE(getMonitorModes, monitor, out_list);
-  return MARU_FAILURE;
+MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {
+  MARU_API_VALIDATE(getMonitorModes, monitor, out_count);
+  *out_count = 0;
+  return NULL;
 }
 
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
@@ -208,11 +200,10 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   return MARU_FAILURE;
 }
 
-MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
+MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(resetMonitorMetrics, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
-  return MARU_SUCCESS;
 }
 #endif
 

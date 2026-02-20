@@ -215,13 +215,13 @@ static void RenderWindowControls(SecondaryWindow* sw, MARU_Window* window, const
 
     MARU_WindowGeometry geometry;
     maru_getWindowGeometry(window, &geometry);
-    int size[2] = { (int)geometry.logical_size.x, (int)geometry.logical_size.y };
-    if (ImGui::InputInt2("Logical Size", size)) {
+    float size[2] = { (float)geometry.logical_size.x, (float)geometry.logical_size.y };
+    if (ImGui::InputFloat2("Logical Size", size)) {
         maru_setWindowSize(window, {(MARU_Scalar)size[0], (MARU_Scalar)size[1]});
     }
 
-    int pos[2] = { (int)geometry.origin.x, (int)geometry.origin.y };
-    if (ImGui::InputInt2("Position", pos)) {
+    float pos[2] = { (float)geometry.origin.x, (float)geometry.origin.y };
+    if (ImGui::InputFloat2("Position", pos)) {
         MARU_WindowAttributes attr = {};
         attr.position = {(MARU_Scalar)pos[0], (MARU_Scalar)pos[1]};
         maru_updateWindow(window, MARU_WINDOW_ATTR_POSITION, &attr);
@@ -307,7 +307,7 @@ void WindowManager_HandleEvent(MARU_EventType type, MARU_Window* window, const M
         sw->ready = true;
         sw->maru_window = window;
         
-        maru_createVkSurface(window, g_vk_ctx.instance, &sw->surface);
+        maru_vulkan_createVkSurface(window, g_vk_ctx.instance, &sw->surface);
         
         // Setup sync objects
         VkSemaphoreCreateInfo semaphoreInfo;

@@ -5,8 +5,8 @@
 #define MARU_EXT_VULKAN_H_INCLUDED
 
 #include <stdint.h>
-
 #include "maru/c/core.h"
+#include "maru/c/tuning.h"
 
 /**
  * @file vulkan.h
@@ -16,8 +16,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#ifdef MARU_ENABLE_VULKAN
 
 /** @brief Opaque handle representing the library state and display server connection. */
 typedef struct MARU_Context MARU_Context;
@@ -32,28 +30,23 @@ typedef struct VkSurfaceKHR_T *VkSurfaceKHR;
 /** @brief Opaque handle to a Vulkan instance. */
 typedef struct VkInstance_T *VkInstance;
 
-/** @brief A transient list of Vulkan extension strings. */
-typedef struct MARU_ExtensionList {
-  const char *const *extensions;
-  uint32_t count;
-} MARU_ExtensionList;
+/** @brief Enables Vulkan support for the specified context. 
+
+If this function is not called, all other maru_vulkan_ functions will abort in debug.
+*/
+MARU_Status maru_vulkan_enable(MARU_Context *context, MARU_VkGetInstanceProcAddrFunc vk_loader);
 
 /** @brief Retrieves the list of Vulkan instance extensions required by MARU. 
 
 The returned list is valid until the next call to maru_pumpEvents().
 */
-MARU_Status maru_getVkExtensions(MARU_Context *context, MARU_ExtensionList *out_list);
+const char **maru_vulkan_getVkExtensions(MARU_Context *context, uint32_t *out_count);
 
-/** @brief Generic function pointer for Vulkan return types. */
 /** @brief Creates a Vulkan surface for the specified window. 
-
-N.B. If you are using a custom loader, you can provide it with via context tuning
 */
-MARU_Status maru_createVkSurface(MARU_Window *window, 
-                                 VkInstance instance,
-                                 VkSurfaceKHR *out_surface);
-
-#endif  // MARU_ENABLE_VULKAN
+MARU_Status maru_vulkan_createVkSurface(MARU_Window *window, 
+                                        VkInstance instance,
+                                        VkSurfaceKHR *out_surface);
 
 #ifdef __cplusplus
 }

@@ -55,7 +55,7 @@ typedef struct MARU_Window_Windows {
 MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info,
                                         MARU_Context **out_context);
 MARU_Status maru_destroyContext_Windows(MARU_Context *context);
-MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms);
+MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
 MARU_Status maru_updateContext_Windows(MARU_Context *context, uint64_t field_mask,
                                           const MARU_ContextAttributes *attributes);
 
@@ -81,8 +81,8 @@ MARU_Status maru_wakeContext_Windows(MARU_Context *context);
 
 MARU_Status maru_updateMonitors_Windows(MARU_Context *context);
 MARU_Status maru_destroyMonitor_Windows(MARU_Monitor *monitor);
-MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
-                                         MARU_VideoModeList *out_list);
+const MARU_VideoMode *maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
+                                         uint32_t *out_count);
 MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
                                         MARU_VideoMode mode);
 

@@ -76,11 +76,22 @@ typedef enum MARU_Status {
 
 // The entire context was dead either before, or became dead because of, the operation.
   MARU_ERROR_CONTEXT_LOST = 2, 
-
-  // The API was used in an invalid way.
-  // Guaranteed to only ever come up in special VALIDATION builds.
-  MARU_ERROR_INVALID_USAGE = -1,
 } MARU_Status;
+
+/** @brief Identifiers for formalized library extensions. */
+typedef enum MARU_ExtensionID {
+  MARU_EXT_VULKAN = 0,
+  MARU_EXT_COUNT
+} MARU_ExtensionID;
+
+/** @brief Supported windowing backends. */
+typedef enum MARU_BackendType {
+  MARU_BACKEND_UNKNOWN = 0,
+  MARU_BACKEND_WAYLAND = 1,
+  MARU_BACKEND_X11 = 2,
+  MARU_BACKEND_WINDOWS = 3,
+  MARU_BACKEND_COCOA = 4,
+} MARU_BackendType;
 
 /** @brief Runtime state flags for a context. */
 typedef enum MARU_ContextStateFlagBits {

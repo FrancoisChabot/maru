@@ -64,7 +64,7 @@ target_include_directories(maru_core_iface INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core>
 )
 
-# 4. Precision-specific interfaces (Public)
+# 4. Precision-specific interfaces
 add_library(maru_iface_d INTERFACE)
 target_link_libraries(maru_iface_d INTERFACE maru_iface)
 
@@ -72,12 +72,16 @@ add_library(maru_iface_f INTERFACE)
 target_link_libraries(maru_iface_f INTERFACE maru_iface)
 target_compile_definitions(maru_iface_f INTERFACE MARU_USE_FLOAT)
 
-# Precision-specific interfaces (Internal)
+# Internal precision interfaces
 add_library(maru_core_iface_d INTERFACE)
 target_link_libraries(maru_core_iface_d INTERFACE maru_core_iface maru_iface_d)
 
 add_library(maru_core_iface_f INTERFACE)
 target_link_libraries(maru_core_iface_f INTERFACE maru_core_iface maru_iface_f)
+
+# The active precision interface for this build
+set(MARU_ACTIVE_CORE_IFACE "maru_core_iface${MARU_LIB_SUFFIX}")
+set(MARU_ACTIVE_IFACE "${MARU_PRECISION_IFACE}")
 
 install(TARGETS
     maru_iface
@@ -89,41 +93,35 @@ install(TARGETS
     maru_core_iface_f
     EXPORT MaruTargets)
 
-# 5. Specialized interfaces for direct vs indirect (for BOTH precisions)
-macro(define_flavor_interfaces suffix)
-    set(target_direct "maru_iface${suffix}_direct")
-    set(target_indirect "maru_iface${suffix}_indirect")
-    set(core_iface "maru_core_iface${suffix}")
+# 5. Specialized interfaces for direct vs indirect
+set(target_direct "maru_iface${MARU_LIB_SUFFIX}_direct")
+set(target_indirect "maru_iface${MARU_LIB_SUFFIX}_indirect")
 
-    # Public flavor interfaces
-    add_library(${target_direct} INTERFACE)
-    target_link_libraries(${target_direct} INTERFACE "maru_iface${suffix}")
+# Public flavor interfaces
+add_library(${target_direct} INTERFACE)
+target_link_libraries(${target_direct} INTERFACE ${MARU_ACTIVE_IFACE})
 
-    add_library(${target_indirect} INTERFACE)
-    target_link_libraries(${target_indirect} INTERFACE "maru_iface${suffix}")
-    target_compile_definitions(${target_indirect} INTERFACE MARU_INDIRECT_BACKEND)
+add_library(${target_indirect} INTERFACE)
+target_link_libraries(${target_indirect} INTERFACE ${MARU_ACTIVE_IFACE})
+target_compile_definitions(${target_indirect} INTERFACE MARU_INDIRECT_BACKEND)
 
-    install(TARGETS ${target_direct} ${target_indirect} EXPORT MaruTargets)
+install(TARGETS ${target_direct} ${target_indirect} EXPORT MaruTargets)
 
-    # Base objects for this flavor (using internal interfaces)
-    add_library("maru_base${suffix}_obj" OBJECT core/core.c)
-    target_link_libraries("maru_base${suffix}_obj" PRIVATE ${core_iface})
+# Base objects for this build
+add_library("maru_base_obj" OBJECT core/core.c)
+target_link_libraries("maru_base_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
 
-    add_library("maru_base${suffix}_indirect_obj" OBJECT core/core.c)
-    target_link_libraries("maru_base${suffix}_indirect_obj" PRIVATE ${core_iface})
-    target_compile_definitions("maru_base${suffix}_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
+add_library("maru_base_indirect_obj" OBJECT core/core.c)
+target_link_libraries("maru_base_indirect_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
+target_compile_definitions("maru_base_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
 
-    if (NOT WIN32)
-      target_link_libraries("maru_base${suffix}_obj" PRIVATE Threads::Threads)
-      target_link_libraries("maru_base${suffix}_indirect_obj" PRIVATE Threads::Threads)
-    endif()
-    
-    set_property(TARGET "maru_base${suffix}_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
-    set_property(TARGET "maru_base${suffix}_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
-endmacro()
+if (NOT WIN32)
+  target_link_libraries("maru_base_obj" PRIVATE Threads::Threads)
+  target_link_libraries("maru_base_indirect_obj" PRIVATE Threads::Threads)
+endif()
 
-define_flavor_interfaces("_d")
-define_flavor_interfaces("_f")
+set_property(TARGET "maru_base_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
+set_property(TARGET "maru_base_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
 
 # 6. Add platform-specific subdirectories
 if (WIN32)

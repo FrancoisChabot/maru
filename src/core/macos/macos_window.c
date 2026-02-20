@@ -135,7 +135,7 @@ MARU_Status maru_destroyWindow_Cocoa(MARU_Window *window_handle) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_getWindowGeometry_Cocoa(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
+void maru_getWindowGeometry_Cocoa(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
   const MARU_Window_Cocoa *window = (const MARU_Window_Cocoa *)window_handle;
 
   NSRect frame = { .origin = { .x = 0, .y = 0 }, .size = { .width = 0, .height = 0 } };
@@ -154,6 +154,4 @@ MARU_Status maru_getWindowGeometry_Cocoa(MARU_Window *window_handle, MARU_Window
               .y = (int32_t)frame.size.height,
           },
   };
-
-  return MARU_SUCCESS;
 }

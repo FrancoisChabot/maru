@@ -35,12 +35,18 @@ typedef struct MARU_External_Lib_Base {
   bool available;
 } MARU_External_Lib_Base;
 
+typedef struct MARU_PumpContext {
+  MARU_EventCallback callback;
+  void *userdata;
+} MARU_PumpContext;
+
 typedef struct MARU_Context_Base {
   MARU_ContextExposed pub;
 #ifdef MARU_INDIRECT_BACKEND
   const struct MARU_Backend *backend;
 #endif
   
+  MARU_BackendType backend_type;
   MARU_Allocator allocator;
 
   MARU_DiagnosticCallback diagnostic_cb;
@@ -48,7 +54,7 @@ typedef struct MARU_Context_Base {
 
   MARU_ContextTuning tuning;
 
-  MARU_EventCallback event_cb;
+  MARU_PumpContext *pump_ctx;
   MARU_EventMask event_mask;
 
   MARU_ContextMetrics metrics;
@@ -61,6 +67,9 @@ typedef struct MARU_Context_Base {
   MARU_Window **window_cache;
   uint32_t window_cache_count;
   uint32_t window_cache_capacity;
+
+  void *extension_vtables[MARU_EXT_COUNT];
+  MARU_ExtensionCleanupCallback extension_cleanups[MARU_EXT_COUNT];
 
 #ifdef MARU_VALIDATE_API_CALLS
   MARU_ThreadId creator_thread;
@@ -106,7 +115,13 @@ typedef struct MARU_Monitor_Base {
   bool is_active; // If false, the monitor was disconnected but is still retained.
 } MARU_Monitor_Base;
 
+#ifdef MARU_ENABLE_DIAGNOSTICS
 void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const char *msg);
+#define MARU_REPORT_DIAGNOSTIC(ctx, diag, msg) _maru_reportDiagnostic(ctx, diag, msg)
+#else
+#define MARU_REPORT_DIAGNOSTIC(ctx, diag, msg) (void)0
+#endif
+
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type, MARU_Window *window, const MARU_Event *event);
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);

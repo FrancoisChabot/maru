@@ -23,6 +23,8 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
 
   memset(((uint8_t*)ctx) + sizeof(MARU_Context_Base), 0, sizeof(MARU_Context_Windows) - sizeof(MARU_Context_Base));
 
+  ctx->base.backend_type = MARU_BACKEND_WINDOWS;
+
   if (create_info->allocator.alloc_cb) {
     ctx->base.allocator = create_info->allocator;
   } else {
@@ -35,7 +37,6 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.pub.userdata = create_info->userdata;
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_cb = create_info->attributes.event_callback;
   ctx->base.event_mask = create_info->attributes.event_mask;
 
   ctx->base.metrics.user_events = &ctx->base.user_event_metrics;
@@ -68,7 +69,7 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
 
   ctx->user32_module = _maru_win32_get_user32();
   if (!ctx->user32_module) {
-    _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to load user32.dll");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to load user32.dll");
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -91,9 +92,15 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms) {
-  (void)context;
+MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
   
+  MARU_PumpContext pump_ctx = {
+    .callback = callback,
+    .userdata = userdata
+  };
+  ctx->base.pump_ctx = &pump_ctx;
+
   MSG msg;
   if (timeout_ms == 0) {
     while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -115,6 +122,7 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms) 
     }
   }
   
+  ctx->base.pump_ctx = NULL;
   return MARU_SUCCESS;
 }
 
@@ -384,7 +392,7 @@ MARU_Status maru_destroyMonitor_Windows(MARU_Monitor *monitor) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+const MARU_VideoMode *maru_getMonitorModes_Windows(const MARU_Monitor *monitor, uint32_t *out_count) {
   MARU_Monitor_Windows *mon = (MARU_Monitor_Windows *)monitor;
   
   if (!mon->modes) {
@@ -419,9 +427,8 @@ MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor, MARU_Video
     }
   }
 
-  out_list->modes = mon->modes;
-  out_list->count = mon->mode_count;
-  return MARU_SUCCESS;
+  *out_count = mon->mode_count;
+  return mon->modes;
 }
 
 MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor, MARU_VideoMode mode) {
@@ -441,4 +448,9 @@ MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor, MARU_VideoM
   
   mon->base.pub.current_mode = mode;
   return MARU_SUCCESS;
+}
+
+void *_maru_getContextNativeHandle_Windows(MARU_Context *context) {
+  (void)context;
+  return NULL;
 }

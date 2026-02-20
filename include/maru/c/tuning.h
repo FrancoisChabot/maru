@@ -47,8 +47,6 @@ typedef struct MARU_ContextTuning {
   struct {
     uint32_t idle_poll_interval_ms;
   } x11;
-
-  MARU_VkGetInstanceProcAddrFunc vk_loader;
 } MARU_ContextTuning;
 
 /** @brief Default tuning parameters. */
@@ -62,7 +60,6 @@ typedef struct MARU_ContextTuning {
     .x11 = { \
       .idle_poll_interval_ms = 250 \
     }, \
-   .vk_loader = NULL \
   }
 
 #ifdef __cplusplus

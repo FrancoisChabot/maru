@@ -22,7 +22,7 @@ static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...)
   char msg[256];
   vsnprintf(msg, sizeof(msg), fmt, args);
   va_end(args);
-  _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
+  MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
 }
 #else
 #define _set_diagnostic(...) ((void)0)

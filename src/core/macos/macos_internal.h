@@ -31,7 +31,7 @@ typedef struct MARU_Window_Cocoa {
 MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
                                       MARU_Context **out_context);
 MARU_Status maru_destroyContext_Cocoa(MARU_Context *context);
-MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms);
+MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
 MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
                                       const MARU_WindowCreateInfo *create_info,
                                       MARU_Window **out_window);

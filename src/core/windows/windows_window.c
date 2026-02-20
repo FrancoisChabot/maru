@@ -508,7 +508,7 @@ MARU_Status maru_destroyWindow_Windows(MARU_Window *window_handle) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
+void maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
   const MARU_Window_Windows *window = (const MARU_Window_Windows *)window_handle;
 
   RECT window_rect = { 0, 0, 0, 0 };
@@ -524,8 +524,6 @@ MARU_Status maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_Wind
       .logical_size = { (MARU_Scalar)client_rect.right, (MARU_Scalar)client_rect.bottom },
       .pixel_size = { client_rect.right, client_rect.bottom },
   };
-
-  return MARU_SUCCESS;
 }
 
 MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field_mask,
@@ -687,4 +685,9 @@ MARU_Status maru_getWindowBackendHandle_Windows(MARU_Window *window_handle,
   *out_type = MARU_BACKEND_WINDOWS;
   out_handle->win32_hwnd = window->hwnd;
   return MARU_SUCCESS;
+}
+
+void *_maru_getWindowNativeHandle_Windows(MARU_Window *window) {
+  MARU_Window_Windows *win = (MARU_Window_Windows *)window;
+  return win->hwnd;
 }

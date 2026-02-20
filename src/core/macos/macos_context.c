@@ -38,6 +38,8 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
   memset(((uint8_t*)ctx) + sizeof(MARU_Context_Base), 0, sizeof(MARU_Context_Cocoa) - sizeof(MARU_Context_Base));
 
+  ctx->base.backend_type = MARU_BACKEND_COCOA;
+
   if (create_info->allocator.alloc_cb) {
     ctx->base.allocator = create_info->allocator;
   } else {
@@ -50,7 +52,6 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
   ctx->base.pub.userdata = create_info->userdata;
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_cb = create_info->attributes.event_callback;
   ctx->base.event_mask = create_info->attributes.event_mask;
 
   if (create_info->tuning) {
@@ -72,7 +73,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
   ctx->ns_app = _maru_cocoa_get_shared_application();
   if (!ctx->ns_app) {
-    _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to obtain NSApplication");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to obtain NSApplication");
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -89,10 +90,17 @@ MARU_Status maru_destroyContext_Cocoa(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms) {
+MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
   MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
+
+  MARU_PumpContext pump_ctx = {
+    .callback = callback,
+    .userdata = userdata
+  };
+  ctx->base.pump_ctx = &pump_ctx;
 
   _maru_cocoa_process_events(ctx, timeout_ms);
 
+  ctx->base.pump_ctx = NULL;
   return MARU_SUCCESS;
 }

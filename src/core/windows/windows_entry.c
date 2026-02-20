@@ -1,6 +1,9 @@
 #include "windows_internal.h"
 #include "maru_api_constraints.h"
 
+extern void *_maru_getContextNativeHandle_Windows(MARU_Context *context);
+extern void *_maru_getWindowNativeHandle_Windows(MARU_Window *window);
+
 #ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_Windows = {
   .destroyContext = maru_destroyContext_Windows,
@@ -20,6 +23,8 @@ const MARU_Backend maru_backend_Windows = {
   .destroyMonitor = maru_destroyMonitor_Windows,
   .getMonitorModes = maru_getMonitorModes_Windows,
   .setMonitorMode = maru_setMonitorMode_Windows,
+  .getContextNativeHandle = _maru_getContextNativeHandle_Windows,
+  .getWindowNativeHandle = _maru_getWindowNativeHandle_Windows,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
@@ -39,9 +44,9 @@ MARU_API MARU_Status maru_updateContext(MARU_Context *context, uint64_t field_ma
   return maru_updateContext_Windows(context, field_mask, attributes);
 }
 
-MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms) {
-  MARU_API_VALIDATE(pumpEvents, context, timeout_ms);
-  return maru_pumpEvents_Windows(context, timeout_ms);
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
+  MARU_API_VALIDATE(pumpEvents, context, timeout_ms, callback, userdata);
+  return maru_pumpEvents_Windows(context, timeout_ms, callback, userdata);
 }
 
 MARU_API MARU_Status maru_createWindow(MARU_Context *context,
@@ -62,10 +67,10 @@ MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
   return maru_updateWindow_Windows(window, field_mask, attributes);
 }
 
-MARU_API MARU_Status maru_getWindowGeometry(MARU_Window *window,
+MARU_API void maru_getWindowGeometry(MARU_Window *window,
                                              MARU_WindowGeometry *out_geometry) {
   MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
-  return maru_getWindowGeometry_Windows(window, out_geometry);
+  maru_getWindowGeometry_Windows(window, out_geometry);
 }
 
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
@@ -98,11 +103,10 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   return maru_destroyCursor_Windows(cursor);
 }
 
-MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
+MARU_API void maru_resetCursorMetrics(MARU_Cursor *cursor) {
   MARU_API_VALIDATE(resetCursorMetrics, cursor);
   MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
   memset(&cur_base->metrics, 0, sizeof(MARU_CursorMetrics));
-  return MARU_SUCCESS;
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
@@ -110,25 +114,26 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   return maru_wakeContext_Windows(context);
 }
 
-MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
-  MARU_API_VALIDATE(getMonitors, context, out_list);
+MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
+  MARU_API_VALIDATE(getMonitors, context, out_count);
   MARU_Status res = maru_updateMonitors_Windows(context);
-  if (res != MARU_SUCCESS) return res;
+  if (res != MARU_SUCCESS) {
+    *out_count = 0;
+    return NULL;
+  }
   
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  out_list->monitors = ctx_base->monitor_cache;
-  out_list->count = ctx_base->monitor_cache_count;
-  return MARU_SUCCESS;
+  *out_count = ctx_base->monitor_cache_count;
+  return ctx_base->monitor_cache;
 }
 
-MARU_API MARU_Status maru_retainMonitor(MARU_Monitor *monitor) {
+MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(retainMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   mon_base->ref_count++;
-  return MARU_SUCCESS;
 }
 
-MARU_API MARU_Status maru_releaseMonitor(MARU_Monitor *monitor) {
+MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(releaseMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   if (mon_base->ref_count > 0) {
@@ -137,12 +142,11 @@ MARU_API MARU_Status maru_releaseMonitor(MARU_Monitor *monitor) {
       _maru_monitor_free(mon_base);
     }
   }
-  return MARU_SUCCESS;
 }
 
-MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
-  MARU_API_VALIDATE(getMonitorModes, monitor, out_list);
-  return maru_getMonitorModes_Windows(monitor, out_list);
+MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {
+  MARU_API_VALIDATE(getMonitorModes, monitor, out_count);
+  return maru_getMonitorModes_Windows(monitor, out_count);
 }
 
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
@@ -150,10 +154,17 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   return maru_setMonitorMode_Windows(monitor, mode);
 }
 
-MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
+MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(resetMonitorMetrics, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
-  return MARU_SUCCESS;
+}
+
+void *_maru_getContextNativeHandle(MARU_Context *context) {
+    return _maru_getContextNativeHandle_Windows(context);
+}
+
+void *_maru_getWindowNativeHandle(MARU_Window *window) {
+    return _maru_getWindowNativeHandle_Windows(window);
 }
 #endif

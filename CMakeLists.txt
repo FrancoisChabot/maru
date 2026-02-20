@@ -9,14 +9,21 @@ else()
 endif()
 
 # Optional modules you can disable if you so chose.
-option(MARU_ENABLE_CONTROLLERS "Enable controller support" ON)
 option(MARU_ENABLE_VULKAN "Enable Vulkan surface binding" ON)
+option(MARU_USE_FLOAT "Use float instead of double for logical coordinates" OFF)
+
+if(MARU_USE_FLOAT)
+  set(MARU_LIB_SUFFIX "_f")
+  set(MARU_PRECISION_IFACE "maru_iface_f")
+else()
+  set(MARU_LIB_SUFFIX "")
+  set(MARU_PRECISION_IFACE "maru_iface_d")
+endif()
 
 # Debug and diagnostics options
 option(MARU_ENABLE_DIAGNOSTICS "Enable diagnostics reporting through callbacks" ON)
 option(MARU_GATHER_METRICS "Enable metrics gathering" ON)
 option(MARU_VALIDATE_API_CALLS "Should API calls be validated?" OFF)
-option(MARU_RECOVERABLE_API_CALLS "Should invalid API calls be recoverable?" OFF)
 option(MARU_ENABLE_INTERNAL_CHECKS "Should the library agressively validate internal state" OFF)
 option(MARU_ENABLE_FAULT_INJECTION "Enable fault injection testing hooks" OFF)
 
@@ -33,24 +40,17 @@ endif()
 
 add_subdirectory(src)
 
-# Define library aliases for both flavors
+# Define library aliases
 if (WIN32)
-  add_library(maru::maru ALIAS maru_windows)
-  add_library(maru::maru_f ALIAS maru_windows_f)
+  add_library(maru::maru ALIAS maru_windows${MARU_LIB_SUFFIX})
 elseif (APPLE)
-  add_library(maru::maru ALIAS maru_macos)
-  add_library(maru::maru_f ALIAS maru_macos_f)
+  add_library(maru::maru ALIAS maru_macos${MARU_LIB_SUFFIX})
 else()
-  add_library(maru::maru ALIAS maru_linux)
-  add_library(maru::maru_f ALIAS maru_linux_f)
+  add_library(maru::maru ALIAS maru_linux${MARU_LIB_SUFFIX})
   
-  # Backend aliases (default to double)
-  add_library(maru::wayland ALIAS maru_wayland_d)
-  add_library(maru::x11 ALIAS maru_x11_d)
-  
-  # Float backend aliases
-  add_library(maru::wayland_f ALIAS maru_wayland_f)
-  add_library(maru::x11_f ALIAS maru_x11_f)
+  # Backend aliases
+  add_library(maru::wayland ALIAS maru_wayland${MARU_LIB_SUFFIX})
+  add_library(maru::x11 ALIAS maru_x11${MARU_LIB_SUFFIX})
 endif()
 
 if(MARU_BUILD_EXAMPLES)
@@ -64,21 +64,16 @@ endif()
 
 # Set export names for consistent cross-platform usage
 if (WIN32)
-  set_target_properties(maru_windows PROPERTIES EXPORT_NAME maru)
-  set_target_properties(maru_windows_f PROPERTIES EXPORT_NAME maru_f)
-  set(MARU_INSTALL_TARGETS maru_windows maru_windows_f)
+  set_target_properties(maru_windows${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
+  set(MARU_INSTALL_TARGETS maru_windows${MARU_LIB_SUFFIX})
 elseif (APPLE)
-  set_target_properties(maru_macos PROPERTIES EXPORT_NAME maru)
-  set_target_properties(maru_macos_f PROPERTIES EXPORT_NAME maru_f)
-  set(MARU_INSTALL_TARGETS maru_macos maru_macos_f)
+  set_target_properties(maru_macos${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
+  set(MARU_INSTALL_TARGETS maru_macos${MARU_LIB_SUFFIX})
 else()
-  set_target_properties(maru_linux PROPERTIES EXPORT_NAME maru)
-  set_target_properties(maru_linux_f PROPERTIES EXPORT_NAME maru_f)
-  set_target_properties(maru_wayland_d PROPERTIES EXPORT_NAME wayland)
-  set_target_properties(maru_wayland_f PROPERTIES EXPORT_NAME wayland_f)
-  set_target_properties(maru_x11_d PROPERTIES EXPORT_NAME x11)
-  set_target_properties(maru_x11_f PROPERTIES EXPORT_NAME x11_f)
-  set(MARU_INSTALL_TARGETS maru_linux maru_linux_f maru_wayland_d maru_wayland_f maru_x11_d maru_x11_f)
+  set_target_properties(maru_linux${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
+  set_target_properties(maru_wayland${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME wayland${MARU_LIB_SUFFIX})
+  set_target_properties(maru_x11${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME x11${MARU_LIB_SUFFIX})
+  set(MARU_INSTALL_TARGETS maru_linux${MARU_LIB_SUFFIX} maru_wayland${MARU_LIB_SUFFIX} maru_x11${MARU_LIB_SUFFIX})
 endif()
 
 # Installation

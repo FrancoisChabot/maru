@@ -12,8 +12,9 @@ static bool window_ready = false;
 static VulkanRenderer renderer;
 
 static void handle_event(MARU_EventType type, MARU_Window *window,
-                         const MARU_Event *event) {
+                         const MARU_Event *event, void *userdata) {
   (void)window;
+  (void)userdata;
   if (type == MARU_CLOSE_REQUESTED) {
     keep_running = false;
   } else if (type == MARU_WINDOW_RESIZED) {
@@ -42,10 +43,8 @@ int main() {
 #endif
   
   MARU_ContextTuning tuning = MARU_CONTEXT_TUNING_DEFAULT;
-  tuning.vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
   create_info.tuning = &tuning;
 
-  create_info.attributes.event_callback = (MARU_EventCallback)handle_event;
   create_info.attributes.event_mask = MARU_ALL_EVENTS;
   MARU_Context *context = NULL;
   if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {
@@ -53,16 +52,19 @@ int main() {
     return 1;
   }
 
-  MARU_ExtensionList vk_extensions = {0};
-  if (maru_getVkExtensions(context, &vk_extensions) != MARU_SUCCESS) {
+  maru_vulkan_enable(context, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr);
+
+  uint32_t vk_extension_count = 0;
+  const char **vk_extensions = maru_vulkan_getVkExtensions(context, &vk_extension_count);
+  if (!vk_extensions) {
     fprintf(stderr, "Failed to get Vulkan extensions.\n");
     maru_destroyContext(context);
     return 1;
   }
 
   // Cast const char* const* to const char**
-  vulkan_renderer_init(&renderer, vk_extensions.count,
-                       (const char **)vk_extensions.extensions);
+  vulkan_renderer_init(&renderer, vk_extension_count,
+                       (const char **)vk_extensions);
 
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru Basic C Example";
@@ -78,7 +80,7 @@ int main() {
 
   printf("Waiting for window to be ready...\n");
   while (keep_running && !window_ready) {
-    maru_pumpEvents(context, 16);
+    maru_pumpEvents(context, 16, handle_event, NULL);
   }
 
   if (!keep_running) {
@@ -89,7 +91,7 @@ int main() {
   }
 
   VkSurfaceKHR surface;
-  if (maru_createVkSurface(window, renderer.instance, &surface) !=
+  if (maru_vulkan_createVkSurface(window, renderer.instance, &surface) !=
       MARU_SUCCESS) {
     fprintf(stderr, "Failed to create Vulkan surface.\n");
     maru_destroyWindow(window);
@@ -107,7 +109,7 @@ int main() {
 
   printf("Entering main loop...\n");
   while (keep_running) {
-    maru_pumpEvents(context, 0);
+    maru_pumpEvents(context, 0, handle_event, NULL);
 
     vulkan_renderer_draw_frame(&renderer);
   }

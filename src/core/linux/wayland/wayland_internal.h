@@ -223,14 +223,14 @@ static inline bool maru_xkb_state_mod_name_is_active(const MARU_Context_WL *ctx,
 MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                                   MARU_Context **out_context);
 MARU_Status maru_destroyContext_WL(MARU_Context *context);
-MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms);
+MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
 MARU_Status maru_createWindow_WL(MARU_Context *context,
                                 const MARU_WindowCreateInfo *create_info,
                                 MARU_Window **out_window);
 MARU_Status maru_updateWindow_WL(MARU_Window *window, uint64_t field_mask,
                                  const MARU_WindowAttributes *attributes);
 MARU_Status maru_destroyWindow_WL(MARU_Window *window);
-MARU_Status maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
+void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 
 MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape shape,
                                      MARU_Cursor **out_cursor);

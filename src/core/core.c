@@ -14,7 +14,10 @@
 MARU_ThreadId _maru_getCurrentThreadId(void) {
   return (MARU_ThreadId)pthread_self();
 }
+#endif
 
+#ifdef MARU_ENABLE_DIAGNOSTICS
+#ifdef MARU_VALIDATE_API_CALLS
 void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
                             const char *msg) {
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)ctx;
@@ -24,8 +27,6 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
                                 .context = (MARU_Context *)ctx,
                                 .window = NULL};
     ctx_base->diagnostic_cb(&info, ctx_base->diagnostic_userdata);
-  } else {
-    fprintf(stderr, "[MARU DIAGNOSTIC %d] %s\n", (int)diag, msg);
   }
 }
 #else
@@ -41,11 +42,12 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
   }
 }
 #endif
+#endif
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type,
                           MARU_Window *window, const MARU_Event *event) {
-  if (ctx->event_cb && (ctx->event_mask & type)) {
-    ctx->event_cb(type, window, event);
+  if (ctx->pump_ctx && (ctx->event_mask & type)) {
+    ctx->pump_ctx->callback(type, window, event, ctx->pump_ctx->userdata);
   }
 }
 
@@ -65,16 +67,18 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
     ctx_base->diagnostic_userdata = attributes->diagnostic_userdata;
   }
 
-  if (field_mask & MARU_CONTEXT_ATTR_EVENT_CALLBACK) {
-    ctx_base->event_cb = attributes->event_callback;
-  }
-
   if (field_mask & MARU_CONTEXT_ATTR_EVENT_MASK) {
     ctx_base->event_mask = attributes->event_mask;
   }
 }
 
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
+  for (uint32_t i = 0; i < MARU_EXT_COUNT; i++) {
+    if (ctx_base->extension_cleanups[i]) {
+      ctx_base->extension_cleanups[i]((MARU_Context *)ctx_base, ctx_base->extension_vtables[i]);
+    }
+  }
+
   for (uint32_t i = 0; i < ctx_base->monitor_cache_count; i++) {
     MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)ctx_base->monitor_cache[i];
     mon_base->is_active = false;
@@ -111,6 +115,12 @@ void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
 }
 
 #ifdef MARU_INDIRECT_BACKEND
+MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
+  MARU_API_VALIDATE(destroyContext, context);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend->destroyContext(context);
+}
+
 MARU_API MARU_Status
 maru_updateContext(MARU_Context *context, uint64_t field_mask,
                    const MARU_ContextAttributes *attributes) {
@@ -124,6 +134,122 @@ maru_updateContext(MARU_Context *context, uint64_t field_mask,
   }
 
   return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
+  MARU_API_VALIDATE(pumpEvents, context, timeout_ms, callback, userdata);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  return ctx_base->backend->pumpEvents(context, timeout_ms, callback, userdata);
+}
+
+MARU_API MARU_Status maru_createWindow(MARU_Context *context,
+                                       const MARU_WindowCreateInfo *create_info,
+                                       MARU_Window **out_window) {
+  MARU_API_VALIDATE(createWindow, context, create_info, out_window);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend->createWindow(context, create_info, out_window);
+}
+
+MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
+  MARU_API_VALIDATE(destroyWindow, window);
+  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+  return win_base->backend->destroyWindow(window);
+}
+
+MARU_API void maru_getWindowGeometry(MARU_Window *window,
+                                            MARU_WindowGeometry *out_geometry) {
+  MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
+  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+  win_base->backend->getWindowGeometry(window, out_geometry);
+}
+
+MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
+                                       const MARU_WindowAttributes *attributes) {
+  MARU_API_VALIDATE(updateWindow, window, field_mask, attributes);
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  return win_base->backend->updateWindow(window, field_mask, attributes);
+}
+
+MARU_API MARU_Status maru_getStandardCursor(MARU_Context *context, MARU_CursorShape shape,
+                                            MARU_Cursor **out_cursor) {
+  MARU_API_VALIDATE(getStandardCursor, context, shape, out_cursor);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend->getStandardCursor(context, shape, out_cursor);
+}
+
+MARU_API MARU_Status maru_createCursor(MARU_Context *context,
+                                        const MARU_CursorCreateInfo *create_info,
+                                        MARU_Cursor **out_cursor) {
+  MARU_API_VALIDATE(createCursor, context, create_info, out_cursor);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend->createCursor(context, create_info, out_cursor);
+}
+
+MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
+  MARU_API_VALIDATE(destroyCursor, cursor);
+  MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
+  return cur_base->backend->destroyCursor(cursor);
+}
+
+MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowFocus, window);
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  return win_base->backend->requestWindowFocus(window);
+}
+
+MARU_API MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
+                                                MARU_BackendType *out_type,
+                                                MARU_BackendHandle *out_handle) {
+  MARU_API_VALIDATE(getWindowBackendHandle, window, out_type, out_handle);
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  return win_base->backend->getWindowBackendHandle(window, out_type, out_handle);
+}
+
+MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
+  MARU_API_VALIDATE(wakeContext, context);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  return ctx_base->backend->wakeContext(context);
+}
+
+MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
+  MARU_API_VALIDATE(getMonitors, context, out_count);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->backend->updateMonitors(context) != MARU_SUCCESS) {
+    *out_count = 0;
+    return NULL;
+  }
+  *out_count = ctx_base->monitor_cache_count;
+  return ctx_base->monitor_cache;
+}
+
+MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(retainMonitor, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  mon_base->ref_count++;
+}
+
+MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(releaseMonitor, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  mon_base->ref_count--;
+}
+
+MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {
+  MARU_API_VALIDATE(getMonitorModes, monitor, out_count);
+  const MARU_Monitor_Base *mon_base = (const MARU_Monitor_Base *)monitor;
+  return mon_base->backend->getMonitorModes(monitor, out_count);
+}
+
+MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+  MARU_API_VALIDATE(setMonitorMode, monitor, mode);
+  const MARU_Monitor_Base *mon_base = (const MARU_Monitor_Base *)monitor;
+  return mon_base->backend->setMonitorMode(monitor, mode);
+}
+
+MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(resetMonitorMetrics, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  mon_base->backend->resetMonitorMetrics(monitor);
 }
 #endif
 
@@ -234,4 +360,60 @@ MARU_API MARU_Version maru_getVersion(void) {
   return (MARU_Version){.major = MARU_VERSION_MAJOR,
                         .minor = MARU_VERSION_MINOR,
                         .patch = MARU_VERSION_PATCH};
+}
+
+MARU_API MARU_BackendType maru_getContextBackendType(const MARU_Context *context) {
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend_type;
+}
+
+MARU_API MARU_Status maru_registerExtension(MARU_Context *context, MARU_ExtensionID id, void *state, MARU_ExtensionCleanupCallback cleanup) {
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  ctx_base->extension_vtables[id] = state;
+  ctx_base->extension_cleanups[id] = cleanup;
+  return MARU_SUCCESS;
+}
+
+MARU_API void *maru_getExtension(const MARU_Context *context, MARU_ExtensionID id) {
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->extension_vtables[id];
+}
+
+MARU_API void *maru_contextAlloc(MARU_Context *context, size_t size) {
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  return maru_context_alloc(ctx_base, size);
+}
+
+MARU_API void maru_contextFree(MARU_Context *context, void *ptr) {
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  maru_context_free(ctx_base, ptr);
+}
+
+MARU_API void *maru_contextGetNativeHandle(MARU_Context *context) {
+  MARU_API_VALIDATE(contextGetNativeHandle, context);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+#ifdef MARU_INDIRECT_BACKEND
+  if (ctx_base->backend->getContextNativeHandle) {
+    return ctx_base->backend->getContextNativeHandle(context);
+  }
+  return NULL;
+#else
+  // This will be resolved by the backend-specific implementation linked in.
+  extern void *_maru_getContextNativeHandle(MARU_Context *context);
+  return _maru_getContextNativeHandle(context);
+#endif
+}
+
+MARU_API void *maru_windowGetNativeHandle(MARU_Window *window) {
+  MARU_API_VALIDATE(windowGetNativeHandle, window);
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+#ifdef MARU_INDIRECT_BACKEND
+  if (win_base->backend->getWindowNativeHandle) {
+    return win_base->backend->getWindowNativeHandle(window);
+  }
+  return NULL;
+#else
+  extern void *_maru_getWindowNativeHandle(MARU_Window *window);
+  return _maru_getWindowNativeHandle(window);
+#endif
 }

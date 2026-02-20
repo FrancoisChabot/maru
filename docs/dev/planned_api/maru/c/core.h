@@ -1,3 +1,6 @@
+/**
+ * @note THIS API HAS BEEN SUPERSEDED AND IS KEPT FOR REFERENCE ONLY.
+ */
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
@@ -61,10 +64,6 @@ typedef enum MARU_Status {
 
 // The entire context was dead either before, or became dead because of, the operation.
   MARU_ERROR_CONTEXT_LOST = 2, 
-
-  // The API was used in an invalid way.
-  // Guaranteed to only ever come up in special VALIDATION builds.
-  MARU_ERROR_INVALID_USAGE = -1,
 } MARU_Status;
 
 /** @brief Generic flags type. */

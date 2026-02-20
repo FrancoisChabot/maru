@@ -213,7 +213,7 @@ MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
                                          const MARU_WindowAttributes *attributes);
 
 /** @brief Returns window geometry. */
-MARU_Status maru_getWindowGeometry(MARU_Window *window,
+void maru_getWindowGeometry(MARU_Window *window,
                                               MARU_WindowGeometry *out_geometry);
 
 /** @brief Requests input focus for a window. */

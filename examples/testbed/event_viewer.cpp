@@ -37,7 +37,7 @@ void EventViewer_HandleEvent(MARU_EventType type, const MARU_Event* event, uint6
     } else if (type == MARU_KEY_STATE_CHANGED) {
         snprintf(buf, sizeof(buf), "Key: %d, State: %d", (int)event->key.raw_key, (int)event->key.state);
     } else if (type == MARU_MOUSE_MOVED) {
-        snprintf(buf, sizeof(buf), "Pos: %.1f, %.1f", event->mouse_motion.position.x, event->mouse_motion.position.y);
+        snprintf(buf, sizeof(buf), "Pos: %.1f, %.1f", (double)event->mouse_motion.position.x, (double)event->mouse_motion.position.y);
     } else if (type == MARU_TEXT_INPUT_RECEIVED) {
         snprintf(buf, sizeof(buf), "Text: %s", event->text_input.text);
     }

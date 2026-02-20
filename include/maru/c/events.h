@@ -10,10 +10,6 @@
 #include "maru/c/core.h"
 #include "maru/c/geometry.h"
 #include "maru/c/inputs.h"
-#include "maru/c/data_exchange.h"
-#ifdef MARU_ENABLE_CONTROLLERS
-#include "maru/c/ext/controllers.h"
-#endif
 
 /**
  * @file events.h
@@ -30,8 +26,6 @@ typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 /** @brief Opaque handle representing a physical monitor. */
 typedef struct MARU_Monitor MARU_Monitor;
-/** @brief Opaque handle representing an active controller connection. */
-typedef struct MARU_Controller MARU_Controller;
 
 
 // N.B. static const MARU_EventMask is the best way to represent 
@@ -69,31 +63,8 @@ static const MARU_EventMask MARU_TEXT_INPUT_RECEIVED = ((MARU_EventMask)1 << 11)
 static const MARU_EventMask MARU_FOCUS_CHANGED = ((MARU_EventMask)1 << 12);
 /** @brief Event fired when a window is maximized or restored. */
 static const MARU_EventMask MARU_WINDOW_MAXIMIZED = ((MARU_EventMask)1 << 13);
-/** @brief Event fired during a drag-and-drop operation when first entering the window. */
-static const MARU_EventMask MARU_DROP_ENTERED = ((MARU_EventMask)1 << 14);
-/** @brief Event fired during a drag-and-drop operation when hovering. */
-static const MARU_EventMask MARU_DROP_HOVERED = ((MARU_EventMask)1 << 15);
-/** @brief Event fired when a drag-and-drop operation leaves a window. */
-static const MARU_EventMask MARU_DROP_EXITED = ((MARU_EventMask)1 << 16);
-/** @brief Event fired when a drag-and-drop payload is dropped on a window. */
-static const MARU_EventMask MARU_DROP_DROPPED = ((MARU_EventMask)1 << 17);
 /** @brief Event fired when IME text composition state changes. */
 static const MARU_EventMask MARU_TEXT_COMPOSITION_UPDATED = ((MARU_EventMask)1 << 18);
-/** @brief Event fired when asynchronous data has been received. */
-static const MARU_EventMask MARU_DATA_RECEIVED = ((MARU_EventMask)1 << 19);
-/** @brief Event fired when the OS requests data from the application. */
-static const MARU_EventMask MARU_DATA_REQUESTED = ((MARU_EventMask)1 << 20);
-/** @brief Event fired when the OS has finished consuming data provided via maru_provideData. */
-static const MARU_EventMask MARU_DATA_CONSUMED = ((MARU_EventMask)1 << 21);
-/** @brief Event fired on the source window when a drag session completes. */
-static const MARU_EventMask MARU_DRAG_FINISHED = ((MARU_EventMask)1 << 22);
-
-  #ifdef MARU_ENABLE_CONTROLLERS
-/** @brief Event fired when a game controller is connected or disconnected. */
-static const MARU_EventMask MARU_CONTROLLER_CONNECTION_CHANGED = ((MARU_EventMask)1 << 46);
-/** @brief Event fired when a controller button state changes. */
-static const MARU_EventMask MARU_CONTROLLER_BUTTON_STATE_CHANGED = ((MARU_EventMask)1 << 47);
-  #endif
 
   // N.B. These bits are reserved for user-defined events
 static const MARU_EventMask MARU_USER_EVENT_0 = ((MARU_EventMask)1 << 48);
@@ -131,11 +102,6 @@ typedef struct MARU_WindowReadyEvent { char _unused; } MARU_WindowReadyEvent;
 typedef struct MARU_WindowCloseEvent { char _unused; } MARU_WindowCloseEvent;
 /** @brief Payload for MARU_SYNC_POINT_REACHED. */
 typedef struct MARU_SyncEvent { char _unused; } MARU_SyncEvent;
-
-/** @brief Payload for MARU_DRAG_FINISHED. */
-typedef struct MARU_DragFinishedEvent {
-  MARU_DropAction action;
-} MARU_DragFinishedEvent;
 
 /** @brief Payload for MARU_WINDOW_RESIZED. */
 typedef struct MARU_WindowResizedEvent {
@@ -214,74 +180,6 @@ typedef struct MARU_FocusEvent {
   bool focused;
 } MARU_FocusEvent;
 
-/** @brief Controls application response to a drag-and-drop hover. */
-typedef struct MARU_DropFeedback {
-  MARU_DropAction *action;
-  void **session_userdata;
-} MARU_DropFeedback;
-
-/** @brief Payload for MARU_DROP_ENTERED. */
-typedef struct MARU_DropEnterEvent {
-  MARU_Vec2Dip position;
-  MARU_DropFeedback *feedback;
-  const char **paths;   // Can be NULL
-  MARU_MIMETypeList available_types;
-  MARU_ModifierFlags modifiers;
-  uint16_t path_count;
-} MARU_DropEnterEvent;
-
-
-/** @brief Payload for MARU_DROP_HOVERED. */
-typedef struct MARU_DropHoverEvent {
-  MARU_Vec2Dip position;
-  MARU_DropFeedback *feedback;
-  const char **paths;
-  MARU_MIMETypeList available_types;
-  MARU_ModifierFlags modifiers;
-  uint16_t path_count;
-} MARU_DropHoverEvent;
-
-/** @brief Payload for MARU_DROP_EXITED. */
-typedef struct MARU_DropLeaveEvent {
-  void **session_userdata;
-} MARU_DropLeaveEvent;
-
-/** @brief Payload for MARU_DROP_DROPPED. */
-typedef struct MARU_DropEvent {
-  MARU_Vec2Dip position;
-  void **session_userdata;
-  const char **paths;
-  MARU_MIMETypeList available_types;
-  MARU_ModifierFlags modifiers;
-  uint16_t path_count;
-} MARU_DropEvent;
-
-/** @brief Payload for MARU_DATA_RECEIVED. */
-typedef struct MARU_DataReceivedEvent {
-  void *user_tag;
-  MARU_Status status;
-  MARU_DataExchangeTarget target;
-  const char *mime_type;
-  const void *data;
-  size_t size;
-} MARU_DataReceivedEvent;
-
-/** @brief Payload for MARU_DATA_REQUESTED. */
-typedef struct MARU_DataRequestEvent {
-  MARU_DataExchangeTarget target;
-  const char *mime_type;
-  void *internal_handle;
-} MARU_DataRequestEvent;
-
-/** @brief Payload for MARU_DATA_CONSUMED. */
-typedef struct MARU_DataConsumedEvent {
-  MARU_DataExchangeTarget target;
-  const char *mime_type;
-  const void *data;
-  size_t size;
-  MARU_DropAction action;
-} MARU_DataConsumedEvent;
-
 /** @brief Payload for user-defined events. */
 typedef struct MARU_UserDefinedEvent {
   union {
@@ -308,25 +206,16 @@ typedef struct MARU_Event {
     MARU_TextInputEvent text_input;
     MARU_TextCompositionEvent text_composition;
     MARU_FocusEvent focus;
-    MARU_DropEnterEvent drop_enter;
-    MARU_DropHoverEvent drop_hover;
-    MARU_DropLeaveEvent drop_leave;
-    MARU_DropEvent drop;
-    MARU_DragFinishedEvent drag_finished;
-    MARU_DataReceivedEvent data_received;
-    MARU_DataRequestEvent data_request;
-    MARU_DataConsumedEvent data_consumed;
-#ifdef MARU_ENABLE_CONTROLLERS
-    MARU_ControllerConnectionEvent controller_connection;
-    MARU_ControllerButtonStateChanged controller_button;
-#endif
 
     MARU_UserDefinedEvent user;
   };
 } MARU_Event;
 
-/** @brief Synchronizes the event queue with the OS and dispatches events to the registered callback. */
-MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms);
+/** @brief Callback signature for event dispatching. */
+typedef void (*MARU_EventCallback)(MARU_EventType type, MARU_Window *window, const struct MARU_Event *evt, void *userdata);
+
+/** @brief Synchronizes the event queue with the OS and dispatches events to the provided callback. */
+MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
 
 /** @brief Manually pushes a user-defined event into the queue.
  *
@@ -342,9 +231,6 @@ MARU_Status maru_postEvent(MARU_Context *context, MARU_EventType type,
  *  without external synchronization.
  */
 MARU_Status maru_wakeContext(MARU_Context *context);
-
-/** @brief Callback signature for event dispatching. */
-typedef void (*MARU_EventCallback)(MARU_EventType type, MARU_Window *window, const struct MARU_Event *evt);
 
 #ifdef __cplusplus
 }

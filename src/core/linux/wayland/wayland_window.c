@@ -35,18 +35,21 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     if (state_flags & LIBDECOR_WINDOW_STATE_FULLSCREEN) fullscreen = true;
   }
 
-  if (maru_libdecor_configuration_get_content_size(ctx, configuration, frame, &width, &height)) {
-    if (window->size.x != (MARU_Scalar)width || window->size.y != (MARU_Scalar)height) {
-      window->size.x = (MARU_Scalar)width;
-      window->size.y = (MARU_Scalar)height;
+  if (!maru_libdecor_configuration_get_content_size(ctx, configuration, frame, &width, &height)) {
+    width = (int)window->size.x;
+    height = (int)window->size.y;
+  }
 
-      MARU_Event evt = {0};
-      evt.resized.geometry.logical_size = window->size;
-      evt.resized.geometry.pixel_size.x = (int32_t)window->size.x;
-      evt.resized.geometry.pixel_size.y = (int32_t)window->size.y;
+  if (window->size.x != (MARU_Scalar)width || window->size.y != (MARU_Scalar)height) {
+    window->size.x = (MARU_Scalar)width;
+    window->size.y = (MARU_Scalar)height;
 
-      _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window*)window, &evt);
-    }
+    MARU_Event evt = {0};
+    evt.resized.geometry.logical_size = window->size;
+    evt.resized.geometry.pixel_size.x = (int32_t)window->size.x;
+    evt.resized.geometry.pixel_size.y = (int32_t)window->size.y;
+
+    _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window*)window, &evt);
   }
 
   if (window->is_maximized != maximized) {
@@ -67,6 +70,17 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
       window->base.pub.flags |= (uint64_t)MARU_WINDOW_STATE_FULLSCREEN;
     else
       window->base.pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_FULLSCREEN;
+  }
+
+  struct libdecor_state *state = maru_libdecor_state_new(ctx, width, height);
+  maru_libdecor_frame_commit(ctx, frame, state, configuration);
+  maru_libdecor_state_free(ctx, state);
+
+  if (!(window->base.pub.flags & MARU_WINDOW_STATE_READY)) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_READY;
+    
+    MARU_Event evt = {0};
+    _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window*)window, &evt);
   }
 
   window->libdecor.last_configuration = configuration;
@@ -176,7 +190,7 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
 
   MARU_WaylandDecorationMode mode = ctx->decoration_mode;
 
-  bool try_ssd = false && (mode == MARU_WAYLAND_DECORATION_MODE_AUTO || mode == MARU_WAYLAND_DECORATION_MODE_SSD);
+  bool try_ssd = (mode == MARU_WAYLAND_DECORATION_MODE_AUTO || mode == MARU_WAYLAND_DECORATION_MODE_SSD);
   bool try_csd = (mode == MARU_WAYLAND_DECORATION_MODE_AUTO || mode == MARU_WAYLAND_DECORATION_MODE_CSD);
 
   if (try_ssd && ctx->protocols.opt.zxdg_decoration_manager_v1) {
@@ -200,6 +214,8 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
     if (create_info->attributes.title) {
       maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel,
                                   create_info->attributes.title);
+    } else {
+      maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel, "Maru");
     }
 
     if (create_info->app_id) {
@@ -230,6 +246,8 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
       if (create_info->attributes.title) {
         maru_libdecor_frame_set_title(ctx, window->libdecor.frame,
                                       create_info->attributes.title);
+      } else {
+        maru_libdecor_frame_set_title(ctx, window->libdecor.frame, "Maru");
       }
 
       if (create_info->app_id) {
@@ -270,6 +288,8 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
     if (create_info->attributes.title) {
       maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel,
                                   create_info->attributes.title);
+    } else {
+      maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel, "Maru");
     }
 
     window->decor_mode = MARU_WAYLAND_DECORATION_MODE_NONE;
@@ -297,6 +317,11 @@ void _maru_wayland_update_opaque_region(MARU_Window_WL *window) {
   }
   maru_wl_surface_set_input_region(ctx, window->wl.surface, input_region);
   maru_wl_region_destroy(ctx, input_region);
+
+  if (window->xdg.surface) {
+    maru_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
+                                         (int)window->size.x, (int)window->size.y);
+  }
 }
 
 MARU_Status maru_createWindow_WL(MARU_Context *context,
@@ -363,7 +388,11 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   _maru_update_window_base(&window->base, field_mask, attributes);
 
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
-    maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel, attributes->title);
+    if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+      maru_libdecor_frame_set_title(ctx, window->libdecor.frame, attributes->title);
+    } else if (window->xdg.toplevel) {
+      maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel, attributes->title);
+    }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
@@ -390,7 +419,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
+MARU_Status maru_destroyWindow_WL(MARU_Window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
@@ -412,7 +441,7 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
+void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
   const MARU_Window_WL *window = (const MARU_Window_WL *)window_handle;
 
   *out_geometry = (MARU_WindowGeometry){
@@ -424,6 +453,9 @@ MARU_Status maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeo
               .y = (int32_t)window->size.y,
           },
   };
+}
 
-  return MARU_SUCCESS;
+void *_maru_getWindowNativeHandle_WL(MARU_Window *window) {
+  MARU_Window_WL *win = (MARU_Window_WL *)window;
+  return win->wl.surface;
 }

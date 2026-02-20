@@ -64,7 +64,7 @@ static inline void *maru_context_alloc_bootstrap(const MARU_ContextCreateInfo *c
 static inline void *maru_context_alloc(MARU_Context_Base *ctx_base, size_t size) {
   void *ptr = ctx_base->allocator.alloc_cb(size, ctx_base->allocator.userdata);
   if (!ptr) {
-    _maru_reportDiagnostic((MARU_Context *)ctx_base, MARU_DIAGNOSTIC_OUT_OF_MEMORY, "Out of memory");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx_base, MARU_DIAGNOSTIC_OUT_OF_MEMORY, "Out of memory");
   }
   return ptr;
 }
@@ -103,7 +103,7 @@ static inline void *maru_context_realloc(MARU_Context_Base *ctx_base, void *ptr,
   void *new_ptr = maru_realloc(&ctx_base->allocator, ptr,
                                old_size, new_size);
   if (!new_ptr && new_size > 0) {
-    _maru_reportDiagnostic((MARU_Context *)ctx_base, MARU_DIAGNOSTIC_OUT_OF_MEMORY, "Out of memory");
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx_base, MARU_DIAGNOSTIC_OUT_OF_MEMORY, "Out of memory");
   }
 
   return new_ptr;

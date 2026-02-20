@@ -52,6 +52,9 @@ static inline bool maru_isContextReady(const MARU_Context *context);
 /** @brief Retrieves the runtime performance metrics for a context. */
 static inline const MARU_ContextMetrics *maru_getContextMetrics(const MARU_Context *context);
 
+/** @brief Retrieves the backend type used by the context. */
+MARU_BackendType maru_getContextBackendType(const MARU_Context *context);
+
 /* ----- Context Management ----- */
 
 /** @brief Special value for timeouts to indicate it should never trigger. */
@@ -62,7 +65,6 @@ typedef enum MARU_ContextAttributesField {
   MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE = 1ULL << 0,
   MARU_CONTEXT_ATTR_DIAGNOSTICS = 1ULL << 1,
   MARU_CONTEXT_ATTR_EVENT_MASK = 1ULL << 2,
-  MARU_CONTEXT_ATTR_EVENT_CALLBACK = 1ULL << 3,
 
   MARU_CONTEXT_ATTR_ALL = 0xFFFFFFFFFFFFFFFFULL,
 } MARU_ContextAttributesField;
@@ -73,17 +75,7 @@ typedef struct MARU_ContextAttributes {
   MARU_DiagnosticCallback diagnostic_cb;  ///< Optional callback for library diagnostics.
   void *diagnostic_userdata;              ///< Passed to the diagnostic callback.
   MARU_EventMask event_mask;              ///< Bitmask of events to allow.
-  MARU_EventCallback event_callback;      ///< Primary event sink.
 } MARU_ContextAttributes;
-
-/** @brief Supported windowing backends. */
-typedef enum MARU_BackendType {
-  MARU_BACKEND_UNKNOWN = 0,
-  MARU_BACKEND_WAYLAND = 1,
-  MARU_BACKEND_X11 = 2,
-  MARU_BACKEND_WINDOWS = 3,
-  MARU_BACKEND_COCOA = 4,
-} MARU_BackendType;
 
 /** @brief Forward declaration of tuning parameters. */
 struct MARU_ContextTuning; // Forward declared, defined in tuning.h
@@ -114,7 +106,6 @@ typedef struct MARU_ContextCreateInfo {
               .diagnostic_cb = NULL,           \
               .diagnostic_userdata = NULL,      \
               .event_mask = (MARU_EventMask)-1, \
-              .event_callback = NULL,           \
           },                                    \
       .tuning = NULL,                           \
   }

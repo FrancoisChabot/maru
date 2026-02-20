@@ -15,10 +15,12 @@ add_executable(maru_tests
 
 target_compile_features(maru_tests PRIVATE cxx_std_20)
 
+target_include_directories(maru_tests PRIVATE ${PROJECT_SOURCE_DIR}/src/core)
+
 target_link_libraries(maru_tests
   PRIVATE
     maru::maru
-    maru_core_iface_d
+    ${MARU_ACTIVE_CORE_IFACE}
     GTest::gtest_main
 )
 
