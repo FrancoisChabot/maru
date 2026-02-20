@@ -61,7 +61,7 @@ void EventViewer_Render(MARU_Window* window, bool* p_open) {
             float alpha = (entry.frame % 2) ? 0.1f : 0.2f;
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1, 1, 1, alpha));
             ImGui::BeginChild(std::to_string((uintptr_t)&entry).c_str(), ImVec2(0, ImGui::GetTextLineHeightWithSpacing()), false, ImGuiWindowFlags_NoScrollbar);
-            ImGui::Text("[%llu] %s %s", entry.frame, event_type_to_string(entry.type), entry.description.c_str());
+            ImGui::Text("[%lu] %s %s", entry.frame, event_type_to_string(entry.type), entry.description.c_str());
             ImGui::EndChild();
             ImGui::PopStyleColor();
         }

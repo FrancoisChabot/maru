@@ -29,8 +29,7 @@ static void _xdg_surface_handle_configure(void *data, struct xdg_surface *surfac
     window->base.pub.flags |= MARU_WINDOW_STATE_READY;
     
     MARU_Event evt = {0};
-    evt.type = MARU_EVENT_TYPE_WINDOW_READY;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_TYPE_WINDOW_READY, (MARU_Window*)window, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window*)window, &evt);
   }
 }
 
@@ -49,12 +48,11 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *topl
       window->size.y = (MARU_Scalar)height;
       
       MARU_Event evt = {0};
-      evt.type = MARU_EVENT_TYPE_WINDOW_RESIZED;
       evt.resized.geometry.logical_size = window->size;
       evt.resized.geometry.pixel_size.x = (int32_t)window->size.x;
       evt.resized.geometry.pixel_size.y = (int32_t)window->size.y;
       
-      _maru_dispatch_event(&ctx->base, MARU_EVENT_TYPE_WINDOW_RESIZED, (MARU_Window*)window, &evt);
+      _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window*)window, &evt);
     }
   }
   
@@ -66,9 +64,8 @@ static void _xdg_toplevel_handle_close(void *data, struct xdg_toplevel *toplevel
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   
   MARU_Event evt = {0};
-  evt.type = MARU_EVENT_TYPE_CLOSE_REQUESTED;
   
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_TYPE_CLOSE_REQUESTED, (MARU_Window*)window, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_CLOSE_REQUESTED, (MARU_Window*)window, &evt);
   (void)toplevel;
 }
 

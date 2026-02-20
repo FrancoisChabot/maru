@@ -147,7 +147,7 @@ void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask,
     if (attributes->mouse_passthrough) {
       win_base->pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
     } else {
-      win_base->pub.flags &= ~MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
+      win_base->pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
     }
   }
 
@@ -155,7 +155,7 @@ void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask,
     if (attributes->resizable) {
       win_base->pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
     } else {
-      win_base->pub.flags &= ~MARU_WINDOW_STATE_RESIZABLE;
+      win_base->pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_RESIZABLE;
     }
   }
 
@@ -163,7 +163,7 @@ void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask,
     if (attributes->decorated) {
       win_base->pub.flags |= MARU_WINDOW_STATE_DECORATED;
     } else {
-      win_base->pub.flags &= ~MARU_WINDOW_STATE_DECORATED;
+      win_base->pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_DECORATED;
     }
   }
 }

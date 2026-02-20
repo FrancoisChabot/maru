@@ -237,8 +237,8 @@ static void RenderWindowControls(SecondaryWindow* sw, MARU_Window* window, const
         ImGui::InputInt2("Aspect Ratio (Num/Denom)", aspect);
 
         if (ImGui::Button("Commit Constraints")) {
-            maru_setWindowMinSize(window, {min_size[0], min_size[1]});
-            maru_setWindowMaxSize(window, {max_size[0], max_size[1]});
+            maru_setWindowMinSize(window, {(MARU_Scalar)min_size[0], (MARU_Scalar)min_size[1]});
+            maru_setWindowMaxSize(window, {(MARU_Scalar)max_size[0], (MARU_Scalar)max_size[1]});
             maru_setWindowAspectRatio(window, {(int32_t)aspect[0], (int32_t)aspect[1]});
         }
     }
@@ -255,9 +255,10 @@ void WindowManager_Render(MARU_Context* context, bool* p_open) {
         static int window_count = 0;
         snprintf(sw->title, sizeof(sw->title), "Secondary Window %d", ++window_count);
         
-        MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
+        MARU_WindowCreateInfo window_info;
         window_info.attributes.title = sw->title;
         window_info.attributes.logical_size = {640, 480};
+        window_info.attributes.position = {0, 0};
         window_info.userdata = sw;
 
         if (maru_createWindow(context, &window_info, &sw->maru_window) == MARU_SUCCESS) {
@@ -309,29 +310,37 @@ void WindowManager_HandleEvent(MARU_EventType type, MARU_Window* window, const M
         maru_createVkSurface(window, g_vk_ctx.instance, &sw->surface);
         
         // Setup sync objects
-        VkSemaphoreCreateInfo semaphoreInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-        VkFenceCreateInfo fenceInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+        VkSemaphoreCreateInfo semaphoreInfo;
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        semaphoreInfo.pNext = VK_NULL_HANDLE;
+        VkFenceCreateInfo fenceInfo;
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.pNext = VK_NULL_HANDLE;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
         
-        const int MAX_FRAMES_IN_FLIGHT = 2;
+        const size_t MAX_FRAMES_IN_FLIGHT = 2;
         sw->imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
         sw->renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
         sw->inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
         
-        for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             vkCreateSemaphore(g_vk_ctx.device, &semaphoreInfo, nullptr, &sw->imageAvailableSemaphores[i]);
             vkCreateSemaphore(g_vk_ctx.device, &semaphoreInfo, nullptr, &sw->renderFinishedSemaphores[i]);
             vkCreateFence(g_vk_ctx.device, &fenceInfo, nullptr, &sw->inFlightFences[i]);
         }
 
         // Command pool & buffers
-        VkCommandPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+        VkCommandPoolCreateInfo poolInfo;
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.pNext = VK_NULL_HANDLE;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         poolInfo.queueFamilyIndex = g_vk_ctx.queueFamilyIndex;
         vkCreateCommandPool(g_vk_ctx.device, &poolInfo, nullptr, &sw->commandPool);
 
         sw->commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-        VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+        VkCommandBufferAllocateInfo allocInfo;
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.pNext = VK_NULL_HANDLE;
         allocInfo.commandPool = sw->commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
@@ -377,10 +386,14 @@ void WindowManager_Update() {
         vkResetFences(g_vk_ctx.device, 1, &sw->inFlightFences[sw->currentFrame]);
 
         vkResetCommandBuffer(sw->commandBuffers[sw->currentFrame], 0);
-        VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+        VkCommandBufferBeginInfo beginInfo;
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.pNext = VK_NULL_HANDLE;
         vkBeginCommandBuffer(sw->commandBuffers[sw->currentFrame], &beginInfo);
 
-        VkRenderPassBeginInfo rpBegin = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+        VkRenderPassBeginInfo rpBegin;
+        rpBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rpBegin.pNext = VK_NULL_HANDLE;
         rpBegin.renderPass = g_renderPass;
         rpBegin.framebuffer = sw->swapChainFramebuffers[imageIndex];
         rpBegin.renderArea.extent = sw->swapChainExtent;
@@ -392,7 +405,9 @@ void WindowManager_Update() {
         vkCmdEndRenderPass(sw->commandBuffers[sw->currentFrame]);
         vkEndCommandBuffer(sw->commandBuffers[sw->currentFrame]);
 
-        VkSubmitInfo submit = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+        VkSubmitInfo submit;
+        submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit.pNext = VK_NULL_HANDLE;
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         submit.waitSemaphoreCount = 1;
         submit.pWaitSemaphores = &sw->imageAvailableSemaphores[sw->currentFrame];
@@ -404,7 +419,9 @@ void WindowManager_Update() {
         
         vkQueueSubmit(g_vk_ctx.graphicsQueue, 1, &submit, sw->inFlightFences[sw->currentFrame]);
 
-        VkPresentInfoKHR present = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+        VkPresentInfoKHR present;
+        present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        present.pNext = VK_NULL_HANDLE;
         present.waitSemaphoreCount = 1;
         present.pWaitSemaphores = &sw->renderFinishedSemaphores[sw->currentFrame];
         present.swapchainCount = 1;

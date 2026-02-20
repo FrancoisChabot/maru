@@ -20,9 +20,21 @@ static inline MARU_Status _mock_destroyContext(MARU_Context* context) {
 static const MARU_Backend _maru_mock_backend = {
     .destroyContext = _mock_destroyContext,
     .pumpEvents = NULL,
+    .updateContext = NULL,
     .createWindow = NULL,
     .destroyWindow = NULL,
     .getWindowGeometry = NULL,
+    .updateWindow = NULL,
+    .requestWindowFocus = NULL,
+    .getWindowBackendHandle = NULL,
+    .getStandardCursor = NULL,
+    .createCursor = NULL,
+    .destroyCursor = NULL,
+    .wakeContext = NULL,
+    .updateMonitors = NULL,
+    .destroyMonitor = NULL,
+    .getMonitorModes = NULL,
+    .setMonitorMode = NULL,
 #ifdef MARU_ENABLE_VULKAN
     .getVkExtensions = NULL,
     .createVkSurface = NULL

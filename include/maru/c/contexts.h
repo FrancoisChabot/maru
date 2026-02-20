@@ -100,11 +100,21 @@ typedef struct MARU_ContextCreateInfo {
 /** @brief Default initialization macro for MARU_ContextCreateInfo. */
 #define MARU_CONTEXT_CREATE_INFO_DEFAULT        \
   {                                             \
+      .allocator = {                            \
+          .alloc_cb = NULL,                     \
+          .realloc_cb = NULL,                   \
+          .free_cb = NULL,                      \
+          .userdata = NULL,                     \
+      },                                        \
+      .userdata = NULL,                         \
       .backend = MARU_BACKEND_UNKNOWN,          \
       .attributes =                             \
           {                                     \
               .inhibit_idle = false,            \
+              .diagnostic_cb = NULL,           \
+              .diagnostic_userdata = NULL,      \
               .event_mask = (MARU_EventMask)-1, \
+              .event_callback = NULL,           \
           },                                    \
       .tuning = NULL,                           \
   }

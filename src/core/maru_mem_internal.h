@@ -45,10 +45,20 @@ static inline void *maru_realloc(const MARU_Allocator *alloc, void *ptr,
 
 static inline void *maru_context_alloc_bootstrap(const MARU_ContextCreateInfo *create_info,
                                                  size_t size) {
+  MARU_Allocator alloc;
   if (create_info->allocator.alloc_cb) {
-    return create_info->allocator.alloc_cb(size, create_info->allocator.userdata);
+    alloc = create_info->allocator;
+  } else {
+    alloc.alloc_cb = _maru_default_alloc;
+    alloc.realloc_cb = NULL;
+    alloc.free_cb = _maru_default_free;
+    alloc.userdata = NULL;
   }
-  return malloc(size);
+  void *ptr = alloc.alloc_cb(size, alloc.userdata);
+  if (ptr) {
+    memset(ptr, 0, size);
+  }
+  return ptr;
 }
 
 static inline void *maru_context_alloc(MARU_Context_Base *ctx_base, size_t size) {

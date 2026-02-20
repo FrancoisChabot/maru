@@ -9,7 +9,14 @@
 #include <vulkan/vulkan.h>
 
 #include "imgui.h"
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
 #include "backends/imgui_impl_vulkan.h"
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 #include "imgui_impl_maru.h"
 
 #include "event_viewer.h"
@@ -228,35 +235,57 @@ static void cleanup_swap_chain() {
 }
 
 int main() {
-  MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-#ifdef _WIN32
-  create_info.backend = MARU_BACKEND_WINDOWS;
-#else
+  MARU_ContextCreateInfo create_info;
   create_info.backend = MARU_BACKEND_WAYLAND;
-#endif
+  create_info.attributes.inhibit_idle = false;
+  create_info.attributes.diagnostic_cb = NULL;
+  create_info.attributes.diagnostic_userdata = NULL;
+  create_info.attributes.event_mask = MARU_ALL_EVENTS;
+  create_info.attributes.event_callback = (MARU_EventCallback)handle_event;
+  create_info.allocator.alloc_cb = NULL;
+  create_info.allocator.realloc_cb = NULL;
+  create_info.allocator.free_cb = NULL;
+  create_info.allocator.userdata = NULL;
+  create_info.userdata = NULL;
   
   MARU_ContextTuning tuning = MARU_CONTEXT_TUNING_DEFAULT;
   tuning.vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
   create_info.tuning = &tuning;
 
-  create_info.attributes.event_callback = (MARU_EventCallback)handle_event;
-  create_info.attributes.event_mask = MARU_ALL_EVENTS;
   MARU_Context *context = NULL;
-  maru_createContext(&create_info, &context);
+  MARU_Status status = maru_createContext(&create_info, &context);
+  if (status != MARU_SUCCESS || !context) {
+      fprintf(stderr, "Failed to create context: status=%d\n", status);
+      return 1;
+  }
 
-  MARU_ExtensionList vk_extensions = {0};
+  MARU_ExtensionList vk_extensions;
+  vk_extensions.count = 0;
+  vk_extensions.extensions = NULL;
   maru_getVkExtensions(context, &vk_extensions);
 
   create_vulkan_instance(vk_extensions.count, (const char **)vk_extensions.extensions);
   pick_physical_device();
 
-  MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
+  MARU_WindowCreateInfo window_info;
   window_info.attributes.title = "Maru ImGui Testbed";
   window_info.attributes.logical_size = {1280, 720};
+  window_info.attributes.position = {0, 0};
+  window_info.userdata = NULL;
 
-  maru_createWindow(context, &window_info, &main_window);
+  MARU_Status win_status = maru_createWindow(context, &window_info, &main_window);
+  if (win_status != MARU_SUCCESS) {
+      fprintf(stderr, "Failed to create window: status=%d\n", win_status);
+      return 1;
+  }
 
-  while (keep_running && !window_ready) maru_pumpEvents(context, 16);
+  while (keep_running && !window_ready) {
+      maru_pumpEvents(context, 16);
+  }
+  if (!window_ready) {
+      fprintf(stderr, "Window failed to become ready\n");
+      return 1;
+  }
 
   maru_createVkSurface(main_window, vk.instance, &vk.surface);
   create_logical_device();
@@ -273,8 +302,12 @@ int main() {
   WindowManager_Init(context, main_window, wm_vk_ctx);
 
   // Sync objects
-  VkSemaphoreCreateInfo semaphoreInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-  VkFenceCreateInfo fenceInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+  VkSemaphoreCreateInfo semaphoreInfo;
+  semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  semaphoreInfo.pNext = VK_NULL_HANDLE;
+  VkFenceCreateInfo fenceInfo;
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.pNext = VK_NULL_HANDLE;
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vkCreateSemaphore(vk.device, &semaphoreInfo, nullptr, &vk.imageAvailableSemaphores[i]);
@@ -283,12 +316,16 @@ int main() {
   }
 
   // Command pool & buffers
-  VkCommandPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+  VkCommandPoolCreateInfo poolInfo;
+  poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  poolInfo.pNext = VK_NULL_HANDLE;
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = 0;
   vkCreateCommandPool(vk.device, &poolInfo, nullptr, &vk.commandPool);
 
-  VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+  VkCommandBufferAllocateInfo allocInfo;
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.pNext = VK_NULL_HANDLE;
   allocInfo.commandPool = vk.commandPool;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
@@ -304,7 +341,9 @@ int main() {
   
   // ImGui Descriptor Pool
   VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } };
-  VkDescriptorPoolCreateInfo descPoolInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+  VkDescriptorPoolCreateInfo descPoolInfo;
+  descPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  descPoolInfo.pNext = VK_NULL_HANDLE;
   descPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
   descPoolInfo.maxSets = 1;
   descPoolInfo.poolSizeCount = 1;
@@ -364,10 +403,14 @@ int main() {
     ImGui::Render();
 
     vkResetCommandBuffer(vk.commandBuffers[vk.currentFrame], 0);
-    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    VkCommandBufferBeginInfo beginInfo;
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.pNext = VK_NULL_HANDLE;
     vkBeginCommandBuffer(vk.commandBuffers[vk.currentFrame], &beginInfo);
 
-    VkRenderPassBeginInfo rpBegin = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+    VkRenderPassBeginInfo rpBegin;
+    rpBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpBegin.pNext = VK_NULL_HANDLE;
     rpBegin.renderPass = vk.renderPass;
     rpBegin.framebuffer = vk.swapChainFramebuffers[imageIndex];
     rpBegin.renderArea.extent = vk.swapChainExtent;
@@ -381,7 +424,9 @@ int main() {
     vkCmdEndRenderPass(vk.commandBuffers[vk.currentFrame]);
     vkEndCommandBuffer(vk.commandBuffers[vk.currentFrame]);
 
-    VkSubmitInfo submit = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    VkSubmitInfo submit;
+    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit.pNext = VK_NULL_HANDLE;
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submit.waitSemaphoreCount = 1;
     submit.pWaitSemaphores = &vk.imageAvailableSemaphores[vk.currentFrame];
@@ -392,7 +437,9 @@ int main() {
     submit.pSignalSemaphores = &vk.renderFinishedSemaphores[vk.currentFrame];
     vkQueueSubmit(vk.graphicsQueue, 1, &submit, vk.inFlightFences[vk.currentFrame]);
 
-    VkPresentInfoKHR present = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+    VkPresentInfoKHR present;
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present.pNext = VK_NULL_HANDLE;
     present.waitSemaphoreCount = 1;
     present.pWaitSemaphores = &vk.renderFinishedSemaphores[vk.currentFrame];
     present.swapchainCount = 1;
