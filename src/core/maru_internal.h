@@ -9,6 +9,7 @@
 #include "maru/c/details/contexts.h"
 #include "maru/c/details/windows.h"
 #include "maru/c/details/cursors.h"
+#include "maru/c/details/monitors.h"
 
 /**
  * @file maru_internal.h
@@ -53,6 +54,10 @@ typedef struct MARU_Context_Base {
   MARU_ContextMetrics metrics;
   MARU_UserEventMetrics user_event_metrics;
 
+  MARU_Monitor **monitor_cache;
+  uint32_t monitor_cache_count;
+  uint32_t monitor_cache_capacity;
+
 #ifdef MARU_VALIDATE_API_CALLS
   MARU_ThreadId creator_thread;
 #endif
@@ -83,10 +88,26 @@ typedef struct MARU_Cursor_Base {
   MARU_CursorMetrics metrics;
 } MARU_Cursor_Base;
 
+typedef struct MARU_Monitor_Base {
+  MARU_MonitorExposed pub;
+#ifdef MARU_INDIRECT_BACKEND
+  const struct MARU_Backend *backend;
+#endif
+
+  MARU_Context_Base *ctx_base;
+  MARU_MonitorMetrics metrics;
+  
+  uint32_t ref_count;
+  bool is_active; // If false, the monitor was disconnected but is still retained.
+} MARU_Monitor_Base;
+
 void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const char *msg);
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type, MARU_Window *window, const MARU_Event *event);
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);
+void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);
 void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask, const MARU_WindowAttributes *attributes);
+
+void _maru_monitor_free(MARU_Monitor_Base *monitor);
 
 #ifdef __cplusplus
 }

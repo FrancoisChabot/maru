@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+#define _CRT_SECURE_NO_WARNINGS
 #include "windows_internal.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
@@ -40,6 +41,10 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.metrics.user_events = &ctx->base.user_event_metrics;
   ctx->base.pub.metrics = &ctx->base.metrics;
 
+  ctx->base.monitor_cache = NULL;
+  ctx->base.monitor_cache_count = 0;
+  ctx->base.monitor_cache_capacity = 0;
+
   if (create_info->tuning) {
     ctx->base.tuning = *create_info->tuning;
   } else {
@@ -77,6 +82,7 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
   if (ctx->user32_module) {
   }
 
+  _maru_cleanup_context_base(&ctx->base);
   maru_context_free(&ctx->base, context);
   return MARU_SUCCESS;
 }
@@ -168,5 +174,183 @@ MARU_Status maru_getStandardCursor_Windows(MARU_Context *context, MARU_CursorSha
 MARU_Status maru_wakeContext_Windows(MARU_Context *context) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
   PostThreadMessageA(ctx->owner_thread_id, WM_NULL, 0, 0);
+  return MARU_SUCCESS;
+}
+
+static BOOL CALLBACK _maru_win32_monitor_enum_proc(HMONITOR hmonitor, HDC hdc, LPRECT rect, LPARAM dw_data) {
+  (void)hdc;
+  (void)rect;
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)dw_data;
+
+  // Check if we already have this monitor in cache
+  for (uint32_t i = 0; i < ctx->base.monitor_cache_count; i++) {
+    MARU_Monitor_Windows *mon = (MARU_Monitor_Windows *)ctx->base.monitor_cache[i];
+    if (mon->hmonitor == hmonitor) {
+      mon->base.is_active = true;
+      return TRUE;
+    }
+  }
+
+  // New monitor
+  MARU_Monitor_Windows *mon = (MARU_Monitor_Windows *)maru_context_alloc(&ctx->base, sizeof(MARU_Monitor_Windows));
+  if (!mon) return FALSE;
+  memset(mon, 0, sizeof(MARU_Monitor_Windows));
+
+  mon->base.ctx_base = &ctx->base;
+  mon->base.pub.context = (MARU_Context *)ctx;
+  mon->base.pub.metrics = &mon->base.metrics;
+  mon->base.is_active = true;
+  mon->base.ref_count = 1; // 1 for being in the cache
+#ifdef MARU_INDIRECT_BACKEND
+  mon->base.backend = ctx->base.backend;
+#endif
+  mon->hmonitor = hmonitor;
+
+  MONITORINFOEXA mi;
+  mi.cbSize = sizeof(mi);
+  if (GetMonitorInfoA(hmonitor, (LPMONITORINFO)&mi)) {
+    mon->base.pub.is_primary = (mi.dwFlags & MONITORINFOF_PRIMARY) != 0;
+    mon->base.pub.logical_position = (MARU_Vec2Dip){ (MARU_Scalar)mi.rcMonitor.left, (MARU_Scalar)mi.rcMonitor.top };
+    mon->base.pub.logical_size = (MARU_Vec2Dip){ (MARU_Scalar)(mi.rcMonitor.right - mi.rcMonitor.left), (MARU_Scalar)(mi.rcMonitor.bottom - mi.rcMonitor.top) };
+    strncpy(mon->device_name, mi.szDevice, sizeof(mon->device_name));
+    mon->device_name[sizeof(mon->device_name) - 1] = '\0';
+    mon->base.pub.name = mon->device_name;
+  }
+
+  // Get current mode
+  DEVMODEA dm;
+  dm.dmSize = sizeof(dm);
+  if (EnumDisplaySettingsA(mon->device_name, ENUM_CURRENT_SETTINGS, &dm)) {
+    mon->base.pub.current_mode.size = (MARU_Vec2Px){ (int32_t)dm.dmPelsWidth, (int32_t)dm.dmPelsHeight };
+    mon->base.pub.current_mode.refresh_rate_mhz = dm.dmDisplayFrequency * 1000;
+  }
+
+  // Get physical size (approximate)
+  mon->base.pub.physical_size = (MARU_Vec2Dip){ 
+    (MARU_Scalar)mon->base.pub.current_mode.size.x * 25.4f / 96.0f,
+    (MARU_Scalar)mon->base.pub.current_mode.size.y * 25.4f / 96.0f 
+  };
+
+  // Get Scale
+  mon->base.pub.scale = 1.0f;
+  UINT dpi_x, dpi_y;
+  HMODULE shcore = GetModuleHandleA("shcore.dll");
+  if (shcore) {
+    typedef HRESULT (WINAPI * GetDpiForMonitorProc)(HMONITOR, int, UINT*, UINT*);
+    GetDpiForMonitorProc get_dpi = (GetDpiForMonitorProc)GetProcAddress(shcore, "GetDpiForMonitor");
+    if (get_dpi) {
+      if (SUCCEEDED(get_dpi(hmonitor, 0, &dpi_x, &dpi_y))) {
+        mon->base.pub.scale = (MARU_Scalar)dpi_x / 96.0f;
+      }
+    }
+  }
+
+  // Add to cache
+  if (ctx->base.monitor_cache_count >= ctx->base.monitor_cache_capacity) {
+    uint32_t old_cap = ctx->base.monitor_cache_capacity;
+    uint32_t new_cap = old_cap ? old_cap * 2 : 4;
+    ctx->base.monitor_cache = (MARU_Monitor **)maru_context_realloc(&ctx->base, ctx->base.monitor_cache, old_cap * sizeof(MARU_Monitor *), new_cap * sizeof(MARU_Monitor *));
+    ctx->base.monitor_cache_capacity = new_cap;
+  }
+  ctx->base.monitor_cache[ctx->base.monitor_cache_count++] = (MARU_Monitor *)mon;
+
+  return TRUE;
+}
+
+MARU_Status maru_updateMonitors_Windows(MARU_Context *context) {
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+
+  // Mark all existing as inactive
+  for (uint32_t i = 0; i < ctx->base.monitor_cache_count; i++) {
+    ((MARU_Monitor_Base *)ctx->base.monitor_cache[i])->is_active = false;
+  }
+
+  if (!EnumDisplayMonitors(NULL, NULL, _maru_win32_monitor_enum_proc, (LPARAM)ctx)) {
+    return MARU_FAILURE;
+  }
+
+  // Remove inactive ones from cache
+  for (uint32_t i = 0; i < ctx->base.monitor_cache_count; ) {
+    MARU_Monitor_Base *mon = (MARU_Monitor_Base *)ctx->base.monitor_cache[i];
+    if (!mon->is_active) {
+      mon->pub.flags |= MARU_MONITOR_STATE_LOST;
+      // Remove from cache list
+      for (uint32_t j = i; j < ctx->base.monitor_cache_count - 1; j++) {
+        ctx->base.monitor_cache[j] = ctx->base.monitor_cache[j+1];
+      }
+      ctx->base.monitor_cache_count--;
+      maru_releaseMonitor((MARU_Monitor *)mon);
+    } else {
+      i++;
+    }
+  }
+
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_destroyMonitor_Windows(MARU_Monitor *monitor) {
+  MARU_Monitor_Windows *mon = (MARU_Monitor_Windows *)monitor;
+  if (mon->modes) {
+    maru_context_free(mon->base.ctx_base, mon->modes);
+  }
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+  MARU_Monitor_Windows *mon = (MARU_Monitor_Windows *)monitor;
+  
+  if (!mon->modes) {
+    uint32_t cap = 16;
+    mon->modes = (MARU_VideoMode *)maru_context_alloc(mon->base.ctx_base, cap * sizeof(MARU_VideoMode));
+    
+    DEVMODEA dm;
+    dm.dmSize = sizeof(dm);
+    for (DWORD i = 0; EnumDisplaySettingsA(mon->device_name, i, &dm); i++) {
+      if (mon->mode_count >= cap) {
+        uint32_t old_cap = cap;
+        cap *= 2;
+        mon->modes = (MARU_VideoMode *)maru_context_realloc(mon->base.ctx_base, mon->modes, old_cap * sizeof(MARU_VideoMode), cap * sizeof(MARU_VideoMode));
+      }
+      
+      bool exists = false;
+      for (uint32_t j = 0; j < mon->mode_count; j++) {
+        if (mon->modes[j].size.x == (int32_t)dm.dmPelsWidth &&
+            mon->modes[j].size.y == (int32_t)dm.dmPelsHeight &&
+            mon->modes[j].refresh_rate_mhz == dm.dmDisplayFrequency * 1000) {
+          exists = true;
+          break;
+        }
+      }
+      
+      if (!exists) {
+        mon->modes[mon->mode_count++] = (MARU_VideoMode){
+          .size = { (int32_t)dm.dmPelsWidth, (int32_t)dm.dmPelsHeight },
+          .refresh_rate_mhz = dm.dmDisplayFrequency * 1000
+        };
+      }
+    }
+  }
+
+  out_list->modes = mon->modes;
+  out_list->count = mon->mode_count;
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+  MARU_Monitor_Windows *mon = (MARU_Monitor_Windows *)monitor;
+  
+  DEVMODEA dm;
+  memset(&dm, 0, sizeof(dm));
+  dm.dmSize = sizeof(dm);
+  dm.dmPelsWidth = (DWORD)mode.size.x;
+  dm.dmPelsHeight = (DWORD)mode.size.y;
+  dm.dmDisplayFrequency = mode.refresh_rate_mhz / 1000;
+  dm.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
+  
+  if (ChangeDisplaySettingsExA(mon->device_name, &dm, NULL, CDS_FULLSCREEN, NULL) != DISP_CHANGE_SUCCESSFUL) {
+    return MARU_FAILURE;
+  }
+  
+  mon->base.pub.current_mode = mode;
   return MARU_SUCCESS;
 }

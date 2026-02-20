@@ -114,24 +114,24 @@ This document tracks the implementation status of the Maru API across different 
 
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_getMonitors()`                          |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_retainMonitor()`                        |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_releaseMonitor()`                       |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorModes()`                      |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_setMonitorMode()`                       |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_resetMonitorMetrics()`                  |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorUserdata()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_setMonitorUserdata()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorContext()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isMonitorLost()`                        |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorMetrics()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorName()`                       |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorPhysicalSize()`               |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorCurrentMode()`                |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorLogicalPosition()`            |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorLogicalSize()`                |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isMonitorPrimary()`                     |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getMonitorScale()`                      |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_getMonitors()`                          |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_retainMonitor()`                        |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_releaseMonitor()`                       |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorModes()`                      |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_setMonitorMode()`                       |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_resetMonitorMetrics()`                  |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorUserdata()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_setMonitorUserdata()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorContext()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isMonitorLost()`                        |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorMetrics()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorName()`                       |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorPhysicalSize()`               |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorCurrentMode()`                |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorLogicalPosition()`            |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorLogicalSize()`                |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isMonitorPrimary()`                     |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getMonitorScale()`                      |   ✅    |   ✅    |   ✅    |   ✅    |
 
 ## 5. Inputs
 

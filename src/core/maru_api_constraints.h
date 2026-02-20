@@ -115,6 +115,39 @@ static inline MARU_Status _maru_validate_wakeContext(MARU_Context *context) {
     return MARU_SUCCESS;
 }
 
+static inline MARU_Status _maru_validate_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+    MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_list != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_retainMonitor(MARU_Monitor *monitor) {
+    MARU_CONSTRAINT_CHECK(monitor != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_releaseMonitor(MARU_Monitor *monitor) {
+    MARU_CONSTRAINT_CHECK(monitor != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+    MARU_CONSTRAINT_CHECK(monitor != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_list != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+    MARU_CONSTRAINT_CHECK(monitor != NULL, MARU_ERROR_INVALID_USAGE);
+    (void)mode;
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_resetMonitorMetrics(MARU_Monitor *monitor) {
+    MARU_CONSTRAINT_CHECK(monitor != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
 #ifdef MARU_ENABLE_VULKAN
 static inline MARU_Status _maru_validate_getVkExtensions(MARU_Context *context, MARU_ExtensionList *out_list) {
     MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);

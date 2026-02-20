@@ -1,4 +1,5 @@
 #include "maru_api_constraints.h"
+#include "maru_mem_internal.h"
 #include <string.h>
 
 #include <stdlib.h>
@@ -48,6 +49,15 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type,
   }
 }
 
+void _maru_monitor_free(MARU_Monitor_Base *monitor) {
+#ifdef MARU_INDIRECT_BACKEND
+  if (monitor->backend->destroyMonitor) {
+    monitor->backend->destroyMonitor((MARU_Monitor *)monitor);
+  }
+#endif
+  maru_context_free(monitor->ctx_base, monitor);
+}
+
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
                                const MARU_ContextAttributes *attributes) {
   if (field_mask & MARU_CONTEXT_ATTR_DIAGNOSTICS) {
@@ -61,6 +71,17 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
 
   if (field_mask & MARU_CONTEXT_ATTR_EVENT_MASK) {
     ctx_base->event_mask = attributes->event_mask;
+  }
+}
+
+void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
+  for (uint32_t i = 0; i < ctx_base->monitor_cache_count; i++) {
+    MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)ctx_base->monitor_cache[i];
+    mon_base->is_active = false;
+    maru_releaseMonitor((MARU_Monitor *)mon_base);
+  }
+  if (ctx_base->monitor_cache) {
+    maru_context_free(ctx_base, ctx_base->monitor_cache);
   }
 }
 
@@ -141,6 +162,64 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
     return ctx_base->backend->wakeContext(context);
   }
   return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+  MARU_API_VALIDATE(getMonitors, context, out_list);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+
+  if (ctx_base->backend->updateMonitors) {
+    MARU_Status res = ctx_base->backend->updateMonitors(context);
+    if (res != MARU_SUCCESS) return res;
+  }
+
+  out_list->monitors = ctx_base->monitor_cache;
+  out_list->count = ctx_base->monitor_cache_count;
+  return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_retainMonitor(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(retainMonitor, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  mon_base->ref_count++;
+  return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_releaseMonitor(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(releaseMonitor, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  if (mon_base->ref_count > 0) {
+    mon_base->ref_count--;
+    if (mon_base->ref_count == 0 && !mon_base->is_active) {
+      _maru_monitor_free(mon_base);
+    }
+  }
+  return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+  MARU_API_VALIDATE(getMonitorModes, monitor, out_list);
+  const MARU_Monitor_Base *mon_base = (const MARU_Monitor_Base *)monitor;
+  if (mon_base->backend->getMonitorModes) {
+    return mon_base->backend->getMonitorModes(monitor, out_list);
+  }
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+  MARU_API_VALIDATE(setMonitorMode, monitor, mode);
+  const MARU_Monitor_Base *mon_base = (const MARU_Monitor_Base *)monitor;
+  if (mon_base->backend->setMonitorMode) {
+    return mon_base->backend->setMonitorMode(monitor, mode);
+  }
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(resetMonitorMetrics, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
+  return MARU_SUCCESS;
 }
 #endif
 

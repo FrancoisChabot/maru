@@ -14,6 +14,10 @@ const MARU_Backend maru_backend_Windows = {
   .getWindowBackendHandle = maru_getWindowBackendHandle_Windows,
   .getStandardCursor = maru_getStandardCursor_Windows,
   .wakeContext = maru_wakeContext_Windows,
+  .updateMonitors = maru_updateMonitors_Windows,
+  .destroyMonitor = maru_destroyMonitor_Windows,
+  .getMonitorModes = maru_getMonitorModes_Windows,
+  .setMonitorMode = maru_setMonitorMode_Windows,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
@@ -83,5 +87,52 @@ MARU_API MARU_Status maru_getStandardCursor(MARU_Context *context, MARU_CursorSh
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
   return maru_wakeContext_Windows(context);
+}
+
+MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+  MARU_API_VALIDATE(getMonitors, context, out_list);
+  MARU_Status res = maru_updateMonitors_Windows(context);
+  if (res != MARU_SUCCESS) return res;
+  
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  out_list->monitors = ctx_base->monitor_cache;
+  out_list->count = ctx_base->monitor_cache_count;
+  return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_retainMonitor(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(retainMonitor, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  mon_base->ref_count++;
+  return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_releaseMonitor(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(releaseMonitor, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  if (mon_base->ref_count > 0) {
+    mon_base->ref_count--;
+    if (mon_base->ref_count == 0 && !mon_base->is_active) {
+      _maru_monitor_free(mon_base);
+    }
+  }
+  return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+  MARU_API_VALIDATE(getMonitorModes, monitor, out_list);
+  return maru_getMonitorModes_Windows(monitor, out_list);
+}
+
+MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+  MARU_API_VALIDATE(setMonitorMode, monitor, mode);
+  return maru_setMonitorMode_Windows(monitor, mode);
+}
+
+MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
+  MARU_API_VALIDATE(resetMonitorMetrics, monitor);
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
+  return MARU_SUCCESS;
 }
 #endif
