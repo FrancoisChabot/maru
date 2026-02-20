@@ -139,8 +139,10 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
 
     switch (msg) {
     case WM_CLOSE: {
-      MARU_Event evt = { .type = MARU_CLOSE_REQUESTED };
-      _maru_dispatch_event(ctx, MARU_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
+      if (ctx->event_cb && (ctx->event_mask & MARU_EVENT_TYPE_CLOSE_REQUESTED)) {
+        MARU_Event evt = { .type = MARU_EVENT_TYPE_CLOSE_REQUESTED };
+        ctx->event_cb(MARU_EVENT_TYPE_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
+      }
       return 0;
     }
 
