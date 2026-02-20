@@ -121,11 +121,10 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   if (!window) {
     return MARU_FAILURE;
   }
+  
+  _maru_init_window_base(&window->base, &ctx->base, create_info);
   memset(((uint8_t*)window) + sizeof(MARU_Window_Base), 0, sizeof(MARU_Window_WL) - sizeof(MARU_Window_Base));
 
-  window->base.ctx_base = &ctx->base;
-  window->base.pub.context = (MARU_Context *)ctx;
-  window->base.pub.userdata = create_info->userdata;
 #ifdef MARU_INDIRECT_BACKEND
   window->base.backend = ctx->base.backend;
 #endif
@@ -151,7 +150,38 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
 
   _maru_wayland_update_opaque_region(window);
 
+  if (create_info->attributes.mouse_passthrough) {
+    struct wl_region *region = maru_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
+    maru_wl_surface_set_input_region(ctx, window->wl.surface, region);
+    maru_wl_region_destroy(ctx, region);
+  }
+
   *out_window = (MARU_Window *)window;
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask,
+                                 const MARU_WindowAttributes *attributes) {
+  MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+
+  _maru_update_window_base(&window->base, field_mask, attributes);
+
+  if (field_mask & MARU_WINDOW_ATTR_TITLE) {
+    maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel, attributes->title);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
+    if (attributes->mouse_passthrough) {
+      struct wl_region *region = maru_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
+      maru_wl_surface_set_input_region(ctx, window->wl.surface, region);
+      maru_wl_region_destroy(ctx, region);
+    } else {
+      maru_wl_surface_set_input_region(ctx, window->wl.surface, NULL);
+    }
+    maru_wl_surface_commit(ctx, window->wl.surface);
+  }
+
   return MARU_SUCCESS;
 }
 
@@ -164,6 +194,7 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
 
   maru_wl_surface_destroy(ctx, window->wl.surface);
 
+  _maru_cleanup_window_base(&window->base);
   maru_context_free(&ctx->base, window);
   return MARU_SUCCESS;
 }

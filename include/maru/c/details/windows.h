@@ -29,6 +29,7 @@ typedef struct MARU_WindowExposed {
   MARU_EventMask event_mask;
   MARU_CursorMode cursor_mode;
   const MARU_Cursor *current_cursor;
+  const char *title;
 } MARU_WindowExposed;
 
 static inline void *maru_getWindowUserdata(const MARU_Window *window) {
@@ -41,6 +42,10 @@ static inline void maru_setWindowUserdata(MARU_Window *window, void *userdata) {
 
 static inline MARU_Context *maru_getWindowContext(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->context;
+}
+
+static inline const char *maru_getWindowTitle(const MARU_Window *window) {
+  return ((const MARU_WindowExposed *)window)->title;
 }
 
 static inline bool maru_isWindowLost(const MARU_Window *window) {
@@ -61,6 +66,10 @@ static inline bool maru_isWindowMaximized(const MARU_Window *window) {
 
 static inline bool maru_isWindowFullscreen(const MARU_Window *window) {
   return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
+}
+
+static inline bool maru_isWindowMousePassthrough(const MARU_Window *window) {
+  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_MOUSE_PASSTHROUGH) != 0;
 }
 
 static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window) {

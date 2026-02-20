@@ -38,6 +38,7 @@ add_executable(maru_testbed
     testbed/event_viewer.cpp
     testbed/monitor_explorer.cpp
     testbed/cursor_tester.cpp
+    testbed/window_manager.cpp
 )
 target_link_libraries(maru_testbed PRIVATE maru::maru imgui)
 set_target_properties(maru_testbed PROPERTIES CXX_STANDARD 20)

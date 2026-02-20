@@ -55,6 +55,9 @@ static inline void maru_setWindowUserdata(MARU_Window *window, void *userdata);
 /** @brief Retrieves the context that owns the specified window. */
 static inline MARU_Context *maru_getWindowContext(const MARU_Window *window);
 
+/** @brief Retrieves the current title of a window. */
+static inline const char *maru_getWindowTitle(const MARU_Window *window);
+
 /** @brief Checks if the window has been lost due to an unrecoverable error. */
 static inline bool maru_isWindowLost(const MARU_Window *window);
 
@@ -69,6 +72,9 @@ static inline bool maru_isWindowMaximized(const MARU_Window *window);
 
 /** @brief Checks if the window is currently in fullscreen mode. */
 static inline bool maru_isWindowFullscreen(const MARU_Window *window);
+
+/** @brief Checks if the window currently has mouse passthrough enabled. */
+static inline bool maru_isWindowMousePassthrough(const MARU_Window *window);
 
 /** @brief Retrieves the current event mask for a window. */
 static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window);

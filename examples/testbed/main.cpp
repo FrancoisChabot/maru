@@ -15,6 +15,7 @@
 #include "event_viewer.h"
 #include "monitor_explorer.h"
 #include "cursor_tester.h"
+#include "window_manager.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -23,9 +24,12 @@ static bool window_ready = false;
 static bool framebuffer_resized = false;
 static uint64_t frame_id = 0;
 
+static MARU_Window* main_window = nullptr;
+
 static bool show_event_viewer = true;
 static bool show_monitor_explorer = false;
 static bool show_cursor_tester = false;
+static bool show_window_manager = false;
 
 struct VulkanState {
     VkInstance instance;
@@ -52,15 +56,16 @@ struct VulkanState {
 
 static void handle_event(MARU_EventType type, MARU_Window *window,
                          const MARU_Event *event) {
-  (void)window;
-  
   EventViewer_HandleEvent(type, event, frame_id);
+  WindowManager_HandleEvent(type, window, event);
 
   if (ImGui::GetCurrentContext() != nullptr)
     ImGui_ImplMaru_HandleEvent(type, event);
 
   if (type == MARU_CLOSE_REQUESTED) {
-    keep_running = false;
+    if (window == main_window) {
+        keep_running = false;
+    }
   } else if (type == MARU_WINDOW_RESIZED) {
     framebuffer_resized = true;
   } else if (type == MARU_WINDOW_READY) {
@@ -249,16 +254,23 @@ int main() {
   window_info.attributes.title = "Maru ImGui Testbed";
   window_info.attributes.logical_size = {1280, 720};
 
-  MARU_Window *window = NULL;
-  maru_createWindow(context, &window_info, &window);
+  maru_createWindow(context, &window_info, &main_window);
 
   while (keep_running && !window_ready) maru_pumpEvents(context, 16);
 
-  maru_createVkSurface(window, vk.instance, &vk.surface);
+  maru_createVkSurface(main_window, vk.instance, &vk.surface);
   create_logical_device();
   vk.swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
   create_render_pass();
-  create_swap_chain(window);
+  create_swap_chain(main_window);
+
+  WindowManager_VulkanContext wm_vk_ctx = {};
+  wm_vk_ctx.instance = vk.instance;
+  wm_vk_ctx.physicalDevice = vk.physicalDevice;
+  wm_vk_ctx.device = vk.device;
+  wm_vk_ctx.graphicsQueue = vk.graphicsQueue;
+  wm_vk_ctx.queueFamilyIndex = 0; // Assuming 0 for simplicity as in main.cpp
+  WindowManager_Init(context, main_window, wm_vk_ctx);
 
   // Sync objects
   VkSemaphoreCreateInfo semaphoreInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
@@ -288,7 +300,7 @@ int main() {
   ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
   ImGui::StyleColorsDark();
-  ImGui_ImplMaru_Init(window);
+  ImGui_ImplMaru_Init(main_window);
   
   // ImGui Descriptor Pool
   VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } };
@@ -318,7 +330,7 @@ int main() {
 
     if (framebuffer_resized) {
         cleanup_swap_chain();
-        create_swap_chain(window);
+        create_swap_chain(main_window);
         framebuffer_resized = false;
     }
 
@@ -338,12 +350,16 @@ int main() {
         ImGui::Checkbox("Event Viewer", &show_event_viewer);
         ImGui::Checkbox("Monitor Explorer", &show_monitor_explorer);
         ImGui::Checkbox("Cursor Tester", &show_cursor_tester);
+        ImGui::Checkbox("Window Manager", &show_window_manager);
     }
     ImGui::End();
 
-    if (show_event_viewer) EventViewer_Render(window, &show_event_viewer);
+    if (show_event_viewer) EventViewer_Render(main_window, &show_event_viewer);
     if (show_monitor_explorer) MonitorExplorer_Render(context, &show_monitor_explorer);
-    if (show_cursor_tester) CursorTester_Render(context, window, &show_cursor_tester);
+    if (show_cursor_tester) CursorTester_Render(context, main_window, &show_cursor_tester);
+    if (show_window_manager) WindowManager_Render(context, &show_window_manager);
+
+    WindowManager_Update();
 
     ImGui::Render();
 
@@ -388,6 +404,7 @@ int main() {
   }
 
   vkDeviceWaitIdle(vk.device);
+  WindowManager_Cleanup();
   ImGui_ImplVulkan_Shutdown();
   ImGui_ImplMaru_Shutdown();
   ImGui::DestroyContext();
@@ -404,7 +421,7 @@ int main() {
   vkDestroyDevice(vk.device, nullptr);
   vkDestroySurfaceKHR(vk.instance, vk.surface, nullptr);
   vkDestroyInstance(vk.instance, nullptr);
-  maru_destroyWindow(window);
+  maru_destroyWindow(main_window);
   maru_destroyContext(context);
   return 0;
 }

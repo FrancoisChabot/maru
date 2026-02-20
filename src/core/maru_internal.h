@@ -79,7 +79,8 @@ typedef struct MARU_Window_Base {
   MARU_WindowMetrics metrics;
 
   MARU_ButtonState8 keyboard_state[MARU_KEY_COUNT];
-  // Internal common state will go here
+  
+  char *title;
 } MARU_Window_Base;
 
 typedef struct MARU_Cursor_Base {
@@ -112,6 +113,8 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window);
 void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window);
 void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask, const MARU_WindowAttributes *attributes);
+void _maru_init_window_base(MARU_Window_Base *win_base, MARU_Context_Base *ctx_base, const MARU_WindowCreateInfo *create_info);
+void _maru_cleanup_window_base(MARU_Window_Base *win_base);
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor);
 

@@ -54,4 +54,10 @@ MARU_API MARU_Status maru_getWindowGeometry(MARU_Window *window,
   MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
   return maru_getWindowGeometry_WL(window, out_geometry);
 }
+
+MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
+                                         const MARU_WindowAttributes *attributes) {
+  MARU_API_VALIDATE(updateWindow, window, field_mask, attributes);
+  return maru_updateWindow_WL(window, field_mask, attributes);
+}
 #endif

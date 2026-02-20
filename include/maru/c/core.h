@@ -95,6 +95,7 @@ typedef enum MARU_WindowStateFlagBits {
   MARU_WINDOW_STATE_FOCUSED = 1ULL << 2,
   MARU_WINDOW_STATE_MAXIMIZED = 1ULL << 3,
   MARU_WINDOW_STATE_FULLSCREEN = 1ULL << 4,
+  MARU_WINDOW_STATE_MOUSE_PASSTHROUGH = 1ULL << 5,
 } MARU_WindowStateFlagBits;
 
 /** @brief Runtime state flags for a cursor. */

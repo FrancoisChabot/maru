@@ -129,8 +129,52 @@ maru_updateContext(MARU_Context *context, uint64_t field_mask,
 
 void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask,
                               const MARU_WindowAttributes *attributes) {
+  if (field_mask & MARU_WINDOW_ATTR_TITLE) {
+    if (win_base->title) {
+      maru_context_free(win_base->ctx_base, win_base->title);
+    }
+    size_t len = strlen(attributes->title);
+    win_base->title = (char *)maru_context_alloc(win_base->ctx_base, len + 1);
+    memcpy(win_base->title, attributes->title, len + 1);
+    win_base->pub.title = win_base->title;
+  }
+
   if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
     win_base->pub.event_mask = attributes->event_mask;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
+    if (attributes->mouse_passthrough) {
+      win_base->pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
+    } else {
+      win_base->pub.flags &= ~MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
+    }
+  }
+}
+
+void _maru_init_window_base(MARU_Window_Base *win_base, MARU_Context_Base *ctx_base, const MARU_WindowCreateInfo *create_info) {
+  memset(win_base, 0, sizeof(MARU_Window_Base));
+  win_base->ctx_base = ctx_base;
+  win_base->pub.context = (MARU_Context *)ctx_base;
+  win_base->pub.userdata = create_info->userdata;
+  win_base->pub.metrics = &win_base->metrics;
+  win_base->pub.keyboard_state = win_base->keyboard_state;
+  win_base->pub.keyboard_key_count = MARU_KEY_COUNT;
+  win_base->pub.event_mask = create_info->attributes.event_mask;
+  win_base->pub.cursor_mode = create_info->attributes.cursor_mode;
+  win_base->pub.current_cursor = create_info->attributes.cursor;
+
+  if (create_info->attributes.title) {
+    size_t len = strlen(create_info->attributes.title);
+    win_base->title = (char *)maru_context_alloc(ctx_base, len + 1);
+    memcpy(win_base->title, create_info->attributes.title, len + 1);
+    win_base->pub.title = win_base->title;
+  }
+}
+
+void _maru_cleanup_window_base(MARU_Window_Base *win_base) {
+  if (win_base->title) {
+    maru_context_free(win_base->ctx_base, win_base->title);
   }
 }
 

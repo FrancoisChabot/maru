@@ -58,7 +58,7 @@ This document tracks the implementation status of the Maru API across different 
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
 | `maru_createWindow()`                         |   ❌    |   ❌    |   ✅    |   ❌    |
 | `maru_destroyWindow()`                        |   ❌    |   ❌    |   ✅    |   ❌    |
-| `maru_updateWindow()`                         |   ❌    |   ❌    |   🏗️    |   ❌    |
+| `maru_updateWindow()`                         |   ❌    |   🏗️    |   🏗️    |   ❌    |
 | `maru_getWindowGeometry()`                    |   ❌    |   ❌    |   ✅    |   ❌    |
 | `maru_requestWindowFocus()`                   |   ❌    |   ❌    |   ✅    |   ❌    |
 | `maru_getWindowBackendHandle()`               |   ❌    |   ❌    |   ✅    |   ❌    |
@@ -76,9 +76,9 @@ This document tracks the implementation status of the Maru API across different 
 ### Attribute Fields (`MARU_WindowAttributes`)
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `MARU_WINDOW_ATTR_TITLE`                      |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_WINDOW_ATTR_TITLE`                      |   ❌    |   ✅    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_LOGICAL_SIZE`               |   ❌    |   ❌    |   ✅    |   ❌    |
-| `MARU_WINDOW_ATTR_FULLSCREEN`                 |   ❌    |   ❌    |   ❌    |   ❌    |
+| `MARU_WINDOW_ATTR_FULLSCREEN`                 |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_CURSOR_MODE`                |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_CURSOR`                     |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_MONITOR`                    |   ❌    |   ❌    |   ❌    |   ❌    |
@@ -89,7 +89,7 @@ This document tracks the implementation status of the Maru API across different 
 | `MARU_WINDOW_ATTR_ASPECT_RATIO`               |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_RESIZABLE`                  |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_DECORATED`                  |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH`          |   ❌    |   ❌    |   ❌    |   ❌    |
+| `MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH`          |   ❌    |   ✅    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_ACCEPT_DROP`                |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_TEXT_INPUT_TYPE`            |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_TEXT_INPUT_RECT`            |   ❌    |   ❌    |   ❌    |   ❌    |
@@ -107,6 +107,7 @@ This document tracks the implementation status of the Maru API across different 
 | `maru_isWindowFocused()`                      |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_isWindowMaximized()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_isWindowFullscreen()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isWindowMousePassthrough()`            |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_getWindowEventMask()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_getWindowMetrics()`                     |   ✅    |   ✅    |   ✅    |   ✅    |
 
@@ -244,7 +245,7 @@ This document tracks the implementation status of the Maru API across different 
 | `maru_setWindowAspectRatio()`                 |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_setWindowResizable()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_setWindowDecorated()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_setWindowMousePassthrough()`            |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_setWindowMousePassthrough()`            |   ❌    |   ✅    |   ✅    |   ❌    |
 | `maru_setWindowTextInputType()`               |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_setWindowTextInputRect()`               |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_setWindowAcceptDrop()`                  |   ❌    |   ❌    |   ❌    |   ❌    |

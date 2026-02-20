@@ -338,6 +338,10 @@ static HWND _maru_win32_create_window(HINSTANCE hinstance,
   DWORD style = WS_OVERLAPPEDWINDOW;
   DWORD ex_style = 0;
 
+  if (create_info->attributes.mouse_passthrough) {
+    ex_style |= WS_EX_TRANSPARENT | WS_EX_LAYERED;
+  }
+
   int width = 800;
   int height = 600;
   if (create_info->attributes.logical_size.x > 0 && create_info->attributes.logical_size.y > 0) {
@@ -378,21 +382,13 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   if (!window) {
     return MARU_FAILURE;
   }
+  
+  _maru_init_window_base(&window->base, &ctx->base, create_info);
   memset(((uint8_t*)window) + sizeof(MARU_Window_Base), 0, sizeof(MARU_Window_Windows) - sizeof(MARU_Window_Base));
 
-  window->base.ctx_base = &ctx->base;
-  window->base.pub.context = (MARU_Context *)ctx;
-  window->base.pub.userdata = create_info->userdata;
 #ifdef MARU_INDIRECT_BACKEND
   window->base.backend = ctx->base.backend;
 #endif
-
-  window->base.pub.metrics = &window->base.metrics;
-  window->base.pub.keyboard_state = window->base.keyboard_state;
-  window->base.pub.keyboard_key_count = MARU_KEY_COUNT;
-  window->base.pub.event_mask = create_info->attributes.event_mask;
-  window->base.pub.cursor_mode = create_info->attributes.cursor_mode;
-  window->base.pub.current_cursor = create_info->attributes.cursor;
 
   window->size = create_info->attributes.logical_size;
   if (window->size.x <= 0) window->size.x = 800;
@@ -414,6 +410,10 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
 
   ShowWindow(window->hwnd, SW_SHOW);
   UpdateWindow(window->hwnd);
+
+  if (create_info->attributes.mouse_passthrough) {
+    SetLayeredWindowAttributes(window->hwnd, 0, 255, LWA_ALPHA);
+  }
 
   window->base.pub.flags = MARU_WINDOW_STATE_READY;
   _maru_register_window(&ctx->base, (MARU_Window *)window);
@@ -441,6 +441,7 @@ MARU_Status maru_destroyWindow_Windows(MARU_Window *window_handle) {
     DestroyWindow(window->hwnd);
   }
 
+  _maru_cleanup_window_base(&window->base);
   maru_context_free(&ctx->base, window);
   return MARU_SUCCESS;
 }
@@ -531,6 +532,19 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field
     // For HIDDEN/LOCKED, we might need to capture or clip the cursor
     // For now just trigger WM_SETCURSOR
     PostMessageA(window->hwnd, WM_SETCURSOR, (WPARAM)window->hwnd, MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
+    DWORD ex_style = GetWindowLongA(window->hwnd, GWL_EXSTYLE);
+    if (attributes->mouse_passthrough) {
+      ex_style |= WS_EX_TRANSPARENT | WS_EX_LAYERED;
+      SetWindowLongA(window->hwnd, GWL_EXSTYLE, ex_style);
+      SetLayeredWindowAttributes(window->hwnd, 0, 255, LWA_ALPHA);
+    } else {
+      ex_style &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED);
+      SetWindowLongA(window->hwnd, GWL_EXSTYLE, ex_style);
+    }
+    SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
   }
 
   // TODO: implement other attributes
