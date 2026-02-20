@@ -10,6 +10,8 @@ target_include_directories(maru_linux_internal_iface INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/dlib>
 )
 
+install(TARGETS maru_linux_internal_iface EXPORT MaruTargets)
+
 # Linux shared logic
 add_library("maru_linux_obj" OBJECT ${MARU_LINUX_COMMON_SOURCES})
 target_link_libraries("maru_linux_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE} ${CMAKE_DL_LIBS})
@@ -32,9 +34,6 @@ add_library(maru_linux${MARU_LIB_SUFFIX} ${MARU_LIB_TYPE}
     $<TARGET_OBJECTS:maru_base_indirect_obj>
     $<TARGET_OBJECTS:maru_wayland_indirect_obj>
     $<TARGET_OBJECTS:maru_x11_indirect_obj>
-    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_linux_obj>>
-    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_wayland_indirect_obj>>
-    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_x11_indirect_obj>>
 )
 target_link_libraries(maru_linux${MARU_LIB_SUFFIX} PUBLIC maru_iface${MARU_LIB_SUFFIX}_indirect)
 if(MARU_BUILD_SHARED)

@@ -17,6 +17,5 @@ set_property(TARGET "maru_x11_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE $
 add_library("maru_x11${MARU_LIB_SUFFIX}" ${MARU_LIB_TYPE}
     $<TARGET_OBJECTS:maru_x11_obj>
     $<TARGET_OBJECTS:maru_base_obj>
-    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_x11_obj>>
 )
 target_link_libraries("maru_x11${MARU_LIB_SUFFIX}" PUBLIC ${iface_direct})

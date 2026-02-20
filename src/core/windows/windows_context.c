@@ -76,6 +76,8 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
 
   ctx->owner_thread_id = GetCurrentThreadId();
 
+  _maru_init_all_extensions((MARU_Context *)ctx);
+
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
   return MARU_SUCCESS;

@@ -133,3 +133,5 @@ else()
 endif()
 
 add_subdirectory(ext-vulkan)
+
+set(MARU_INSTALL_TARGETS ${MARU_INSTALL_TARGETS} PARENT_SCOPE)

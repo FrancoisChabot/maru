@@ -649,6 +649,8 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     ctx->libdecor.ctx = maru_libdecor_new(ctx, ctx->wl.display, NULL);
   }
 
+  _maru_init_all_extensions((MARU_Context *)ctx);
+
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
   return MARU_SUCCESS;
@@ -689,12 +691,12 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
 #define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener) \
   if (ctx->protocols.iface_name) { maru_##iface_name##_destroy(ctx, ctx->protocols.iface_name); }
   MARU_WL_REGISTRY_REQUIRED_BINDINGS
-#undef MARU_WL_REGISTRY_REQUIRED_BINDINGS
+#undef MARU_WL_REGISTRY_BINDING_ENTRY
 
 #define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener) \
   if (ctx->protocols.opt.iface_name) { maru_##iface_name##_destroy(ctx, ctx->protocols.opt.iface_name); }
   MARU_WL_REGISTRY_OPTIONAL_BINDINGS
-#undef MARU_WL_REGISTRY_OPTIONAL_BINDINGS
+#undef MARU_WL_REGISTRY_BINDING_ENTRY
 
   if (ctx->wl.registry) {
     maru_wl_registry_destroy(ctx, ctx->wl.registry);

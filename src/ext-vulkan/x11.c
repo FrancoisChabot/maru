@@ -4,6 +4,41 @@
 #include "maru_api_constraints.h"
 #include "ext_vulkan_internal.h"
 #include "vulkan_api_constraints.h"
+#include <string.h>
+
+#if defined(_WIN32)
+    __declspec(allocate(".maru_ext$a")) extern const void* const _maru_ext_start_marker;
+#else
+    extern const MARU_ExtensionDescriptor* const __start_maru_ext_hooks;
+#endif
+
+#ifndef MARU_INDIRECT_BACKEND
+static void _maru_vulkan_auto_init(MARU_Context *ctx, MARU_ExtensionID id);
+#endif
+
+#ifndef MARU_INDIRECT_BACKEND
+MARU_REGISTER_EXTENSION("vulkan", _maru_vulkan_auto_init)
+#endif
+
+static MARU_ExtensionID _maru_vulkan_get_id(MARU_Context *ctx) {
+#ifdef MARU_INDIRECT_BACKEND
+    (void)ctx;
+    return 0; // Placeholder
+#else
+#if defined(_WIN32)
+    return (MARU_ExtensionID)(&_maru_ext_ptr__maru_vulkan_auto_init - (&_maru_ext_start_marker + 1));
+#else
+    return (MARU_ExtensionID)(&_maru_ext_ptr__maru_vulkan_auto_init - &__start_maru_ext_hooks);
+#endif
+#endif
+}
+
+#ifndef MARU_INDIRECT_BACKEND
+static void _maru_vulkan_auto_init(MARU_Context *ctx, MARU_ExtensionID id) {
+    (void)id;
+    maru_vulkan_enable(ctx, NULL);
+}
+#endif
 
 typedef struct MARU_VulkanExtContextState_X11 {
   #ifdef MARU_INDIRECT_BACKEND
@@ -41,15 +76,23 @@ static void _maru_vulkan_cleanup_X11(MARU_Context *context, void *state) {
 MARU_Status maru_vulkan_enable_x11(MARU_Context *context, MARU_VkGetInstanceProcAddrFunc vk_loader) {
   MARU_VULKAN_API_VALIDATE(enable, context, vk_loader);
 
-  MARU_VulkanExtContextState_X11 *state = (MARU_VulkanExtContextState_X11 *)maru_contextAlloc(context, sizeof(MARU_VulkanExtContextState_X11));
-  if (!state) return MARU_FAILURE;
+  MARU_ExtensionID id = _maru_vulkan_get_id(context);
+  MARU_VulkanExtContextState_X11 *state = (MARU_VulkanExtContextState_X11 *)maru_getExtension(context, id);
+  if (!state) {
+    state = (MARU_VulkanExtContextState_X11 *)maru_contextAlloc(context, sizeof(MARU_VulkanExtContextState_X11));
+    if (!state) return MARU_FAILURE;
+    memset(state, 0, sizeof(MARU_VulkanExtContextState_X11));
 
-  #ifdef MARU_INDIRECT_BACKEND
-  state->vtable = &maru_ext_vk_backend_X11;
-  #endif
-  state->vk_loader = vk_loader;
+    #ifdef MARU_INDIRECT_BACKEND
+    state->vtable = &maru_ext_vk_backend_X11;
+    #endif
+    maru_registerExtension(context, id, state, _maru_vulkan_cleanup_X11);
+  }
 
-  maru_registerExtension(context, MARU_EXT_VULKAN, state, _maru_vulkan_cleanup_X11);
+  if (vk_loader) {
+    state->vk_loader = vk_loader;
+  }
+
   return MARU_SUCCESS;
 }
 

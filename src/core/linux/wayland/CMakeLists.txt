@@ -15,6 +15,8 @@ target_include_directories(maru_wayland_internal_iface INTERFACE
 )
 target_link_libraries(maru_wayland_internal_iface INTERFACE maru_linux_internal_iface)
 
+install(TARGETS maru_wayland_internal_iface EXPORT MaruTargets)
+
 set(iface_direct "maru_iface${MARU_LIB_SUFFIX}_direct")
 
 # Direct target objects
@@ -32,6 +34,5 @@ set_property(TARGET "maru_wayland_indirect_obj" PROPERTY POSITION_INDEPENDENT_CO
 add_library("maru_wayland${MARU_LIB_SUFFIX}" ${MARU_LIB_TYPE}
     $<TARGET_OBJECTS:maru_wayland_obj>
     $<TARGET_OBJECTS:maru_base_obj>
-    $<$<BOOL:${MARU_ENABLE_VULKAN}>:$<TARGET_OBJECTS:maru_vulkan_wayland_obj>>
 )
 target_link_libraries("maru_wayland${MARU_LIB_SUFFIX}" PUBLIC ${iface_direct})

@@ -9,7 +9,6 @@ else()
 endif()
 
 # Optional modules you can disable if you so chose.
-option(MARU_ENABLE_VULKAN "Enable Vulkan surface binding" ON)
 option(MARU_USE_FLOAT "Use float instead of double for logical coordinates" OFF)
 
 if(MARU_USE_FLOAT)
@@ -43,6 +42,7 @@ add_subdirectory(src)
 # Define library aliases
 if (WIN32)
   add_library(maru::maru ALIAS maru_windows${MARU_LIB_SUFFIX})
+  add_library(maru::vulkan ALIAS maru_vulkan_windows${MARU_LIB_SUFFIX})
 elseif (APPLE)
   add_library(maru::maru ALIAS maru_macos${MARU_LIB_SUFFIX})
 else()
@@ -51,6 +51,11 @@ else()
   # Backend aliases
   add_library(maru::wayland ALIAS maru_wayland${MARU_LIB_SUFFIX})
   add_library(maru::x11 ALIAS maru_x11${MARU_LIB_SUFFIX})
+
+  # Vulkan aliases
+  add_library(maru::vulkan ALIAS maru_vulkan_linux${MARU_LIB_SUFFIX})
+  add_library(maru::vulkan_wayland ALIAS maru_vulkan_wayland${MARU_LIB_SUFFIX})
+  add_library(maru::vulkan_x11 ALIAS maru_vulkan_x11${MARU_LIB_SUFFIX})
 endif()
 
 if(MARU_BUILD_EXAMPLES)
@@ -65,15 +70,15 @@ endif()
 # Set export names for consistent cross-platform usage
 if (WIN32)
   set_target_properties(maru_windows${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
-  set(MARU_INSTALL_TARGETS maru_windows${MARU_LIB_SUFFIX})
+  list(APPEND MARU_INSTALL_TARGETS maru_windows${MARU_LIB_SUFFIX})
 elseif (APPLE)
   set_target_properties(maru_macos${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
-  set(MARU_INSTALL_TARGETS maru_macos${MARU_LIB_SUFFIX})
+  list(APPEND MARU_INSTALL_TARGETS maru_macos${MARU_LIB_SUFFIX})
 else()
   set_target_properties(maru_linux${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
   set_target_properties(maru_wayland${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME wayland${MARU_LIB_SUFFIX})
   set_target_properties(maru_x11${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME x11${MARU_LIB_SUFFIX})
-  set(MARU_INSTALL_TARGETS maru_linux${MARU_LIB_SUFFIX} maru_wayland${MARU_LIB_SUFFIX} maru_x11${MARU_LIB_SUFFIX})
+  list(APPEND MARU_INSTALL_TARGETS maru_linux${MARU_LIB_SUFFIX} maru_wayland${MARU_LIB_SUFFIX} maru_x11${MARU_LIB_SUFFIX})
 endif()
 
 # Installation

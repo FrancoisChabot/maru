@@ -68,8 +68,9 @@ typedef struct MARU_Context_Base {
   uint32_t window_cache_count;
   uint32_t window_cache_capacity;
 
-  void *extension_vtables[MARU_EXT_COUNT];
-  MARU_ExtensionCleanupCallback extension_cleanups[MARU_EXT_COUNT];
+  uint32_t extension_count;
+  void **extension_vtables;
+  MARU_ExtensionCleanupCallback *extension_cleanups;
 
 #ifdef MARU_VALIDATE_API_CALLS
   MARU_ThreadId creator_thread;
@@ -132,6 +133,33 @@ void _maru_init_window_base(MARU_Window_Base *win_base, MARU_Context_Base *ctx_b
 void _maru_cleanup_window_base(MARU_Window_Base *win_base);
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor);
+
+typedef void (*MARU_ExtAutoInitFunc)(MARU_Context *ctx, MARU_ExtensionID id);
+
+typedef struct MARU_ExtensionDescriptor {
+    const char *name;
+    MARU_ExtAutoInitFunc init_func;
+} MARU_ExtensionDescriptor;
+
+#if defined(_WIN32)
+    // MSVC uses alphabetical sorting of section names. 
+    // $a is start, $b is data, $c is stop.
+    #pragma section(".maru_ext$a", read)
+    #pragma section(".maru_ext$b", read)
+    #pragma section(".maru_ext$c", read)
+
+    #define MARU_REGISTER_EXTENSION(name, init_fn) \
+        static const MARU_ExtensionDescriptor _maru_desc_##init_fn = { name, init_fn }; \
+        __declspec(allocate(".maru_ext$b")) \
+        const MARU_ExtensionDescriptor* const _maru_ext_ptr_##init_fn = &_maru_desc_##init_fn;
+#else
+    #define MARU_REGISTER_EXTENSION(name, init_fn) \
+        static const MARU_ExtensionDescriptor _maru_desc_##init_fn = { name, init_fn }; \
+        const MARU_ExtensionDescriptor* const _maru_ext_ptr_##init_fn \
+        __attribute__((section("maru_ext_hooks"), used)) = &_maru_desc_##init_fn;
+#endif
+
+void _maru_init_all_extensions(MARU_Context *ctx);
 
 #ifdef __cplusplus
 }

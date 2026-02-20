@@ -79,10 +79,8 @@ typedef enum MARU_Status {
 } MARU_Status;
 
 /** @brief Identifiers for formalized library extensions. */
-typedef enum MARU_ExtensionID {
-  MARU_EXT_VULKAN = 0,
-  MARU_EXT_COUNT
-} MARU_ExtensionID;
+typedef uint32_t MARU_ExtensionID;
+#define MARU_EXT_INVALID ((MARU_ExtensionID)-1)
 
 /** @brief Supported windowing backends. */
 typedef enum MARU_BackendType {

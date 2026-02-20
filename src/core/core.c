@@ -73,10 +73,17 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
 }
 
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
-  for (uint32_t i = 0; i < MARU_EXT_COUNT; i++) {
+  for (uint32_t i = 0; i < ctx_base->extension_count; i++) {
     if (ctx_base->extension_cleanups[i]) {
       ctx_base->extension_cleanups[i]((MARU_Context *)ctx_base, ctx_base->extension_vtables[i]);
     }
+  }
+
+  if (ctx_base->extension_vtables) {
+    maru_context_free(ctx_base, ctx_base->extension_vtables);
+  }
+  if (ctx_base->extension_cleanups) {
+    maru_context_free(ctx_base, ctx_base->extension_cleanups);
   }
 
   for (uint32_t i = 0; i < ctx_base->monitor_cache_count; i++) {
@@ -377,6 +384,41 @@ MARU_API MARU_Status maru_registerExtension(MARU_Context *context, MARU_Extensio
 MARU_API void *maru_getExtension(const MARU_Context *context, MARU_ExtensionID id) {
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->extension_vtables[id];
+}
+
+#if defined(_WIN32)
+    __declspec(allocate(".maru_ext$a")) static const void* const _maru_ext_start_marker = NULL;
+    __declspec(allocate(".maru_ext$c")) static const void* const _maru_ext_stop_marker = NULL;
+#endif
+
+void _maru_init_all_extensions(MARU_Context *ctx) {
+#if defined(_WIN32)
+    const MARU_ExtensionDescriptor* const* it = (const MARU_ExtensionDescriptor* const*)(&_maru_ext_start_marker + 1);
+    const MARU_ExtensionDescriptor* const* end = (const MARU_ExtensionDescriptor* const*)(&_maru_ext_stop_marker);
+#else
+    extern const MARU_ExtensionDescriptor* const __start_maru_ext_hooks __attribute__((weak));
+    extern const MARU_ExtensionDescriptor* const __stop_maru_ext_hooks __attribute__((weak));
+    const MARU_ExtensionDescriptor* const* it = &__start_maru_ext_hooks;
+    const MARU_ExtensionDescriptor* const* end = &__stop_maru_ext_hooks;
+
+    if (!it || !end) return;
+#endif
+
+    uint32_t count = (uint32_t)(end - it);
+    if (count == 0) return;
+
+    MARU_Context_Base *base = (MARU_Context_Base*)ctx;
+    base->extension_count = count;
+    base->extension_vtables = maru_context_alloc(base, sizeof(void*) * count);
+    base->extension_cleanups = maru_context_alloc(base, sizeof(MARU_ExtensionCleanupCallback) * count);
+    memset(base->extension_vtables, 0, sizeof(void*) * count);
+    memset(base->extension_cleanups, 0, sizeof(MARU_ExtensionCleanupCallback) * count);
+
+    for (uint32_t i = 0; i < count; ++i) {
+        if (it[i] && it[i]->init_func) {
+            it[i]->init_func(ctx, i);
+        }
+    }
 }
 
 MARU_API void *maru_contextAlloc(MARU_Context *context, size_t size) {

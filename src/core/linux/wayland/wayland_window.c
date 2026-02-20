@@ -419,7 +419,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_destroyWindow_WL(MARU_Window_handle) {
+MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 

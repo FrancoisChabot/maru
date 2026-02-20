@@ -36,6 +36,8 @@ static const MARU_Backend _maru_mock_backend = {
     .getMonitorModes = NULL,
     .setMonitorMode = NULL,
     .resetMonitorMetrics = NULL,
+    .getContextNativeHandle = NULL,
+    .getWindowNativeHandle = NULL,
 };
 #endif
 
@@ -59,11 +61,6 @@ static inline MARU_Context* maru_test_createContext(const MARU_ContextCreateInfo
     ctx->pub.flags = MARU_CONTEXT_STATE_READY;
     ctx->diagnostic_cb = create_info->attributes.diagnostic_cb;
     ctx->diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-
-    for (int i = 0; i < MARU_EXT_COUNT; ++i) {
-        ctx->extension_vtables[i] = NULL;
-        ctx->extension_cleanups[i] = NULL;
-    }
 
 #ifdef MARU_INDIRECT_BACKEND
     ctx->backend = &_maru_mock_backend;

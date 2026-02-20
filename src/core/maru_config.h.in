@@ -8,7 +8,6 @@
 
 // Extensions
 #cmakedefine MARU_ENABLE_CONTROLLERS
-#cmakedefine MARU_ENABLE_VULKAN
 
 // Backends
 #cmakedefine MARU_ENABLE_BACKEND_WAYLAND
