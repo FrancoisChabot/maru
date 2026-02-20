@@ -35,6 +35,7 @@ static const MARU_Backend _maru_mock_backend = {
     .destroyMonitor = NULL,
     .getMonitorModes = NULL,
     .setMonitorMode = NULL,
+    .resetMonitorMetrics = NULL,
 #ifdef MARU_ENABLE_VULKAN
     .getVkExtensions = NULL,
     .createVkSurface = NULL

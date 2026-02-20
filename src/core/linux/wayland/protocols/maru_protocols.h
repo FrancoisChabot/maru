@@ -12,12 +12,13 @@
 #include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 
 extern const struct xdg_wm_base_listener _maru_xdg_wm_base_listener;
+extern const struct wl_seat_listener _maru_wayland_seat_listener;
 
 // Required interfaces
 #define MARU_WL_REGISTRY_REQUIRED_BINDINGS                                 \
   MARU_WL_REGISTRY_BINDING_ENTRY(wl_compositor, 4, NULL)                   \
   MARU_WL_REGISTRY_BINDING_ENTRY(wl_shm, 1, NULL)                          \
-  MARU_WL_REGISTRY_BINDING_ENTRY(wl_seat, 5, NULL)                         \
+  MARU_WL_REGISTRY_BINDING_ENTRY(wl_seat, 5, &_maru_wayland_seat_listener)  \
   MARU_WL_REGISTRY_BINDING_ENTRY(xdg_wm_base, 1, &_maru_xdg_wm_base_listener)
 
 // Optional interfaces

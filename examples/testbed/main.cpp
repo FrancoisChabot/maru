@@ -267,11 +267,12 @@ int main() {
   create_vulkan_instance(vk_extensions.count, (const char **)vk_extensions.extensions);
   pick_physical_device();
 
-  MARU_WindowCreateInfo window_info;
+  MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru ImGui Testbed";
   window_info.attributes.logical_size = {1280, 720};
   window_info.attributes.position = {0, 0};
   window_info.userdata = NULL;
+  window_info.app_id = "maru.testbed";
 
   MARU_Status win_status = maru_createWindow(context, &window_info, &main_window);
   if (win_status != MARU_SUCCESS) {

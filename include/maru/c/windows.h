@@ -184,6 +184,7 @@ typedef union MARU_BackendHandle {
                   .monitor = NULL,                              \
                   .min_size = {0, 0},                           \
                   .max_size = {0, 0},                           \
+                  .position = {0, 0},                           \
                   .aspect_ratio = {0, 0},                       \
                   .resizable = true,                            \
                   .decorated = true,                            \
@@ -195,7 +196,8 @@ typedef union MARU_BackendHandle {
                   .event_mask = MARU_ALL_EVENTS},               \
    .app_id = "maru.app",                                        \
    .content_type = MARU_CONTENT_TYPE_NONE,                      \
-   .transparent = false                                         \
+   .transparent = false,                                         \
+   .userdata = NULL                                             \
   }
 
 /** @brief Creates a new window. */

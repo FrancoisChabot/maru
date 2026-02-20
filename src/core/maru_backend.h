@@ -40,6 +40,7 @@ typedef struct MARU_Backend {
                                  MARU_VideoModeList *out_list);
   MARU_Status (*setMonitorMode)(const MARU_Monitor *monitor,
                                 MARU_VideoMode mode);
+  MARU_Status (*resetMonitorMetrics)(MARU_Monitor *monitor);
 
 #ifdef MARU_ENABLE_VULKAN
   MARU_Status (*getVkExtensions)(MARU_Context *context,

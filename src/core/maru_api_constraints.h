@@ -121,6 +121,7 @@ static inline MARU_Status _maru_validate_createCursor(MARU_Context *context,
 
 static inline MARU_Status _maru_validate_destroyCursor(MARU_Cursor *cursor) {
     MARU_CONSTRAINT_CHECK(cursor != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(!maru_isCursorSystem(cursor), MARU_ERROR_INVALID_USAGE);
     return MARU_SUCCESS;
 }
 

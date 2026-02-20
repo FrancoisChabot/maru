@@ -17,28 +17,29 @@ void *libdecor_get_userdata(struct libdecor *context);
   MARU_LIB_FN(unref)                          \
   MARU_LIB_FN(decorate)                       \
   MARU_LIB_FN(frame_unref)                    \
-  MARU_LIB_FN(frame_set_title)                \
-  MARU_LIB_FN(frame_set_app_id)               \
+  MARU_LIB_FN(frame_set_title)               \
+  MARU_LIB_FN(frame_set_app_id)              \
   MARU_LIB_FN(frame_set_capabilities)         \
-  MARU_LIB_FN(frame_map)                      \
-  MARU_LIB_FN(frame_set_visibility)           \
-  MARU_LIB_FN(frame_commit)                   \
-  MARU_LIB_FN(frame_get_xdg_toplevel)         \
-  MARU_LIB_FN(frame_get_xdg_surface)          \
-  MARU_LIB_FN(frame_set_min_content_size)     \
-  MARU_LIB_FN(frame_set_max_content_size)     \
-  MARU_LIB_FN(frame_get_min_content_size)     \
-  MARU_LIB_FN(frame_get_max_content_size)     \
-  MARU_LIB_FN(frame_set_fullscreen)           \
-  MARU_LIB_FN(frame_unset_fullscreen)         \
-  MARU_LIB_FN(frame_set_maximized)            \
-  MARU_LIB_FN(frame_unset_maximized)          \
-  MARU_LIB_FN(frame_translate_coordinate)     \
+  MARU_LIB_FN(frame_map)                     \
+  MARU_LIB_FN(frame_set_visibility)          \
+  MARU_LIB_FN(frame_commit)                  \
+  MARU_LIB_FN(frame_get_xdg_toplevel)        \
+  MARU_LIB_FN(frame_get_xdg_surface)         \
+  MARU_LIB_FN(frame_set_min_content_size)    \
+  MARU_LIB_FN(frame_set_max_content_size)    \
+  MARU_LIB_FN(frame_get_min_content_size)    \
+  MARU_LIB_FN(frame_get_max_content_size)    \
+  MARU_LIB_FN(frame_set_fullscreen)          \
+  MARU_LIB_FN(frame_unset_fullscreen)        \
+  MARU_LIB_FN(frame_set_maximized)           \
+  MARU_LIB_FN(frame_unset_maximized)         \
+  MARU_LIB_FN(frame_translate_coordinate)    \
   MARU_LIB_FN(state_new)                      \
   MARU_LIB_FN(state_free)                     \
   MARU_LIB_FN(configuration_get_content_size) \
   MARU_LIB_FN(configuration_get_window_state) \
   MARU_LIB_FN(dispatch)                       \
+  MARU_LIB_FN(get_fd)                         \
   MARU_LIB_OPT_FN(set_userdata)               \
   MARU_LIB_OPT_FN(get_userdata)
 
