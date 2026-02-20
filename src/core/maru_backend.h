@@ -10,6 +10,8 @@
 typedef struct MARU_Backend {
   MARU_Status (*destroyContext)(MARU_Context *context);
   MARU_Status (*pumpEvents)(MARU_Context *context, uint32_t timeout_ms);
+  MARU_Status (*updateContext)(MARU_Context *context, uint64_t field_mask,
+                               const MARU_ContextAttributes *attributes);
 
   MARU_Status (*createWindow)(MARU_Context *context,
                               const MARU_WindowCreateInfo *create_info,
@@ -17,6 +19,16 @@ typedef struct MARU_Backend {
   MARU_Status (*destroyWindow)(MARU_Window *window);
   MARU_Status (*getWindowGeometry)(MARU_Window *window,
                                    MARU_WindowGeometry *out_geometry);
+  MARU_Status (*updateWindow)(MARU_Window *window, uint64_t field_mask,
+                               const MARU_WindowAttributes *attributes);
+  MARU_Status (*requestWindowFocus)(MARU_Window *window);
+  MARU_Status (*getWindowBackendHandle)(MARU_Window *window,
+                                         MARU_BackendType *out_type,
+                                         MARU_BackendHandle *out_handle);
+
+  MARU_Status (*getStandardCursor)(MARU_Context *context, MARU_CursorShape shape,
+                                   MARU_Cursor **out_cursor);
+  MARU_Status (*wakeContext)(MARU_Context *context);
 
 #ifdef MARU_ENABLE_VULKAN
   MARU_Status (*getVkExtensions)(MARU_Context *context,

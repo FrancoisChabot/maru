@@ -34,9 +34,11 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.pub.userdata = create_info->userdata;
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_cb = create_info->attributes.event_cb;
-  ctx->base.event_userdata = create_info->attributes.event_userdata;
+  ctx->base.event_cb = create_info->attributes.event_callback;
   ctx->base.event_mask = create_info->attributes.event_mask;
+
+  ctx->base.metrics.user_events = &ctx->base.user_event_metrics;
+  ctx->base.pub.metrics = &ctx->base.metrics;
 
   if (create_info->tuning) {
     ctx->base.tuning = *create_info->tuning;
@@ -61,6 +63,8 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
+
+  ctx->owner_thread_id = GetCurrentThreadId();
 
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
@@ -101,5 +105,68 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms) 
     }
   }
   
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_updateContext_Windows(MARU_Context *context, uint64_t field_mask,
+                                          const MARU_ContextAttributes *attributes) {
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+
+  _maru_update_context_base(&ctx->base, field_mask, attributes);
+
+  if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
+    // TODO: Implement idle inhibition
+  }
+
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_getStandardCursor_Windows(MARU_Context *context, MARU_CursorShape shape,
+                                            MARU_Cursor **out_cursor) {
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+  LPCSTR id;
+
+  switch (shape) {
+    case MARU_CURSOR_SHAPE_DEFAULT: id = IDC_ARROW; break;
+    case MARU_CURSOR_SHAPE_HELP: id = IDC_HELP; break;
+    case MARU_CURSOR_SHAPE_HAND: id = IDC_HAND; break;
+    case MARU_CURSOR_SHAPE_WAIT: id = IDC_WAIT; break;
+    case MARU_CURSOR_SHAPE_CROSSHAIR: id = IDC_CROSS; break;
+    case MARU_CURSOR_SHAPE_TEXT: id = IDC_IBEAM; break;
+    case MARU_CURSOR_SHAPE_MOVE: id = IDC_SIZEALL; break;
+    case MARU_CURSOR_SHAPE_NOT_ALLOWED: id = IDC_NO; break;
+    case MARU_CURSOR_SHAPE_EW_RESIZE: id = IDC_SIZEWE; break;
+    case MARU_CURSOR_SHAPE_NS_RESIZE: id = IDC_SIZENS; break;
+    case MARU_CURSOR_SHAPE_NESW_RESIZE: id = IDC_SIZENESW; break;
+    case MARU_CURSOR_SHAPE_NWSE_RESIZE: id = IDC_SIZENWSE; break;
+    default: return MARU_FAILURE;
+  }
+
+  HCURSOR hcursor = LoadCursor(NULL, id);
+  if (!hcursor) {
+    return MARU_FAILURE;
+  }
+
+  MARU_Cursor_Windows *cursor = (MARU_Cursor_Windows *)maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_Windows));
+  if (!cursor) {
+    return MARU_FAILURE;
+  }
+  memset(cursor, 0, sizeof(MARU_Cursor_Windows));
+
+  cursor->base.ctx_base = &ctx->base;
+  cursor->base.pub.metrics = &cursor->base.metrics;
+  cursor->base.pub.flags = MARU_CURSOR_FLAG_SYSTEM;
+#ifdef MARU_INDIRECT_BACKEND
+  cursor->base.backend = ctx->base.backend;
+#endif
+  cursor->hcursor = hcursor;
+
+  *out_cursor = (MARU_Cursor *)cursor;
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_wakeContext_Windows(MARU_Context *context) {
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+  PostThreadMessageA(ctx->owner_thread_id, WM_NULL, 0, 0);
   return MARU_SUCCESS;
 }

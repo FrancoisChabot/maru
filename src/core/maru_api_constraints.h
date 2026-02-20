@@ -71,6 +71,50 @@ static inline MARU_Status _maru_validate_getWindowGeometry(MARU_Window *window,
     return MARU_SUCCESS;
 }
 
+static inline MARU_Status _maru_validate_updateWindow(MARU_Window *window, uint64_t field_mask,
+                                         const MARU_WindowAttributes *attributes) {
+    MARU_CONSTRAINT_CHECK(window != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(attributes != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_requestWindowFocus(MARU_Window *window) {
+    MARU_CONSTRAINT_CHECK(window != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_getWindowBackendHandle(MARU_Window *window,
+                                               MARU_BackendType *out_type,
+                                               MARU_BackendHandle *out_handle) {
+    MARU_CONSTRAINT_CHECK(window != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_type != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_handle != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_resetContextMetrics(MARU_Context *context) {
+    MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_resetWindowMetrics(MARU_Window *window) {
+    MARU_CONSTRAINT_CHECK(window != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_getStandardCursor(MARU_Context *context, MARU_CursorShape shape,
+                                                            MARU_Cursor **out_cursor) {
+    MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_cursor != NULL, MARU_ERROR_INVALID_USAGE);
+    (void)shape;
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_wakeContext(MARU_Context *context) {
+    MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
 #ifdef MARU_ENABLE_VULKAN
 static inline MARU_Status _maru_validate_getVkExtensions(MARU_Context *context, MARU_ExtensionList *out_list) {
     MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);

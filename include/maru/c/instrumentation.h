@@ -7,8 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "maru/c/core.h"
 #include "maru/c/contexts.h"
+#include "maru/c/core.h"
 
 /**
  * @file instrumentation.h
@@ -42,11 +42,11 @@ typedef struct MARU_DiagnosticInfo {
   MARU_Diagnostic diagnostic;
   const char *message;
   MARU_Context *context;
-  struct MARU_Window *window; // Window handles don't exist yet, but we'll need this.
+  MARU_Window *window;
 } MARU_DiagnosticInfo;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // MARU_INSTRUMENTATION_H_INCLUDED
+#endif // MARU_INSTRUMENTATION_H_INCLUDED

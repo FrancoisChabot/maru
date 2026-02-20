@@ -23,7 +23,6 @@ extern "C" {
 typedef struct MARU_Window MARU_Window;
 /** @brief Unified standard event payload union. */
 struct MARU_Event;
-struct MARU_DataRequestEvent;
 
 /** @brief Supported Drag and Drop actions for OS feedback. */
 typedef enum MARU_DropAction {
@@ -61,6 +60,8 @@ typedef enum MARU_DataProvideFlags {
   /** Request zero-copy delivery */
   MARU_DATA_PROVIDE_FLAG_ZERO_COPY = 1 << 0,
 } MARU_DataProvideFlags;
+
+struct MARU_DataRequestEvent;
 
 /** @brief Provides the actual payload in response to an `MARU_DATA_REQUESTED` event. */
 MARU_Status maru_provideData(const struct MARU_DataRequestEvent *request_event,

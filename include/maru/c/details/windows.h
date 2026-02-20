@@ -4,11 +4,15 @@
 #ifndef MARU_DETAILS_WINDOWS_H_INCLUDED
 #define MARU_DETAILS_WINDOWS_H_INCLUDED
 
-#include "maru/c/windows.h"
+#include "maru/c/core.h"
+#include "maru/c/metrics.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct MARU_Context MARU_Context;
+typedef struct MARU_Window MARU_Window;
 
 /** @brief Internal representation of MARU_Window. 
     CHANGING THIS REQUIRES A MAJOR VERSION BUMP
@@ -17,6 +21,11 @@ typedef struct MARU_WindowExposed {
   void *userdata;
   MARU_Context *context;
   uint64_t flags;
+  const MARU_WindowMetrics *metrics;
+
+  const MARU_ButtonState8 *keyboard_state;
+  uint32_t keyboard_key_count;
+  MARU_EventMask event_mask;
 } MARU_WindowExposed;
 
 static inline void *maru_getWindowUserdata(const MARU_Window *window) {
@@ -49,6 +58,14 @@ static inline bool maru_isWindowMaximized(const MARU_Window *window) {
 
 static inline bool maru_isWindowFullscreen(const MARU_Window *window) {
   return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
+}
+
+static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window) {
+  return ((const MARU_WindowExposed *)window)->event_mask;
+}
+
+static inline const MARU_WindowMetrics *maru_getWindowMetrics(const MARU_Window *window) {
+  return ((const MARU_WindowExposed *)window)->metrics;
 }
 
 #ifdef __cplusplus

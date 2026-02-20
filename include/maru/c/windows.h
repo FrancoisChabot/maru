@@ -7,8 +7,18 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef MARU_ENABLE_BACKEND_X11
+#include <X11/Xlib.h>
+#endif
+
+#ifdef MARU_ENABLE_BACKEND_WINDOWS
+#include <windows.h>
+#endif
+
 #include "maru/c/core.h"
+#include "maru/c/contexts.h"
 #include "maru/c/geometry.h"
+#include "maru/c/metrics.h"
 
 /**
  * @file windows.h
@@ -19,53 +29,31 @@
 extern "C" {
 #endif
 
+/** @brief Opaque handle representing the library state and display server connection. */
 typedef struct MARU_Context MARU_Context;
+/** @brief Opaque handle representing an OS-level window. */
 typedef struct MARU_Window MARU_Window;
+/** @brief Opaque handle representing a hardware-accelerated cursor. */
+typedef struct MARU_Cursor MARU_Cursor;
+/** @brief Persistent handle representing a physical monitor. */
+typedef struct MARU_Monitor MARU_Monitor;
 
-/** @brief Runtime state flags for a window. */
-typedef enum MARU_WindowStateFlagBits {
-  MARU_WINDOW_STATE_LOST = 1ULL << 0,
-  MARU_WINDOW_STATE_READY = 1ULL << 1,
-  MARU_WINDOW_STATE_FOCUSED = 1ULL << 2,
-  MARU_WINDOW_STATE_MAXIMIZED = 1ULL << 3,
-  MARU_WINDOW_STATE_FULLSCREEN = 1ULL << 4,
-} MARU_WindowStateFlagBits;
-
-/** @brief Live-updatable window properties. */
-typedef struct MARU_WindowAttributes {
-  const char *title;
-  MARU_Vec2Dip logical_size;
-} MARU_WindowAttributes;
-
-/** @brief Parameters for maru_createWindow(). */
-typedef struct MARU_WindowCreateInfo {
-  MARU_WindowAttributes attributes;
-  void *userdata;
-} MARU_WindowCreateInfo;
-
-/** @brief Creates a new window. */
-MARU_API MARU_Status maru_createWindow(MARU_Context *context,
-                                         const MARU_WindowCreateInfo *create_info,
-                                         MARU_Window **out_window);
-
-/** @brief Destroys a window. */
-MARU_API MARU_Status maru_destroyWindow(MARU_Window *window);
-
-/** @brief Returns window geometry. */
-MARU_API MARU_Status maru_getWindowGeometry(MARU_Window *window,
-                                              MARU_WindowGeometry *out_geometry);
-
-/** @brief Default initialization macro for MARU_WindowCreateInfo. */
-#define MARU_WINDOW_CREATE_INFO_DEFAULT                         \
-  {.attributes = {.title = "MARU Window"},                       \
-   .userdata = NULL                                             \
-  }
+/* ----- Passive Accessors (External Synchronization Required) ----- 
+ *
+ * These functions are essentially zero-cost member accesses. They are safe to 
+ * call from any thread, provided the access is synchronized with mutating 
+ * operations (like maru_pumpEvents or maru_updateWindow) on the same window 
+ * to ensure memory visibility.
+ */
 
 /** @brief Retrieves the user-defined data pointer associated with a window. */
 static inline void *maru_getWindowUserdata(const MARU_Window *window);
 
 /** @brief Sets the user-defined data pointer associated with a window. */
 static inline void maru_setWindowUserdata(MARU_Window *window, void *userdata);
+
+/** @brief Retrieves the context that owns the specified window. */
+static inline MARU_Context *maru_getWindowContext(const MARU_Window *window);
 
 /** @brief Checks if the window has been lost due to an unrecoverable error. */
 static inline bool maru_isWindowLost(const MARU_Window *window);
@@ -81,6 +69,163 @@ static inline bool maru_isWindowMaximized(const MARU_Window *window);
 
 /** @brief Checks if the window is currently in fullscreen mode. */
 static inline bool maru_isWindowFullscreen(const MARU_Window *window);
+
+/** @brief Retrieves the current event mask for a window. */
+static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window);
+
+/** @brief Retrieves the runtime performance metrics for a window. */
+static inline const MARU_WindowMetrics *maru_getWindowMetrics(const MARU_Window *window);
+
+/** @brief Cursor visibility and constraint modes. */
+typedef enum MARU_CursorMode {
+  MARU_CURSOR_NORMAL = 0,
+  MARU_CURSOR_HIDDEN = 1,
+  MARU_CURSOR_LOCKED = 2,
+} MARU_CursorMode;
+
+/** @brief Semantic hints for compositor optimization. */
+typedef enum MARU_ContentType {
+  MARU_CONTENT_TYPE_NONE = 0,
+  MARU_CONTENT_TYPE_PHOTO = 1,
+  MARU_CONTENT_TYPE_VIDEO = 2,
+  MARU_CONTENT_TYPE_GAME = 3,
+} MARU_ContentType;
+
+/** @brief Semantic hints for the Input Method Editor. */
+typedef enum MARU_TextInputType {
+  MARU_TEXT_INPUT_TYPE_NONE = 0,
+  MARU_TEXT_INPUT_TYPE_TEXT,
+  MARU_TEXT_INPUT_TYPE_PASSWORD,
+  MARU_TEXT_INPUT_TYPE_EMAIL,
+  MARU_TEXT_INPUT_TYPE_NUMERIC,
+} MARU_TextInputType;
+
+/** @brief Bitmask for selecting which attributes to update in
+ * maru_updateWindow(). */
+typedef enum MARU_WindowAttributesField {
+  MARU_WINDOW_ATTR_TITLE = 1ULL << 0,
+  MARU_WINDOW_ATTR_LOGICAL_SIZE = 1ULL << 1,
+  MARU_WINDOW_ATTR_FULLSCREEN = 1ULL << 2,
+  MARU_WINDOW_ATTR_CURSOR_MODE = 1ULL << 3,
+  MARU_WINDOW_ATTR_CURSOR = 1ULL << 4,
+  MARU_WINDOW_ATTR_MONITOR = 1ULL << 5,
+  MARU_WINDOW_ATTR_MAXIMIZED = 1ULL << 6,
+  MARU_WINDOW_ATTR_MIN_SIZE = 1ULL << 7,
+  MARU_WINDOW_ATTR_MAX_SIZE = 1ULL << 8,
+  MARU_WINDOW_ATTR_POSITION = 1ULL << 9,
+  MARU_WINDOW_ATTR_ASPECT_RATIO = 1ULL << 10,
+  MARU_WINDOW_ATTR_RESIZABLE = 1ULL << 11,
+  MARU_WINDOW_ATTR_DECORATED = 1ULL << 12,
+  MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH = 1ULL << 13,
+  MARU_WINDOW_ATTR_ACCEPT_DROP = 1ULL << 14,
+  MARU_WINDOW_ATTR_TEXT_INPUT_TYPE = 1ULL << 15,
+  MARU_WINDOW_ATTR_TEXT_INPUT_RECT = 1ULL << 16,
+  MARU_WINDOW_ATTR_PRIMARY_SELECTION = 1ULL << 17,
+  MARU_WINDOW_ATTR_EVENT_MASK = 1ULL << 18,
+
+  MARU_WINDOW_ATTR_ALL = 0xFFFFFFFFFFFFFFFFULL,
+} MARU_WindowAttributesField;
+
+/** @brief Live-updatable window properties. */
+typedef struct MARU_WindowAttributes {
+  const char *title;
+  MARU_Vec2Dip logical_size;
+  bool fullscreen;
+  bool maximized;
+  MARU_CursorMode cursor_mode;
+  MARU_Cursor *cursor;
+  MARU_Monitor *monitor;
+  MARU_Vec2Dip min_size;
+  MARU_Vec2Dip max_size;
+  MARU_Vec2Dip position;
+  MARU_Fraction aspect_ratio;
+  bool resizable;
+  bool decorated;
+  bool mouse_passthrough;
+  bool accept_drop;
+  bool primary_selection;
+  MARU_TextInputType text_input_type;
+  MARU_RectDip text_input_rect;
+  MARU_EventMask event_mask;
+} MARU_WindowAttributes;
+
+/** @brief Parameters for maru_createWindow(). */
+typedef struct MARU_WindowCreateInfo {
+  MARU_WindowAttributes attributes;
+  const char *app_id;
+  MARU_ContentType content_type;
+  bool transparent;
+  void *userdata;
+} MARU_WindowCreateInfo;
+
+/** @brief Container for backend-specific window or surface handles. */
+typedef union MARU_BackendHandle {
+#ifdef MARU_ENABLE_BACKEND_WAYLAND
+  void *wayland_surface;
+#endif
+#ifdef MARU_ENABLE_BACKEND_X11
+  Window x11_window;      // x11 include conditional
+#endif
+#ifdef MARU_ENABLE_BACKEND_WINDOWS
+  HWND win32_hwnd;        // windows include conditional
+#endif
+#ifdef MARU_ENABLE_BACKEND_COCOA
+  void *cocoa_window;
+#endif
+} MARU_BackendHandle;
+
+/** @brief Default initialization macro for MARU_WindowCreateInfo. */
+#define MARU_WINDOW_CREATE_INFO_DEFAULT                         \
+  {.attributes = {.title = "MARU Window",                       \
+                  .logical_size = {800, 600},                   \
+                  .fullscreen = false,                          \
+                  .maximized = false,                           \
+                  .cursor_mode = MARU_CURSOR_NORMAL,            \
+                  .cursor = NULL,                               \
+                  .monitor = NULL,                              \
+                  .min_size = {0, 0},                           \
+                  .max_size = {0, 0},                           \
+                  .aspect_ratio = {0, 0},                       \
+                  .resizable = true,                            \
+                  .decorated = true,                            \
+                  .mouse_passthrough = false,                   \
+                  .accept_drop = false,                          \
+                  .primary_selection = true,                    \
+                  .text_input_type = MARU_TEXT_INPUT_TYPE_NONE, \
+                  .text_input_rect = {{0, 0}, {0, 0}},          \
+                  .event_mask = MARU_ALL_EVENTS},               \
+   .app_id = "maru.app",                                        \
+   .content_type = MARU_CONTENT_TYPE_NONE,                      \
+   .transparent = false                                         \
+  }
+
+/** @brief Creates a new window. */
+MARU_Status maru_createWindow(MARU_Context *context,
+                                         const MARU_WindowCreateInfo *create_info,
+                                         MARU_Window **out_window);
+
+/** @brief Destroys a window. */
+MARU_Status maru_destroyWindow(MARU_Window *window);
+
+/** @brief Updates window attributes. */
+MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
+                                         const MARU_WindowAttributes *attributes);
+
+/** @brief Returns window geometry. */
+MARU_Status maru_getWindowGeometry(MARU_Window *window,
+                                              MARU_WindowGeometry *out_geometry);
+
+/** @brief Requests input focus for a window. */
+MARU_Status maru_requestWindowFocus(MARU_Window *window);
+
+
+/** @brief Retrieves the native OS handle for the window. */
+MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
+                                        MARU_BackendType *out_type,
+                                        MARU_BackendHandle *out_handle);
+
+/** @brief Resets the metrics counters attached to a window handle. */
+MARU_Status maru_resetWindowMetrics(MARU_Window *window);
 
 #include "maru/c/details/windows.h"
 

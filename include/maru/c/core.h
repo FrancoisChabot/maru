@@ -8,17 +8,13 @@
 #include <stdint.h>
 
 #include "maru/c/details/maru_config.h"
-/**
- * @file core.h
- * @brief Core types, versioning, and memory management.
- */
 
 #ifndef MARU_API
-#ifdef _WIN32
-#if defined(MARU_BUILD_DLL)
-#define MARU_API __declspec(dllexport)
-#elif defined(MARU_STATIC)
+#ifdef MARU_STATIC
 #define MARU_API
+#elif defined(_WIN32)
+#ifdef MARU_BUILDING_DLL
+#define MARU_API __declspec(dllexport)
 #else
 #define MARU_API __declspec(dllimport)
 #endif
@@ -26,6 +22,11 @@
 #define MARU_API __attribute__((visibility("default")))
 #endif
 #endif
+
+/**
+ * @file core.h
+ * @brief Core types, versioning, and memory management.
+ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,7 +40,7 @@ typedef struct MARU_Version {
 } MARU_Version;
 
 /** @brief Retrieves the linked version of the MARU library. */
-MARU_API MARU_Version maru_getVersion(void);
+MARU_Version maru_getVersion(void);
 
 /** @brief Function pointer for memory allocation. */
 typedef void *(*MARU_AllocationFunction)(size_t size, void *userdata);
@@ -81,8 +82,48 @@ typedef enum MARU_Status {
   MARU_ERROR_INVALID_USAGE = -1,
 } MARU_Status;
 
+/** @brief Runtime state flags for a context. */
+typedef enum MARU_ContextStateFlagBits {
+  MARU_CONTEXT_STATE_LOST = 1ULL << 0,
+  MARU_CONTEXT_STATE_READY = 1ULL << 1,
+} MARU_ContextStateFlagBits;
+
+/** @brief Runtime state flags for a window. */
+typedef enum MARU_WindowStateFlagBits {
+  MARU_WINDOW_STATE_LOST = 1ULL << 0,
+  MARU_WINDOW_STATE_READY = 1ULL << 1,
+  MARU_WINDOW_STATE_FOCUSED = 1ULL << 2,
+  MARU_WINDOW_STATE_MAXIMIZED = 1ULL << 3,
+  MARU_WINDOW_STATE_FULLSCREEN = 1ULL << 4,
+} MARU_WindowStateFlagBits;
+
+/** @brief Runtime state flags for a cursor. */
+typedef enum MARU_CursorStateFlagBits {
+  MARU_CURSOR_FLAG_SYSTEM = 1ULL << 0,
+} MARU_CursorStateFlagBits;
+
+/** @brief Runtime state flags for a monitor. */
+typedef enum MARU_MonitorStateFlagBits {
+  MARU_MONITOR_STATE_LOST = 1ULL << 0,
+} MARU_MonitorStateFlagBits;
+
 /** @brief Generic flags type. */
 typedef uint64_t MARU_Flags;
+
+/** @brief Bitmask for filtering events during polling or waiting. */
+typedef uint64_t MARU_EventMask;
+
+/** @brief Represents a single event type */
+typedef uint64_t MARU_EventType;
+
+/** @brief Tracks whether a button is currently pressed or released. */
+typedef enum MARU_ButtonState {
+  MARU_BUTTON_STATE_RELEASED = 0,
+  MARU_BUTTON_STATE_PRESSED = 1,
+} MARU_ButtonState;
+
+/** @brief 1-byte version of MARU_ButtonState for efficient array storage. */
+typedef uint8_t MARU_ButtonState8;
 
 #ifdef __cplusplus
 }

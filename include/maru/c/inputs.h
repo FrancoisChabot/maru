@@ -19,14 +19,6 @@ extern "C" {
 /** @brief Bitmask for active keyboard modifiers. */
 typedef uint64_t MARU_ModifierFlags;
 
-/** @brief Tracks whether a button is currently pressed or released. */
-typedef enum MARU_ButtonState {
-  MARU_BUTTON_STATE_RELEASED = 0,
-  MARU_BUTTON_STATE_PRESSED = 1,
-} MARU_ButtonState;
-
-/** @brief 1-byte version of MARU_ButtonState for efficient array storage. */
-typedef uint8_t MARU_ButtonState8;
 
 /** @brief Identifiers for physical keyboard keys. */
 typedef enum MARU_Key {
@@ -161,10 +153,35 @@ typedef enum MARU_MouseButton {
   MARU_MOUSE_BUTTON_8 = 7,
 } MARU_MouseButton;
 
+/** @brief State for a single continuous input axis. */
+typedef struct MARU_AnalogInputState {
+  MARU_Scalar value;
+} MARU_AnalogInputState;
+
+/** @brief Opaque handle representing an OS-level window. */
+typedef struct MARU_Window MARU_Window;
+
+/* ----- Passive Accessors (External Synchronization Required) ----- 
+ *
+ * These functions are essentially zero-cost member accesses. They are safe to 
+ * call from any thread, provided the access is synchronized with mutating 
+ * operations (like maru_pumpEvents) on the window's owner context to ensure 
+ * memory visibility.
+ */
+
+/** @brief Retrieves the number of keyboard keys supported for a window. */
+static inline uint32_t maru_getKeyboardButtonCount(const MARU_Window *window);
+
+/** @brief Retrieves the current state of all keyboard keys for a window. */
+static inline const MARU_ButtonState8 *maru_getKeyboardButtonStates(const MARU_Window *window);
+
+/** @brief Checks if a specific keyboard key is currently pressed for a window. */
+static inline bool maru_isKeyPressed(const MARU_Window *window, MARU_Key key);
+
 #ifdef __cplusplus
 }
 #endif
 
 #include "maru/c/details/inputs.h"
 
-#endif // MARU_INPUT_H_INCLUDED
+#endif  // MARU_INPUT_H_INCLUDED

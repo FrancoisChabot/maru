@@ -16,6 +16,7 @@ extern "C" {
 typedef struct MARU_ContextExposed {
   void *userdata;
   uint64_t flags;
+  const MARU_ContextMetrics *metrics;
 } MARU_ContextExposed;
 
 static inline void *maru_getContextUserdata(const MARU_Context *context) {
@@ -32,6 +33,10 @@ static inline bool maru_isContextLost(const MARU_Context *context) {
 
 static inline bool maru_isContextReady(const MARU_Context *context) {
   return (((const MARU_ContextExposed *)context)->flags & MARU_CONTEXT_STATE_READY) != 0;
+}
+
+static inline const MARU_ContextMetrics *maru_getContextMetrics(const MARU_Context *context) {
+  return ((const MARU_ContextExposed *)context)->metrics;
 }
 
 #ifdef __cplusplus

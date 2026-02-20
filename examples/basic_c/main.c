@@ -14,14 +14,18 @@ static VulkanRenderer renderer;
 static void handle_event(MARU_EventType type, MARU_Window *window,
                          const MARU_Event *event) {
   (void)window;
-  if (type == MARU_EVENT_TYPE_CLOSE_REQUESTED) {
+  if (type == MARU_CLOSE_REQUESTED) {
     keep_running = false;
-  } else if (type == MARU_EVENT_TYPE_WINDOW_RESIZED) {
+  } else if (type == MARU_WINDOW_RESIZED) {
     vulkan_renderer_on_resized(&renderer,
                                (uint32_t)event->resized.geometry.pixel_size.x,
                                (uint32_t)event->resized.geometry.pixel_size.y);
-  } else if (type == MARU_EVENT_TYPE_WINDOW_READY) {
+  } else if (type == MARU_WINDOW_READY) {
     window_ready = true;
+  } else if (type == MARU_KEY_STATE_CHANGED) {
+    if (event->key.raw_key == MARU_KEY_F && event->key.state == MARU_BUTTON_STATE_PRESSED) {
+      maru_setWindowFullscreen(window, !maru_isWindowFullscreen(window));
+    }
   }
 }
 
@@ -41,7 +45,7 @@ int main() {
   tuning.vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
   create_info.tuning = &tuning;
 
-  create_info.attributes.event_cb = (MARU_EventCallback)handle_event;
+  create_info.attributes.event_callback = (MARU_EventCallback)handle_event;
   create_info.attributes.event_mask = MARU_ALL_EVENTS;
   MARU_Context *context = NULL;
   if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {

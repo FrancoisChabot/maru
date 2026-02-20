@@ -8,6 +8,7 @@
 // The API headers define MARU_ContextExposed and MARU_WindowExposed
 #include "maru/c/details/contexts.h"
 #include "maru/c/details/windows.h"
+#include "maru/c/details/cursors.h"
 
 /**
  * @file maru_internal.h
@@ -47,17 +48,16 @@ typedef struct MARU_Context_Base {
   MARU_ContextTuning tuning;
 
   MARU_EventCallback event_cb;
-  void *event_userdata;
   MARU_EventMask event_mask;
+
+  MARU_ContextMetrics metrics;
+  MARU_UserEventMetrics user_event_metrics;
 
 #ifdef MARU_VALIDATE_API_CALLS
   MARU_ThreadId creator_thread;
 #endif
   // Internal common state will go here
 } MARU_Context_Base;
-
-void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const char *msg);
-void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type, MARU_Window *window, const MARU_Event *event);
 
 typedef struct MARU_Window_Base {
   MARU_WindowExposed pub;
@@ -66,8 +66,27 @@ typedef struct MARU_Window_Base {
 #endif
 
   MARU_Context_Base *ctx_base;
+  
+  MARU_WindowMetrics metrics;
+
+  MARU_ButtonState8 keyboard_state[MARU_KEY_COUNT];
   // Internal common state will go here
 } MARU_Window_Base;
+
+typedef struct MARU_Cursor_Base {
+  MARU_CursorExposed pub;
+#ifdef MARU_INDIRECT_BACKEND
+  const struct MARU_Backend *backend;
+#endif
+
+  MARU_Context_Base *ctx_base;
+  MARU_CursorMetrics metrics;
+} MARU_Cursor_Base;
+
+void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const char *msg);
+void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type, MARU_Window *window, const MARU_Event *event);
+void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);
+void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask, const MARU_WindowAttributes *attributes);
 
 #ifdef __cplusplus
 }

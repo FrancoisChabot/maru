@@ -139,9 +139,9 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
 
     switch (msg) {
     case WM_CLOSE: {
-      if (ctx->event_cb && (ctx->event_mask & MARU_EVENT_TYPE_CLOSE_REQUESTED)) {
-        MARU_Event evt = { .type = MARU_EVENT_TYPE_CLOSE_REQUESTED };
-        ctx->event_cb(MARU_EVENT_TYPE_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
+      if (ctx->event_cb && (ctx->event_mask & MARU_CLOSE_REQUESTED)) {
+        MARU_Event evt = { {0} };
+        ctx->event_cb(MARU_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
       }
       return 0;
     }
@@ -152,8 +152,13 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
       window->size.x = (MARU_Scalar)width;
       window->size.y = (MARU_Scalar)height;
 
+      if (wparam == SIZE_MAXIMIZED) {
+        window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+      } else if (wparam == SIZE_RESTORED) {
+        window->base.pub.flags &= ~MARU_WINDOW_STATE_MAXIMIZED;
+      }
+
       MARU_Event evt = {
-        .type = MARU_WINDOW_RESIZED,
         .resized = {
           .geometry = {
             .pixel_size = { width, height },
@@ -162,12 +167,18 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
         }
       };
       _maru_dispatch_event(ctx, MARU_WINDOW_RESIZED, (MARU_Window *)window, &evt);
+
+      if (wparam == SIZE_MAXIMIZED || wparam == SIZE_RESTORED) {
+        MARU_Event max_evt = {
+          .maximized = { .maximized = (wparam == SIZE_MAXIMIZED) }
+        };
+        _maru_dispatch_event(ctx, MARU_WINDOW_MAXIMIZED, (MARU_Window *)window, &max_evt);
+      }
       return 0;
     }
 
     case WM_MOUSEMOVE: {
       MARU_Event evt = {
-        .type = MARU_MOUSE_MOVED,
         .mouse_motion = {
           .position = { (MARU_Scalar)GET_X_LPARAM(lparam), (MARU_Scalar)GET_Y_LPARAM(lparam) }
         }
@@ -195,7 +206,6 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
         ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
 
       MARU_Event evt = {
-        .type = MARU_MOUSE_BUTTON_STATE_CHANGED,
         .mouse_button = {
           .button = button,
           .state = state,
@@ -208,7 +218,6 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
 
     case WM_MOUSEWHEEL: {
       MARU_Event evt = {
-        .type = MARU_MOUSE_SCROLLED,
         .mouse_scroll = {
           .delta = { 0, (MARU_Scalar)GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA },
           .steps = { 0, GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA }
@@ -220,7 +229,6 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
 
     case WM_MOUSEHWHEEL: {
       MARU_Event evt = {
-        .type = MARU_MOUSE_SCROLLED,
         .mouse_scroll = {
           .delta = { (MARU_Scalar)GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA, 0 },
           .steps = { GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA, 0 }
@@ -234,15 +242,39 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
     case WM_SYSKEYDOWN:
     case WM_KEYUP:
     case WM_SYSKEYUP: {
+      MARU_Key key = _maru_win32_map_key(wparam);
+      MARU_ButtonState state = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+      
+      if (key != MARU_KEY_UNKNOWN) {
+        window->base.keyboard_state[key] = (MARU_ButtonState8)state;
+      }
+
       MARU_Event evt = {
-        .type = MARU_KEY_STATE_CHANGED,
         .key = {
-          .raw_key = _maru_win32_map_key(wparam),
-          .state = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED,
+          .raw_key = key,
+          .state = state,
           .modifiers = _maru_win32_get_modifiers()
         }
       };
       _maru_dispatch_event(ctx, MARU_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
+      return 0;
+    }
+
+    case WM_SETFOCUS: {
+      window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
+      MARU_Event evt = {
+        .focus = { .focused = true }
+      };
+      _maru_dispatch_event(ctx, MARU_FOCUS_CHANGED, (MARU_Window *)window, &evt);
+      return 0;
+    }
+
+    case WM_KILLFOCUS: {
+      window->base.pub.flags &= ~MARU_WINDOW_STATE_FOCUSED;
+      MARU_Event evt = {
+        .focus = { .focused = false }
+      };
+      _maru_dispatch_event(ctx, MARU_FOCUS_CHANGED, (MARU_Window *)window, &evt);
       return 0;
     }
 
@@ -251,7 +283,6 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
       int len = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)&wparam, 1, utf8, 4, NULL, NULL);
       if (len > 0) {
         MARU_Event evt = {
-          .type = MARU_TEXT_INPUT_RECEIVED,
           .text_input = {
             .text = utf8,
             .length = (uint32_t)len
@@ -342,6 +373,11 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   window->base.backend = ctx->base.backend;
 #endif
 
+  window->base.pub.metrics = &window->base.metrics;
+  window->base.pub.keyboard_state = window->base.keyboard_state;
+  window->base.pub.keyboard_key_count = MARU_KEY_COUNT;
+  window->base.pub.event_mask = create_info->attributes.event_mask;
+
   window->size = create_info->attributes.logical_size;
   if (window->size.x <= 0) window->size.x = 800;
   if (window->size.y <= 0) window->size.y = 600;
@@ -365,9 +401,9 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
 
   window->base.pub.flags = MARU_WINDOW_STATE_READY;
 
-  if (ctx->base.event_cb && (ctx->base.event_mask & MARU_EVENT_TYPE_WINDOW_READY)) {
-      MARU_Event evt = { .type = MARU_EVENT_TYPE_WINDOW_READY };
-      ctx->base.event_cb(MARU_EVENT_TYPE_WINDOW_READY, (MARU_Window *)window, &evt);
+  if (ctx->base.event_cb && (ctx->base.event_mask & MARU_WINDOW_READY)) {
+      MARU_Event evt = { {0} };
+      ctx->base.event_cb(MARU_WINDOW_READY, (MARU_Window *)window, &evt);
   }
 
   *out_window = (MARU_Window *)window;
@@ -407,5 +443,80 @@ MARU_Status maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_Wind
       .pixel_size = { client_rect.right, client_rect.bottom },
   };
 
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field_mask,
+                                       const MARU_WindowAttributes *attributes) {
+  MARU_Window_Windows *window = (MARU_Window_Windows *)window_handle;
+
+  _maru_update_window_base(&window->base, field_mask, attributes);
+
+  if (field_mask & MARU_WINDOW_ATTR_TITLE) {
+    SetWindowTextA(window->hwnd, attributes->title);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
+    RECT rect = { 0, 0, (int)attributes->logical_size.x, (int)attributes->logical_size.y };
+    DWORD style = GetWindowLongA(window->hwnd, GWL_STYLE);
+    DWORD ex_style = GetWindowLongA(window->hwnd, GWL_EXSTYLE);
+    AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+    SetWindowPos(window->hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
+    if (attributes->fullscreen && !window->is_fullscreen) {
+      window->saved_style = GetWindowLongA(window->hwnd, GWL_STYLE);
+      window->saved_ex_style = GetWindowLongA(window->hwnd, GWL_EXSTYLE);
+      GetWindowRect(window->hwnd, &window->saved_rect);
+
+      MONITORINFO mi = { sizeof(mi) };
+      if (GetMonitorInfoA(MonitorFromWindow(window->hwnd, MONITOR_DEFAULTTONEAREST), &mi)) {
+        SetWindowLongA(window->hwnd, GWL_STYLE, window->saved_style & ~WS_OVERLAPPEDWINDOW);
+        SetWindowPos(window->hwnd, HWND_TOP,
+                     mi.rcMonitor.left, mi.rcMonitor.top,
+                     mi.rcMonitor.right - mi.rcMonitor.left,
+                     mi.rcMonitor.bottom - mi.rcMonitor.top,
+                     SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+        
+        window->is_fullscreen = true;
+        window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+      }
+    } else if (!attributes->fullscreen && window->is_fullscreen) {
+      SetWindowLongA(window->hwnd, GWL_STYLE, window->saved_style);
+      SetWindowLongA(window->hwnd, GWL_EXSTYLE, window->saved_ex_style);
+      SetWindowPos(window->hwnd, NULL,
+                   window->saved_rect.left, window->saved_rect.top,
+                   window->saved_rect.right - window->saved_rect.left,
+                   window->saved_rect.bottom - window->saved_rect.top,
+                   SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+      
+      window->is_fullscreen = false;
+      window->base.pub.flags &= ~MARU_WINDOW_STATE_FULLSCREEN;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
+    window->base.pub.event_mask = attributes->event_mask;
+  }
+
+  // TODO: implement other attributes
+
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window_handle) {
+  MARU_Window_Windows *window = (MARU_Window_Windows *)window_handle;
+  SetForegroundWindow(window->hwnd);
+  SetFocus(window->hwnd);
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_getWindowBackendHandle_Windows(MARU_Window *window_handle,
+                                               MARU_BackendType *out_type,
+                                               MARU_BackendHandle *out_handle) {
+  MARU_Window_Windows *window = (MARU_Window_Windows *)window_handle;
+  *out_type = MARU_BACKEND_WINDOWS;
+  out_handle->win32_hwnd = window->hwnd;
   return MARU_SUCCESS;
 }

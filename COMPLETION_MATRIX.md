@@ -19,11 +19,11 @@ This document tracks the implementation status of the Maru API across different 
 ### Functions
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_createContext()`                        |   🏗️    |   🏗️    |   ❌    |   ❌    |
-| `maru_destroyContext()`                       |   🏗️    |   🏗️    |   ❌    |   ❌    |
-| `maru_updateContext()`                        |   🏗️    |   🏗️    |   🏗️    |   🏗️    |
-| `maru_resetContextMetrics()`                  |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_wakeContext()`                          |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_createContext()`                        |   🏗️    |   🏗️    |   ✅    |   ❌    |
+| `maru_destroyContext()`                       |   🏗️    |   🏗️    |   ✅    |   ❌    |
+| `maru_updateContext()`                        |   🏗️    |   🏗️    |   ✅    |   🏗️    |
+| `maru_resetContextMetrics()`                  |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_wakeContext()`                          |   ❌    |   ❌    |   ✅    |   ❌    |
 
 ### Create Info Fields (`MARU_ContextCreateInfo`)
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
@@ -31,7 +31,7 @@ This document tracks the implementation status of the Maru API across different 
 | `.allocator`                                  |   ✅    |   ✅    |   ✅    |   ✅    |
 | `.userdata`                                   |   ✅    |   ✅    |   ✅    |   ✅    |
 | `.backend`                                    |   ✅    |   ✅    |   ✅    |   ✅    |
-| `.attributes`                                 |   🏗️    |   ❌    |   ❌    |   ❌    |
+| `.attributes`                                 |   🏗️    |   ❌    |   🏗️    |   ❌    |
 | `.tuning`                                     |   ❌    |   ❌    |   ❌    |   ❌    |
 
 ### Attribute Fields (`MARU_ContextAttributes`)
@@ -39,8 +39,8 @@ This document tracks the implementation status of the Maru API across different 
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
 | `MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE`      |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_CONTEXT_ATTR_DIAGNOSTICS`               |   ✅    |   ✅    |   ✅    |   ✅    |
-| `MARU_CONTEXT_ATTR_EVENT_MASK`                |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_CONTEXT_ATTR_EVENT_CALLBACK`            |   ❌    |   ❌    |   ❌    |   ❌    |
+| `MARU_CONTEXT_ATTR_EVENT_MASK`                |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_CONTEXT_ATTR_EVENT_CALLBACK`            |   ❌    |   ❌    |   ✅    |   ❌    |
 
 ### Passive Accessors & Metrics
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
@@ -49,35 +49,35 @@ This document tracks the implementation status of the Maru API across different 
 | `maru_setContextUserdata()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_isContextLost()`                        |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_isContextReady()`                       |   ✅    |   ✅    |   ✅    |   ✅    |
-| `maru_getContextMetrics()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_getContextMetrics()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
 
 ## 3. Window Management
 
 ### Functions
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_createWindow()`                         |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_destroyWindow()`                        |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_updateWindow()`                         |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getWindowGeometry()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_requestWindowFocus()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getWindowBackendHandle()`               |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_resetWindowMetrics()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_createWindow()`                         |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_destroyWindow()`                        |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_updateWindow()`                         |   ❌    |   ❌    |   🏗️    |   ❌    |
+| `maru_getWindowGeometry()`                    |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_requestWindowFocus()`                   |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_getWindowBackendHandle()`               |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_resetWindowMetrics()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
 
 ### Create Info Fields (`MARU_WindowCreateInfo`)
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `.attributes`                                 |   ❌    |   ❌    |   ❌    |   ❌    |
+| `.attributes`                                 |   ❌    |   ❌    |   🏗️    |   ❌    |
 | `.app_id`                                     |   ❌    |   ❌    |   ❌    |   ❌    |
 | `.content_type`                               |   ❌    |   ❌    |   ❌    |   ❌    |
 | `.transparent`                                |   ❌    |   ❌    |   ❌    |   ❌    |
-| `.userdata`                                   |   ❌    |   ❌    |   ❌    |   ❌    |
+| `.userdata`                                   |   ❌    |   ❌    |   ✅    |   ❌    |
 
 ### Attribute Fields (`MARU_WindowAttributes`)
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `MARU_WINDOW_ATTR_TITLE`                      |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_WINDOW_ATTR_LOGICAL_SIZE`               |   ❌    |   ❌    |   ❌    |   ❌    |
+| `MARU_WINDOW_ATTR_TITLE`                      |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_WINDOW_ATTR_LOGICAL_SIZE`               |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_FULLSCREEN`                 |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_CURSOR_MODE`                |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_CURSOR`                     |   ❌    |   ❌    |   ❌    |   ❌    |
@@ -94,21 +94,21 @@ This document tracks the implementation status of the Maru API across different 
 | `MARU_WINDOW_ATTR_TEXT_INPUT_TYPE`            |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_TEXT_INPUT_RECT`            |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_PRIMARY_SELECTION`          |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_WINDOW_ATTR_EVENT_MASK`                 |   ❌    |   ❌    |   ❌    |   ❌    |
+| `MARU_WINDOW_ATTR_EVENT_MASK`                 |   ❌    |   ❌    |   ✅    |   ❌    |
 
 ### Passive Accessors & Metrics
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_getWindowUserdata()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_setWindowUserdata()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getWindowContext()`                     |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isWindowLost()`                         |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isWindowReady()`                        |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isWindowFocused()`                      |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isWindowMaximized()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isWindowFullscreen()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getWindowEventMask()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getWindowMetrics()`                     |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_getWindowUserdata()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_setWindowUserdata()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getWindowContext()`                     |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isWindowLost()`                         |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isWindowReady()`                        |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isWindowFocused()`                      |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isWindowMaximized()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isWindowFullscreen()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getWindowEventMask()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getWindowMetrics()`                     |   ✅    |   ✅    |   ✅    |   ✅    |
 
 ## 4. Monitors
 
@@ -137,48 +137,48 @@ This document tracks the implementation status of the Maru API across different 
 
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_getKeyboardButtonCount()`               |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getKeyboardButtonStates()`              |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isKeyPressed()`                         |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_getKeyboardButtonCount()`               |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getKeyboardButtonStates()`              |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isKeyPressed()`                         |   ✅    |   ✅    |   ✅    |   ✅    |
 
 ## 6. Cursors
 
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_getStandardCursor()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_getStandardCursor()`                    |   ❌    |   ❌    |   ✅    |   ❌    |
 | `maru_createCursor()`                         |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_destroyCursor()`                        |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_resetCursorMetrics()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getCursorUserdata()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_setCursorUserdata()`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_isCursorSystem()`                       |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getCursorMetrics()`                     |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_getCursorUserdata()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_setCursorUserdata()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_isCursorSystem()`                       |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getCursorMetrics()`                     |   ✅    |   ✅    |   ✅    |   ✅    |
 
 ## 7. Events & Dispatch
 
 ### Functions
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_pumpEvents()`                           |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_pumpEvents()`                           |   ❌    |   ❌    |   ✅    |   ❌    |
 | `maru_postEvent()`                            |   ❌    |   ❌    |   ❌    |   ❌    |
 
 ### Event Types (`MARU_EventMask`)
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `MARU_CLOSE_REQUESTED`                        |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_WINDOW_RESIZED`                         |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_KEY_STATE_CHANGED`                      |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_WINDOW_READY`                           |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_MOUSE_MOVED`                            |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_MOUSE_BUTTON_STATE_CHANGED`             |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_MOUSE_SCROLLED`                         |   ❌    |   ❌    |   ❌    |   ❌    |
+| `MARU_CLOSE_REQUESTED`                        |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_WINDOW_RESIZED`                         |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_KEY_STATE_CHANGED`                      |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_WINDOW_READY`                           |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_MOUSE_MOVED`                            |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_MOUSE_BUTTON_STATE_CHANGED`             |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_MOUSE_SCROLLED`                         |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_IDLE_STATE_CHANGED`                     |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_MONITOR_CONNECTION_CHANGED`             |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_MONITOR_MODE_CHANGED`                   |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_SYNC_POINT_REACHED`                     |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_TEXT_INPUT_RECEIVED`                    |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_FOCUS_CHANGED`                          |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_WINDOW_MAXIMIZED`                       |   ❌    |   ❌    |   ❌    |   ❌    |
+| `MARU_TEXT_INPUT_RECEIVED`                    |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_FOCUS_CHANGED`                          |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_WINDOW_MAXIMIZED`                       |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_DROP_ENTERED`                           |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_DROP_HOVERED`                           |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_DROP_EXITED`                            |   ❌    |   ❌    |   ❌    |   ❌    |
@@ -223,16 +223,16 @@ This document tracks the implementation status of the Maru API across different 
 ### Vulkan
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
-| `maru_getVkExtensions()`                      |   🏗️    |   🏗️    |   ❌    |   ❌    |
-| `maru_createVkSurface()`                      |   🏗️    |   🏗️    |   ❌    |   ❌    |
+| `maru_getVkExtensions()`                      |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_createVkSurface()`                      |   ✅    |   ✅    |   ✅    |   ✅    |
 
 ## 11. Convenience Functions
 
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
 | `maru_setContextInhibitsSystemIdle()`         |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_setWindowTitle()`                       |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_setWindowSize()`                        |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_setWindowTitle()`                       |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_setWindowSize()`                        |   ❌    |   ❌    |   ✅    |   ❌    |
 | `maru_setWindowFullscreen()`                  |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_setWindowMaximized()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_setWindowCursorMode()`                  |   ❌    |   ❌    |   ❌    |   ❌    |
@@ -247,7 +247,7 @@ This document tracks the implementation status of the Maru API across different 
 | `maru_setWindowTextInputType()`               |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_setWindowTextInputRect()`               |   ❌    |   ❌    |   ❌    |   ❌    |
 | `maru_setWindowAcceptDrop()`                  |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_setWindowEventMask()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_setWindowEventMask()`                   |   ❌    |   ❌    |   ✅    |   ❌    |
 | `maru_requestText()`                          |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getContextEventMetrics()`               |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_getDiagnosticString()`                  |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_getContextEventMetrics()`               |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_getDiagnosticString()`                  |   ✅    |   ✅    |   ✅    |   ✅    |
