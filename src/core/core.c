@@ -83,6 +83,31 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
   if (ctx_base->monitor_cache) {
     maru_context_free(ctx_base, ctx_base->monitor_cache);
   }
+  if (ctx_base->window_cache) {
+    maru_context_free(ctx_base, ctx_base->window_cache);
+  }
+}
+
+void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
+  if (ctx_base->window_cache_count >= ctx_base->window_cache_capacity) {
+    uint32_t old_cap = ctx_base->window_cache_capacity;
+    uint32_t new_cap = old_cap ? old_cap * 2 : 4;
+    ctx_base->window_cache = (MARU_Window **)maru_context_realloc(ctx_base, ctx_base->window_cache, old_cap * sizeof(MARU_Window *), new_cap * sizeof(MARU_Window *));
+    ctx_base->window_cache_capacity = new_cap;
+  }
+  ctx_base->window_cache[ctx_base->window_cache_count++] = window;
+}
+
+void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
+  for (uint32_t i = 0; i < ctx_base->window_cache_count; i++) {
+    if (ctx_base->window_cache[i] == window) {
+      for (uint32_t j = i; j < ctx_base->window_cache_count - 1; j++) {
+        ctx_base->window_cache[j] = ctx_base->window_cache[j + 1];
+      }
+      ctx_base->window_cache_count--;
+      return;
+    }
+  }
 }
 
 #ifdef MARU_INDIRECT_BACKEND
@@ -153,6 +178,43 @@ MARU_API MARU_Status maru_getStandardCursor(MARU_Context *context, MARU_CursorSh
     return ctx_base->backend->getStandardCursor(context, shape, out_cursor);
   }
   return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_createCursor(MARU_Context *context,
+                                         const MARU_CursorCreateInfo *create_info,
+                                         MARU_Cursor **out_cursor) {
+  MARU_API_VALIDATE(createCursor, context, create_info, out_cursor);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->backend->createCursor) {
+    return ctx_base->backend->createCursor(context, create_info, out_cursor);
+  }
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
+  MARU_API_VALIDATE(destroyCursor, cursor);
+  MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
+  MARU_Context_Base *ctx_base = cur_base->ctx_base;
+
+  // Reset any window using this cursor
+  for (uint32_t i = 0; i < ctx_base->window_cache_count; i++) {
+    MARU_Window *window = ctx_base->window_cache[i];
+    if (((const MARU_WindowExposed *)window)->current_cursor == cursor) {
+      maru_setWindowCursor(window, NULL);
+    }
+  }
+
+  if (cur_base->backend->destroyCursor) {
+    return cur_base->backend->destroyCursor(cursor);
+  }
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
+  MARU_API_VALIDATE(resetCursorMetrics, cursor);
+  MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
+  memset(&cur_base->metrics, 0, sizeof(MARU_CursorMetrics));
+  return MARU_SUCCESS;
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {

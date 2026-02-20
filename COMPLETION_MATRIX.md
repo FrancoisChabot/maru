@@ -79,8 +79,8 @@ This document tracks the implementation status of the Maru API across different 
 | `MARU_WINDOW_ATTR_TITLE`                      |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_LOGICAL_SIZE`               |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_FULLSCREEN`                 |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_WINDOW_ATTR_CURSOR_MODE`                |   ❌    |   ❌    |   ❌    |   ❌    |
-| `MARU_WINDOW_ATTR_CURSOR`                     |   ❌    |   ❌    |   ❌    |   ❌    |
+| `MARU_WINDOW_ATTR_CURSOR_MODE`                |   ❌    |   ❌    |   ✅    |   ❌    |
+| `MARU_WINDOW_ATTR_CURSOR`                     |   ❌    |   ❌    |   ✅    |   ❌    |
 | `MARU_WINDOW_ATTR_MONITOR`                    |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_MAXIMIZED`                  |   ❌    |   ❌    |   ❌    |   ❌    |
 | `MARU_WINDOW_ATTR_MIN_SIZE`                   |   ❌    |   ❌    |   ❌    |   ❌    |
@@ -146,13 +146,14 @@ This document tracks the implementation status of the Maru API across different 
 | Feature                                       |   X11   | Wayland | Windows |  Cocoa  |
 | :-------------------------------------------- | :-----: | :-----: | :-----: | :-----: |
 | `maru_getStandardCursor()`                    |   ❌    |   ❌    |   ✅    |   ❌    |
-| `maru_createCursor()`                         |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_destroyCursor()`                        |   ❌    |   ❌    |   ❌    |   ❌    |
-| `maru_resetCursorMetrics()`                   |   ❌    |   ❌    |   ❌    |   ❌    |
+| `maru_createCursor()`                         |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_destroyCursor()`                        |   ❌    |   ❌    |   ✅    |   ❌    |
+| `maru_resetCursorMetrics()`                  |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_getCursorUserdata()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
-| `maru_setCursorUserdata()`                    |   ✅    |   ✅    |   ✅    |   ✅    |
+| `maru_setCursorUserdata()`                   |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_isCursorSystem()`                       |   ✅    |   ✅    |   ✅    |   ✅    |
 | `maru_getCursorMetrics()`                     |   ✅    |   ✅    |   ✅    |   ✅    |
+
 
 ## 7. Events & Dispatch
 

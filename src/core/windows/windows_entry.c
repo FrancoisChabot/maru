@@ -13,6 +13,8 @@ const MARU_Backend maru_backend_Windows = {
   .requestWindowFocus = maru_requestWindowFocus_Windows,
   .getWindowBackendHandle = maru_getWindowBackendHandle_Windows,
   .getStandardCursor = maru_getStandardCursor_Windows,
+  .createCursor = maru_createCursor_Windows,
+  .destroyCursor = maru_destroyCursor_Windows,
   .wakeContext = maru_wakeContext_Windows,
   .updateMonitors = maru_updateMonitors_Windows,
   .destroyMonitor = maru_destroyMonitor_Windows,
@@ -82,6 +84,25 @@ MARU_API MARU_Status maru_getStandardCursor(MARU_Context *context, MARU_CursorSh
                                               MARU_Cursor **out_cursor) {
   MARU_API_VALIDATE(getStandardCursor, context, shape, out_cursor);
   return maru_getStandardCursor_Windows(context, shape, out_cursor);
+}
+
+MARU_API MARU_Status maru_createCursor(MARU_Context *context,
+                                         const MARU_CursorCreateInfo *create_info,
+                                         MARU_Cursor **out_cursor) {
+  MARU_API_VALIDATE(createCursor, context, create_info, out_cursor);
+  return maru_createCursor_Windows(context, create_info, out_cursor);
+}
+
+MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
+  MARU_API_VALIDATE(destroyCursor, cursor);
+  return maru_destroyCursor_Windows(cursor);
+}
+
+MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
+  MARU_API_VALIDATE(resetCursorMetrics, cursor);
+  MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
+  memset(&cur_base->metrics, 0, sizeof(MARU_CursorMetrics));
+  return MARU_SUCCESS;
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {

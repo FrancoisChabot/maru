@@ -13,6 +13,7 @@ extern "C" {
 
 typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
+typedef struct MARU_Cursor MARU_Cursor;
 
 /** @brief Internal representation of MARU_Window. 
     CHANGING THIS REQUIRES A MAJOR VERSION BUMP
@@ -26,6 +27,8 @@ typedef struct MARU_WindowExposed {
   const MARU_ButtonState8 *keyboard_state;
   uint32_t keyboard_key_count;
   MARU_EventMask event_mask;
+  MARU_CursorMode cursor_mode;
+  const MARU_Cursor *current_cursor;
 } MARU_WindowExposed;
 
 static inline void *maru_getWindowUserdata(const MARU_Window *window) {
@@ -66,6 +69,10 @@ static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window) 
 
 static inline const MARU_WindowMetrics *maru_getWindowMetrics(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->metrics;
+}
+
+static inline MARU_CursorMode maru_getWindowCursorMode(const MARU_Window *window) {
+  return ((const MARU_WindowExposed *)window)->cursor_mode;
 }
 
 #ifdef __cplusplus

@@ -278,6 +278,20 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
       return 0;
     }
 
+    case WM_SETCURSOR: {
+      if (LOWORD(lparam) == HTCLIENT) {
+        if (window->cursor_mode == MARU_CURSOR_HIDDEN || window->cursor_mode == MARU_CURSOR_LOCKED) {
+          SetCursor(NULL);
+        } else if (window->current_cursor) {
+          SetCursor(window->current_cursor->hcursor);
+        } else {
+          SetCursor(LoadCursor(NULL, IDC_ARROW));
+        }
+        return TRUE;
+      }
+      break;
+    }
+
     case WM_CHAR: {
       char utf8[4];
       int len = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)&wparam, 1, utf8, 4, NULL, NULL);
@@ -377,6 +391,8 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   window->base.pub.keyboard_state = window->base.keyboard_state;
   window->base.pub.keyboard_key_count = MARU_KEY_COUNT;
   window->base.pub.event_mask = create_info->attributes.event_mask;
+  window->base.pub.cursor_mode = create_info->attributes.cursor_mode;
+  window->base.pub.current_cursor = create_info->attributes.cursor;
 
   window->size = create_info->attributes.logical_size;
   if (window->size.x <= 0) window->size.x = 800;
@@ -400,6 +416,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   UpdateWindow(window->hwnd);
 
   window->base.pub.flags = MARU_WINDOW_STATE_READY;
+  _maru_register_window(&ctx->base, (MARU_Window *)window);
 
   if (ctx->base.event_cb && (ctx->base.event_mask & MARU_WINDOW_READY)) {
       MARU_Event evt = { {0} };
@@ -413,6 +430,8 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
 MARU_Status maru_destroyWindow_Windows(MARU_Window *window_handle) {
   MARU_Window_Windows *window = (MARU_Window_Windows *)window_handle;
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)window->base.ctx_base;
+
+  _maru_unregister_window(&ctx->base, window_handle);
 
   if (window->hdc) {
     ReleaseDC(window->hwnd, window->hdc);
@@ -498,6 +517,20 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field
 
   if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
     window->base.pub.event_mask = attributes->event_mask;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
+    window->current_cursor = (MARU_Cursor_Windows *)attributes->cursor;
+    window->base.pub.current_cursor = attributes->cursor;
+    PostMessageA(window->hwnd, WM_SETCURSOR, (WPARAM)window->hwnd, MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
+    window->cursor_mode = attributes->cursor_mode;
+    window->base.pub.cursor_mode = attributes->cursor_mode;
+    // For HIDDEN/LOCKED, we might need to capture or clip the cursor
+    // For now just trigger WM_SETCURSOR
+    PostMessageA(window->hwnd, WM_SETCURSOR, (WPARAM)window->hwnd, MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
   }
 
   // TODO: implement other attributes

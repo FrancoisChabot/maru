@@ -14,6 +14,7 @@
 
 #include "event_viewer.h"
 #include "monitor_explorer.h"
+#include "cursor_tester.h"
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
@@ -24,6 +25,7 @@ static uint64_t frame_id = 0;
 
 static bool show_event_viewer = true;
 static bool show_monitor_explorer = false;
+static bool show_cursor_tester = false;
 
 struct VulkanState {
     VkInstance instance;
@@ -63,6 +65,10 @@ static void handle_event(MARU_EventType type, MARU_Window *window,
     framebuffer_resized = true;
   } else if (type == MARU_WINDOW_READY) {
     window_ready = true;
+  } else if (type == MARU_KEY_STATE_CHANGED) {
+    if (event->key.raw_key == MARU_KEY_ESCAPE && event->key.state == MARU_BUTTON_STATE_PRESSED) {
+      maru_setWindowCursorMode(window, MARU_CURSOR_NORMAL);
+    }
   }
 }
 
@@ -331,11 +337,13 @@ int main() {
     if (ImGui::Begin("Table of Contents")) {
         ImGui::Checkbox("Event Viewer", &show_event_viewer);
         ImGui::Checkbox("Monitor Explorer", &show_monitor_explorer);
+        ImGui::Checkbox("Cursor Tester", &show_cursor_tester);
     }
     ImGui::End();
 
     if (show_event_viewer) EventViewer_Render(window, &show_event_viewer);
     if (show_monitor_explorer) MonitorExplorer_Render(context, &show_monitor_explorer);
+    if (show_cursor_tester) CursorTester_Render(context, window, &show_cursor_tester);
 
     ImGui::Render();
 

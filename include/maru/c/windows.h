@@ -76,13 +76,6 @@ static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window);
 /** @brief Retrieves the runtime performance metrics for a window. */
 static inline const MARU_WindowMetrics *maru_getWindowMetrics(const MARU_Window *window);
 
-/** @brief Cursor visibility and constraint modes. */
-typedef enum MARU_CursorMode {
-  MARU_CURSOR_NORMAL = 0,
-  MARU_CURSOR_HIDDEN = 1,
-  MARU_CURSOR_LOCKED = 2,
-} MARU_CursorMode;
-
 /** @brief Semantic hints for compositor optimization. */
 typedef enum MARU_ContentType {
   MARU_CONTENT_TYPE_NONE = 0,

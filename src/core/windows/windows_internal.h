@@ -16,6 +16,21 @@ typedef struct MARU_Context_Windows {
   DWORD owner_thread_id;
 } MARU_Context_Windows;
 
+typedef struct MARU_Cursor_Windows {
+  MARU_Cursor_Base base;
+  HCURSOR hcursor;
+  bool is_system;
+} MARU_Cursor_Windows;
+
+typedef struct MARU_Monitor_Windows {
+  MARU_Monitor_Base base;
+  HMONITOR hmonitor;
+  char device_name[32]; // From MONITORINFOEX
+
+  MARU_VideoMode *modes;
+  uint32_t mode_count;
+} MARU_Monitor_Windows;
+
 typedef struct MARU_Window_Windows {
   MARU_Window_Base base;
 
@@ -28,21 +43,10 @@ typedef struct MARU_Window_Windows {
   DWORD saved_style;
   DWORD saved_ex_style;
   RECT saved_rect;
+
+  MARU_Cursor_Windows *current_cursor;
+  MARU_CursorMode cursor_mode;
 } MARU_Window_Windows;
-
-typedef struct MARU_Cursor_Windows {
-  MARU_Cursor_Base base;
-  HCURSOR hcursor;
-} MARU_Cursor_Windows;
-
-typedef struct MARU_Monitor_Windows {
-  MARU_Monitor_Base base;
-  HMONITOR hmonitor;
-  char device_name[32]; // From MONITORINFOEX
-
-  MARU_VideoMode *modes;
-  uint32_t mode_count;
-} MARU_Monitor_Windows;
 
 MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info,
                                         MARU_Context **out_context);
@@ -65,6 +69,10 @@ MARU_Status maru_getWindowBackendHandle_Windows(MARU_Window *window,
 
 MARU_Status maru_getStandardCursor_Windows(MARU_Context *context, MARU_CursorShape shape,
                                             MARU_Cursor **out_cursor);
+MARU_Status maru_createCursor_Windows(MARU_Context *context,
+                                       const MARU_CursorCreateInfo *create_info,
+                                       MARU_Cursor **out_cursor);
+MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor);
 MARU_Status maru_wakeContext_Windows(MARU_Context *context);
 
 MARU_Status maru_updateMonitors_Windows(MARU_Context *context);

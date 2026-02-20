@@ -28,6 +28,10 @@ typedef struct MARU_Backend {
 
   MARU_Status (*getStandardCursor)(MARU_Context *context, MARU_CursorShape shape,
                                    MARU_Cursor **out_cursor);
+  MARU_Status (*createCursor)(MARU_Context *context,
+                              const MARU_CursorCreateInfo *create_info,
+                              MARU_Cursor **out_cursor);
+  MARU_Status (*destroyCursor)(MARU_Cursor *cursor);
   MARU_Status (*wakeContext)(MARU_Context *context);
 
   MARU_Status (*updateMonitors)(MARU_Context *context);

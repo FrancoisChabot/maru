@@ -110,6 +110,25 @@ static inline MARU_Status _maru_validate_getStandardCursor(MARU_Context *context
     return MARU_SUCCESS;
 }
 
+static inline MARU_Status _maru_validate_createCursor(MARU_Context *context,
+                                                     const MARU_CursorCreateInfo *create_info,
+                                                     MARU_Cursor **out_cursor) {
+    MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(create_info != NULL, MARU_ERROR_INVALID_USAGE);
+    MARU_CONSTRAINT_CHECK(out_cursor != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_destroyCursor(MARU_Cursor *cursor) {
+    MARU_CONSTRAINT_CHECK(cursor != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _maru_validate_resetCursorMetrics(MARU_Cursor *cursor) {
+    MARU_CONSTRAINT_CHECK(cursor != NULL, MARU_ERROR_INVALID_USAGE);
+    return MARU_SUCCESS;
+}
+
 static inline MARU_Status _maru_validate_wakeContext(MARU_Context *context) {
     MARU_CONSTRAINT_CHECK(context != NULL, MARU_ERROR_INVALID_USAGE);
     return MARU_SUCCESS;

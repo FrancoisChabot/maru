@@ -58,6 +58,10 @@ typedef struct MARU_Context_Base {
   uint32_t monitor_cache_count;
   uint32_t monitor_cache_capacity;
 
+  MARU_Window **window_cache;
+  uint32_t window_cache_count;
+  uint32_t window_cache_capacity;
+
 #ifdef MARU_VALIDATE_API_CALLS
   MARU_ThreadId creator_thread;
 #endif
@@ -105,6 +109,8 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type, MARU_Window *window, const MARU_Event *event);
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);
+void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window);
+void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window);
 void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask, const MARU_WindowAttributes *attributes);
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor);

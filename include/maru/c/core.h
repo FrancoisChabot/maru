@@ -125,6 +125,13 @@ typedef enum MARU_ButtonState {
 /** @brief 1-byte version of MARU_ButtonState for efficient array storage. */
 typedef uint8_t MARU_ButtonState8;
 
+/** @brief Cursor visibility and constraint modes. */
+typedef enum MARU_CursorMode {
+  MARU_CURSOR_NORMAL = 0,
+  MARU_CURSOR_HIDDEN = 1,
+  MARU_CURSOR_LOCKED = 2,
+} MARU_CursorMode;
+
 #ifdef __cplusplus
 }
 #endif
