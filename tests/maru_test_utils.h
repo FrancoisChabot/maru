@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 // A dummy destroy function for the mock backend
-static MARU_Status _mock_destroyContext(MARU_Context* context) {
+static inline MARU_Status _mock_destroyContext(MARU_Context* context) {
     MARU_Context_Base* ctx_base = (MARU_Context_Base*)context;
     maru_context_free(ctx_base, context);
     return MARU_SUCCESS;

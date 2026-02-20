@@ -79,6 +79,27 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
 
 MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms) {
   (void)context;
-  (void)timeout_ms;
+  
+  MSG msg;
+  if (timeout_ms == 0) {
+    while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+      TranslateMessage(&msg);
+      DispatchMessageA(&msg);
+    }
+  } else {
+    DWORD start_time = GetTickCount();
+    DWORD elapsed = 0;
+
+    while (elapsed < timeout_ms) {
+      if (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+      } else {
+        MsgWaitForMultipleObjects(0, NULL, FALSE, timeout_ms - elapsed, QS_ALLINPUT);
+      }
+      elapsed = GetTickCount() - start_time;
+    }
+  }
+  
   return MARU_SUCCESS;
 }

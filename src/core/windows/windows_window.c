@@ -10,16 +10,65 @@
 
 static const char* _maru_win32_window_class = "MaruWindowClass";
 
+static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+  MARU_Window_Windows *window = (MARU_Window_Windows *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+  if (window) {
+    MARU_Context_Base *ctx = window->base.ctx_base;
+
+    switch (msg) {
+    case WM_CLOSE: {
+      if (ctx->event_cb && (ctx->event_mask & MARU_EVENT_TYPE_CLOSE_REQUESTED)) {
+        MARU_Event evt = { .type = MARU_EVENT_TYPE_CLOSE_REQUESTED };
+        ctx->event_cb(MARU_EVENT_TYPE_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
+      }
+      return 0;
+    }
+
+    case WM_SIZE: {
+      int width = LOWORD(lparam);
+      int height = HIWORD(lparam);
+      window->size.x = (MARU_Scalar)width;
+      window->size.y = (MARU_Scalar)height;
+
+      if (ctx->event_cb && (ctx->event_mask & MARU_EVENT_TYPE_WINDOW_RESIZED)) {
+        MARU_Event evt = {
+          .type = MARU_EVENT_TYPE_WINDOW_RESIZED,
+          .resized = {
+            .geometry = {
+              .pixel_size = { width, height },
+              .logical_size = { (MARU_Scalar)width, (MARU_Scalar)height }
+            }
+          }
+        };
+        ctx->event_cb(MARU_EVENT_TYPE_WINDOW_RESIZED, (MARU_Window *)window, &evt);
+      }
+      return 0;
+    }
+    }
+  }
+
+  return DefWindowProcA(hwnd, msg, wparam, lparam);
+}
+
 static ATOM _maru_win32_register_class(HINSTANCE hinstance) {
+  static bool registered = false;
+  if (registered) return 1;
+
   WNDCLASSA wc = { 0 };
-  wc.lpfnWndProc = DefWindowProcA;
+  wc.lpfnWndProc = _maru_win32_wndproc;
   wc.hInstance = hinstance;
   wc.lpszClassName = _maru_win32_window_class;
-  return RegisterClassA(&wc);
+  wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+  
+  ATOM atom = RegisterClassA(&wc);
+  if (atom) registered = true;
+  return atom;
 }
 
 static HWND _maru_win32_create_window(HINSTANCE hinstance,
-                                       const MARU_WindowCreateInfo *create_info) {
+                                       const MARU_WindowCreateInfo *create_info,
+                                       void* userdata) {
   ATOM atom = _maru_win32_register_class(hinstance);
   if (!atom) {
     return NULL;
@@ -48,6 +97,10 @@ static HWND _maru_win32_create_window(HINSTANCE hinstance,
       hinstance,
       NULL);
 
+  if (hwnd) {
+    SetWindowLongPtrA(hwnd, GWLP_USERDATA, (LONG_PTR)userdata);
+  }
+
   return hwnd;
 }
 
@@ -75,7 +128,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   if (window->size.y <= 0) window->size.y = 600;
 
   HMODULE hinstance = GetModuleHandleA(NULL);
-  window->hwnd = _maru_win32_create_window(hinstance, create_info);
+  window->hwnd = _maru_win32_create_window(hinstance, create_info, window);
   if (!window->hwnd) {
     maru_context_free(&ctx->base, window);
     return MARU_FAILURE;
@@ -92,6 +145,11 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   UpdateWindow(window->hwnd);
 
   window->base.pub.flags = MARU_WINDOW_STATE_READY;
+
+  if (ctx->base.event_cb && (ctx->base.event_mask & MARU_EVENT_TYPE_WINDOW_READY)) {
+      MARU_Event evt = { .type = MARU_EVENT_TYPE_WINDOW_READY };
+      ctx->base.event_cb(MARU_EVENT_TYPE_WINDOW_READY, (MARU_Window *)window, &evt);
+  }
 
   *out_window = (MARU_Window *)window;
   return MARU_SUCCESS;

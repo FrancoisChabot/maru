@@ -31,6 +31,8 @@ typedef VkResult (*PFN_vkCreateWin32SurfaceKHR)(VkInstance instance,
 
 typedef MARU_VulkanVoidFunction (*PFN_vkGetInstanceProcAddr)(void* instance, const char* pName);
 
+extern MARU_VulkanVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char* pName);
+
 MARU_Status maru_getVkExtensions_Windows(MARU_Context* context, MARU_ExtensionList* out_list) {
   (void)context;
   static const char* extensions[] = {
@@ -50,7 +52,11 @@ MARU_Status maru_createVkSurface_Windows(MARU_Window* window_handle,
   MARU_Window_Windows* window = (MARU_Window_Windows*)window_handle;
   MARU_Context_Windows* ctx = (MARU_Context_Windows*)window->base.ctx_base;
 
-  PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->base.tuning.vk_loader;
+  MARU_VkGetInstanceProcAddrFunc vk_loader = ctx->base.tuning.vk_loader;
+
+  if (!vk_loader) {
+    vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
+  }
 
   if (!vk_loader) {
     _maru_reportDiagnostic((MARU_Context*)ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
