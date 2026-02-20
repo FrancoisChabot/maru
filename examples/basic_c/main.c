@@ -5,6 +5,7 @@
 #include "maru/maru.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <vulkan/vulkan.h>
 
 static bool keep_running = true;
 static bool window_ready = false;
@@ -30,7 +31,16 @@ int main() {
          version.patch);
 
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-  create_info.backend = MARU_BACKEND_WAYLAND; // Force Wayland for now
+#ifdef _WIN32
+  create_info.backend = MARU_BACKEND_WINDOWS;
+#else
+  create_info.backend = MARU_BACKEND_WAYLAND;
+#endif
+  
+  MARU_ContextTuning tuning = MARU_CONTEXT_TUNING_DEFAULT;
+  tuning.vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
+  create_info.tuning = &tuning;
+
   create_info.attributes.event_cb = (MARU_EventCallback)handle_event;
   create_info.attributes.event_mask = MARU_ALL_EVENTS;
   MARU_Context *context = NULL;

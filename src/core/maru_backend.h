@@ -8,16 +8,21 @@
 
 #ifdef MARU_INDIRECT_BACKEND
 typedef struct MARU_Backend {
-  __typeof__(maru_destroyContext) *destroyContext;
-  __typeof__(maru_pumpEvents) *pumpEvents;
+  MARU_Status (*destroyContext)(MARU_Context *context);
+  MARU_Status (*pumpEvents)(MARU_Context *context, uint32_t timeout_ms);
 
-  __typeof__(maru_createWindow) *createWindow;
-  __typeof__(maru_destroyWindow) *destroyWindow;
-  __typeof__(maru_getWindowGeometry) *getWindowGeometry;
+  MARU_Status (*createWindow)(MARU_Context *context,
+                              const MARU_WindowCreateInfo *create_info,
+                              MARU_Window **out_window);
+  MARU_Status (*destroyWindow)(MARU_Window *window);
+  MARU_Status (*getWindowGeometry)(MARU_Window *window,
+                                   MARU_WindowGeometry *out_geometry);
 
 #ifdef MARU_ENABLE_VULKAN
-  __typeof__(maru_getVkExtensions) *getVkExtensions;
-  __typeof__(maru_createVkSurface) *createVkSurface;
+  MARU_Status (*getVkExtensions)(MARU_Context *context,
+                                 MARU_ExtensionList *out_list);
+  MARU_Status (*createVkSurface)(MARU_Window *window, VkInstance instance,
+                                 VkSurfaceKHR *out_surface);
 #endif
 
   // More to be added directly here

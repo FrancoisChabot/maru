@@ -15,8 +15,10 @@
 
 #ifndef MARU_API
 #ifdef _WIN32
-#ifdef MARU_BUILD_DLL
+#if defined(MARU_BUILD_DLL)
 #define MARU_API __declspec(dllexport)
+#elif defined(MARU_STATIC)
+#define MARU_API
 #else
 #define MARU_API __declspec(dllimport)
 #endif

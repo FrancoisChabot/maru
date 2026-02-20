@@ -25,7 +25,7 @@ add_library(maru_common_settings INTERFACE)
 target_compile_features(maru_common_settings INTERFACE c_std_11)
 
 if(MSVC)
-  target_compile_options(maru_common_settings INTERFACE /W4 /WX /wd4100 /wd4189)
+  target_compile_options(maru_common_settings INTERFACE /W4 /WX /wd4100 /wd4189 /wd5105)
 else()
   target_compile_options(maru_common_settings INTERFACE
     -Wall
@@ -53,6 +53,9 @@ target_include_directories(maru_iface INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(maru_iface INTERFACE maru_common_settings)
+if(NOT MARU_BUILD_SHARED)
+  target_compile_definitions(maru_iface INTERFACE MARU_STATIC)
+endif()
 
 # Internal interface: public headers + private core headers
 add_library(maru_core_iface INTERFACE)
@@ -76,7 +79,15 @@ target_link_libraries(maru_core_iface_d INTERFACE maru_core_iface maru_iface_d)
 add_library(maru_core_iface_f INTERFACE)
 target_link_libraries(maru_core_iface_f INTERFACE maru_core_iface maru_iface_f)
 
-install(TARGETS maru_iface maru_iface_d maru_iface_f maru_common_settings EXPORT MaruTargets)
+install(TARGETS
+    maru_iface
+    maru_iface_d
+    maru_iface_f
+    maru_common_settings
+    maru_core_iface
+    maru_core_iface_d
+    maru_core_iface_f
+    EXPORT MaruTargets)
 
 # 5. Specialized interfaces for direct vs indirect (for BOTH precisions)
 macro(define_flavor_interfaces suffix)
