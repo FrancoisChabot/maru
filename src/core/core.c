@@ -150,6 +150,22 @@ void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask,
       win_base->pub.flags &= ~MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
     }
   }
+
+  if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
+    if (attributes->resizable) {
+      win_base->pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+    } else {
+      win_base->pub.flags &= ~MARU_WINDOW_STATE_RESIZABLE;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_DECORATED) {
+    if (attributes->decorated) {
+      win_base->pub.flags |= MARU_WINDOW_STATE_DECORATED;
+    } else {
+      win_base->pub.flags &= ~MARU_WINDOW_STATE_DECORATED;
+    }
+  }
 }
 
 void _maru_init_window_base(MARU_Window_Base *win_base, MARU_Context_Base *ctx_base, const MARU_WindowCreateInfo *create_info) {
@@ -163,6 +179,13 @@ void _maru_init_window_base(MARU_Window_Base *win_base, MARU_Context_Base *ctx_b
   win_base->pub.event_mask = create_info->attributes.event_mask;
   win_base->pub.cursor_mode = create_info->attributes.cursor_mode;
   win_base->pub.current_cursor = create_info->attributes.cursor;
+
+  if (create_info->attributes.resizable) {
+    win_base->pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+  }
+  if (create_info->attributes.decorated) {
+    win_base->pub.flags |= MARU_WINDOW_STATE_DECORATED;
+  }
 
   if (create_info->attributes.title) {
     size_t len = strlen(create_info->attributes.title);

@@ -72,6 +72,14 @@ static inline bool maru_isWindowMousePassthrough(const MARU_Window *window) {
   return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_MOUSE_PASSTHROUGH) != 0;
 }
 
+static inline bool maru_isWindowResizable(const MARU_Window *window) {
+  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+}
+
+static inline bool maru_isWindowDecorated(const MARU_Window *window) {
+  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_DECORATED) != 0;
+}
+
 static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->event_mask;
 }

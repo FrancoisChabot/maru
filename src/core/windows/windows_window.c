@@ -292,10 +292,56 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
       break;
     }
 
+    case WM_GETMINMAXINFO: {
+      MINMAXINFO *mmi = (MINMAXINFO *)lparam;
+      DWORD style = GetWindowLongA(hwnd, GWL_STYLE);
+      DWORD ex_style = GetWindowLongA(hwnd, GWL_EXSTYLE);
+
+      if (window->min_size.x > 0 || window->min_size.y > 0) {
+        RECT rect = { 0, 0, (int)window->min_size.x, (int)window->min_size.y };
+        AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+        if (window->min_size.x > 0) mmi->ptMinTrackSize.x = rect.right - rect.left;
+        if (window->min_size.y > 0) mmi->ptMinTrackSize.y = rect.bottom - rect.top;
+      }
+
+      if (window->max_size.x > 0 || window->max_size.y > 0) {
+        RECT rect = { 0, 0, (int)window->max_size.x, (int)window->max_size.y };
+        AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+        if (window->max_size.x > 0) mmi->ptMaxTrackSize.x = rect.right - rect.left;
+        if (window->max_size.y > 0) mmi->ptMaxTrackSize.y = rect.bottom - rect.top;
+      }
+      return 0;
+    }
+
+    case WM_SIZING: {
+      if (window->aspect_ratio.num > 0 && window->aspect_ratio.denom > 0) {
+        RECT *rect = (RECT *)lparam;
+        DWORD style = GetWindowLongA(hwnd, GWL_STYLE);
+        DWORD ex_style = GetWindowLongA(hwnd, GWL_EXSTYLE);
+
+        RECT decoration = { 0, 0, 0, 0 };
+        AdjustWindowRectEx(&decoration, style, FALSE, ex_style);
+        int dec_w = (decoration.right - decoration.left);
+        int dec_h = (decoration.bottom - decoration.top);
+
+        float target_ratio = (float)window->aspect_ratio.num / (float)window->aspect_ratio.denom;
+        int current_w = (rect->right - rect->left) - dec_w;
+        int current_h = (rect->bottom - rect->top) - dec_h;
+
+        if (wparam == WMSZ_LEFT || wparam == WMSZ_RIGHT || wparam == WMSZ_LEFT + WMSZ_RIGHT) {
+          rect->bottom = rect->top + (int)(current_w / target_ratio) + dec_h;
+        } else {
+          rect->right = rect->left + (int)(current_h * target_ratio) + dec_w;
+        }
+      }
+      return TRUE;
+    }
+
     case WM_CHAR: {
-      char utf8[4];
+      char utf8[5];
       int len = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)&wparam, 1, utf8, 4, NULL, NULL);
       if (len > 0) {
+        utf8[len] = '\0';
         MARU_Event evt = {
           .text_input = {
             .text = utf8,
@@ -335,7 +381,19 @@ static HWND _maru_win32_create_window(HINSTANCE hinstance,
     return NULL;
   }
 
-  DWORD style = WS_OVERLAPPEDWINDOW;
+  DWORD style = 0;
+  if (create_info->attributes.decorated) {
+    style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+    if (create_info->attributes.resizable) {
+      style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
+    }
+  } else {
+    style = WS_POPUP;
+    if (create_info->attributes.resizable) {
+      style |= WS_THICKFRAME;
+    }
+  }
+
   DWORD ex_style = 0;
 
   if (create_info->attributes.mouse_passthrough) {
@@ -394,6 +452,10 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   if (window->size.x <= 0) window->size.x = 800;
   if (window->size.y <= 0) window->size.y = 600;
 
+  window->min_size = create_info->attributes.min_size;
+  window->max_size = create_info->attributes.max_size;
+  window->aspect_ratio = create_info->attributes.aspect_ratio;
+
   HMODULE hinstance = GetModuleHandleA(NULL);
   window->hwnd = _maru_win32_create_window(hinstance, create_info, window);
   if (!window->hwnd) {
@@ -415,7 +477,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
     SetLayeredWindowAttributes(window->hwnd, 0, 255, LWA_ALPHA);
   }
 
-  window->base.pub.flags = MARU_WINDOW_STATE_READY;
+  window->base.pub.flags |= MARU_WINDOW_STATE_READY;
   _maru_register_window(&ctx->base, (MARU_Window *)window);
 
   if (ctx->base.event_cb && (ctx->base.event_mask & MARU_WINDOW_READY)) {
@@ -547,7 +609,66 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field
     SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
   }
 
-  // TODO: implement other attributes
+  if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
+    ShowWindow(window->hwnd, attributes->maximized ? SW_MAXIMIZE : SW_RESTORE);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
+    window->min_size = attributes->min_size;
+    SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
+    window->max_size = attributes->max_size;
+    SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
+    window->aspect_ratio = attributes->aspect_ratio;
+    if (window->aspect_ratio.num > 0 && window->aspect_ratio.denom > 0) {
+      RECT rect;
+      GetClientRect(window->hwnd, &rect);
+      int current_w = rect.right - rect.left;
+      float target_ratio = (float)window->aspect_ratio.num / (float)window->aspect_ratio.denom;
+      int target_h = (int)(current_w / target_ratio);
+
+      RECT window_rect = { 0, 0, current_w, target_h };
+      DWORD style = GetWindowLongA(window->hwnd, GWL_STYLE);
+      DWORD ex_style = GetWindowLongA(window->hwnd, GWL_EXSTYLE);
+      AdjustWindowRectEx(&window_rect, style, FALSE, ex_style);
+
+      SetWindowPos(window->hwnd, NULL, 0, 0, window_rect.right - window_rect.left, window_rect.bottom - window_rect.top, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    } else {
+      SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    }
+  }
+
+  if (field_mask & (MARU_WINDOW_ATTR_RESIZABLE | MARU_WINDOW_ATTR_DECORATED)) {
+    bool resizable = (field_mask & MARU_WINDOW_ATTR_RESIZABLE) ? attributes->resizable : (GetWindowLongA(window->hwnd, GWL_STYLE) & WS_THICKFRAME);
+    bool decorated = (field_mask & MARU_WINDOW_ATTR_DECORATED) ? attributes->decorated : (GetWindowLongA(window->hwnd, GWL_STYLE) & WS_CAPTION);
+
+    DWORD style = GetWindowLongA(window->hwnd, GWL_STYLE);
+    style &= ~(WS_OVERLAPPEDWINDOW | WS_POPUP | WS_THICKFRAME | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+
+    if (decorated) {
+      style |= WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+      if (resizable) {
+        style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
+      }
+    } else {
+      style |= WS_POPUP;
+      if (resizable) {
+        style |= WS_THICKFRAME;
+      }
+    }
+
+    SetWindowLongA(window->hwnd, GWL_STYLE, style);
+    SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_POSITION) {
+    SetWindowPos(window->hwnd, NULL, (int)attributes->position.x, (int)attributes->position.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+  }
 
   return MARU_SUCCESS;
 }

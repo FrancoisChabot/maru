@@ -46,6 +46,10 @@ typedef struct MARU_Window_Windows {
 
   MARU_Cursor_Windows *current_cursor;
   MARU_CursorMode cursor_mode;
+
+  MARU_Vec2Dip min_size;
+  MARU_Vec2Dip max_size;
+  MARU_Fraction aspect_ratio;
 } MARU_Window_Windows;
 
 MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info,

@@ -178,7 +178,7 @@ void WindowManager_Init(MARU_Context* context, MARU_Window* main_window, const W
     }
 }
 
-static void RenderWindowControls(MARU_Window* window, const char* default_title) {
+static void RenderWindowControls(SecondaryWindow* sw, MARU_Window* window, const char* default_title) {
     char title_buf[256];
     const char* current_title = maru_getWindowTitle(window);
     if (!current_title) current_title = default_title;
@@ -198,11 +198,49 @@ static void RenderWindowControls(MARU_Window* window, const char* default_title)
         maru_setWindowMousePassthrough(window, passthrough);
     }
 
+    bool resizable = maru_isWindowResizable(window);
+    if (ImGui::Checkbox("Resizable", &resizable)) {
+        maru_setWindowResizable(window, resizable);
+    }
+
+    bool decorated = maru_isWindowDecorated(window);
+    if (ImGui::Checkbox("Decorated", &decorated)) {
+        maru_setWindowDecorated(window, decorated);
+    }
+
+    bool maximized = maru_isWindowMaximized(window);
+    if (ImGui::Checkbox("Maximized", &maximized)) {
+        maru_setWindowMaximized(window, maximized);
+    }
+
     MARU_WindowGeometry geometry;
     maru_getWindowGeometry(window, &geometry);
     int size[2] = { (int)geometry.logical_size.x, (int)geometry.logical_size.y };
     if (ImGui::InputInt2("Logical Size", size)) {
         maru_setWindowSize(window, {(MARU_Scalar)size[0], (MARU_Scalar)size[1]});
+    }
+
+    int pos[2] = { (int)geometry.origin.x, (int)geometry.origin.y };
+    if (ImGui::InputInt2("Position", pos)) {
+        MARU_WindowAttributes attr = {};
+        attr.position = {(MARU_Scalar)pos[0], (MARU_Scalar)pos[1]};
+        maru_updateWindow(window, MARU_WINDOW_ATTR_POSITION, &attr);
+    }
+
+    if (sw) {
+        static float min_size[2] = { 200, 200 };
+        static float max_size[2] = { 1000, 1000 };
+        static int aspect[2] = { 0, 0 };
+
+        ImGui::InputFloat2("Min Size", min_size);
+        ImGui::InputFloat2("Max Size", max_size);
+        ImGui::InputInt2("Aspect Ratio (Num/Denom)", aspect);
+
+        if (ImGui::Button("Commit Constraints")) {
+            maru_setWindowMinSize(window, {min_size[0], min_size[1]});
+            maru_setWindowMaxSize(window, {max_size[0], max_size[1]});
+            maru_setWindowAspectRatio(window, {(int32_t)aspect[0], (int32_t)aspect[1]});
+        }
     }
 }
 
@@ -232,7 +270,7 @@ void WindowManager_Render(MARU_Context* context, bool* p_open) {
     ImGui::Separator();
     
     if (ImGui::TreeNode("Main Window")) {
-        RenderWindowControls(g_main_window, "Maru ImGui Testbed");
+        RenderWindowControls(nullptr, g_main_window, "Maru ImGui Testbed");
         ImGui::TreePop();
     }
 
@@ -243,7 +281,7 @@ void WindowManager_Render(MARU_Context* context, bool* p_open) {
         SecondaryWindow* sw = g_secondary_windows[i];
         ImGui::PushID((int)i);
         if (ImGui::TreeNode(sw->title)) {
-            RenderWindowControls(sw->maru_window, sw->title);
+            RenderWindowControls(sw, sw->maru_window, sw->title);
             ImGui::ColorEdit4("Clear Color", sw->clearColor);
             if (ImGui::Button("Close")) {
                 sw->should_close = true;
