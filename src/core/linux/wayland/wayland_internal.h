@@ -25,6 +25,7 @@ typedef struct MARU_Context_WL {
     struct wl_seat *seat;
     struct wl_keyboard *keyboard;
     struct wl_pointer *pointer;
+    struct wp_cursor_shape_device_v1 *cursor_shape_device;
   } input;
 
   struct {
@@ -32,6 +33,7 @@ typedef struct MARU_Context_WL {
     MARU_Window *pointer_focus;
     struct wl_surface *pointer_surface;
     uint32_t pointer_serial;
+    uint32_t activation_serial;
   } focused;
 
   MARU_Wayland_Protocols_WL protocols;
@@ -41,6 +43,9 @@ typedef struct MARU_Context_WL {
   } libdecor;
 
   MARU_WaylandDecorationMode decoration_mode;
+  MARU_ModifierFlags cached_modifiers;
+  char *activation_token;
+  int wake_fd;
 
   struct {
     MARU_Lib_WaylandClient wl;
@@ -56,7 +61,14 @@ typedef struct MARU_Window_WL {
 
   struct {
     struct wl_surface *surface;
+    struct wl_callback *frame_callback;
   } wl;
+
+  struct {
+    struct wp_fractional_scale_v1 *fractional_scale;
+    struct zwp_idle_inhibitor_v1 *idle_inhibitor;
+    struct wp_content_type_v1 *content_type;
+  } ext;
 
   struct {
     struct xdg_surface *surface;
@@ -72,13 +84,29 @@ typedef struct MARU_Window_WL {
   MARU_Vec2Dip size;
   MARU_Vec2Dip min_size;
   MARU_Vec2Dip max_size;
+  MARU_Scalar scale;
   MARU_WaylandDecorationMode decor_mode;
   MARU_CursorMode cursor_mode;
+  MARU_Monitor **monitors;
+  uint32_t monitor_count;
+  uint32_t monitor_capacity;
   bool is_maximized;
   bool is_fullscreen;
   bool is_resizable;
   bool is_decorated;
 } MARU_Window_WL;
+
+typedef struct MARU_Monitor_WL {
+  MARU_Monitor_Base base;
+  struct wl_output *output;
+  struct zxdg_output_v1 *xdg_output;
+  uint32_t name;
+  MARU_VideoMode current_mode;
+  MARU_VideoMode *modes;
+  uint32_t mode_count;
+  uint32_t mode_capacity;
+  MARU_Scalar scale;
+} MARU_Monitor_WL;
 
 typedef struct MARU_Cursor_WL {
   MARU_Cursor_Base base;
@@ -220,9 +248,23 @@ static inline bool maru_xkb_state_mod_name_is_active(const MARU_Context_WL *ctx,
   return ctx->linux_common.xkb_lib.state_mod_name_is_active(state, name, XKB_STATE_MODS_EFFECTIVE);
 }
 
+static inline bool maru_xkb_state_mod_index_is_active(const MARU_Context_WL *ctx, struct xkb_state *state, uint32_t index) {
+  return ctx->linux_common.xkb_lib.state_mod_index_is_active(state, index, XKB_STATE_MODS_EFFECTIVE);
+}
+
+static inline xkb_mod_mask_t maru_xkb_state_serialize_mods(const MARU_Context_WL *ctx, struct xkb_state *state) {
+  return ctx->linux_common.xkb_lib.state_serialize_mods(state, XKB_STATE_MODS_EFFECTIVE);
+}
+
+extern const struct wl_surface_listener _maru_wayland_surface_listener;
+extern const struct wp_fractional_scale_v1_listener _maru_wayland_fractional_scale_listener;
+
 MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                                   MARU_Context **out_context);
 MARU_Status maru_destroyContext_WL(MARU_Context *context);
+MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
+                                  const MARU_ContextAttributes *attributes);
+MARU_Status maru_wakeContext_WL(MARU_Context *context);
 MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
 MARU_Status maru_createWindow_WL(MARU_Context *context,
                                 const MARU_WindowCreateInfo *create_info,
@@ -230,7 +272,19 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
 MARU_Status maru_updateWindow_WL(MARU_Window *window, uint64_t field_mask,
                                  const MARU_WindowAttributes *attributes);
 MARU_Status maru_destroyWindow_WL(MARU_Window *window);
+MARU_Status maru_requestWindowFocus_WL(MARU_Window *window);
+MARU_Status maru_getWindowBackendHandle_WL(MARU_Window *window,
+                                         MARU_BackendType *out_type,
+                                         MARU_BackendHandle *out_handle);
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
+
+MARU_Monitor *const *maru_getMonitors_WL(MARU_Context *context, uint32_t *out_count);
+MARU_Status maru_updateMonitors_WL(MARU_Context *context);
+const MARU_VideoMode *maru_getMonitorModes_WL(const MARU_Monitor *monitor, uint32_t *out_count);
+MARU_Status maru_setMonitorMode_WL(const MARU_Monitor *monitor, MARU_VideoMode mode);
+void maru_destroyMonitor_WL(MARU_Monitor *monitor);
+
+void _maru_wayland_register_xdg_output(MARU_Context_WL *ctx, MARU_Monitor_WL *monitor);
 
 MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape shape,
                                      MARU_Cursor **out_cursor);
@@ -239,11 +293,26 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
                                 MARU_Cursor **out_cursor);
 MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor);
 
+void _maru_wayland_bind_output(MARU_Context_WL *ctx, uint32_t name, uint32_t version);
+void _maru_wayland_remove_output(MARU_Context_WL *ctx, uint32_t name);
+
 bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
                                              const MARU_WindowCreateInfo *create_info);
 void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial);
 MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(const MARU_ContextCreateInfo *create_info);
+
+void _maru_wayland_check_activation(MARU_Context_WL *ctx);
+void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window);
+void _maru_wayland_request_frame(MARU_Window_WL *window);
+
+bool _maru_wayland_init_libdecor(MARU_Context_WL *ctx);
+void _maru_wayland_cleanup_libdecor(MARU_Context_WL *ctx);
+bool _maru_wayland_create_libdecor_frame(MARU_Window_WL *window,
+                                          const MARU_WindowCreateInfo *create_info);
+void _maru_wayland_destroy_libdecor_frame(MARU_Window_WL *window);
+void _maru_wayland_libdecor_set_title(MARU_Window_WL *window, const char *title);
+void _maru_wayland_libdecor_set_capabilities(MARU_Window_WL *window);
 
 /* libdecor helpers */
 
@@ -400,8 +469,34 @@ static inline int maru_libdecor_get_fd(MARU_Context_WL *ctx, struct libdecor *co
   return ctx->dlib.opt.decor.get_fd(context);
 }
 
+static inline void maru_libdecor_set_userdata(MARU_Context_WL *ctx, struct libdecor *context,
+                                               void *userdata) {
+  if (ctx->dlib.opt.decor.opt.set_userdata) {
+    ctx->dlib.opt.decor.opt.set_userdata(context, userdata);
+  }
+}
+
+static inline void *maru_libdecor_get_userdata(MARU_Context_WL *ctx, struct libdecor *context) {
+  if (ctx->dlib.opt.decor.opt.get_userdata) {
+    return ctx->dlib.opt.decor.opt.get_userdata(context);
+  }
+  return NULL;
+}
+
 #include "protocols/generated/maru-wayland-helpers.h"
 #include "protocols/generated/maru-xdg-shell-helpers.h"
 #include "protocols/generated/maru-xdg-decoration-unstable-v1-helpers.h"
+#include "protocols/generated/maru-xdg-output-unstable-v1-helpers.h"
+#include "protocols/generated/maru-viewporter-helpers.h"
+#include "protocols/generated/maru-fractional-scale-v1-helpers.h"
+#include "protocols/generated/maru-cursor-shape-v1-helpers.h"
+#include "protocols/generated/maru-text-input-unstable-v3-helpers.h"
+#include "protocols/generated/maru-relative-pointer-unstable-v1-helpers.h"
+#include "protocols/generated/maru-pointer-constraints-unstable-v1-helpers.h"
+#include "protocols/generated/maru-idle-inhibit-unstable-v1-helpers.h"
+#include "protocols/generated/maru-ext-idle-notify-v1-helpers.h"
+#include "protocols/generated/maru-xdg-activation-v1-helpers.h"
+#include "protocols/generated/maru-primary-selection-unstable-v1-helpers.h"
+#include "protocols/generated/maru-content-type-v1-helpers.h"
 
 #endif

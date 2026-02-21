@@ -55,8 +55,8 @@ static const MARU_EventMask MARU_IDLE_STATE_CHANGED = ((MARU_EventMask)1 << 7);
 static const MARU_EventMask MARU_MONITOR_CONNECTION_CHANGED = ((MARU_EventMask)1 << 8);
 /** @brief Event fired when a monitor's display mode changes. */
 static const MARU_EventMask MARU_MONITOR_MODE_CHANGED = ((MARU_EventMask)1 << 9);
-/** @brief Event fired when a requested synchronization point is reached. */
-static const MARU_EventMask MARU_SYNC_POINT_REACHED = ((MARU_EventMask)1 << 10);
+/** @brief Event fired when the window should render its next frame. */
+static const MARU_EventMask MARU_WINDOW_FRAME = ((MARU_EventMask)1 << 10);
 /** @brief Event fired when Unicode text input is received. */
 static const MARU_EventMask MARU_TEXT_INPUT_RECEIVED = ((MARU_EventMask)1 << 11);
 /** @brief Event fired when a window gains or loses focus. */
@@ -100,8 +100,10 @@ static const MARU_EventMask MARU_ALL_EVENTS = ~((MARU_EventMask)0);
 typedef struct MARU_WindowReadyEvent { char _unused; } MARU_WindowReadyEvent;
 /** @brief Payload for MARU_CLOSE_REQUESTED. */
 typedef struct MARU_WindowCloseEvent { char _unused; } MARU_WindowCloseEvent;
-/** @brief Payload for MARU_SYNC_POINT_REACHED. */
-typedef struct MARU_SyncEvent { char _unused; } MARU_SyncEvent;
+/** @brief Payload for MARU_WINDOW_FRAME. */
+typedef struct MARU_WindowFrameEvent { 
+  uint32_t timestamp_ms; 
+} MARU_WindowFrameEvent;
 
 /** @brief Payload for MARU_WINDOW_RESIZED. */
 typedef struct MARU_WindowResizedEvent {
@@ -202,7 +204,7 @@ typedef struct MARU_Event {
     MARU_IdleEvent idle;
     MARU_MonitorConnectionEvent monitor_connection;
     MARU_MonitorModeEvent monitor_mode;
-    MARU_SyncEvent sync;
+    MARU_WindowFrameEvent frame;
     MARU_TextInputEvent text_input;
     MARU_TextCompositionEvent text_composition;
     MARU_FocusEvent focus;

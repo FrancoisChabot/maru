@@ -20,6 +20,7 @@
   MARU_LIB_FN(state_key_get_one_sym)    \
   MARU_LIB_FN(state_key_get_utf8)       \
   MARU_LIB_FN(state_mod_name_is_active) \
+  MARU_LIB_FN(state_mod_index_is_active) \
   MARU_LIB_FN(keymap_mod_get_index)     \
   MARU_LIB_FN(state_serialize_mods)
 

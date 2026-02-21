@@ -219,6 +219,8 @@ void maru_getWindowGeometry(MARU_Window *window,
 /** @brief Requests input focus for a window. */
 MARU_Status maru_requestWindowFocus(MARU_Window *window);
 
+/** @brief Requests a frame callback for the window. */
+MARU_Status maru_requestWindowFrame(MARU_Window *window);
 
 /** @brief Retrieves the native OS handle for the window. */
 MARU_Status maru_getWindowBackendHandle(MARU_Window *window,

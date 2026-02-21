@@ -6,6 +6,7 @@
 
 #include "maru/c/events.h"
 #include "maru/c/instrumentation.h"
+#include "core_event_queue.h"
 
 #ifdef MARU_VALIDATE_API_CALLS
 #include <pthread.h>
@@ -60,8 +61,35 @@ void _maru_monitor_free(MARU_Monitor_Base *monitor) {
   maru_context_free(monitor->ctx_base, monitor);
 }
 
+void _maru_init_context_base(MARU_Context_Base *ctx_base) {
+  uint32_t capacity = ctx_base->tuning.user_event_queue_size;
+  if (capacity == 0) capacity = 256;
+  _maru_event_queue_init(&ctx_base->user_event_queue, ctx_base, capacity);
+
+  ctx_base->metrics.user_events = &ctx_base->user_event_metrics;
+  ctx_base->pub.metrics = &ctx_base->metrics;
+}
+
+void _maru_drain_user_events(MARU_Context_Base *ctx_base) {
+  MARU_EventType type;
+  MARU_Window *window;
+  MARU_UserDefinedEvent user_evt;
+  MARU_Event evt;
+
+  while (_maru_event_queue_pop(&ctx_base->user_event_queue, &type, &window, &user_evt)) {
+    evt.user = user_evt;
+    _maru_dispatch_event(ctx_base, type, window, &evt);
+  }
+  
+  _maru_event_queue_update_metrics(&ctx_base->user_event_queue, &ctx_base->user_event_metrics);
+}
+
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
                                const MARU_ContextAttributes *attributes) {
+  if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
+    ctx_base->inhibit_idle = attributes->inhibit_idle;
+  }
+
   if (field_mask & MARU_CONTEXT_ATTR_DIAGNOSTICS) {
     ctx_base->diagnostic_cb = attributes->diagnostic_cb;
     ctx_base->diagnostic_userdata = attributes->diagnostic_userdata;
@@ -97,6 +125,8 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
   if (ctx_base->window_cache) {
     maru_context_free(ctx_base, ctx_base->window_cache);
   }
+
+  _maru_event_queue_cleanup(&ctx_base->user_event_queue, ctx_base);
 }
 
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
@@ -204,12 +234,32 @@ MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   return win_base->backend->requestWindowFocus(window);
 }
 
+MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowFrame, window);
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  if (win_base->backend->requestWindowFrame) {
+    return win_base->backend->requestWindowFrame(window);
+  }
+  return MARU_FAILURE;
+}
+
 MARU_API MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
                                                 MARU_BackendType *out_type,
                                                 MARU_BackendHandle *out_handle) {
   MARU_API_VALIDATE(getWindowBackendHandle, window, out_type, out_handle);
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   return win_base->backend->getWindowBackendHandle(window, out_type, out_handle);
+}
+
+MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventType type,
+                                      MARU_Window *window, MARU_UserDefinedEvent evt) {
+  MARU_API_VALIDATE(postEvent, context, type, window, evt);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+
+  if (_maru_event_queue_push(&ctx_base->user_event_queue, type, window, evt)) {
+    return maru_wakeContext(context);
+  }
+  return MARU_FAILURE;
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {

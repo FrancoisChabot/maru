@@ -236,6 +236,29 @@ static void cleanup_swap_chain() {
     vkDestroySwapchainKHR(vk.device, vk.swapChain, nullptr);
 }
 
+#ifdef __linux__
+#include <dlfcn.h>
+
+static void cleanup_system_leaks() {
+    // These libraries often leak memory on exit if not explicitly shut down.
+    // We use dlsym to find and call their cleanup functions if they are loaded.
+    
+    void* fc_handle = dlopen("libfontconfig.so.1", RTLD_LAZY | RTLD_NOLOAD);
+    if (fc_handle) {
+        void (*fini)(void) = (void (*)(void))dlsym(fc_handle, "FcFini");
+        if (fini) fini();
+        dlclose(fc_handle);
+    }
+
+    void* dbus_handle = dlopen("libdbus-1.so.3", RTLD_LAZY | RTLD_NOLOAD);
+    if (dbus_handle) {
+        void (*shutdown)(void) = (void (*)(void))dlsym(dbus_handle, "dbus_shutdown");
+        if (shutdown) shutdown();
+        dlclose(dbus_handle);
+    }
+}
+#endif
+
 int main() {
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
 #ifdef _WIN32
@@ -475,5 +498,9 @@ int main() {
   vkDestroyInstance(vk.instance, nullptr);
   maru_destroyWindow(main_window);
   maru_destroyContext(context);
+  
+#ifdef __linux__
+  cleanup_system_leaks();
+#endif
   return 0;
 }

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "maru/maru.h"
 #include "maru_backend.h"
+#include "core_event_queue.h"
 
 // The API headers define MARU_ContextExposed and MARU_WindowExposed
 #include "maru/c/details/contexts.h"
@@ -56,6 +57,7 @@ typedef struct MARU_Context_Base {
 
   MARU_PumpContext *pump_ctx;
   MARU_EventMask event_mask;
+  bool inhibit_idle;
 
   MARU_ContextMetrics metrics;
   MARU_UserEventMetrics user_event_metrics;
@@ -71,6 +73,8 @@ typedef struct MARU_Context_Base {
   uint32_t extension_count;
   void **extension_vtables;
   MARU_ExtensionCleanupCallback *extension_cleanups;
+
+  MARU_EventQueue user_event_queue;
 
 #ifdef MARU_VALIDATE_API_CALLS
   MARU_ThreadId creator_thread;
@@ -124,6 +128,8 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const
 #endif
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type, MARU_Window *window, const MARU_Event *event);
+void _maru_init_context_base(MARU_Context_Base *ctx_base);
+void _maru_drain_user_events(MARU_Context_Base *ctx_base);
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window);

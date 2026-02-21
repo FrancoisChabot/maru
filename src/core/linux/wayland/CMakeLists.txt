@@ -1,7 +1,11 @@
 set(MARU_WAYLAND_SOURCES 
     wayland_entry.c
     wayland_context.c
+    wayland_input.c
+    wayland_monitor.c
+    wayland_csd.c
     wayland_window.c
+    wayland_misc.c
     wayland_utils.c
     dlib/loader.c
     protocols/maru_protocols.c

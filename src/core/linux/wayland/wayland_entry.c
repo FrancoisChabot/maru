@@ -11,21 +11,22 @@ extern void *_maru_getWindowNativeHandle_WL(MARU_Window *window);
 #ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_WL = {
   .destroyContext = maru_destroyContext_WL,
+  .updateContext = maru_updateContext_WL,
   .pumpEvents = maru_pumpEvents_WL,
   .createWindow = maru_createWindow_WL,
   .destroyWindow = maru_destroyWindow_WL,
   .getWindowGeometry = maru_getWindowGeometry_WL,
   .updateWindow = maru_updateWindow_WL,
-  .requestWindowFocus = NULL,
-  .getWindowBackendHandle = NULL,
+  .requestWindowFocus = maru_requestWindowFocus_WL,
+  .getWindowBackendHandle = maru_getWindowBackendHandle_WL,
   .getStandardCursor = maru_getStandardCursor_WL,
   .createCursor = maru_createCursor_WL,
   .destroyCursor = maru_destroyCursor_WL,
-  .wakeContext = NULL,
-  .updateMonitors = NULL,
-  .destroyMonitor = NULL,
-  .getMonitorModes = NULL,
-  .setMonitorMode = NULL,
+  .wakeContext = maru_wakeContext_WL,
+  .updateMonitors = maru_updateMonitors_WL,
+  .destroyMonitor = maru_destroyMonitor_WL,
+  .getMonitorModes = maru_getMonitorModes_WL,
+  .setMonitorMode = maru_setMonitorMode_WL,
   .resetMonitorMetrics = NULL,
   .getContextNativeHandle = _maru_getContextNativeHandle_WL,
   .getWindowNativeHandle = _maru_getWindowNativeHandle_WL,
@@ -40,6 +41,17 @@ MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_inf
 MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
   MARU_API_VALIDATE(destroyContext, context);
   return maru_destroyContext_WL(context);
+}
+
+MARU_API MARU_Status
+maru_updateContext(MARU_Context *context, uint64_t field_mask,
+                   const MARU_ContextAttributes *attributes) {
+  MARU_API_VALIDATE(updateContext, context, field_mask, attributes);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+
+  _maru_update_context_base(ctx_base, field_mask, attributes);
+
+  return maru_updateContext_WL(context, field_mask, attributes);
 }
 
 MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
@@ -98,17 +110,21 @@ MARU_API MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
                                                MARU_BackendType *out_type,
                                                MARU_BackendHandle *out_handle) {
   MARU_API_VALIDATE(getWindowBackendHandle, window, out_type, out_handle);
-  return MARU_FAILURE;
+  return maru_getWindowBackendHandle_WL(window, out_type, out_handle);
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
-  return MARU_FAILURE;
+  return maru_wakeContext_WL(context);
 }
 
 MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
   MARU_API_VALIDATE(getMonitors, context, out_count);
-  return NULL; // Not implemented
+  if (maru_updateMonitors_WL(context) != MARU_SUCCESS) {
+    *out_count = 0;
+    return NULL;
+  }
+  return maru_getMonitors_WL(context, out_count);
 }
 
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
@@ -127,12 +143,12 @@ MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
 
 MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {
   MARU_API_VALIDATE(getMonitorModes, monitor, out_count);
-  return NULL;
+  return maru_getMonitorModes_WL(monitor, out_count);
 }
 
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
   MARU_API_VALIDATE(setMonitorMode, monitor, mode);
-  return MARU_FAILURE;
+  return maru_setMonitorMode_WL(monitor, mode);
 }
 
 MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {

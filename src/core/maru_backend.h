@@ -17,6 +17,7 @@ typedef struct MARU_Backend {
   __typeof__(maru_getWindowGeometry) *getWindowGeometry;
   __typeof__(maru_updateWindow) *updateWindow;
   __typeof__(maru_requestWindowFocus) *requestWindowFocus;
+  MARU_Status (*requestWindowFrame)(MARU_Window *window);
   __typeof__(maru_getWindowBackendHandle) *getWindowBackendHandle;
 
   __typeof__(maru_getStandardCursor) *getStandardCursor;

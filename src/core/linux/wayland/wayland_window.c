@@ -17,97 +17,6 @@ const struct zxdg_toplevel_decoration_v1_listener _maru_wayland_xdg_decoration_l
     .configure = _xdg_decoration_handle_configure,
 };
 
-static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
-                                             struct libdecor_configuration *configuration,
-                                             void *user_data) {
-  MARU_Window_WL *window = (MARU_Window_WL *)user_data;
-  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-
-  int width = 0;
-  int height = 0;
-
-  enum libdecor_window_state state_flags;
-  bool maximized = false;
-  bool fullscreen = false;
-
-  if (maru_libdecor_configuration_get_window_state(ctx, configuration, &state_flags)) {
-    if (state_flags & LIBDECOR_WINDOW_STATE_MAXIMIZED) maximized = true;
-    if (state_flags & LIBDECOR_WINDOW_STATE_FULLSCREEN) fullscreen = true;
-  }
-
-  if (!maru_libdecor_configuration_get_content_size(ctx, configuration, frame, &width, &height)) {
-    width = (int)window->size.x;
-    height = (int)window->size.y;
-  }
-
-  if (window->size.x != (MARU_Scalar)width || window->size.y != (MARU_Scalar)height) {
-    window->size.x = (MARU_Scalar)width;
-    window->size.y = (MARU_Scalar)height;
-
-    MARU_Event evt = {0};
-    evt.resized.geometry.logical_size = window->size;
-    evt.resized.geometry.pixel_size.x = (int32_t)window->size.x;
-    evt.resized.geometry.pixel_size.y = (int32_t)window->size.y;
-
-    _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window*)window, &evt);
-  }
-
-  if (window->is_maximized != maximized) {
-    window->is_maximized = maximized;
-    if (maximized)
-      window->base.pub.flags |= (uint64_t)MARU_WINDOW_STATE_MAXIMIZED;
-    else
-      window->base.pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_MAXIMIZED;
-
-    MARU_Event evt = {0};
-    evt.maximized.maximized = maximized;
-    _maru_dispatch_event(&ctx->base, MARU_WINDOW_MAXIMIZED, (MARU_Window*)window, &evt);
-  }
-
-  if (window->is_fullscreen != fullscreen) {
-    window->is_fullscreen = fullscreen;
-    if (fullscreen)
-      window->base.pub.flags |= (uint64_t)MARU_WINDOW_STATE_FULLSCREEN;
-    else
-      window->base.pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_FULLSCREEN;
-  }
-
-  struct libdecor_state *state = maru_libdecor_state_new(ctx, width, height);
-  maru_libdecor_frame_commit(ctx, frame, state, configuration);
-  maru_libdecor_state_free(ctx, state);
-
-  if (!(window->base.pub.flags & MARU_WINDOW_STATE_READY)) {
-    window->base.pub.flags |= MARU_WINDOW_STATE_READY;
-    
-    MARU_Event evt = {0};
-    _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window*)window, &evt);
-  }
-
-  window->libdecor.last_configuration = configuration;
-}
-
-static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *user_data) {
-  MARU_Window_WL *window = (MARU_Window_WL *)user_data;
-  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-
-  MARU_Event evt = {0};
-  _maru_dispatch_event(&ctx->base, MARU_CLOSE_REQUESTED, (MARU_Window*)window, &evt);
-  (void)frame;
-}
-
-static void _libdecor_frame_handle_commit(struct libdecor_frame *frame, void *user_data) {
-  MARU_Window_WL *window = (MARU_Window_WL *)user_data;
-  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-  maru_wl_surface_commit(ctx, window->wl.surface);
-  (void)frame;
-}
-
-static struct libdecor_frame_interface _maru_libdecor_frame_interface = {
-    .configure = _libdecor_frame_handle_configure,
-    .close = _libdecor_frame_handle_close,
-    .commit = _libdecor_frame_handle_commit,
-};
-
 MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(const MARU_ContextCreateInfo *create_info) {
   if (create_info->tuning) {
     return create_info->tuning->wayland.decoration_mode;
@@ -115,18 +24,137 @@ MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(const MARU_ContextC
   return MARU_WAYLAND_DECORATION_MODE_AUTO;
 }
 
+static void _fractional_scale_handle_preferred_scale(
+    void *data, struct wp_fractional_scale_v1 *fractional_scale, uint32_t scale) {
+  MARU_Window_WL *window = (MARU_Window_WL *)data;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+
+  window->scale = scale / (MARU_Scalar)120.0;
+
+  // When using fractional scaling, buffer scale must be 1.
+  maru_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
+
+  if (window->base.pub.flags & MARU_WINDOW_STATE_READY) {
+    MARU_Event evt = {0};
+    evt.resized.geometry.logical_size = window->size;
+    evt.resized.geometry.pixel_size.x = (int32_t)(window->size.x * window->scale);
+    evt.resized.geometry.pixel_size.y = (int32_t)(window->size.y * window->scale);
+    
+    _maru_wayland_update_opaque_region(window);
+    _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window*)window, &evt);
+  }
+}
+
+const struct wp_fractional_scale_v1_listener _maru_wayland_fractional_scale_listener = {
+    .preferred_scale = _fractional_scale_handle_preferred_scale,
+};
+
+static uint32_t _maru_wayland_map_content_type(MARU_ContentType type) {
+  switch (type) {
+    case MARU_CONTENT_TYPE_NONE: return WP_CONTENT_TYPE_V1_TYPE_NONE;
+    case MARU_CONTENT_TYPE_PHOTO: return WP_CONTENT_TYPE_V1_TYPE_PHOTO;
+    case MARU_CONTENT_TYPE_VIDEO: return WP_CONTENT_TYPE_V1_TYPE_VIDEO;
+    case MARU_CONTENT_TYPE_GAME: return WP_CONTENT_TYPE_V1_TYPE_GAME;
+    default: return WP_CONTENT_TYPE_V1_TYPE_NONE;
+  }
+}
+
 static void _wl_surface_handle_enter(void *data, struct wl_surface *surface,
                                      struct wl_output *output) {
-  (void)data; (void)surface; (void)output;
+  MARU_Window_WL *window = (MARU_Window_WL *)data;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+
+  MARU_Monitor_WL *monitor = NULL;
+  for (uint32_t i = 0; i < ctx->base.monitor_cache_count; i++) {
+    if (((MARU_Monitor_WL *)ctx->base.monitor_cache[i])->output == output) {
+      monitor = (MARU_Monitor_WL *)ctx->base.monitor_cache[i];
+      break;
+    }
+  }
+
+  if (!monitor) return;
+
+  if (window->monitor_count >= window->monitor_capacity) {
+    uint32_t old_cap = window->monitor_capacity;
+    uint32_t new_cap = old_cap ? old_cap * 2 : 4;
+    window->monitors = maru_context_realloc(&ctx->base, window->monitors, old_cap * sizeof(MARU_Monitor *), new_cap * sizeof(MARU_Monitor *));
+    window->monitor_capacity = new_cap;
+  }
+  window->monitors[window->monitor_count++] = (MARU_Monitor *)monitor;
+  
+  (void)surface;
 }
+
 static void _wl_surface_handle_leave(void *data, struct wl_surface *surface,
                                      struct wl_output *output) {
-  (void)data; (void)surface; (void)output;
+  MARU_Window_WL *window = (MARU_Window_WL *)data;
+  for (uint32_t i = 0; i < window->monitor_count; i++) {
+    if (((MARU_Monitor_WL *)window->monitors[i])->output == output) {
+      for (uint32_t j = i; j < window->monitor_count - 1; j++) {
+        window->monitors[j] = window->monitors[j + 1];
+      }
+      window->monitor_count--;
+      break;
+    }
+  }
+  (void)surface;
+}
+
+static void _wl_handle_frame_done(void *data, struct wl_callback *callback, uint32_t time);
+
+static const struct wl_callback_listener _wl_frame_listener = {
+    .done = _wl_handle_frame_done,
+};
+
+static void _wl_handle_frame_done(void *data, struct wl_callback *callback, uint32_t time) {
+  MARU_Window_WL *window = (MARU_Window_WL *)data;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+
+  if (callback == window->wl.frame_callback) {
+    maru_wl_callback_destroy(ctx, callback);
+    window->wl.frame_callback = NULL;
+
+    MARU_Event evt = {0};
+    evt.frame.timestamp_ms = time;
+    _maru_dispatch_event(&ctx->base, MARU_WINDOW_FRAME, (MARU_Window *)window, &evt);
+  }
+}
+
+void _maru_wayland_request_frame(MARU_Window_WL *window) {
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  if (window->wl.frame_callback) return;
+
+  window->wl.frame_callback = maru_wl_surface_frame(ctx, window->wl.surface);
+  maru_wl_callback_add_listener(ctx, window->wl.frame_callback, &_wl_frame_listener, window);
+}
+
+static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surface *surface,
+                                                      int32_t factor) {
+  MARU_Window_WL *window = (MARU_Window_WL *)data;
+  if (window->ext.fractional_scale) return;
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  if (window->scale != (MARU_Scalar)factor) {
+    window->scale = (MARU_Scalar)factor;
+    maru_wl_surface_set_buffer_scale(ctx, window->wl.surface, factor);
+
+    if (window->base.pub.flags & MARU_WINDOW_STATE_READY) {
+      MARU_Event evt = {0};
+      evt.resized.geometry.logical_size = window->size;
+      evt.resized.geometry.pixel_size.x = (int32_t)(window->size.x * window->scale);
+      evt.resized.geometry.pixel_size.y = (int32_t)(window->size.y * window->scale);
+      
+      _maru_wayland_update_opaque_region(window);
+      _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window*)window, &evt);
+    }
+  }
+  (void)surface;
 }
 
 const struct wl_surface_listener _maru_wayland_surface_listener = {
     .enter = _wl_surface_handle_enter,
     .leave = _wl_surface_handle_leave,
+    .preferred_buffer_scale = _wl_surface_handle_preferred_buffer_scale,
 };
 
 static void _xdg_surface_handle_configure(void *data, struct xdg_surface *surface,
@@ -151,6 +179,17 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *topl
   MARU_Window_WL *window = (MARU_Window_WL *)data;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   
+  bool maximized = false;
+  bool fullscreen = false;
+  
+  uint32_t *state;
+  wl_array_for_each(state, states) {
+    switch (*state) {
+      case XDG_TOPLEVEL_STATE_MAXIMIZED: maximized = true; break;
+      case XDG_TOPLEVEL_STATE_FULLSCREEN: fullscreen = true; break;
+    }
+  }
+
   // Basic resize handling
   if (width > 0 && height > 0) {
     if (window->size.x != (MARU_Scalar)width || window->size.y != (MARU_Scalar)height) {
@@ -162,11 +201,32 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *topl
       evt.resized.geometry.pixel_size.x = (int32_t)window->size.x;
       evt.resized.geometry.pixel_size.y = (int32_t)window->size.y;
       
+      _maru_wayland_update_opaque_region(window);
       _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window*)window, &evt);
     }
   }
+
+  if (window->is_maximized != maximized) {
+    window->is_maximized = maximized;
+    if (maximized)
+      window->base.pub.flags |= (uint64_t)MARU_WINDOW_STATE_MAXIMIZED;
+    else
+      window->base.pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_MAXIMIZED;
+
+    MARU_Event evt = {0};
+    evt.maximized.maximized = maximized;
+    _maru_dispatch_event(&ctx->base, MARU_WINDOW_MAXIMIZED, (MARU_Window*)window, &evt);
+  }
+
+  if (window->is_fullscreen != fullscreen) {
+    window->is_fullscreen = fullscreen;
+    if (fullscreen)
+      window->base.pub.flags |= (uint64_t)MARU_WINDOW_STATE_FULLSCREEN;
+    else
+      window->base.pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_FULLSCREEN;
+  }
   
-  (void)toplevel; (void)states;
+  (void)toplevel;
 }
 
 static void _xdg_toplevel_handle_close(void *data, struct xdg_toplevel *toplevel) {
@@ -239,30 +299,7 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
   }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_AUTO && try_csd && ctx->libdecor.ctx) {
-    window->libdecor.frame = maru_libdecor_decorate(ctx, ctx->libdecor.ctx, window->wl.surface,
-                                                    &_maru_libdecor_frame_interface, window);
-
-    if (window->libdecor.frame) {
-      if (create_info->attributes.title) {
-        maru_libdecor_frame_set_title(ctx, window->libdecor.frame,
-                                      create_info->attributes.title);
-      } else {
-        maru_libdecor_frame_set_title(ctx, window->libdecor.frame, "Maru");
-      }
-
-      if (create_info->app_id) {
-        maru_libdecor_frame_set_app_id(ctx, window->libdecor.frame,
-                                       create_info->app_id);
-      }
-
-      enum libdecor_capabilities caps = LIBDECOR_ACTION_CLOSE | LIBDECOR_ACTION_MOVE | LIBDECOR_ACTION_MINIMIZE;
-      if (window->is_resizable) {
-        caps |= LIBDECOR_ACTION_RESIZE | LIBDECOR_ACTION_FULLSCREEN;
-      }
-      maru_libdecor_frame_set_capabilities(ctx, window->libdecor.frame, caps);
-      maru_libdecor_frame_set_visibility(ctx, window->libdecor.frame, window->is_decorated);
-
-      maru_libdecor_frame_map(ctx, window->libdecor.frame);
+    if (_maru_wayland_create_libdecor_frame(window, create_info)) {
       window->decor_mode = MARU_WAYLAND_DECORATION_MODE_CSD;
     }
   }
@@ -343,6 +380,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
 #endif
 
   window->size = create_info->attributes.logical_size;
+  window->scale = 1.0;
   window->cursor_mode = create_info->attributes.cursor_mode;
   window->is_decorated = create_info->attributes.decorated;
   window->is_resizable = create_info->attributes.resizable;
@@ -360,13 +398,30 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   maru_wl_surface_add_listener(ctx, window->wl.surface, &_maru_wayland_surface_listener,
                                window);
 
+  if (ctx->protocols.opt.wp_fractional_scale_manager_v1) {
+    window->ext.fractional_scale = maru_wp_fractional_scale_manager_v1_get_fractional_scale(
+        ctx, ctx->protocols.opt.wp_fractional_scale_manager_v1, window->wl.surface);
+    maru_wp_fractional_scale_v1_add_listener(ctx, window->ext.fractional_scale,
+                                             &_maru_wayland_fractional_scale_listener, window);
+  }
+
   if (!_maru_wayland_create_xdg_shell_objects(window, create_info)) {
     maru_wl_surface_destroy(ctx, window->wl.surface);
     maru_context_free(&ctx->base, window);
     return MARU_FAILURE;
   }
 
+  if (ctx->protocols.opt.wp_content_type_manager_v1) {
+    window->ext.content_type = maru_wp_content_type_manager_v1_get_surface_content_type(
+        ctx, ctx->protocols.opt.wp_content_type_manager_v1, window->wl.surface);
+    if (window->ext.content_type) {
+      maru_wp_content_type_v1_set_content_type(
+          ctx, window->ext.content_type, _maru_wayland_map_content_type(create_info->content_type));
+    }
+  }
+
   _maru_wayland_update_opaque_region(window);
+  _maru_wayland_update_idle_inhibitor(window);
 
   if (create_info->attributes.mouse_passthrough) {
     struct wl_region *region = maru_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
@@ -388,8 +443,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   _maru_update_window_base(&window->base, field_mask, attributes);
 
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
-    if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
-      maru_libdecor_frame_set_title(ctx, window->libdecor.frame, attributes->title);
+    if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+      _maru_wayland_libdecor_set_title(window, attributes->title);
     } else if (window->xdg.toplevel) {
       maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel, attributes->title);
     }
@@ -403,6 +458,70 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
     window->base.pub.current_cursor = attributes->cursor;
     _maru_wayland_update_cursor(ctx, window, ctx->focused.pointer_serial);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
+    if (window->size.x != attributes->logical_size.x || window->size.y != attributes->logical_size.y) {
+      window->size = attributes->logical_size;
+      
+      MARU_Event evt = {0};
+      evt.resized.geometry.logical_size = window->size;
+      evt.resized.geometry.pixel_size.x = (int32_t)(window->size.x * window->scale);
+      evt.resized.geometry.pixel_size.y = (int32_t)(window->size.y * window->scale);
+      
+      _maru_wayland_update_opaque_region(window);
+      _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window*)window, &evt);
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
+    if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+      if (attributes->fullscreen) {
+        maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, NULL);
+      } else {
+        maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
+      }
+    } else if (window->xdg.toplevel) {
+      if (attributes->fullscreen) {
+        maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, NULL);
+      } else {
+        maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
+      }
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
+    if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+      if (attributes->maximized) {
+        maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
+      } else {
+        maru_libdecor_frame_unset_maximized(ctx, window->libdecor.frame);
+      }
+    } else if (window->xdg.toplevel) {
+      if (attributes->maximized) {
+        maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
+      } else {
+        maru_xdg_toplevel_unset_maximized(ctx, window->xdg.toplevel);
+      }
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
+    window->min_size = attributes->min_size;
+    if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+      maru_libdecor_frame_set_min_content_size(ctx, window->libdecor.frame, (int)window->min_size.x, (int)window->min_size.y);
+    } else if (window->xdg.toplevel) {
+      maru_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)window->min_size.x, (int)window->min_size.y);
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
+    window->max_size = attributes->max_size;
+    if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+      maru_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame, (int)window->max_size.x, (int)window->max_size.y);
+    } else if (window->xdg.toplevel) {
+      maru_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)window->max_size.x, (int)window->max_size.y);
+    }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
@@ -423,14 +542,30 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
-  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
-    maru_libdecor_frame_unref(ctx, window->libdecor.frame);
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+    _maru_wayland_destroy_libdecor_frame(window);
   } else {
     if (window->xdg.decoration) {
       maru_zxdg_toplevel_decoration_v1_destroy(ctx, window->xdg.decoration);
     }
     if (window->xdg.toplevel) maru_xdg_toplevel_destroy(ctx, window->xdg.toplevel);
     if (window->xdg.surface) maru_xdg_surface_destroy(ctx, window->xdg.surface);
+  }
+
+  if (window->ext.idle_inhibitor) {
+    maru_zwp_idle_inhibitor_v1_destroy(ctx, window->ext.idle_inhibitor);
+  }
+
+  if (window->ext.content_type) {
+    maru_wp_content_type_v1_destroy(ctx, window->ext.content_type);
+  }
+
+  if (window->ext.fractional_scale) {
+    maru_wp_fractional_scale_v1_destroy(ctx, window->ext.fractional_scale);
+  }
+
+  if (window->monitors) {
+    maru_context_free(&ctx->base, window->monitors);
   }
 
   maru_wl_surface_destroy(ctx, window->wl.surface);
@@ -449,8 +584,8 @@ void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *
       .logical_size = window->size,
       .pixel_size =
           {
-              .x = (int32_t)window->size.x, // TODO: apply scale
-              .y = (int32_t)window->size.y,
+              .x = (int32_t)(window->size.x * window->scale),
+              .y = (int32_t)(window->size.y * window->scale),
           },
   };
 }
@@ -458,4 +593,18 @@ void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *
 void *_maru_getWindowNativeHandle_WL(MARU_Window *window) {
   MARU_Window_WL *win = (MARU_Window_WL *)window;
   return win->wl.surface;
+}
+
+MARU_Status maru_getWindowBackendHandle_WL(MARU_Window *window_handle,
+                                         MARU_BackendType *out_type,
+                                         MARU_BackendHandle *out_handle) {
+  MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
+  *out_type = MARU_BACKEND_WAYLAND;
+#ifdef MARU_ENABLE_BACKEND_WAYLAND
+  out_handle->wayland_surface = window->wl.surface;
+#else
+  (void)window;
+  (void)out_handle;
+#endif
+  return MARU_SUCCESS;
 }
