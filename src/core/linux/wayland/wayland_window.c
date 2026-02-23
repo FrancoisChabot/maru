@@ -5,6 +5,92 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  if (!maru_isWindowReady((MARU_Window *)window)) {
+    return;
+  }
+
+  MARU_Event evt = {0};
+  maru_getWindowGeometry_WL((MARU_Window *)window, &evt.resized.geometry);
+  _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window *)window, &evt);
+}
+
+static void _fractional_scale_handle_preferred_scale(
+    void *data, struct wp_fractional_scale_v1 *fractional_scale, uint32_t scale) {
+  (void)fractional_scale;
+  MARU_Window_WL *window = (MARU_Window_WL *)data;
+  if (!window || scale == 0) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  MARU_Scalar new_scale = (MARU_Scalar)scale / (MARU_Scalar)120.0;
+  if (window->scale == new_scale) {
+    return;
+  }
+
+  window->scale = new_scale;
+  maru_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
+  _maru_wayland_dispatch_window_resized(window);
+}
+
+const struct wp_fractional_scale_v1_listener _maru_wayland_fractional_scale_listener = {
+    .preferred_scale = _fractional_scale_handle_preferred_scale,
+};
+
+static void _wl_surface_handle_enter(void *data, struct wl_surface *surface,
+                                     struct wl_output *output) {
+  (void)data;
+  (void)surface;
+  (void)output;
+}
+
+static void _wl_surface_handle_leave(void *data, struct wl_surface *surface,
+                                     struct wl_output *output) {
+  (void)data;
+  (void)surface;
+  (void)output;
+}
+
+static void _wl_surface_handle_preferred_buffer_scale(void *data,
+                                                      struct wl_surface *surface,
+                                                      int32_t factor) {
+  (void)surface;
+  MARU_Window_WL *window = (MARU_Window_WL *)data;
+  if (!window || factor <= 0) {
+    return;
+  }
+
+  if (window->ext.fractional_scale) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  MARU_Scalar new_scale = (MARU_Scalar)factor;
+  if (window->scale == new_scale) {
+    return;
+  }
+
+  window->scale = new_scale;
+  maru_wl_surface_set_buffer_scale(ctx, window->wl.surface, factor);
+  _maru_wayland_dispatch_window_resized(window);
+}
+
+static void _wl_surface_handle_preferred_buffer_transform(
+    void *data, struct wl_surface *surface, uint32_t transform) {
+  (void)data;
+  (void)surface;
+  (void)transform;
+}
+
+const struct wl_surface_listener _maru_wayland_surface_listener = {
+    .enter = _wl_surface_handle_enter,
+    .leave = _wl_surface_handle_leave,
+    .preferred_buffer_scale = _wl_surface_handle_preferred_buffer_scale,
+    .preferred_buffer_transform = _wl_surface_handle_preferred_buffer_transform,
+};
+
 static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_toplevel,
                                            int32_t width, int32_t height,
                                            struct wl_array *states) {
@@ -100,6 +186,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.ctx_base = &ctx->base;
   window->base.pub.context = context;
   window->size = create_info->attributes.logical_size;
+  window->scale = (MARU_Scalar)1.0;
   window->decor_mode = ctx->decor_mode;
   
   #ifdef MARU_INDIRECT_BACKEND
@@ -120,7 +207,9 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   if (!window->wl.surface) {
     goto cleanup_window;
   }
+  maru_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
   maru_wl_surface_set_user_data(ctx, window->wl.surface, window);
+  maru_wl_surface_add_listener(ctx, window->wl.surface, &_maru_wayland_surface_listener, window);
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
     if (!_maru_wayland_create_libdecor_frame(window, create_info)) {
@@ -129,6 +218,15 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   } else {
     if (!_maru_wayland_create_xdg_shell_objects(window, create_info)) {
       goto cleanup_surface;
+    }
+  }
+
+  if (ctx->protocols.opt.wp_fractional_scale_manager_v1) {
+    window->ext.fractional_scale = maru_wp_fractional_scale_manager_v1_get_fractional_scale(
+        ctx, ctx->protocols.opt.wp_fractional_scale_manager_v1, window->wl.surface);
+    if (window->ext.fractional_scale) {
+      maru_wp_fractional_scale_v1_add_listener(
+          ctx, window->ext.fractional_scale, &_maru_wayland_fractional_scale_listener, window);
     }
   }
 
@@ -233,6 +331,10 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   }
   if (window->ext.relative_pointer) {
     maru_zwp_relative_pointer_v1_destroy(ctx, window->ext.relative_pointer);
+  }
+  if (window->ext.fractional_scale) {
+    maru_wp_fractional_scale_v1_destroy(ctx, window->ext.fractional_scale);
+    window->ext.fractional_scale = NULL;
   }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
