@@ -20,6 +20,15 @@ extern "C" {
 typedef uint64_t MARU_ModifierFlags;
 
 
+/** @brief Tracks whether a button is currently pressed or released. */
+typedef enum MARU_ButtonState {
+  MARU_BUTTON_STATE_RELEASED = 0,
+  MARU_BUTTON_STATE_PRESSED = 1,
+} MARU_ButtonState;
+
+/** @brief 1-byte version of MARU_ButtonState for efficient array storage. */
+typedef uint8_t MARU_ButtonState8;
+
 /** @brief Identifiers for physical keyboard keys. */
 typedef enum MARU_Key {
   MARU_KEY_UNKNOWN = 0,

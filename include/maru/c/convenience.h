@@ -19,8 +19,11 @@
 extern "C" {
 #endif
 
+// Context attribute setters
+// N.B. If you are calling a few of those in a row, consider using maru_updateWindow instead.
 static inline void maru_setContextInhibitsSystemIdle(MARU_Context *context, bool enabled);
 
+// Window attribute setters
 // N.B. If you are calling a few of those in a row, consider using maru_updateWindow instead.
 static inline void maru_setWindowTitle(MARU_Window *window, const char *title);
 static inline void maru_setWindowSize(MARU_Window *window, MARU_Vec2Dip size);

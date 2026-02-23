@@ -38,6 +38,25 @@ typedef struct MARU_Cursor MARU_Cursor;
 /** @brief Persistent handle representing a physical monitor. */
 typedef struct MARU_Monitor MARU_Monitor;
 
+/** @brief Runtime state flags for a window. */
+typedef enum MARU_WindowStateFlagBits {
+  MARU_WINDOW_STATE_LOST = 1ULL << 0,
+  MARU_WINDOW_STATE_READY = 1ULL << 1,
+  MARU_WINDOW_STATE_FOCUSED = 1ULL << 2,
+  MARU_WINDOW_STATE_MAXIMIZED = 1ULL << 3,
+  MARU_WINDOW_STATE_FULLSCREEN = 1ULL << 4,
+  MARU_WINDOW_STATE_MOUSE_PASSTHROUGH = 1ULL << 5,
+  MARU_WINDOW_STATE_RESIZABLE = 1ULL << 6,
+  MARU_WINDOW_STATE_DECORATED = 1ULL << 7,
+} MARU_WindowStateFlagBits;
+
+/** @brief Cursor visibility and constraint modes. */
+typedef enum MARU_CursorMode {
+  MARU_CURSOR_NORMAL = 0,
+  MARU_CURSOR_HIDDEN = 1,
+  MARU_CURSOR_LOCKED = 2,
+} MARU_CursorMode;
+
 /* ----- Passive Accessors (External Synchronization Required) ----- 
  *
  * These functions are essentially zero-cost member accesses. They are safe to 

@@ -24,8 +24,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     ctx->allocator.free_cb = _maru_default_free;
     ctx->allocator.userdata = NULL;
   }
-
-  ctx->pub.userdata = create_info->userdata;
+  
   ctx->pub.flags = MARU_CONTEXT_STATE_READY;
   ctx->diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->diagnostic_userdata = create_info->attributes.diagnostic_userdata;

@@ -6,6 +6,7 @@
 
 #include "maru/c/core.h"
 #include "maru/c/metrics.h"
+#include "maru/c/windows.h"
 
 #ifdef __cplusplus
 extern "C" {

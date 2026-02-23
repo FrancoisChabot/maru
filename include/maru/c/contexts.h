@@ -24,6 +24,14 @@ extern "C" {
 /** @brief Opaque handle representing the library state and display server connection. */
 typedef struct MARU_Context MARU_Context;
 
+
+/** @brief Runtime state flags for a context. */
+typedef enum MARU_ContextStateFlagBits {
+  MARU_CONTEXT_STATE_LOST = 1ULL << 0,
+  MARU_CONTEXT_STATE_READY = 1ULL << 1,
+} MARU_ContextStateFlagBits;
+
+
 /** @brief Forward declaration of diagnostic info. */
 struct MARU_DiagnosticInfo;
 
@@ -63,25 +71,27 @@ MARU_BackendType maru_getContextBackendType(const MARU_Context *context);
 
 /** @brief Bitmask for selecting which attributes to update in maru_updateContext(). */
 typedef enum MARU_ContextAttributesField {
-  MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE = 1ULL << 0,
-  MARU_CONTEXT_ATTR_DIAGNOSTICS = 1ULL << 1,
-  MARU_CONTEXT_ATTR_EVENT_MASK = 1ULL << 2,
+  MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE = 1UL << 0,
+  MARU_CONTEXT_ATTR_DIAGNOSTICS = 1UL << 1,
+  MARU_CONTEXT_ATTR_EVENT_MASK = 1UL << 2,
 
-  MARU_CONTEXT_ATTR_ALL = 0xFFFFFFFFFFFFFFFFULL,
+  MARU_CONTEXT_ATTR_ALL = 0xFFFFFFFFUL,
 } MARU_ContextAttributesField;
 
-/** @brief Configurable parameters for an active context. */
+/** @brief Updatable parameters for an active context. */
 typedef struct MARU_ContextAttributes {
-  bool inhibit_idle;                      ///< If true, prevents the OS from entering sleep.
   MARU_DiagnosticCallback diagnostic_cb;  ///< Optional callback for library diagnostics.
   void *diagnostic_userdata;              ///< Passed to the diagnostic callback.
+  
   MARU_EventMask event_mask;              ///< Bitmask of events to allow.
+  
+  bool inhibit_idle;                      ///< If true, prevents the OS from entering sleep.
+
 } MARU_ContextAttributes;
 
 /** @brief Parameters for maru_createContext(). */
 typedef struct MARU_ContextCreateInfo {
   MARU_Allocator allocator;           ///< Custom memory allocator.
-  void *userdata;                     ///< Initial value for MARU_Context::userdata.
   MARU_BackendType backend;           ///< Requested backend, if set to MARU_BACKEND_UNKNOWN, a sensible default will be picked if possible.
   MARU_ContextAttributes attributes;  ///< Initial runtime attributes.
   MARU_ContextTuning tuning;          ///< Low-level tuning.
@@ -96,14 +106,13 @@ typedef struct MARU_ContextCreateInfo {
           .free_cb = NULL,                      \
           .userdata = NULL,                     \
       },                                        \
-      .userdata = NULL,                         \
       .backend = MARU_BACKEND_UNKNOWN,          \
       .attributes =                             \
           {                                     \
-              .inhibit_idle = false,            \
               .diagnostic_cb = NULL,           \
               .diagnostic_userdata = NULL,      \
               .event_mask = MARU_ALL_EVENTS, \
+              .inhibit_idle = false,            \
           },                                    \
       .tuning = MARU_CONTEXT_TUNING_DEFAULT,    \
   }

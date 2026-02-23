@@ -169,7 +169,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   _maru_init_context_base(&ctx->base);
 
-  ctx->base.pub.userdata = create_info->userdata;
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx->base.event_mask = create_info->attributes.event_mask;
@@ -244,7 +243,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     goto cleanup_registry;
   }
 
-  fprintf(stderr, "DEBUG: About to do second roundtrip\n");
   // Second roundtrip to process additional events
   if (maru_wl_display_roundtrip(ctx, ctx->wl.display) < 0) {
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,

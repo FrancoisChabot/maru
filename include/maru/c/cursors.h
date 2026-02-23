@@ -26,6 +26,14 @@ typedef struct MARU_Context MARU_Context;
 /** @brief Opaque handle representing a hardware-accelerated cursor. */
 typedef struct MARU_Cursor MARU_Cursor;
 
+/** @brief Runtime state flags for a cursor. */
+typedef enum MARU_CursorStateFlagBits {
+  MARU_CURSOR_FLAG_SYSTEM = 1ULL << 0,
+} MARU_CursorStateFlagBits;
+
+
+
+
 /** @brief Standard OS cursor shapes. */
 typedef enum MARU_CursorShape {
   MARU_CURSOR_SHAPE_DEFAULT = 1,
