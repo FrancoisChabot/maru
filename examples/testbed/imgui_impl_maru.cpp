@@ -2,9 +2,11 @@
 // Copyright (c) 2026 François Chabot
 
 #include "imgui_impl_maru.h"
+#include "maru/c/cursors.h"
 
 #include <maru/c/events.h>
 #include <maru/c/inputs.h>
+#include <maru/c/details/windows.h>
 #include <maru/c/windows.h>
 #include <maru/maru.h>
 
@@ -151,7 +153,7 @@ void ImGui_ImplMaru_Shutdown() {
     ImGuiIO& io = ImGui::GetIO();
 
     for (int i = 0; i < ImGuiMouseCursor_COUNT; i++) {
-        if (bd->MouseCursors[i]) maru_destroyCursor(bd->MouseCursors[i]);
+        if (bd->MouseCursors[i] && !maru_isCursorSystem(bd->MouseCursors[i])) maru_destroyCursor(bd->MouseCursors[i]);
         bd->MouseCursors[i] = NULL;
     }
 
@@ -169,6 +171,22 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
     // Respect app-managed cursor modes (e.g. locked/hidden in the testbed).
     if (maru_getWindowCursorMode(bd->Window) != MARU_CURSOR_NORMAL)
         return;
+
+    const MARU_Cursor* active_cursor =
+        ((const MARU_WindowExposed*)bd->Window)->current_cursor;
+    if (active_cursor) {
+        bool imgui_managed_cursor = false;
+        for (int i = 0; i < ImGuiMouseCursor_COUNT; ++i) {
+            if (active_cursor == bd->MouseCursors[i]) {
+                imgui_managed_cursor = true;
+                break;
+            }
+        }
+
+        // If another module applied a cursor override, keep it.
+        if (!imgui_managed_cursor)
+            return;
+    }
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {

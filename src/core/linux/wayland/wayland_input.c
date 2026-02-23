@@ -58,9 +58,23 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
     }
 
     struct wl_cursor *wl_cursor = NULL;
+    struct wl_buffer *buffer = NULL;
+    int32_t hotspot_x = 0;
+    int32_t hotspot_y = 0;
+    int32_t width = 0;
+    int32_t height = 0;
+
     if (cursor_handle) {
         MARU_Cursor_WL *cursor = (MARU_Cursor_WL *)cursor_handle;
         wl_cursor = cursor->wl_cursor;
+
+        if (cursor->buffer) {
+            buffer = cursor->buffer;
+            hotspot_x = cursor->hotspot_x;
+            hotspot_y = cursor->hotspot_y;
+            width = (int32_t)cursor->width;
+            height = (int32_t)cursor->height;
+        }
     } else {
         if (!ctx->wl.cursor_theme) {
              if (ctx->protocols.wl_shm) {
@@ -79,12 +93,18 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
         }
     }
 
-    if (!wl_cursor) return;
+    if (!buffer) {
+        if (!wl_cursor) return;
 
-    struct wl_cursor_image *image = wl_cursor->images[0];
-    struct wl_buffer *buffer = maru_wl_cursor_image_get_buffer(ctx, image);
-    
-    if (!buffer) return;
+        struct wl_cursor_image *image = wl_cursor->images[0];
+        buffer = maru_wl_cursor_image_get_buffer(ctx, image);
+        if (!buffer) return;
+
+        hotspot_x = (int32_t)image->hotspot_x;
+        hotspot_y = (int32_t)image->hotspot_y;
+        width = (int32_t)image->width;
+        height = (int32_t)image->height;
+    }
 
     if (!ctx->wl.cursor_surface) {
         ctx->wl.cursor_surface = maru_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
@@ -92,10 +112,10 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
     }
 
     maru_wl_surface_attach(ctx, ctx->wl.cursor_surface, buffer, 0, 0);
-    maru_wl_surface_damage(ctx, ctx->wl.cursor_surface, 0, 0, (int32_t)image->width, (int32_t)image->height);
+    maru_wl_surface_damage(ctx, ctx->wl.cursor_surface, 0, 0, width, height);
     maru_wl_surface_commit(ctx, ctx->wl.cursor_surface);
 
-    maru_wl_pointer_set_cursor(ctx, ctx->wl.pointer, serial, ctx->wl.cursor_surface, (int32_t)image->hotspot_x, (int32_t)image->hotspot_y);
+    maru_wl_pointer_set_cursor(ctx, ctx->wl.pointer, serial, ctx->wl.cursor_surface, hotspot_x, hotspot_y);
 }
 
 static void _pointer_handle_enter(void *data, struct wl_pointer *pointer,
@@ -505,8 +525,11 @@ MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape sh
   memset(cursor, 0, sizeof(MARU_Cursor_WL));
 
   cursor->base.ctx_base = &ctx->base;
+  cursor->base.pub.metrics = &cursor->base.metrics;
+  cursor->base.pub.flags = MARU_CURSOR_FLAG_SYSTEM;
   cursor->wl_cursor = wl_cursor;
   cursor->cursor_shape = shape;
+  cursor->shm_fd = -1;
   
   *out_cursor = (MARU_Cursor *)cursor;
   return MARU_SUCCESS;
@@ -515,9 +538,79 @@ MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape sh
 MARU_Status maru_createCursor_WL(MARU_Context *context,
                                 const MARU_CursorCreateInfo *create_info,
                                 MARU_Cursor **out_cursor) {
-  // Custom cursor creation requires creating a wl_buffer from pixels.
-  // Not implemented yet.
-  return MARU_FAILURE;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)context;
+  const int32_t width = create_info->size.x;
+  const int32_t height = create_info->size.y;
+
+  if (!ctx->protocols.wl_shm || !create_info->pixels || width <= 0 || height <= 0) {
+    return MARU_FAILURE;
+  }
+
+  const int32_t stride = width * 4;
+  const size_t data_size = (size_t)stride * (size_t)height;
+
+  int fd = memfd_create("maru-cursor", MFD_CLOEXEC);
+  if (fd < 0) {
+    return MARU_FAILURE;
+  }
+
+  if (ftruncate(fd, (off_t)data_size) != 0) {
+    close(fd);
+    return MARU_FAILURE;
+  }
+
+  void *data = mmap(NULL, data_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if (data == MAP_FAILED) {
+    close(fd);
+    return MARU_FAILURE;
+  }
+
+  memcpy(data, create_info->pixels, data_size);
+
+  struct wl_shm_pool *pool =
+      maru_wl_shm_create_pool(ctx, ctx->protocols.wl_shm, fd, (int32_t)data_size);
+  if (!pool) {
+    munmap(data, data_size);
+    close(fd);
+    return MARU_FAILURE;
+  }
+
+  struct wl_buffer *buffer = maru_wl_shm_pool_create_buffer(
+      ctx, pool, 0, width, height, stride, WL_SHM_FORMAT_ARGB8888);
+  maru_wl_shm_pool_destroy(ctx, pool);
+  if (!buffer) {
+    munmap(data, data_size);
+    close(fd);
+    return MARU_FAILURE;
+  }
+
+  MARU_Cursor_WL *cursor = maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_WL));
+  if (!cursor) {
+    maru_wl_buffer_destroy(ctx, buffer);
+    munmap(data, data_size);
+    close(fd);
+    return MARU_FAILURE;
+  }
+  memset(cursor, 0, sizeof(MARU_Cursor_WL));
+
+  cursor->base.ctx_base = &ctx->base;
+  #ifdef MARU_INDIRECT_BACKEND
+  extern const MARU_Backend maru_backend_WL;
+  cursor->base.backend = &maru_backend_WL;
+  #endif
+  cursor->base.pub.metrics = &cursor->base.metrics;
+  cursor->base.pub.userdata = create_info->userdata;
+  cursor->buffer = buffer;
+  cursor->shm_data = data;
+  cursor->shm_size = data_size;
+  cursor->shm_fd = fd;
+  cursor->width = (uint32_t)width;
+  cursor->height = (uint32_t)height;
+  cursor->hotspot_x = create_info->hot_spot.x;
+  cursor->hotspot_y = create_info->hot_spot.y;
+
+  *out_cursor = (MARU_Cursor *)cursor;
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor) {
@@ -526,6 +619,12 @@ MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor) {
 
   if (cursor_wl->buffer) {
       maru_wl_buffer_destroy(ctx, cursor_wl->buffer);
+  }
+  if (cursor_wl->shm_data && cursor_wl->shm_size > 0) {
+      munmap(cursor_wl->shm_data, cursor_wl->shm_size);
+  }
+  if (cursor_wl->shm_fd >= 0) {
+      close(cursor_wl->shm_fd);
   }
 
   maru_context_free(&ctx->base, cursor);

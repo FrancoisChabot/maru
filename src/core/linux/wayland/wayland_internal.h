@@ -96,6 +96,9 @@ typedef struct MARU_Cursor_WL {
   MARU_Cursor_Base base;
   struct wl_cursor *wl_cursor;
   struct wl_buffer *buffer;
+  void *shm_data;
+  size_t shm_size;
+  int shm_fd;
   int32_t hotspot_x;
   int32_t hotspot_y;
   uint32_t width;
