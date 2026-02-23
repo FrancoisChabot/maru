@@ -129,6 +129,9 @@ MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   if (mon_base->ref_count > 0) {
     mon_base->ref_count--;
+    if (mon_base->ref_count == 0 && !mon_base->is_active) {
+      maru_destroyMonitor_WL(monitor);
+    }
   }
 }
 

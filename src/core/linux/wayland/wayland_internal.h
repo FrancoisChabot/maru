@@ -85,11 +85,13 @@ typedef struct MARU_Monitor_WL {
   struct wl_output *output;
   struct zxdg_output_v1 *xdg_output;
   uint32_t name;
+  char *name_storage;
   MARU_VideoMode current_mode;
   MARU_VideoMode *modes;
   uint32_t mode_count;
   uint32_t mode_capacity;
   MARU_Scalar scale;
+  bool announced;
 } MARU_Monitor_WL;
 
 typedef struct MARU_Cursor_WL {
@@ -255,6 +257,7 @@ extern const struct wl_surface_listener _maru_wayland_surface_listener;
 extern const struct wp_fractional_scale_v1_listener _maru_wayland_fractional_scale_listener;
 extern const struct wl_pointer_listener _maru_wayland_pointer_listener;
 extern const struct wl_keyboard_listener _maru_wayland_keyboard_listener;
+extern const struct wl_output_listener _maru_wayland_output_listener;
 
 MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                                   MARU_Context **out_context);

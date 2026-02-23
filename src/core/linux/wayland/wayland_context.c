@@ -169,6 +169,7 @@ static void _registry_handle_global_remove(void *data,
                                            uint32_t name) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   (void)registry;
+  _maru_wayland_remove_output(ctx, name);
 }
 
 static const struct wl_registry_listener _registry_listener = {
@@ -327,6 +328,8 @@ cleanup_symbols:
 MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
+  _maru_cleanup_context_base(&ctx->base);
+
   if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
     _maru_wayland_cleanup_libdecor(ctx);
   }
@@ -369,8 +372,6 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
 
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
-
-  _maru_cleanup_context_base(&ctx->base);
 
   maru_context_free(&ctx->base, context);
   return MARU_SUCCESS;

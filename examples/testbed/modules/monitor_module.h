@@ -7,6 +7,7 @@
 
 class MonitorModule : public FeatureModule {
 public:
+    void onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) override;
     void update(MARU_Context* ctx, MARU_Window* window) override;
     void render(MARU_Context* ctx, MARU_Window* window) override;
 
@@ -15,4 +16,8 @@ public:
 
 private:
     bool enabled_ = true;
+    bool refresh_requested_ = true;
+    bool auto_refresh_on_events_ = true;
+    bool has_mode_set_result_ = false;
+    MARU_Status last_mode_set_status_ = MARU_FAILURE;
 };
