@@ -38,6 +38,7 @@ extern const struct wl_seat_listener _maru_wayland_seat_listener;
   MARU_WL_REGISTRY_BINDING_ENTRY(wl_seat, 5, &_maru_wayland_seat_listener)  \
   MARU_WL_REGISTRY_BINDING_ENTRY(zxdg_output_manager_v1, 3, NULL)          \
   MARU_WL_REGISTRY_BINDING_ENTRY(zxdg_decoration_manager_v1, 1, NULL)       \
+  MARU_WL_REGISTRY_BINDING_ENTRY(xdg_activation_v1, 1, NULL)                \
   MARU_WL_REGISTRY_BINDING_ENTRY(wp_viewporter, 1, NULL)                    \
   MARU_WL_REGISTRY_BINDING_ENTRY(wp_fractional_scale_manager_v1, 1, NULL)   \
   MARU_WL_REGISTRY_BINDING_ENTRY(zwp_relative_pointer_manager_v1, 1, NULL)  \

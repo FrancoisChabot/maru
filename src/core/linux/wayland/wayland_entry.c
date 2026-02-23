@@ -8,6 +8,11 @@
 extern void *maru_getContextNativeHandle_WL(MARU_Context *context);
 extern void *maru_getWindowNativeHandle_WL(MARU_Window *window);
 
+static void maru_resetMonitorMetrics_WL(MARU_Monitor *monitor) {
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
+}
+
 #ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_WL = {
   .destroyContext = maru_destroyContext_WL,
@@ -26,7 +31,7 @@ const MARU_Backend maru_backend_WL = {
   .getMonitors = maru_getMonitors_WL,
   .getMonitorModes = maru_getMonitorModes_WL,
   .setMonitorMode = maru_setMonitorMode_WL,
-  .resetMonitorMetrics = NULL,
+  .resetMonitorMetrics = maru_resetMonitorMetrics_WL,
   .getContextNativeHandle = maru_getContextNativeHandle_WL,
   .getWindowNativeHandle = maru_getWindowNativeHandle_WL,
 };
@@ -102,7 +107,7 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
 
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
-  return MARU_SUCCESS;
+  return maru_requestWindowFocus_WL(window);
 }
 
 MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
