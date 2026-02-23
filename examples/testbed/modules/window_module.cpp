@@ -401,11 +401,6 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 attrs.mouse_passthrough = mouse_passthrough;
                 maru_updateWindow(target, MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH, &attrs);
             }
-            if (ImGui::Checkbox("Primary Selection", &primary_is_primary_selection_)) {
-                MARU_WindowAttributes attrs = {};
-                attrs.primary_selection = primary_is_primary_selection_;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_PRIMARY_SELECTION, &attrs);
-            }
 
 #ifdef MARU_USE_FLOAT
             const ImGuiDataType scalar_type = ImGuiDataType_Float;
@@ -493,11 +488,6 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 MARU_WindowAttributes attrs = {};
                 attrs.mouse_passthrough = sw.mouse_passthrough;
                 maru_updateWindow(sw.window, MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH, &attrs);
-            }
-            if (ImGui::Checkbox("Primary Selection", &sw.primary_selection) && sw.window) {
-                MARU_WindowAttributes attrs = {};
-                attrs.primary_selection = sw.primary_selection;
-                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_PRIMARY_SELECTION, &attrs);
             }
 
 #ifdef MARU_USE_FLOAT

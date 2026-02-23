@@ -104,6 +104,7 @@ typedef struct MARU_Window_WL {
   bool is_fullscreen;
   bool is_resizable;
   bool is_decorated;
+  bool pending_resized_event;
   bool accepts_drop;
   bool primary_selection;
 } MARU_Window_WL;
@@ -328,6 +329,8 @@ void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial);
 void _maru_wayland_update_cursor_mode(MARU_Window_WL *window);
 void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window);
+void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
+                                        const MARU_Window_WL *window);
 extern const struct zwp_relative_pointer_v1_listener _maru_wayland_relative_pointer_listener;
 extern const struct zwp_locked_pointer_v1_listener _maru_wayland_locked_pointer_listener;
 MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(MARU_Context_WL *ctx);

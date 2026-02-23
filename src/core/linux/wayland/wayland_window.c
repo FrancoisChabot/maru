@@ -2,6 +2,7 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -37,12 +38,55 @@ static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
   maru_wp_viewport_set_destination(ctx, window->ext.viewport, dst_w, dst_h);
 }
 
+static uint32_t _maru_wayland_clamp_size(uint32_t value, uint32_t min_value, uint32_t max_value) {
+  if (value < min_value) return min_value;
+  if (value > max_value) return max_value;
+  return value;
+}
+
+void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
+                                        const MARU_Window_WL *window) {
+  if (!width || !height || !window) return;
+  if (*width == 0 || *height == 0) return;
+  if (window->aspect_ratio.num == 0 || window->aspect_ratio.denom == 0) return;
+
+  uint32_t min_width = window->min_size.x > 0 ? (uint32_t)window->min_size.x : 0u;
+  uint32_t min_height = window->min_size.y > 0 ? (uint32_t)window->min_size.y : 0u;
+  uint32_t max_width = window->max_size.x > 0 ? (uint32_t)window->max_size.x : UINT32_MAX;
+  uint32_t max_height = window->max_size.y > 0 ? (uint32_t)window->max_size.y : UINT32_MAX;
+
+  if (max_width < min_width) max_width = min_width;
+  if (max_height < min_height) max_height = min_height;
+
+  const uint64_t ratio_num = (uint32_t)window->aspect_ratio.num;
+  const uint64_t ratio_den = (uint32_t)window->aspect_ratio.denom;
+
+  for (int pass = 0; pass < 2; ++pass) {
+    uint64_t lhs = (uint64_t)(*width) * ratio_den;
+    uint64_t rhs = (uint64_t)(*height) * ratio_num;
+
+    if (lhs > rhs) {
+      uint64_t adjusted = ((uint64_t)(*height) * ratio_num + (ratio_den / 2u)) / ratio_den;
+      *width = (uint32_t)(adjusted > 0 ? adjusted : 1u);
+    } else if (lhs < rhs) {
+      uint64_t adjusted = ((uint64_t)(*width) * ratio_den + (ratio_num / 2u)) / ratio_num;
+      *height = (uint32_t)(adjusted > 0 ? adjusted : 1u);
+    }
+
+    *width = _maru_wayland_clamp_size(*width, min_width, max_width);
+    *height = _maru_wayland_clamp_size(*height, min_height, max_height);
+  }
+}
+
 static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
   if (!window) {
     return;
   }
 
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  const MARU_Scalar old_width = window->size.x;
+  const MARU_Scalar old_height = window->size.y;
+  bool size_changed = false;
   int32_t min_w = (int32_t)window->min_size.x;
   int32_t min_h = (int32_t)window->min_size.y;
   int32_t max_w = (int32_t)window->max_size.x;
@@ -59,13 +103,50 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
     }
   }
 
+  if (!window->is_maximized && !window->is_fullscreen) {
+    uint32_t constrained_w = (uint32_t)((window->size.x > 0) ? window->size.x : 1);
+    uint32_t constrained_h = (uint32_t)((window->size.y > 0) ? window->size.y : 1);
+    _maru_wayland_enforce_aspect_ratio(&constrained_w, &constrained_h, window);
+    window->size.x = (MARU_Scalar)constrained_w;
+    window->size.y = (MARU_Scalar)constrained_h;
+    size_changed = (window->size.x != old_width || window->size.y != old_height);
+  }
+
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
     maru_libdecor_frame_set_min_content_size(ctx, window->libdecor.frame, min_w, min_h);
     maru_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame, max_w, max_h);
+
+    struct xdg_toplevel *xdg_toplevel =
+        maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
+    if (xdg_toplevel) {
+      maru_xdg_toplevel_set_min_size(ctx, xdg_toplevel, min_w, min_h);
+      maru_xdg_toplevel_set_max_size(ctx, xdg_toplevel, max_w, max_h);
+    }
   } else if (window->xdg.toplevel) {
     maru_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, min_w, min_h);
     maru_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, max_w, max_h);
   }
+
+  if (window->xdg.surface) {
+    maru_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
+                                         (int32_t)window->size.x, (int32_t)window->size.y);
+  }
+
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame &&
+      !window->is_maximized && !window->is_fullscreen) {
+    struct libdecor_state *state = maru_libdecor_state_new(
+        ctx, (int)window->size.x, (int)window->size.y);
+    if (state) {
+      maru_libdecor_frame_commit(ctx, window->libdecor.frame, state, window->libdecor.last_configuration);
+      maru_libdecor_state_free(ctx, state);
+    }
+  }
+
+  if (size_changed) {
+    window->pending_resized_event = true;
+  }
+
+  maru_wl_surface_commit(ctx, window->wl.surface);
 }
 
 static void _maru_wayland_apply_mouse_passthrough(MARU_Window_WL *window) {
@@ -183,16 +264,6 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
   MARU_Window_WL *window = (MARU_Window_WL *)data;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
-  if (width > 0 && height > 0) {
-    const MARU_Scalar new_width = (MARU_Scalar)width;
-    const MARU_Scalar new_height = (MARU_Scalar)height;
-    if (window->size.x != new_width || window->size.y != new_height) {
-      window->size.x = new_width;
-      window->size.y = new_height;
-      _maru_wayland_dispatch_window_resized(window);
-    }
-  }
-
   bool is_maximized = false;
   bool is_fullscreen = false;
   const uint32_t *state = NULL;
@@ -201,6 +272,21 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       is_maximized = true;
     } else if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) {
       is_fullscreen = true;
+    }
+  }
+
+  if (width > 0 && height > 0) {
+    uint32_t pending_width = (uint32_t)width;
+    uint32_t pending_height = (uint32_t)height;
+    if (!is_maximized && !is_fullscreen) {
+      _maru_wayland_enforce_aspect_ratio(&pending_width, &pending_height, window);
+    }
+    const MARU_Scalar new_width = (MARU_Scalar)pending_width;
+    const MARU_Scalar new_height = (MARU_Scalar)pending_height;
+    if (window->size.x != new_width || window->size.y != new_height) {
+      window->size.x = new_width;
+      window->size.y = new_height;
+      _maru_wayland_dispatch_window_resized(window);
     }
   }
 
@@ -364,8 +450,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->is_fullscreen = create_info->attributes.fullscreen;
   window->is_resizable = create_info->attributes.resizable;
   window->is_decorated = create_info->decorated;
-  window->accepts_drop = create_info->attributes.accept_drop;
-  window->primary_selection = create_info->attributes.primary_selection;
 
   if (window->is_maximized) {
     window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
@@ -523,8 +607,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 
   if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
       window->aspect_ratio = attributes->aspect_ratio;
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "Wayland backend does not enforce aspect ratio constraints yet");
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
@@ -583,18 +665,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
-      window->accepts_drop = attributes->accept_drop;
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "Drop acceptance filtering is not implemented on Wayland");
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
-      window->primary_selection = attributes->primary_selection;
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "Primary selection toggling is not implemented on Wayland");
-  }
-
   if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
       window->text_input_type = attributes->text_input_type;
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
@@ -632,7 +702,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       window->base.pub.event_mask = attributes->event_mask;
   }
 
-  if (field_mask & (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE | MARU_WINDOW_ATTR_RESIZABLE)) {
+  if (field_mask & (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE |
+                    MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE)) {
       _maru_wayland_apply_size_constraints(window);
   }
 

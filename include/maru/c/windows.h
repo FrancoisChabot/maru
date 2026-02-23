@@ -134,10 +134,8 @@ typedef enum MARU_WindowAttributesField {
   MARU_WINDOW_ATTR_ASPECT_RATIO = 1ULL << 10,
   MARU_WINDOW_ATTR_RESIZABLE = 1ULL << 11,
   MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH = 1ULL << 12,
-  MARU_WINDOW_ATTR_ACCEPT_DROP = 1ULL << 13,
   MARU_WINDOW_ATTR_TEXT_INPUT_TYPE = 1ULL << 14,
   MARU_WINDOW_ATTR_TEXT_INPUT_RECT = 1ULL << 15,
-  MARU_WINDOW_ATTR_PRIMARY_SELECTION = 1ULL << 16,
   MARU_WINDOW_ATTR_EVENT_MASK = 1ULL << 17,
   MARU_WINDOW_ATTR_VIEWPORT_SIZE = 1ULL << 18,
 
@@ -159,8 +157,6 @@ typedef struct MARU_WindowAttributes {
   MARU_Fraction aspect_ratio;
   bool resizable;
   bool mouse_passthrough;
-  bool accept_drop;
-  bool primary_selection;
   MARU_TextInputType text_input_type;
   MARU_RectDip text_input_rect;
   MARU_EventMask event_mask;
@@ -208,8 +204,6 @@ typedef union MARU_BackendHandle {
                   .aspect_ratio = {0, 0},                       \
                   .resizable = true,                            \
                   .mouse_passthrough = false,                   \
-                  .accept_drop = false,                          \
-                  .primary_selection = true,                    \
                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE, \
                   .text_input_rect = {{0, 0}, {0, 0}},          \
                   .event_mask = MARU_ALL_EVENTS,                \

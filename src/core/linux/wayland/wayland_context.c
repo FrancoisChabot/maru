@@ -498,6 +498,17 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   ctx->base.pump_ctx = &pump_ctx;
 
   _maru_drain_user_events(&ctx->base);
+  for (uint32_t i = 0; i < ctx->base.window_cache_count; ++i) {
+    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
+    if (!window || !window->pending_resized_event) {
+      continue;
+    }
+
+    if (maru_isWindowReady((MARU_Window *)window)) {
+      window->pending_resized_event = false;
+      _maru_wayland_dispatch_window_resized(window);
+    }
+  }
 
   int display_fd = maru_wl_display_get_fd(ctx, ctx->wl.display);
   struct pollfd fds[2];

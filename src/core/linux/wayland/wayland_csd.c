@@ -39,16 +39,37 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 
   int width, height;
   enum libdecor_window_state window_state;
+  bool is_maximized = false;
+  bool is_fullscreen = false;
+
+  if (maru_libdecor_configuration_get_window_state(ctx, configuration, &window_state)) {
+    is_maximized = (window_state & LIBDECOR_WINDOW_STATE_MAXIMIZED) != 0;
+    is_fullscreen = (window_state & LIBDECOR_WINDOW_STATE_FULLSCREEN) != 0;
+  }
+
+  window->is_maximized = is_maximized;
+  window->is_fullscreen = is_fullscreen;
 
   if (!maru_libdecor_configuration_get_content_size(ctx, configuration, frame, &width, &height)) {
     width = (int)window->size.x;
     height = (int)window->size.y;
   }
 
-  window->size.x = (MARU_Scalar)width;
-  window->size.y = (MARU_Scalar)height;
+  window->libdecor.last_configuration = configuration;
 
-  struct libdecor_state *state = maru_libdecor_state_new(ctx, width, height);
+  uint32_t content_width = width > 0 ? (uint32_t)width : (uint32_t)window->size.x;
+  uint32_t content_height = height > 0 ? (uint32_t)height : (uint32_t)window->size.y;
+
+  if (!is_maximized && !is_fullscreen) {
+    _maru_wayland_enforce_aspect_ratio(&content_width, &content_height, window);
+  }
+  const bool size_changed = (window->size.x != (MARU_Scalar)content_width) ||
+                            (window->size.y != (MARU_Scalar)content_height);
+
+  window->size.x = (MARU_Scalar)content_width;
+  window->size.y = (MARU_Scalar)content_height;
+
+  struct libdecor_state *state = maru_libdecor_state_new(ctx, (int)content_width, (int)content_height);
   maru_libdecor_frame_commit(ctx, frame, state, configuration);
   maru_libdecor_state_free(ctx, state);
 
@@ -56,6 +77,10 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     window->base.pub.flags |= MARU_WINDOW_STATE_READY;
     MARU_Event evt = {0};
     _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window *)window, &evt);
+  }
+
+  if (size_changed) {
+    _maru_wayland_dispatch_window_resized(window);
   }
 
   maru_wl_surface_commit(ctx, window->wl.surface);
