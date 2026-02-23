@@ -81,6 +81,9 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
   } else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD) && ctx->wl.keyboard) {
     maru_wl_keyboard_destroy(ctx, ctx->wl.keyboard);
     ctx->wl.keyboard = NULL;
+    ctx->repeat.repeat_key = 0;
+    ctx->repeat.next_repeat_ns = 0;
+    ctx->repeat.interval_ns = 0;
   }
 }
 
@@ -97,6 +100,14 @@ static void _maru_wayland_drain_wake_fd(MARU_Context_WL *ctx) {
   uint64_t pending = 0;
   while (read(ctx->wake_fd, &pending, sizeof(pending)) == (ssize_t)sizeof(pending)) {
   }
+}
+
+uint64_t _maru_wayland_get_monotonic_time_ns(void) {
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+    return 0;
+  }
+  return ((uint64_t)ts.tv_sec * 1000000000ull) + (uint64_t)ts.tv_nsec;
 }
 
 static void _maru_wayland_disconnect_display(MARU_Context_WL *ctx) {
@@ -278,19 +289,15 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     goto cleanup_display;
   }
 
-  fprintf(stderr, "DEBUG: About to add registry listener\n");
   maru_wl_registry_add_listener(ctx, ctx->wl.registry, &_registry_listener,
                                 ctx);
 
-  fprintf(stderr, "DEBUG: About to do first roundtrip\n");
   if (maru_wl_display_roundtrip(ctx, ctx->wl.display) < 0) {
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
                            MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                            "wl_display_roundtrip() failure");
     goto cleanup_registry;
   }
-
-  fprintf(stderr, "DEBUG: First roundtrip done\n");
 
   // Check if required interfaces are bound
   bool missing_required = false;
@@ -451,6 +458,21 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   maru_wl_display_flush(ctx, ctx->wl.display);
 
   int timeout = (timeout_ms == MARU_NEVER) ? -1 : (int)timeout_ms;
+  if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 && ctx->repeat.next_repeat_ns != 0) {
+    const uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
+    if (now_ns != 0) {
+      if (ctx->repeat.next_repeat_ns <= now_ns) {
+        timeout = 0;
+      } else {
+        const uint64_t wait_ns = ctx->repeat.next_repeat_ns - now_ns;
+        const int repeat_timeout_ms = (int)((wait_ns + 999999ull) / 1000000ull);
+        if (timeout < 0 || repeat_timeout_ms < timeout) {
+          timeout = repeat_timeout_ms;
+        }
+      }
+    }
+  }
+
   int poll_result = poll(fds, nfds, timeout);
   if (poll_result > 0) {
     bool display_ready = (fds[0].revents & (POLLIN | POLLERR | POLLHUP)) != 0;
@@ -468,6 +490,42 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   }
 
   maru_wl_display_dispatch_pending(ctx, ctx->wl.display);
+
+  if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 && ctx->repeat.next_repeat_ns != 0 &&
+      ctx->linux_common.xkb.state && ctx->linux_common.xkb.focused_window) {
+    uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
+    if (now_ns != 0 && now_ns >= ctx->repeat.next_repeat_ns) {
+      uint32_t dispatch_count = 0;
+      const uint32_t max_dispatch_per_pump = 16;
+      const uint64_t interval_ns =
+          (ctx->repeat.interval_ns > 0) ? ctx->repeat.interval_ns : 1000000000ull;
+
+      while (ctx->repeat.repeat_key != 0 && now_ns >= ctx->repeat.next_repeat_ns &&
+             dispatch_count < max_dispatch_per_pump) {
+        MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.xkb.focused_window;
+        if (!window) {
+          break;
+        }
+
+        char buf[32];
+        int n = maru_xkb_state_key_get_utf8(ctx, ctx->linux_common.xkb.state,
+                                            ctx->repeat.repeat_key, buf, sizeof(buf));
+        if (n > 0) {
+          MARU_Event text_evt = {0};
+          text_evt.text_input.text = buf;
+          text_evt.text_input.length = (uint32_t)n;
+          _maru_dispatch_event(&ctx->base, MARU_TEXT_INPUT_RECEIVED, (MARU_Window *)window, &text_evt);
+        }
+
+        ctx->repeat.next_repeat_ns += interval_ns;
+        dispatch_count++;
+      }
+
+      if (dispatch_count == max_dispatch_per_pump && now_ns >= ctx->repeat.next_repeat_ns) {
+        ctx->repeat.next_repeat_ns = now_ns + interval_ns;
+      }
+    }
+  }
 
   ctx->base.pump_ctx = NULL;
   return MARU_SUCCESS;

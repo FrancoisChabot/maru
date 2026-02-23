@@ -25,6 +25,14 @@ typedef struct MARU_Context_WL {
     struct wl_surface *cursor_surface;
   } wl;
 
+  struct {
+    int32_t rate;
+    int32_t delay;
+    uint32_t repeat_key;
+    uint64_t next_repeat_ns;
+    uint64_t interval_ns;
+  } repeat;
+
   MARU_Wayland_Protocols_WL protocols;
 
   struct {
@@ -318,6 +326,7 @@ void _maru_wayland_destroy_ssd_decoration(MARU_Window_WL *window);
 void _maru_wayland_check_activation(MARU_Context_WL *ctx);
 void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window);
 void _maru_wayland_request_frame(MARU_Window_WL *window);
+uint64_t _maru_wayland_get_monotonic_time_ns(void);
 
 bool _maru_wayland_init_libdecor(MARU_Context_WL *ctx);
 void _maru_wayland_cleanup_libdecor(MARU_Context_WL *ctx);

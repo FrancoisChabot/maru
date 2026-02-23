@@ -436,6 +436,10 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
         _maru_dispatch_event(&ctx->base, MARU_FOCUS_CHANGED, ctx->linux_common.xkb.focused_window, &evt);
         ctx->linux_common.xkb.focused_window = NULL;
     }
+
+    ctx->repeat.repeat_key = 0;
+    ctx->repeat.next_repeat_ns = 0;
+    ctx->repeat.interval_ns = 0;
 }
 
 static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
@@ -445,27 +449,31 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.xkb.focused_window;
     if (!window || !ctx->linux_common.xkb.state) return;
 
-    uint32_t keycode = key + 8; // XKB uses +8 offset
+    uint32_t keycode = key + 8;
 
-    MARU_Event evt = {0};
-    evt.key.raw_key = _linux_scancode_to_maru_key(key);
-    evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
-    
-    evt.key.modifiers = 0;
-    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.shift))
-        evt.key.modifiers |= MARU_MODIFIER_SHIFT;
-    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.ctrl))
-        evt.key.modifiers |= MARU_MODIFIER_CONTROL;
-    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.alt))
-        evt.key.modifiers |= MARU_MODIFIER_ALT;
-    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.meta))
-        evt.key.modifiers |= MARU_MODIFIER_META;
-    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.caps))
-        evt.key.modifiers |= MARU_MODIFIER_CAPS_LOCK;
-    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.num))
-        evt.key.modifiers |= MARU_MODIFIER_NUM_LOCK;
+    const bool is_repeat = (state == WL_KEYBOARD_KEY_STATE_PRESSED) && (ctx->repeat.repeat_key == keycode);
 
-    _maru_dispatch_event(&ctx->base, MARU_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
+    if (!is_repeat) {
+        MARU_Event evt = {0};
+        evt.key.raw_key = _linux_scancode_to_maru_key(key);
+        evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+        
+        evt.key.modifiers = 0;
+        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.shift))
+            evt.key.modifiers |= MARU_MODIFIER_SHIFT;
+        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.ctrl))
+            evt.key.modifiers |= MARU_MODIFIER_CONTROL;
+        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.alt))
+            evt.key.modifiers |= MARU_MODIFIER_ALT;
+        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.meta))
+            evt.key.modifiers |= MARU_MODIFIER_META;
+        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.caps))
+            evt.key.modifiers |= MARU_MODIFIER_CAPS_LOCK;
+        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.num))
+            evt.key.modifiers |= MARU_MODIFIER_NUM_LOCK;
+
+        _maru_dispatch_event(&ctx->base, MARU_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
+    }
 
     if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
         char buf[32];
@@ -475,6 +483,33 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
             text_evt.text_input.text = buf;
             text_evt.text_input.length = (uint32_t)n;
             _maru_dispatch_event(&ctx->base, MARU_TEXT_INPUT_RECEIVED, (MARU_Window *)window, &text_evt);
+
+            if (ctx->repeat.rate > 0 && ctx->repeat.delay >= 0) {
+                const uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
+                const uint64_t delay_ns = ((uint64_t)(uint32_t)ctx->repeat.delay) * 1000000ull;
+                uint64_t interval_ns = 1000000000ull / (uint64_t)(uint32_t)ctx->repeat.rate;
+                if (interval_ns == 0) {
+                    interval_ns = 1;
+                }
+
+                ctx->repeat.repeat_key = keycode;
+                ctx->repeat.interval_ns = interval_ns;
+                ctx->repeat.next_repeat_ns = now_ns + delay_ns;
+            } else {
+                ctx->repeat.repeat_key = 0;
+                ctx->repeat.next_repeat_ns = 0;
+                ctx->repeat.interval_ns = 0;
+            }
+        } else {
+            ctx->repeat.repeat_key = 0;
+            ctx->repeat.next_repeat_ns = 0;
+            ctx->repeat.interval_ns = 0;
+        }
+    } else {
+        if (ctx->repeat.repeat_key == keycode) {
+            ctx->repeat.repeat_key = 0;
+            ctx->repeat.next_repeat_ns = 0;
+            ctx->repeat.interval_ns = 0;
         }
     }
 }
@@ -492,7 +527,9 @@ static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboa
 
 static void _keyboard_handle_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
                                          int32_t rate, int32_t delay) {
-    // TODO: Implement key repeat
+    MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+    ctx->repeat.rate = rate;
+    ctx->repeat.delay = delay;
 }
 
 const struct wl_keyboard_listener _maru_wayland_keyboard_listener = {
