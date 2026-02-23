@@ -21,9 +21,12 @@ typedef struct MARU_Context_WL {
     struct wl_seat *seat;
     struct wl_pointer *pointer;
     struct wl_keyboard *keyboard;
+    struct ext_idle_notification_v1 *idle_notification;
     struct wl_cursor_theme *cursor_theme;
     struct wl_surface *cursor_surface;
   } wl;
+
+  MARU_Cursor *standard_cursors[16];
 
   struct {
     int32_t rate;
@@ -34,6 +37,15 @@ typedef struct MARU_Context_WL {
   } repeat;
 
   MARU_Wayland_Protocols_WL protocols;
+
+  struct {
+    MARU_Vec2Dip delta;
+    struct {
+      int32_t x;
+      int32_t y;
+    } steps;
+    bool active;
+  } scroll;
 
   struct {
     MARU_Lib_WaylandClient wl;

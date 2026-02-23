@@ -39,6 +39,7 @@ typedef MARU_VulkanVoidFunction (*MARU_VkGetInstanceProcAddrFunc)(void *instance
 //N.B. If you are reviewing this API, imagine that this will be extended as needed as the backends are built...
 typedef struct MARU_ContextTuning {
   uint32_t user_event_queue_size;
+  uint32_t idle_timeout_ms;
 
   struct {
     MARU_WaylandDecorationMode decoration_mode;
@@ -56,6 +57,7 @@ typedef struct MARU_ContextTuning {
 #define MARU_CONTEXT_TUNING_DEFAULT                           \
   {                                                            \
     .user_event_queue_size = 256, \
+    .idle_timeout_ms = 0, \
     .wayland = { \
       .decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO, \
       .dnd_post_drop_timeout_ms = 1000, \

@@ -49,6 +49,14 @@ void EventModule::render(MARU_Context* ctx, MARU_Window* window) {
         event_checkbox("FOCUS_CHANGED", MARU_FOCUS_CHANGED);
         event_checkbox("WINDOW_MAXIMIZED", MARU_WINDOW_MAXIMIZED);
         event_checkbox("TEXT_COMPOSITION_UPDATED", MARU_TEXT_COMPOSITION_UPDATED);
+
+        ImGui::Separator();
+        static int idle_timeout = 0;
+        if (ImGui::SliderInt("Idle Timeout (ms)", &idle_timeout, 0, 10000)) {
+            MARU_ContextAttributes attrs = {};
+            attrs.idle_timeout_ms = (uint32_t)idle_timeout;
+            maru_updateContext(ctx, MARU_CONTEXT_ATTR_IDLE_TIMEOUT, &attrs);
+        }
     }
     ImGui::End();
 }

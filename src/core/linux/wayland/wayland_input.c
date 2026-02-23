@@ -190,27 +190,41 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
 static void _pointer_handle_axis(void *data, struct wl_pointer *pointer,
                                  uint32_t time, uint32_t axis, wl_fixed_t value) {
     MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
-
-    if (!window) return;
-
-    MARU_Event evt = {0};
-    double val = wl_fixed_to_double(value);
     
-    // Scale down scroll values a bit as they can be large on Wayland
     if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
-        evt.mouse_scroll.delta.y = -val / 10.0;
+        ctx->scroll.delta.y -= wl_fixed_to_double(value);
     } else {
-        evt.mouse_scroll.delta.x = -val / 10.0;
+        ctx->scroll.delta.x -= wl_fixed_to_double(value);
     }
-
-    _maru_dispatch_event(&ctx->base, MARU_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
+    ctx->scroll.active = true;
 }
 
-static void _pointer_handle_frame(void *data, struct wl_pointer *wl_pointer) {}
+static void _pointer_handle_frame(void *data, struct wl_pointer *wl_pointer) {
+    MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+    MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+
+    if (ctx->scroll.active) {
+        if (window) {
+            MARU_Event evt = {0};
+            evt.mouse_scroll.delta = ctx->scroll.delta;
+            evt.mouse_scroll.steps.x = ctx->scroll.steps.x;
+            evt.mouse_scroll.steps.y = ctx->scroll.steps.y;
+            _maru_dispatch_event(&ctx->base, MARU_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
+        }
+        memset(&ctx->scroll, 0, sizeof(ctx->scroll));
+    }
+}
 static void _pointer_handle_axis_source(void *data, struct wl_pointer *wl_pointer, uint32_t axis_source) {}
 static void _pointer_handle_axis_stop(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis) {}
-static void _pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t discrete) {}
+static void _pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t discrete) {
+    MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+    if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+        ctx->scroll.steps.y -= discrete;
+    } else {
+        ctx->scroll.steps.x -= discrete;
+    }
+    ctx->scroll.active = true;
+}
 
 static void _relative_pointer_handle_relative_motion(void *data, struct zwp_relative_pointer_v1 *pointer,
                                                      uint32_t utime_hi, uint32_t utime_lo,
@@ -431,6 +445,9 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
         MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.xkb.focused_window;
         window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
 
+        // Clear keyboard state on focus loss
+        memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
+
         MARU_Event evt = {0};
         evt.focus.focused = false;
         _maru_dispatch_event(&ctx->base, MARU_FOCUS_CHANGED, ctx->linux_common.xkb.focused_window, &evt);
@@ -450,13 +467,20 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     if (!window || !ctx->linux_common.xkb.state) return;
 
     uint32_t keycode = key + 8;
+    MARU_Key maru_key = _linux_scancode_to_maru_key(key);
+    MARU_ButtonState maru_state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+
+    // Update keyboard cache
+    if (maru_key != MARU_KEY_UNKNOWN) {
+        window->base.keyboard_state[maru_key] = (MARU_ButtonState8)maru_state;
+    }
 
     const bool is_repeat = (state == WL_KEYBOARD_KEY_STATE_PRESSED) && (ctx->repeat.repeat_key == keycode);
 
     if (!is_repeat) {
         MARU_Event evt = {0};
-        evt.key.raw_key = _linux_scancode_to_maru_key(key);
-        evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+        evt.key.raw_key = maru_key;
+        evt.key.state = maru_state;
         
         evt.key.modifiers = 0;
         if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.shift))
@@ -546,6 +570,13 @@ MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape sh
                                      MARU_Cursor **out_cursor) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
+  if (shape <= 0 || shape >= 16) return MARU_FAILURE;
+
+  if (ctx->standard_cursors[shape]) {
+      *out_cursor = ctx->standard_cursors[shape];
+      return MARU_SUCCESS;
+  }
+
   if (!ctx->wl.cursor_theme) {
       if (!ctx->protocols.wl_shm) return MARU_FAILURE;
       
@@ -566,12 +597,17 @@ MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape sh
   memset(cursor, 0, sizeof(MARU_Cursor_WL));
 
   cursor->base.ctx_base = &ctx->base;
+  #ifdef MARU_INDIRECT_BACKEND
+  extern const MARU_Backend maru_backend_WL;
+  cursor->base.backend = &maru_backend_WL;
+  #endif
   cursor->base.pub.metrics = &cursor->base.metrics;
   cursor->base.pub.flags = MARU_CURSOR_FLAG_SYSTEM;
   cursor->wl_cursor = wl_cursor;
   cursor->cursor_shape = shape;
   cursor->shm_fd = -1;
   
+  ctx->standard_cursors[shape] = (MARU_Cursor *)cursor;
   *out_cursor = (MARU_Cursor *)cursor;
   return MARU_SUCCESS;
 }

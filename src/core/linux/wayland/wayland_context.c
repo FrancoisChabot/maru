@@ -151,6 +151,44 @@ static bool _maru_wl_registry_try_bind(
   return true;
 }
 
+static void _idle_notification_handle_idled(void *data, struct ext_idle_notification_v1 *notification) {
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  MARU_Event evt = {0};
+  evt.idle.is_idle = true;
+  evt.idle.timeout_ms = ctx->base.tuning.idle_timeout_ms;
+  _maru_dispatch_event(&ctx->base, MARU_IDLE_STATE_CHANGED, NULL, &evt);
+}
+
+static void _idle_notification_handle_resumed(void *data, struct ext_idle_notification_v1 *notification) {
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  MARU_Event evt = {0};
+  evt.idle.is_idle = false;
+  evt.idle.timeout_ms = ctx->base.tuning.idle_timeout_ms;
+  _maru_dispatch_event(&ctx->base, MARU_IDLE_STATE_CHANGED, NULL, &evt);
+}
+
+static const struct ext_idle_notification_v1_listener _idle_notification_listener = {
+  .idled = _idle_notification_handle_idled,
+  .resumed = _idle_notification_handle_resumed,
+};
+
+static void _maru_wayland_update_idle_notification(MARU_Context_WL *ctx) {
+  if (ctx->wl.idle_notification) {
+    maru_ext_idle_notification_v1_destroy(ctx, ctx->wl.idle_notification);
+    ctx->wl.idle_notification = NULL;
+  }
+
+  uint32_t timeout_ms = ctx->base.tuning.idle_timeout_ms;
+  if (timeout_ms > 0 && ctx->protocols.opt.ext_idle_notifier_v1 && ctx->protocols.opt.wl_seat) {
+    ctx->wl.idle_notification = maru_ext_idle_notifier_v1_get_idle_notification(
+        ctx, ctx->protocols.opt.ext_idle_notifier_v1, timeout_ms, ctx->protocols.opt.wl_seat);
+    if (ctx->wl.idle_notification) {
+      maru_ext_idle_notification_v1_add_listener(ctx, ctx->wl.idle_notification,
+                                                  &_idle_notification_listener, ctx);
+    }
+  }
+}
+
 static void _registry_handle_global(void *data, struct wl_registry *registry,
                                     uint32_t name, const char *interface,
                                     uint32_t version) {
@@ -178,6 +216,10 @@ static void _registry_handle_global(void *data, struct wl_registry *registry,
     return;
   MARU_WL_REGISTRY_OPTIONAL_BINDINGS
 #undef MARU_WL_REGISTRY_BINDING_ENTRY
+
+  if (strcmp(interface, "wl_seat") == 0) {
+    _maru_wayland_update_idle_notification(ctx);
+  }
 }
 
 static void _registry_handle_global_remove(void *data,
@@ -331,6 +373,8 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     }
   }
 
+  _maru_wayland_update_idle_notification(ctx);
+
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
   return MARU_SUCCESS;
@@ -353,6 +397,12 @@ cleanup_symbols:
 MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
+  for (int i = 0; i < 16; ++i) {
+    if (ctx->standard_cursors[i]) {
+      maru_destroyCursor_WL(ctx->standard_cursors[i]);
+    }
+  }
+
   _maru_cleanup_context_base(&ctx->base);
 
   if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
@@ -366,6 +416,11 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   if (ctx->wl.keyboard) {
     if (ctx->wl.keyboard) maru_wl_keyboard_destroy(ctx, ctx->wl.keyboard);
     ctx->wl.keyboard = NULL;
+  }
+
+  if (ctx->wl.idle_notification) {
+    maru_ext_idle_notification_v1_destroy(ctx, ctx->wl.idle_notification);
+    ctx->wl.idle_notification = NULL;
   }
 
 #define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)    \
@@ -419,6 +474,9 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
       }
     }
   }
+
+  _maru_wayland_update_idle_notification(ctx);
+
   return MARU_SUCCESS;
 }
 

@@ -71,6 +71,7 @@ typedef enum MARU_ContextAttributesField {
   MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE = 1UL << 0,
   MARU_CONTEXT_ATTR_DIAGNOSTICS = 1UL << 1,
   MARU_CONTEXT_ATTR_EVENT_MASK = 1UL << 2,
+  MARU_CONTEXT_ATTR_IDLE_TIMEOUT = 1UL << 3,
 
   MARU_CONTEXT_ATTR_ALL = 0xFFFFFFFFUL,
 } MARU_ContextAttributesField;
@@ -83,6 +84,8 @@ typedef struct MARU_ContextAttributes {
   MARU_EventMask event_mask;              ///< Bitmask of events to allow.
   
   bool inhibit_idle;                      ///< If true, prevents the OS from entering sleep.
+
+  uint32_t idle_timeout_ms;               ///< Threshold for MARU_IDLE_STATE_CHANGED. 0 disables idle notifications.
 
 } MARU_ContextAttributes;
 
@@ -110,6 +113,7 @@ typedef struct MARU_ContextCreateInfo {
               .diagnostic_userdata = NULL,      \
               .event_mask = MARU_ALL_EVENTS, \
               .inhibit_idle = false,            \
+              .idle_timeout_ms = 0,             \
           },                                    \
       .tuning = MARU_CONTEXT_TUNING_DEFAULT,    \
   }

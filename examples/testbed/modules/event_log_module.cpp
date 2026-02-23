@@ -47,7 +47,9 @@ void EventLogModule::onEvent(MARU_EventType type, MARU_Window* win, const MARU_E
         ss << "Button: " << (int)e.mouse_button.button << " State: " << (e.mouse_button.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
            << " Mods: " << formatModifiers(e.mouse_button.modifiers);
     } else if (type == MARU_MOUSE_SCROLLED) {
-        ss << "Delta: (" << e.mouse_scroll.delta.x << "," << e.mouse_scroll.delta.y << ")";
+        ss << "Delta: (" << e.mouse_scroll.delta.x << "," << e.mouse_scroll.delta.y << ")" << "Steps: (" << e.mouse_scroll.steps.x << "," << e.mouse_scroll.steps.y << ")";
+    } else if (type == MARU_IDLE_STATE_CHANGED) {
+        ss << "Idle: " << (e.idle.is_idle ? "YES" : "NO") << " Timeout: " << e.idle.timeout_ms << "ms";
     } else if (type == MARU_TEXT_INPUT_RECEIVED) {
         ss << "Text: '" << (e.text_input.text ? e.text_input.text : "") << "' Len: " << e.text_input.length;
     } else if (type == MARU_TEXT_COMPOSITION_UPDATED) {

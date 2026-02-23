@@ -94,6 +94,10 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
   if (field_mask & MARU_CONTEXT_ATTR_EVENT_MASK) {
     ctx_base->event_mask = attributes->event_mask;
   }
+
+  if (field_mask & MARU_CONTEXT_ATTR_IDLE_TIMEOUT) {
+    ctx_base->tuning.idle_timeout_ms = attributes->idle_timeout_ms;
+  }
 }
 
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {

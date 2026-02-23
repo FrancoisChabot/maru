@@ -8,7 +8,7 @@
             "name": "C/C++ Debug (gdb Launch)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/examples/maru_basic_c",
+            "program": "${workspaceFolder}/build/examples/maru_testbed",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
