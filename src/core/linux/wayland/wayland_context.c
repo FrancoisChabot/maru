@@ -29,6 +29,36 @@ const struct xdg_wm_base_listener _maru_xdg_wm_base_listener = {
   .ping = _xdg_wm_base_ping,
 };
 
+static void _wl_refresh_locked_window_pointers(MARU_Context_WL *ctx) {
+  for (uint32_t i = 0; i < ctx->base.window_cache_count; i++) {
+    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
+    if (!window) {
+      continue;
+    }
+
+    if (window->base.pub.cursor_mode == MARU_CURSOR_LOCKED) {
+      _maru_wayland_update_cursor_mode(window);
+    }
+  }
+}
+
+static void _wl_clear_locked_window_pointers(MARU_Context_WL *ctx) {
+  for (uint32_t i = 0; i < ctx->base.window_cache_count; i++) {
+    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
+    if (!window) {
+      continue;
+    }
+
+    if (window->ext.relative_pointer) {
+      maru_zwp_relative_pointer_v1_destroy(ctx, window->ext.relative_pointer);
+      window->ext.relative_pointer = NULL;
+    }
+    if (window->ext.locked_pointer) {
+      maru_zwp_locked_pointer_v1_destroy(ctx, window->ext.locked_pointer);
+      window->ext.locked_pointer = NULL;
+    }
+  }
+}
 
 static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, uint32_t caps) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
@@ -37,7 +67,9 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
     ctx->wl.pointer = maru_wl_seat_get_pointer(ctx, wl_seat);
     ctx->dlib.wl.proxy_add_listener((struct wl_proxy *)ctx->wl.pointer,
                                     (void (**)(void))&_maru_wayland_pointer_listener, ctx);
+    _wl_refresh_locked_window_pointers(ctx);
   } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && ctx->wl.pointer) {
+    _wl_clear_locked_window_pointers(ctx);
     maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
     ctx->wl.pointer = NULL;
   }

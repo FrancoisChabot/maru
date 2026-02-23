@@ -134,6 +134,8 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer,
     
     evt.mouse_motion.delta.x = evt.mouse_motion.position.x - ctx->linux_common.pointer.x;
     evt.mouse_motion.delta.y = evt.mouse_motion.position.y - ctx->linux_common.pointer.y;
+    evt.mouse_motion.raw_delta.x = 0.0;
+    evt.mouse_motion.raw_delta.y = 0.0;
     
     ctx->linux_common.pointer.x = evt.mouse_motion.position.x;
     ctx->linux_common.pointer.y = evt.mouse_motion.position.y;

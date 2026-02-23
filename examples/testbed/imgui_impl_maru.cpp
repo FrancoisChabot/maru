@@ -166,6 +166,10 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return;
 
+    // Respect app-managed cursor modes (e.g. locked/hidden in the testbed).
+    if (maru_getWindowCursorMode(bd->Window) != MARU_CURSOR_NORMAL)
+        return;
+
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {
         MARU_WindowAttributes attrs = {};

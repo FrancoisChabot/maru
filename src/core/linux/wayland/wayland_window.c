@@ -154,8 +154,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       window->base.pub.current_cursor = attributes->cursor;
   }
   if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
-      window->base.pub.cursor_mode = attributes->cursor_mode;
-      _maru_wayland_update_cursor_mode(window);
+      if (window->base.pub.cursor_mode != attributes->cursor_mode) {
+          window->base.pub.cursor_mode = attributes->cursor_mode;
+          _maru_wayland_update_cursor_mode(window);
+      }
   }
 
   if ((field_mask & MARU_WINDOW_ATTR_CURSOR) || (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE)) {
