@@ -48,10 +48,7 @@ int main() {
          version.patch);
 
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-  
-  
-  MARU_ContextTuning tuning = MARU_CONTEXT_TUNING_DEFAULT;
-  create_info.tuning = &tuning;
+  create_info.tuning.wayland.decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO;
 
   create_info.attributes.diagnostic_cb = handle_diagnostic;
   create_info.attributes.event_mask = MARU_ALL_EVENTS;

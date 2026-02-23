@@ -126,6 +126,24 @@ static const struct wl_registry_listener _registry_listener = {
     .global_remove = _registry_handle_global_remove,
 };
 
+MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(MARU_Context_WL *ctx) {
+  MARU_WaylandDecorationMode mode = ctx->base.tuning.wayland.decoration_mode;
+
+  if (mode != MARU_WAYLAND_DECORATION_MODE_AUTO) {
+    return mode;
+  }
+
+  if (ctx->protocols.opt.zxdg_decoration_manager_v1) {
+    return MARU_WAYLAND_DECORATION_MODE_SSD;
+  }
+
+  if (ctx->dlib.opt.decor.base.available) {
+    return MARU_WAYLAND_DECORATION_MODE_CSD;
+  }
+
+  return MARU_WAYLAND_DECORATION_MODE_NONE;
+}
+
 MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                                   MARU_Context **out_context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)maru_context_alloc_bootstrap(
@@ -138,6 +156,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
          sizeof(MARU_Context_WL) - sizeof(MARU_Context_Base));
 
   ctx->base.pub.backend_type = MARU_BACKEND_WAYLAND;
+  ctx->base.tuning = create_info->tuning;
 
   if (create_info->allocator.alloc_cb) {
     ctx->base.allocator = create_info->allocator;
@@ -234,6 +253,13 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     goto cleanup_registry;
   }
 
+  ctx->decor_mode = _maru_wayland_get_decoration_mode(ctx);
+
+  if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+    if (!_maru_wayland_init_libdecor(ctx)) {
+      ctx->decor_mode = MARU_WAYLAND_DECORATION_MODE_NONE;
+    }
+  }
 
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
@@ -253,6 +279,9 @@ cleanup_symbols:
 MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
+  if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+    _maru_wayland_cleanup_libdecor(ctx);
+  }
 
 #define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)    \
   if (ctx->protocols.iface_name) {                                             \
@@ -324,7 +353,8 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
 
   maru_wl_display_flush(ctx, ctx->wl.display);
 
-  if (poll(fds, 1, timeout_ms) > 0) {
+  int timeout = (timeout_ms == MARU_NEVER) ? -1 : (int)timeout_ms;
+  if (poll(fds, 1, timeout) > 0) {
     maru_wl_display_read_events(ctx, ctx->wl.display);
   } else {
     maru_wl_display_cancel_read(ctx, ctx->wl.display);

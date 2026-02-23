@@ -77,6 +77,10 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
     maru_xdg_toplevel_set_app_id(ctx, window->xdg.toplevel, create_info->app_id);
   }
 
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_SSD) {
+    _maru_wayland_create_ssd_decoration(window);
+  }
+
   maru_wl_surface_commit(ctx, window->wl.surface);
 
   return true;
@@ -96,6 +100,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.ctx_base = &ctx->base;
   window->base.pub.context = context;
   window->size = create_info->attributes.logical_size;
+  window->decor_mode = ctx->decor_mode;
   
   #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_WL;
@@ -116,8 +121,14 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
     goto cleanup_window;
   }
 
-  if (!_maru_wayland_create_xdg_shell_objects(window, create_info)) {
-    goto cleanup_surface;
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+    if (!_maru_wayland_create_libdecor_frame(window, create_info)) {
+        goto cleanup_surface;
+    }
+  } else {
+    if (!_maru_wayland_create_xdg_shell_objects(window, create_info)) {
+      goto cleanup_surface;
+    }
   }
 
   _maru_register_window(&ctx->base, (MARU_Window *)window);
@@ -147,6 +158,12 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
 
   _maru_unregister_window(&ctx->base, window_handle);
 
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+    _maru_wayland_destroy_libdecor_frame(window);
+  } else {
+    _maru_wayland_destroy_ssd_decoration(window);
+  }
+
   if (window->xdg.toplevel) {
     maru_xdg_toplevel_destroy(ctx, window->xdg.toplevel);
   }
@@ -167,9 +184,9 @@ void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *
   const MARU_Window_WL *window = (const MARU_Window_WL *)window_handle;
   memset(out_geometry, 0, sizeof(MARU_WindowGeometry));
   out_geometry->logical_size = window->size;
-  out_geometry->scale = (window->scale > 0) ? window->scale : 1.0f;
-  out_geometry->pixel_size.x = (uint32_t)(window->size.x * out_geometry->scale);
-  out_geometry->pixel_size.y = (uint32_t)(window->size.y * out_geometry->scale);
+  out_geometry->scale = (window->scale > (MARU_Scalar)0) ? window->scale : (MARU_Scalar)1.0;
+  out_geometry->pixel_size.x = (int32_t)(window->size.x * out_geometry->scale);
+  out_geometry->pixel_size.y = (int32_t)(window->size.y * out_geometry->scale);
 }
 
 void *maru_getWindowNativeHandle_WL(MARU_Window *window) {

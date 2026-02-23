@@ -4,6 +4,8 @@ set(MARU_WAYLAND_SOURCES
     wayland_input.c
     wayland_monitor.c
     wayland_window.c
+    wayland_ssd.c
+    wayland_csd.c
     wayland_misc.c
     wayland_utils.c
     dlib/loader.c

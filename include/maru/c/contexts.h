@@ -10,6 +10,7 @@
 #include "maru/c/core.h"
 #include "maru/c/metrics.h"
 #include "maru/c/events.h"
+#include "maru/c/tuning.h"
 
 /**
  * @file contexts.h
@@ -77,16 +78,13 @@ typedef struct MARU_ContextAttributes {
   MARU_EventMask event_mask;              ///< Bitmask of events to allow.
 } MARU_ContextAttributes;
 
-/** @brief Forward declaration of tuning parameters. */
-struct MARU_ContextTuning; // Forward declared, defined in tuning.h
-
 /** @brief Parameters for maru_createContext(). */
 typedef struct MARU_ContextCreateInfo {
   MARU_Allocator allocator;           ///< Custom memory allocator.
   void *userdata;                     ///< Initial value for MARU_Context::userdata.
   MARU_BackendType backend;           ///< Requested backend, if set to MARU_BACKEND_UNKNOWN, a sensible default will be picked if possible.
   MARU_ContextAttributes attributes;  ///< Initial runtime attributes.
-  const struct MARU_ContextTuning *tuning; ///< Optional low-level tuning.
+  MARU_ContextTuning tuning;          ///< Low-level tuning.
 } MARU_ContextCreateInfo;
 
 /** @brief Default initialization macro for MARU_ContextCreateInfo. */
@@ -107,7 +105,7 @@ typedef struct MARU_ContextCreateInfo {
               .diagnostic_userdata = NULL,      \
               .event_mask = MARU_ALL_EVENTS, \
           },                                    \
-      .tuning = NULL,                           \
+      .tuning = MARU_CONTEXT_TUNING_DEFAULT,    \
   }
 
 /** @brief Creates a new context. 

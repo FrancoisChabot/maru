@@ -28,6 +28,9 @@ typedef struct MARU_Context_WL {
       MARU_Lib_Decor decor;
     } opt;
   } dlib;
+
+  MARU_WaylandDecorationMode decor_mode;
+  struct libdecor *libdecor_context;
 } MARU_Context_WL;
 
 typedef struct MARU_Window_WL {
@@ -271,7 +274,10 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
                                              const MARU_WindowCreateInfo *create_info);
 void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial);
-MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(const MARU_ContextCreateInfo *create_info);
+MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(MARU_Context_WL *ctx);
+
+bool _maru_wayland_create_ssd_decoration(MARU_Window_WL *window);
+void _maru_wayland_destroy_ssd_decoration(MARU_Window_WL *window);
 
 void _maru_wayland_check_activation(MARU_Context_WL *ctx);
 void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window);

@@ -50,12 +50,7 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.window_cache_count = 0;
   ctx->base.window_cache_capacity = 0;
 
-  if (create_info->tuning) {
-    ctx->base.tuning = *create_info->tuning;
-  } else {
-    MARU_ContextTuning default_tuning = MARU_CONTEXT_TUNING_DEFAULT;
-    ctx->base.tuning = default_tuning;
-  }
+  ctx->base.tuning = create_info->tuning;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_Windows;
