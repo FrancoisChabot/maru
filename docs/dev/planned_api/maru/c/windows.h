@@ -134,6 +134,7 @@ typedef enum MARU_WindowAttributesField {
   MARU_WINDOW_ATTR_TEXT_INPUT_RECT = 1ULL << 16,
   MARU_WINDOW_ATTR_PRIMARY_SELECTION = 1ULL << 17,
   MARU_WINDOW_ATTR_EVENT_MASK = 1ULL << 18,
+  MARU_WINDOW_ATTR_VIEWPORT_SIZE = 1ULL << 19,
 
   MARU_WINDOW_ATTR_ALL = 0xFFFFFFFFFFFFFFFFULL,
 } MARU_WindowAttributesField;
@@ -159,6 +160,7 @@ typedef struct MARU_WindowAttributes {
   MARU_TextInputType text_input_type;
   MARU_RectDip text_input_rect;
   MARU_EventMask event_mask;
+  MARU_Vec2Dip viewport_size;
 } MARU_WindowAttributes;
 
 /** @brief Parameters for maru_createWindow(). */
@@ -205,7 +207,8 @@ typedef union MARU_BackendHandle {
                   .primary_selection = true,                    \
                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE, \
                   .text_input_rect = {{0, 0}, {0, 0}},          \
-                  .event_mask = MARU_ALL_EVENTS},               \
+                  .event_mask = MARU_ALL_EVENTS,                \
+                  .viewport_size = {0, 0}},                     \
    .app_id = "maru.app",                                        \
    .content_type = MARU_CONTENT_TYPE_NONE,                      \
    .transparent = false                                         \

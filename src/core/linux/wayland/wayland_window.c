@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
+void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   if (!maru_isWindowReady((MARU_Window *)window)) {
     return;
@@ -14,6 +14,27 @@ static void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
   MARU_Event evt = {0};
   maru_getWindowGeometry_WL((MARU_Window *)window, &evt.resized.geometry);
   _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window *)window, &evt);
+}
+
+static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
+  if (!window || !window->ext.viewport) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  const bool disabled = (window->viewport_size.x <= (MARU_Scalar)0.0 ||
+                         window->viewport_size.y <= (MARU_Scalar)0.0);
+  if (disabled) {
+    maru_wp_viewport_set_destination(ctx, window->ext.viewport, -1, -1);
+    return;
+  }
+
+  int32_t dst_w = (int32_t)window->viewport_size.x;
+  int32_t dst_h = (int32_t)window->viewport_size.y;
+  if (dst_w <= 0 || dst_h <= 0) {
+    return;
+  }
+  maru_wp_viewport_set_destination(ctx, window->ext.viewport, dst_w, dst_h);
 }
 
 static void _fractional_scale_handle_preferred_scale(
@@ -95,10 +116,15 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
                                            int32_t width, int32_t height,
                                            struct wl_array *states) {
   MARU_Window_WL *window = (MARU_Window_WL *)data;
-  
+
   if (width > 0 && height > 0) {
-    window->size.x = (MARU_Scalar)width;
-    window->size.y = (MARU_Scalar)height;
+    const MARU_Scalar new_width = (MARU_Scalar)width;
+    const MARU_Scalar new_height = (MARU_Scalar)height;
+    if (window->size.x != new_width || window->size.y != new_height) {
+      window->size.x = new_width;
+      window->size.y = new_height;
+      _maru_wayland_dispatch_window_resized(window);
+    }
   }
 }
 
@@ -187,6 +213,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.pub.context = context;
   window->size = create_info->attributes.logical_size;
   window->scale = (MARU_Scalar)1.0;
+  window->viewport_size = create_info->attributes.viewport_size;
   window->decor_mode = ctx->decor_mode;
   
   #ifdef MARU_INDIRECT_BACKEND
@@ -210,6 +237,10 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   maru_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
   maru_wl_surface_set_user_data(ctx, window->wl.surface, window);
   maru_wl_surface_add_listener(ctx, window->wl.surface, &_maru_wayland_surface_listener, window);
+  if (ctx->protocols.opt.wp_viewporter) {
+    window->ext.viewport = maru_wp_viewporter_get_viewport(ctx, ctx->protocols.opt.wp_viewporter, window->wl.surface);
+    _maru_wayland_apply_viewport_size(window);
+  }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
     if (!_maru_wayland_create_libdecor_frame(window, create_info)) {
@@ -236,6 +267,10 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   return MARU_SUCCESS;
 
 cleanup_surface:
+  if (window->ext.viewport) {
+    maru_wp_viewport_destroy(ctx, window->ext.viewport);
+    window->ext.viewport = NULL;
+  }
   maru_wl_surface_destroy(ctx, window->wl.surface);
 cleanup_window:
   if (window->base.title) maru_context_free(&ctx->base, window->base.title);
@@ -262,6 +297,11 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       if (ctx->linux_common.pointer.focused_window == window_handle) {
           _maru_wayland_update_cursor(ctx, window, ctx->linux_common.pointer.enter_serial);
       }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
+      window->viewport_size = attributes->viewport_size;
+      _maru_wayland_apply_viewport_size(window);
   }
 
   return MARU_SUCCESS;
@@ -331,6 +371,10 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   }
   if (window->ext.relative_pointer) {
     maru_zwp_relative_pointer_v1_destroy(ctx, window->ext.relative_pointer);
+  }
+  if (window->ext.viewport) {
+    maru_wp_viewport_destroy(ctx, window->ext.viewport);
+    window->ext.viewport = NULL;
   }
   if (window->ext.fractional_scale) {
     maru_wp_fractional_scale_v1_destroy(ctx, window->ext.fractional_scale);

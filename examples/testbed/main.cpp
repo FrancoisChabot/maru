@@ -4,6 +4,7 @@
 #include "imgui.h"
 #include "imgui_impl_maru.h"
 #include "imgui_impl_vulkan.h"
+#include <chrono>
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 
@@ -40,11 +41,30 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
+static bool                     g_PendingResize = false;
+static uint64_t                 g_LastResizeAtMs = 0;
+static MARU_Vec2Dip             g_PendingViewportSize = {0, 0};
+static uint32_t                 g_ResizeDebounceMs = 32;
 
 static bool                     g_KeepRunning = true;
 static bool                     g_WindowReady = false;
 static MARU_Window*             g_PrimaryWindow = nullptr;
 static App*                     g_App = nullptr;
+
+static uint64_t now_ms()
+{
+    const auto now = std::chrono::steady_clock::now().time_since_epoch();
+    return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+}
+
+static void set_window_viewport_size(MARU_Window* window, MARU_Vec2Dip viewport_size)
+{
+    if (!window)
+        return;
+    MARU_WindowAttributes attrs = {};
+    attrs.viewport_size = viewport_size;
+    maru_updateWindow(window, MARU_WINDOW_ATTR_VIEWPORT_SIZE, &attrs);
+}
 
 static void handle_maru_diagnostic(const MARU_DiagnosticInfo* info, void* userdata) {
     (void)userdata;
@@ -65,8 +85,12 @@ static void handle_maru_event(MARU_EventType type, MARU_Window* window, const MA
         g_KeepRunning = false;
     else if (type == MARU_WINDOW_READY && window == g_PrimaryWindow)
         g_WindowReady = true;
-    else if (type == MARU_WINDOW_RESIZED && window == g_PrimaryWindow)
-        g_SwapChainRebuild = true;
+    else if (type == MARU_WINDOW_RESIZED && window == g_PrimaryWindow) {
+        g_PendingResize = true;
+        g_LastResizeAtMs = now_ms();
+        g_PendingViewportSize = event->resized.geometry.logical_size;
+        set_window_viewport_size(window, g_PendingViewportSize);
+    }
 }
 
 static void check_vk_result(VkResult err)
@@ -422,12 +446,19 @@ int main(int, char**)
             g_KeepRunning = false;
 
         maru_getWindowGeometry(window, &geometry);
-        if (geometry.pixel_size.x > 0 && geometry.pixel_size.y > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != (int)geometry.pixel_size.x || g_MainWindowData.Height != (int)geometry.pixel_size.y))
+        const uint64_t now = now_ms();
+        const bool debounce_elapsed = g_PendingResize && (now >= g_LastResizeAtMs) && ((now - g_LastResizeAtMs) >= g_ResizeDebounceMs);
+        const bool need_rebuild = g_SwapChainRebuild || debounce_elapsed;
+        if (geometry.pixel_size.x > 0 && geometry.pixel_size.y > 0 && need_rebuild)
         {
             ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
             ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, (int)geometry.pixel_size.x, (int)geometry.pixel_size.y, g_MinImageCount);
             g_MainWindowData.FrameIndex = 0;
             g_SwapChainRebuild = false;
+            g_PendingResize = false;
+            g_LastResizeAtMs = 0;
+            g_PendingViewportSize = {0, 0};
+            set_window_viewport_size(window, g_PendingViewportSize);
         }
 
         ImGui_ImplVulkan_NewFrame();
