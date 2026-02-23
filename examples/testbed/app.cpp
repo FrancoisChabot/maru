@@ -13,7 +13,7 @@
 #include "imgui.h"
 
 App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, VkQueue queue, VkDescriptorPool descriptor_pool) {
-    (void)instance; (void)physical_device; (void)device; (void)queue_family; (void)queue; (void)descriptor_pool;
+    (void)descriptor_pool;
     primary_window_handle_ = window;
 
     auto inst = std::make_unique<InstrumentationModule>();
@@ -25,7 +25,7 @@ App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_dev
     modules_.push_back(std::make_unique<MetricsModule>());
     modules_.push_back(std::make_unique<MonitorModule>());
     modules_.push_back(std::make_unique<CursorModule>());
-    modules_.push_back(std::make_unique<WindowModule>());
+    modules_.push_back(std::make_unique<WindowModule>(window, instance, physical_device, device, queue_family, queue));
     modules_.push_back(std::make_unique<InputModule>());
 }
 

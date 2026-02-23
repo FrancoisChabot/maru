@@ -43,6 +43,7 @@ static bool                     g_SwapChainRebuild = false;
 
 static bool                     g_KeepRunning = true;
 static bool                     g_WindowReady = false;
+static MARU_Window*             g_PrimaryWindow = nullptr;
 static App*                     g_App = nullptr;
 
 static void handle_maru_diagnostic(const MARU_DiagnosticInfo* info, void* userdata) {
@@ -52,18 +53,19 @@ static void handle_maru_diagnostic(const MARU_DiagnosticInfo* info, void* userda
 
 static void handle_maru_event(MARU_EventType type, MARU_Window* window, const MARU_Event* event, void* userdata)
 {
-    (void)window;
     (void)userdata;
-    ImGui_ImplMaru_HandleEvent(type, event);
+    if (!window || window == g_PrimaryWindow) {
+        ImGui_ImplMaru_HandleEvent(type, event);
+    }
     
     if (g_App)
         g_App->onEvent(type, window, *event);
 
-    if (type == MARU_CLOSE_REQUESTED)
+    if (type == MARU_CLOSE_REQUESTED && window == g_PrimaryWindow)
         g_KeepRunning = false;
-    else if (type == MARU_WINDOW_READY)
+    else if (type == MARU_WINDOW_READY && window == g_PrimaryWindow)
         g_WindowReady = true;
-    else if (type == MARU_WINDOW_RESIZED)
+    else if (type == MARU_WINDOW_RESIZED && window == g_PrimaryWindow)
         g_SwapChainRebuild = true;
 }
 
@@ -366,6 +368,7 @@ int main(int, char**)
         maru_destroyContext(context);
         return 1;
     }
+    g_PrimaryWindow = window;
 
     VkSurfaceKHR surface;
     if (maru_vulkan_createVkSurface(window, g_Instance, &surface) != MARU_SUCCESS) {
@@ -459,6 +462,7 @@ int main(int, char**)
     CleanupVulkan();
 
     maru_destroyWindow(window);
+    g_PrimaryWindow = nullptr;
     maru_destroyContext(context);
 
     return 0;
