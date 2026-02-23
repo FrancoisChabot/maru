@@ -10,6 +10,7 @@
 
 typedef struct MARU_Context_Linux_Common {
   struct {
+    MARU_Window *focused_window;
     struct xkb_context *ctx;
     struct xkb_keymap *keymap;
     struct xkb_state *state;

@@ -5,15 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug maru_testbed (bld_dbg)",
-            "type": "cppvsdbg",
+            "name": "C/C++ Debug (gdb Launch)",
+            "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bld_dbg/examples/Debug/maru_testbed.exe",
+            "program": "${workspaceFolder}/build/examples/maru_basic_c",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/bld_dbg/examples/Debug",
+            "cwd": "${workspaceFolder}",
             "environment": [],
-            "console": "integratedTerminal"
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

@@ -236,6 +236,14 @@ static inline xkb_mod_mask_t maru_xkb_state_serialize_mods(const MARU_Context_WL
   return ctx->linux_common.xkb_lib.state_serialize_mods(state, XKB_STATE_MODS_EFFECTIVE);
 }
 
+static inline xkb_keysym_t maru_xkb_state_key_get_one_sym(const MARU_Context_WL *ctx, struct xkb_state *state, xkb_keycode_t key) {
+  return ctx->linux_common.xkb_lib.state_key_get_one_sym(state, key);
+}
+
+static inline int maru_xkb_state_key_get_utf8(const MARU_Context_WL *ctx, struct xkb_state *state, xkb_keycode_t key, char *buffer, size_t size) {
+  return ctx->linux_common.xkb_lib.state_key_get_utf8(state, key, buffer, size);
+}
+
 extern const struct wl_surface_listener _maru_wayland_surface_listener;
 extern const struct wp_fractional_scale_v1_listener _maru_wayland_fractional_scale_listener;
 extern const struct wl_pointer_listener _maru_wayland_pointer_listener;

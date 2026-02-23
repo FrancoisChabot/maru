@@ -135,32 +135,239 @@ const struct wl_pointer_listener _maru_wayland_pointer_listener = {
     .axis_discrete = _pointer_handle_axis_discrete,
 };
 
+static MARU_Key _linux_scancode_to_maru_key(uint32_t scancode) {
+    switch (scancode) {
+        case KEY_ESC: return MARU_KEY_ESCAPE;
+        case KEY_1: return MARU_KEY_1;
+        case KEY_2: return MARU_KEY_2;
+        case KEY_3: return MARU_KEY_3;
+        case KEY_4: return MARU_KEY_4;
+        case KEY_5: return MARU_KEY_5;
+        case KEY_6: return MARU_KEY_6;
+        case KEY_7: return MARU_KEY_7;
+        case KEY_8: return MARU_KEY_8;
+        case KEY_9: return MARU_KEY_9;
+        case KEY_0: return MARU_KEY_0;
+        case KEY_MINUS: return MARU_KEY_MINUS;
+        case KEY_EQUAL: return MARU_KEY_EQUAL;
+        case KEY_BACKSPACE: return MARU_KEY_BACKSPACE;
+        case KEY_TAB: return MARU_KEY_TAB;
+        case KEY_Q: return MARU_KEY_Q;
+        case KEY_W: return MARU_KEY_W;
+        case KEY_E: return MARU_KEY_E;
+        case KEY_R: return MARU_KEY_R;
+        case KEY_T: return MARU_KEY_T;
+        case KEY_Y: return MARU_KEY_Y;
+        case KEY_U: return MARU_KEY_U;
+        case KEY_I: return MARU_KEY_I;
+        case KEY_O: return MARU_KEY_O;
+        case KEY_P: return MARU_KEY_P;
+        case KEY_LEFTBRACE: return MARU_KEY_LEFT_BRACKET;
+        case KEY_RIGHTBRACE: return MARU_KEY_RIGHT_BRACKET;
+        case KEY_ENTER: return MARU_KEY_ENTER;
+        case KEY_LEFTCTRL: return MARU_KEY_LEFT_CONTROL;
+        case KEY_A: return MARU_KEY_A;
+        case KEY_S: return MARU_KEY_S;
+        case KEY_D: return MARU_KEY_D;
+        case KEY_F: return MARU_KEY_F;
+        case KEY_G: return MARU_KEY_G;
+        case KEY_H: return MARU_KEY_H;
+        case KEY_J: return MARU_KEY_J;
+        case KEY_K: return MARU_KEY_K;
+        case KEY_L: return MARU_KEY_L;
+        case KEY_SEMICOLON: return MARU_KEY_SEMICOLON;
+        case KEY_APOSTROPHE: return MARU_KEY_APOSTROPHE;
+        case KEY_GRAVE: return MARU_KEY_GRAVE_ACCENT;
+        case KEY_LEFTSHIFT: return MARU_KEY_LEFT_SHIFT;
+        case KEY_BACKSLASH: return MARU_KEY_BACKSLASH;
+        case KEY_Z: return MARU_KEY_Z;
+        case KEY_X: return MARU_KEY_X;
+        case KEY_C: return MARU_KEY_C;
+        case KEY_V: return MARU_KEY_V;
+        case KEY_B: return MARU_KEY_B;
+        case KEY_N: return MARU_KEY_N;
+        case KEY_M: return MARU_KEY_M;
+        case KEY_COMMA: return MARU_KEY_COMMA;
+        case KEY_DOT: return MARU_KEY_PERIOD;
+        case KEY_SLASH: return MARU_KEY_SLASH;
+        case KEY_RIGHTSHIFT: return MARU_KEY_RIGHT_SHIFT;
+        case KEY_KPASTERISK: return MARU_KEY_KP_MULTIPLY;
+        case KEY_LEFTALT: return MARU_KEY_LEFT_ALT;
+        case KEY_SPACE: return MARU_KEY_SPACE;
+        case KEY_CAPSLOCK: return MARU_KEY_CAPS_LOCK;
+        case KEY_F1: return MARU_KEY_F1;
+        case KEY_F2: return MARU_KEY_F2;
+        case KEY_F3: return MARU_KEY_F3;
+        case KEY_F4: return MARU_KEY_F4;
+        case KEY_F5: return MARU_KEY_F5;
+        case KEY_F6: return MARU_KEY_F6;
+        case KEY_F7: return MARU_KEY_F7;
+        case KEY_F8: return MARU_KEY_F8;
+        case KEY_F9: return MARU_KEY_F9;
+        case KEY_F10: return MARU_KEY_F10;
+        case KEY_NUMLOCK: return MARU_KEY_NUM_LOCK;
+        case KEY_SCROLLLOCK: return MARU_KEY_SCROLL_LOCK;
+        case KEY_KP7: return MARU_KEY_KP_7;
+        case KEY_KP8: return MARU_KEY_KP_8;
+        case KEY_KP9: return MARU_KEY_KP_9;
+        case KEY_KPMINUS: return MARU_KEY_KP_SUBTRACT;
+        case KEY_KP4: return MARU_KEY_KP_4;
+        case KEY_KP5: return MARU_KEY_KP_5;
+        case KEY_KP6: return MARU_KEY_KP_6;
+        case KEY_KPPLUS: return MARU_KEY_KP_ADD;
+        case KEY_KP1: return MARU_KEY_KP_1;
+        case KEY_KP2: return MARU_KEY_KP_2;
+        case KEY_KP3: return MARU_KEY_KP_3;
+        case KEY_KP0: return MARU_KEY_KP_0;
+        case KEY_KPDOT: return MARU_KEY_KP_DECIMAL;
+        case KEY_F11: return MARU_KEY_F11;
+        case KEY_F12: return MARU_KEY_F12;
+        case KEY_KPENTER: return MARU_KEY_KP_ENTER;
+        case KEY_RIGHTCTRL: return MARU_KEY_RIGHT_CONTROL;
+        case KEY_KPSLASH: return MARU_KEY_KP_DIVIDE;
+        case KEY_SYSRQ: return MARU_KEY_PRINT_SCREEN;
+        case KEY_RIGHTALT: return MARU_KEY_RIGHT_ALT;
+        case KEY_HOME: return MARU_KEY_HOME;
+        case KEY_UP: return MARU_KEY_UP;
+        case KEY_PAGEUP: return MARU_KEY_PAGE_UP;
+        case KEY_LEFT: return MARU_KEY_LEFT;
+        case KEY_RIGHT: return MARU_KEY_RIGHT;
+        case KEY_END: return MARU_KEY_END;
+        case KEY_DOWN: return MARU_KEY_DOWN;
+        case KEY_PAGEDOWN: return MARU_KEY_PAGE_DOWN;
+        case KEY_INSERT: return MARU_KEY_INSERT;
+        case KEY_DELETE: return MARU_KEY_DELETE;
+        case KEY_LEFTMETA: return MARU_KEY_LEFT_META;
+        case KEY_RIGHTMETA: return MARU_KEY_RIGHT_META;
+        case KEY_COMPOSE: return MARU_KEY_MENU;
+        default: return MARU_KEY_UNKNOWN;
+    }
+}
+
 static void _keyboard_handle_keymap(void *data, struct wl_keyboard *wl_keyboard,
                                     uint32_t format, int32_t fd, uint32_t size) {
+    MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+    char *map_str;
+
+    if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
+        close(fd);
+        return;
+    }
+
+    map_str = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (map_str == MAP_FAILED) {
+        close(fd);
+        return;
+    }
+
+    if (ctx->linux_common.xkb.keymap)
+        maru_xkb_keymap_unref(ctx, ctx->linux_common.xkb.keymap);
+    if (ctx->linux_common.xkb.state)
+        maru_xkb_state_unref(ctx, ctx->linux_common.xkb.state);
+
+    ctx->linux_common.xkb.keymap = maru_xkb_keymap_new_from_string(
+        ctx, ctx->linux_common.xkb.ctx, map_str);
+
+    munmap(map_str, size);
+    close(fd);
+
+    if (!ctx->linux_common.xkb.keymap) {
+        return;
+    }
+
+    ctx->linux_common.xkb.state = maru_xkb_state_new(ctx, ctx->linux_common.xkb.keymap);
+
+    ctx->linux_common.xkb.mod_indices.shift = maru_xkb_mod_index(ctx, ctx->linux_common.xkb.keymap, XKB_MOD_NAME_SHIFT);
+    ctx->linux_common.xkb.mod_indices.ctrl = maru_xkb_mod_index(ctx, ctx->linux_common.xkb.keymap, XKB_MOD_NAME_CTRL);
+    ctx->linux_common.xkb.mod_indices.alt = maru_xkb_mod_index(ctx, ctx->linux_common.xkb.keymap, XKB_MOD_NAME_ALT);
+    ctx->linux_common.xkb.mod_indices.meta = maru_xkb_mod_index(ctx, ctx->linux_common.xkb.keymap, XKB_MOD_NAME_LOGO);
+    ctx->linux_common.xkb.mod_indices.caps = maru_xkb_mod_index(ctx, ctx->linux_common.xkb.keymap, XKB_MOD_NAME_CAPS);
+    ctx->linux_common.xkb.mod_indices.num = maru_xkb_mod_index(ctx, ctx->linux_common.xkb.keymap, XKB_MOD_NAME_NUM);
 }
 
 static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
                                    uint32_t serial, struct wl_surface *surface,
                                    struct wl_array *keys) {
+    MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+    if (!surface) return;
+
+    MARU_Window_WL *window = (MARU_Window_WL *)ctx->dlib.wl.proxy_get_user_data((struct wl_proxy *)surface);
+    if (window) {
+        ctx->linux_common.xkb.focused_window = (MARU_Window *)window;
+        
+        MARU_Event evt = {0};
+        evt.focus.focused = true;
+        _maru_dispatch_event(&ctx->base, MARU_FOCUS_CHANGED, (MARU_Window *)window, &evt);
+    }
 }
 
 static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
                                    uint32_t serial, struct wl_surface *surface) {
+    MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+    
+    if (ctx->linux_common.xkb.focused_window) {
+        MARU_Event evt = {0};
+        evt.focus.focused = false;
+        _maru_dispatch_event(&ctx->base, MARU_FOCUS_CHANGED, ctx->linux_common.xkb.focused_window, &evt);
+        ctx->linux_common.xkb.focused_window = NULL;
+    }
 }
 
 static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
                                  uint32_t serial, uint32_t time, uint32_t key,
                                  uint32_t state) {
+    MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+    MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.xkb.focused_window;
+    if (!window || !ctx->linux_common.xkb.state) return;
+
+    uint32_t keycode = key + 8; // XKB uses +8 offset
+
+    MARU_Event evt = {0};
+    evt.key.raw_key = _linux_scancode_to_maru_key(key);
+    evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+    
+    evt.key.modifiers = 0;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.shift))
+        evt.key.modifiers |= MARU_MODIFIER_SHIFT;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.ctrl))
+        evt.key.modifiers |= MARU_MODIFIER_CONTROL;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.alt))
+        evt.key.modifiers |= MARU_MODIFIER_ALT;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.meta))
+        evt.key.modifiers |= MARU_MODIFIER_META;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.caps))
+        evt.key.modifiers |= MARU_MODIFIER_CAPS_LOCK;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.num))
+        evt.key.modifiers |= MARU_MODIFIER_NUM_LOCK;
+
+    _maru_dispatch_event(&ctx->base, MARU_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
+
+    if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+        char buf[32];
+        int n = maru_xkb_state_key_get_utf8(ctx, ctx->linux_common.xkb.state, keycode, buf, sizeof(buf));
+        if (n > 0) {
+            MARU_Event text_evt = {0};
+            text_evt.text_input.text = buf;
+            text_evt.text_input.length = (uint32_t)n;
+            _maru_dispatch_event(&ctx->base, MARU_TEXT_INPUT_RECEIVED, (MARU_Window *)window, &text_evt);
+        }
+    }
 }
 
 static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboard,
                                        uint32_t serial, uint32_t mods_depressed,
                                        uint32_t mods_latched, uint32_t mods_locked,
                                        uint32_t group) {
+    MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+    if (ctx->linux_common.xkb.state) {
+        maru_xkb_state_update_mask(ctx, ctx->linux_common.xkb.state,
+                                   mods_depressed, mods_latched, mods_locked, group);
+    }
 }
 
 static void _keyboard_handle_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
                                          int32_t rate, int32_t delay) {
+    // TODO: Implement key repeat
 }
 
 const struct wl_keyboard_listener _maru_wayland_keyboard_listener = {

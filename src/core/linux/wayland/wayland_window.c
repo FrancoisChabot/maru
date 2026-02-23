@@ -160,6 +160,9 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   if (ctx->linux_common.pointer.focused_window == window_handle) {
     ctx->linux_common.pointer.focused_window = NULL;
   }
+  if (ctx->linux_common.xkb.focused_window == window_handle) {
+    ctx->linux_common.xkb.focused_window = NULL;
+  }
 
   _maru_unregister_window(&ctx->base, window_handle);
 
