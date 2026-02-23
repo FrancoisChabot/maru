@@ -35,7 +35,15 @@ target_link_libraries(maru_basic_c PRIVATE maru::maru maru_shared_renderer)
 add_executable(maru_testbed 
     testbed/main.cpp 
     testbed/imgui_impl_maru.cpp
-    testbed/event_log.cpp
+    testbed/app.cpp
+    testbed/modules/event_log_module.cpp
+    testbed/modules/event_module.cpp
+    testbed/modules/metrics_module.cpp
+    testbed/modules/monitor_module.cpp
+    testbed/modules/cursor_module.cpp
+    testbed/modules/window_module.cpp
+    testbed/modules/input_module.cpp
+    testbed/modules/instrumentation_module.cpp
 )
 target_link_libraries(maru_testbed PRIVATE maru::maru maru::vulkan imgui)
 set_target_properties(maru_testbed PROPERTIES CXX_STANDARD 20)

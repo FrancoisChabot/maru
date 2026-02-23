@@ -22,6 +22,7 @@ const MARU_Backend maru_backend_WL = {
   .createCursor = maru_createCursor_WL,
   .destroyCursor = maru_destroyCursor_WL,
   .wakeContext = maru_wakeContext_WL,
+  .getMonitors = maru_getMonitors_WL,
   .getMonitorModes = maru_getMonitorModes_WL,
   .setMonitorMode = maru_setMonitorMode_WL,
   .resetMonitorMetrics = NULL,

@@ -1,14 +1,20 @@
-#include "event_log.h"
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
+#include "event_log_module.h"
 #include "imgui.h"
 #include <sstream>
 #include <iomanip>
+#include <cstdio>
+#include <cstring>
 
-EventLog::EventLog() {
-    logs.resize(max_logs);
+EventLogModule::EventLogModule() {
+    logs_.resize(max_logs_);
 }
 
-void EventLog::onFrameBegin() {
-    current_frame_id++;
+void EventLogModule::update(MARU_Context* ctx, MARU_Window* window) {
+    (void)ctx; (void)window;
+    current_frame_id_++;
 }
 
 static std::string formatModifiers(MARU_ModifierFlags mods) {
@@ -22,8 +28,8 @@ static std::string formatModifiers(MARU_ModifierFlags mods) {
     return s;
 }
 
-void EventLog::onEvent(MARU_EventType type, MARU_Window* win, const MARU_Event& e) {
-    if (!enabled) return;
+void EventLogModule::onEvent(MARU_EventType type, MARU_Window* win, const MARU_Event& e) {
+    if (!enabled_) return;
     
     // Skip noisy frame events
     if (type == MARU_WINDOW_FRAME) return;
@@ -60,14 +66,14 @@ void EventLog::onEvent(MARU_EventType type, MARU_Window* win, const MARU_Event& 
 
     LogEntry entry;
     entry.timestamp = ImGui::GetTime();
-    entry.frame_id = current_frame_id;
+    entry.frame_id = current_frame_id_;
     entry.type = type;
     entry.details = ss.str();
     entry.window_handle = win;
     
     if (win) {
-        auto it = window_titles.find(win);
-        if (it != window_titles.end()) {
+        auto it = window_titles_.find(win);
+        if (it != window_titles_.end()) {
             entry.window_title = it->second;
         } else {
             char buf[32];
@@ -78,49 +84,50 @@ void EventLog::onEvent(MARU_EventType type, MARU_Window* win, const MARU_Event& 
         entry.window_title = "Global";
     }
 
-    logs[next_index] = std::move(entry);
-    next_index = (next_index + 1) % max_logs;
-    if (next_index == 0) full = true;
+    logs_[next_index_] = std::move(entry);
+    next_index_ = (next_index_ + 1) % max_logs_;
+    if (next_index_ == 0) full_ = true;
 }
 
-void EventLog::render() {
-    if (!enabled) return;
+void EventLogModule::render(MARU_Context* ctx, MARU_Window* window) {
+    (void)ctx; (void)window;
+    if (!enabled_) return;
 
     ImGui::SetNextWindowSize(ImVec2(800, 400), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin("Event Log", &enabled)) {
+    if (!ImGui::Begin("Event Log", &enabled_)) {
         ImGui::End();
         return;
     }
 
     if (ImGui::Button("Clear")) {
-        logs.clear();
-        logs.resize(max_logs);
-        next_index = 0;
-        full = false;
+        logs_.clear();
+        logs_.resize(max_logs_);
+        next_index_ = 0;
+        full_ = false;
     }
     ImGui::SameLine();
-    ImGui::Checkbox("Auto-scroll", &auto_scroll);
+    ImGui::Checkbox("Auto-scroll", &auto_scroll_);
     ImGui::SameLine();
-    ImGui::Checkbox("Details", &show_details);
+    ImGui::Checkbox("Details", &show_details_);
 
     ImGui::Separator();
 
     static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
-    if (ImGui::BeginTable("EventLogTable", show_details ? 5 : 4, flags, ImVec2(0, 0))) {
+    if (ImGui::BeginTable("EventLogTable", show_details_ ? 5 : 4, flags, ImVec2(0, 0))) {
         ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 60.0f);
         ImGui::TableSetupColumn("Frame", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 200.0f);
         ImGui::TableSetupColumn("Window", ImGuiTableColumnFlags_WidthFixed, 100.0f);
-        if (show_details) ImGui::TableSetupColumn("Details", ImGuiTableColumnFlags_WidthStretch);
+        if (show_details_) ImGui::TableSetupColumn("Details", ImGuiTableColumnFlags_WidthStretch);
         
         ImGui::TableSetupScrollFreeze(0, 1); // Freeze the header row
         ImGui::TableHeadersRow();
 
-        size_t count = full ? max_logs : next_index;
-        size_t start = full ? next_index : 0;
+        size_t count = full_ ? max_logs_ : next_index_;
+        size_t start = full_ ? next_index_ : 0;
 
         for (size_t i = 0; i < count; ++i) {
-            const auto& entry = logs[(start + i) % max_logs];
+            const auto& entry = logs_[(start + i) % max_logs_];
             ImGui::TableNextRow();
 
             // Alternating colors based on frame ID
@@ -135,13 +142,13 @@ void EventLog::render() {
             ImGui::Text("%s", typeToString(entry.type));
             ImGui::TableNextColumn();
             ImGui::TextUnformatted(entry.window_title.c_str());
-            if (show_details) {
+            if (show_details_) {
                 ImGui::TableNextColumn();
                 ImGui::TextUnformatted(entry.details.c_str());
             }
         }
 
-        if (auto_scroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        if (auto_scroll_ && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
             ImGui::SetScrollHereY(1.0f);
 
         ImGui::EndTable();
@@ -150,7 +157,7 @@ void EventLog::render() {
     ImGui::End();
 }
 
-const char* EventLog::typeToString(MARU_EventType type) {
+const char* EventLogModule::typeToString(MARU_EventType type) {
     if (type == MARU_CLOSE_REQUESTED) return "CLOSE_REQUESTED";
     if (type == MARU_WINDOW_RESIZED) return "WINDOW_RESIZED";
     if (type == MARU_KEY_STATE_CHANGED) return "KEY_STATE_CHANGED";
