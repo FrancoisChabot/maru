@@ -120,6 +120,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   if (!window->wl.surface) {
     goto cleanup_window;
   }
+  maru_wl_surface_set_user_data(ctx, window->wl.surface, window);
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
     if (!_maru_wayland_create_libdecor_frame(window, create_info)) {
@@ -155,6 +156,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+
+  if (ctx->linux_common.pointer.focused_window == window_handle) {
+    ctx->linux_common.pointer.focused_window = NULL;
+  }
 
   _maru_unregister_window(&ctx->base, window_handle);
 

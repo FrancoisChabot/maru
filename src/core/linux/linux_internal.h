@@ -23,6 +23,12 @@ typedef struct MARU_Context_Linux_Common {
     } mod_indices;
   } xkb;
 
+  struct {
+    MARU_Window *focused_window;
+    double x;
+    double y;
+  } pointer;
+
   MARU_Lib_Xkb xkb_lib;
 } MARU_Context_Linux_Common;
 

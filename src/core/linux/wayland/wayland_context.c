@@ -32,6 +32,24 @@ const struct xdg_wm_base_listener _maru_xdg_wm_base_listener = {
 
 static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, uint32_t caps) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+
+  if ((caps & WL_SEAT_CAPABILITY_POINTER) && !ctx->wl.pointer) {
+    ctx->wl.pointer = maru_wl_seat_get_pointer(ctx, wl_seat);
+    ctx->dlib.wl.proxy_add_listener((struct wl_proxy *)ctx->wl.pointer,
+                                    (void (**)(void))&_maru_wayland_pointer_listener, ctx);
+  } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && ctx->wl.pointer) {
+    maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
+    ctx->wl.pointer = NULL;
+  }
+
+  if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !ctx->wl.keyboard) {
+    ctx->wl.keyboard = maru_wl_seat_get_keyboard(ctx, wl_seat);
+    ctx->dlib.wl.proxy_add_listener((struct wl_proxy *)ctx->wl.keyboard,
+                                    (void (**)(void))&_maru_wayland_keyboard_listener, ctx);
+  } else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD) && ctx->wl.keyboard) {
+    maru_wl_keyboard_destroy(ctx, ctx->wl.keyboard);
+    ctx->wl.keyboard = NULL;
+  }
 }
 
 static void _wl_seat_handle_name(void *data, struct wl_seat *wl_seat, const char *name) {
@@ -279,6 +297,15 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
 
   if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
     _maru_wayland_cleanup_libdecor(ctx);
+  }
+
+  if (ctx->wl.pointer) {
+    if (ctx->wl.pointer) maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
+    ctx->wl.pointer = NULL;
+  }
+  if (ctx->wl.keyboard) {
+    if (ctx->wl.keyboard) maru_wl_keyboard_destroy(ctx, ctx->wl.keyboard);
+    ctx->wl.keyboard = NULL;
   }
 
 #define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)    \

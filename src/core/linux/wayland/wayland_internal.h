@@ -17,6 +17,9 @@ typedef struct MARU_Context_WL {
   struct {
     struct wl_display *display;
     struct wl_registry *registry;
+    struct wl_seat *seat;
+    struct wl_pointer *pointer;
+    struct wl_keyboard *keyboard;
   } wl;
 
   MARU_Wayland_Protocols_WL protocols;
@@ -235,6 +238,8 @@ static inline xkb_mod_mask_t maru_xkb_state_serialize_mods(const MARU_Context_WL
 
 extern const struct wl_surface_listener _maru_wayland_surface_listener;
 extern const struct wp_fractional_scale_v1_listener _maru_wayland_fractional_scale_listener;
+extern const struct wl_pointer_listener _maru_wayland_pointer_listener;
+extern const struct wl_keyboard_listener _maru_wayland_keyboard_listener;
 
 MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                                   MARU_Context **out_context);
