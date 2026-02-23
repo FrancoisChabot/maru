@@ -139,10 +139,8 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
 
     switch (msg) {
     case WM_CLOSE: {
-      if (ctx->event_cb && (ctx->event_mask & MARU_CLOSE_REQUESTED)) {
-        MARU_Event evt = { {0} };
-        ctx->event_cb(MARU_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
-      }
+      MARU_Event evt = { {0} };
+      _maru_dispatch_event(ctx, MARU_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
       return 0;
     }
 
@@ -480,10 +478,8 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   window->base.pub.flags |= MARU_WINDOW_STATE_READY;
   _maru_register_window(&ctx->base, (MARU_Window *)window);
 
-  if (ctx->base.event_cb && (ctx->base.event_mask & MARU_WINDOW_READY)) {
-      MARU_Event evt = { {0} };
-      ctx->base.event_cb(MARU_WINDOW_READY, (MARU_Window *)window, &evt);
-  }
+  MARU_Event evt = { {0} };
+  _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window *)window, &evt);
 
   *out_window = (MARU_Window *)window;
   return MARU_SUCCESS;

@@ -48,9 +48,11 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type,
                           MARU_Window *window, const MARU_Event *event) {
-  if (ctx->pump_ctx && (ctx->event_mask & type)) {
-    ctx->pump_ctx->callback(type, window, event, ctx->pump_ctx->userdata);
-  }
+  if (!ctx->pump_ctx) return;
+  if ((ctx->event_mask & type) == 0) return;
+  if (window && (maru_getWindowEventMask(window) & type) == 0) return;
+
+  ctx->pump_ctx->callback(type, window, event, ctx->pump_ctx->userdata);
 }
 
 void _maru_init_context_base(MARU_Context_Base *ctx_base) {

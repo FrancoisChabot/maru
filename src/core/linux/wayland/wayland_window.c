@@ -247,6 +247,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   memset(window, 0, sizeof(MARU_Window_WL));
   window->base.ctx_base = &ctx->base;
   window->base.pub.context = context;
+  window->base.pub.event_mask = create_info->attributes.event_mask;
   window->size = create_info->attributes.logical_size;
   window->scale = (MARU_Scalar)1.0;
   window->viewport_size = create_info->attributes.viewport_size;
@@ -338,6 +339,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
       window->viewport_size = attributes->viewport_size;
       _maru_wayland_apply_viewport_size(window);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
+      window->base.pub.event_mask = attributes->event_mask;
   }
 
   return MARU_SUCCESS;

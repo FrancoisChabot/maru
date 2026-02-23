@@ -10,19 +10,27 @@ void EventModule::update(MARU_Context* ctx, MARU_Window* window) {
     (void)ctx; (void)window;
 }
 
+void EventModule::onContextRecreated(MARU_Context* ctx, MARU_Window* window) {
+    (void)ctx;
+    (void)window;
+    context_mask_ = MARU_ALL_EVENTS;
+}
+
 void EventModule::render(MARU_Context* ctx, MARU_Window* window) {
     if (!enabled_) return;
+    (void)window;
 
     if (ImGui::Begin("Event Mask", &enabled_)) {
-        MARU_EventMask mask = maru_getWindowEventMask(window);
+        MARU_EventMask mask = context_mask_;
         
         auto event_checkbox = [&](const char* name, MARU_EventMask bit) {
             bool val = (mask & bit) != 0;
             if (ImGui::Checkbox(name, &val)) {
                 if (val) mask |= bit; else mask &= ~bit;
-                MARU_WindowAttributes attrs = {};
+                MARU_ContextAttributes attrs = {};
                 attrs.event_mask = mask;
-                maru_updateWindow(window, MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
+                maru_updateContext(ctx, MARU_CONTEXT_ATTR_EVENT_MASK, &attrs);
+                context_mask_ = mask;
             }
         };
 

@@ -30,6 +30,7 @@ static std::string formatModifiers(MARU_ModifierFlags mods) {
 
 void EventLogModule::onEvent(MARU_EventType type, MARU_Window* win, const MARU_Event& e) {
     if (!enabled_) return;
+    if (hide_mouse_motion_ && type == MARU_MOUSE_MOVED) return;
     
     std::stringstream ss;
     if (type == MARU_WINDOW_RESIZED) {
@@ -108,6 +109,8 @@ void EventLogModule::render(MARU_Context* ctx, MARU_Window* window) {
     ImGui::Checkbox("Details", &show_details_);
     ImGui::SameLine();
     ImGui::Checkbox("Frame Events", &log_frame_events_);
+    ImGui::SameLine();
+    ImGui::Checkbox("Hide Mouse Motion", &hide_mouse_motion_);
 
     ImGui::Separator();
 

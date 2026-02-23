@@ -402,7 +402,7 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
                                   const MARU_ContextAttributes *attributes) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
-  (void)attributes;
+  _maru_update_context_base(&ctx->base, field_mask, attributes);
   return MARU_SUCCESS;
 }
 

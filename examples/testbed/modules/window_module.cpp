@@ -43,6 +43,49 @@ static void check_vk_result(VkResult err) {
     }
 }
 
+static void renderWindowEventMaskControls(const char* id_label, MARU_Window* target) {
+    if (!target) {
+        return;
+    }
+
+    ImGui::PushID(id_label);
+    if (ImGui::CollapsingHeader("Window Event Mask")) {
+        MARU_EventMask mask = maru_getWindowEventMask(target);
+
+        auto event_checkbox = [&](const char* name, MARU_EventMask bit) {
+            bool val = (mask & bit) != 0;
+            if (ImGui::Checkbox(name, &val)) {
+                if (val) {
+                    mask |= bit;
+                } else {
+                    mask &= ~bit;
+                }
+
+                MARU_WindowAttributes attrs = {};
+                attrs.event_mask = mask;
+                maru_updateWindow(target, MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
+            }
+        };
+
+        event_checkbox("CLOSE_REQUESTED", MARU_CLOSE_REQUESTED);
+        event_checkbox("WINDOW_RESIZED", MARU_WINDOW_RESIZED);
+        event_checkbox("KEY_STATE_CHANGED", MARU_KEY_STATE_CHANGED);
+        event_checkbox("WINDOW_READY", MARU_WINDOW_READY);
+        event_checkbox("MOUSE_MOVED", MARU_MOUSE_MOVED);
+        event_checkbox("MOUSE_BUTTON_STATE_CHANGED", MARU_MOUSE_BUTTON_STATE_CHANGED);
+        event_checkbox("MOUSE_SCROLLED", MARU_MOUSE_SCROLLED);
+        event_checkbox("IDLE_STATE_CHANGED", MARU_IDLE_STATE_CHANGED);
+        event_checkbox("MONITOR_CONNECTION_CHANGED", MARU_MONITOR_CONNECTION_CHANGED);
+        event_checkbox("MONITOR_MODE_CHANGED", MARU_MONITOR_MODE_CHANGED);
+        event_checkbox("WINDOW_FRAME", MARU_WINDOW_FRAME);
+        event_checkbox("TEXT_INPUT_RECEIVED", MARU_TEXT_INPUT_RECEIVED);
+        event_checkbox("FOCUS_CHANGED", MARU_FOCUS_CHANGED);
+        event_checkbox("WINDOW_MAXIMIZED", MARU_WINDOW_MAXIMIZED);
+        event_checkbox("TEXT_COMPOSITION_UPDATED", MARU_TEXT_COMPOSITION_UPDATED);
+    }
+    ImGui::PopID();
+}
+
 void WindowModule::onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) {
     (void)event;
     if (handling_window_teardown_) {
@@ -394,6 +437,8 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             if (ImGui::Button("Request Frame Callback")) {
                 maru_requestWindowFrame(target);
             }
+
+            renderWindowEventMaskControls("primary_window_mask", target);
         }
     }
 
@@ -499,6 +544,8 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             if (ImGui::Button("Close")) {
                 sw.should_close = true;
             }
+
+            renderWindowEventMaskControls("secondary_window_mask", sw.window);
         }
         ImGui::PopID();
     }
