@@ -13,6 +13,7 @@
 typedef struct MARU_Context_WL {
   MARU_Context_Base base;
   MARU_Context_Linux_Common linux_common;
+  int wake_fd;
 
   struct {
     struct wl_display *display;

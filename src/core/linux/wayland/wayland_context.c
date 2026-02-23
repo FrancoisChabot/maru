@@ -93,6 +93,11 @@ const struct wl_seat_listener _maru_wayland_seat_listener = {
   .name = _wl_seat_handle_name,
 };
 
+static void _maru_wayland_drain_wake_fd(MARU_Context_WL *ctx) {
+  uint64_t pending = 0;
+  while (read(ctx->wake_fd, &pending, sizeof(pending)) == (ssize_t)sizeof(pending)) {
+  }
+}
 
 static void _maru_wayland_disconnect_display(MARU_Context_WL *ctx) {
   if (ctx->wl.display) {
@@ -205,6 +210,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   memset(((uint8_t *)ctx) + sizeof(MARU_Context_Base), 0,
          sizeof(MARU_Context_WL) - sizeof(MARU_Context_Base));
+  ctx->wake_fd = -1;
 
   ctx->base.pub.backend_type = MARU_BACKEND_WAYLAND;
   ctx->base.tuning = create_info->tuning;
@@ -242,6 +248,14 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                                  &ctx->dlib.opt.decor)) {
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
+  }
+
+  ctx->wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+  if (ctx->wake_fd < 0) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
+                           MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                           "Failed to create wake eventfd");
+    goto cleanup_symbols;
   }
 
   ctx->linux_common.xkb.ctx = maru_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
@@ -319,6 +333,10 @@ cleanup_registry:
 cleanup_display:
   _maru_wayland_disconnect_display(ctx);
 cleanup_symbols:
+  if (ctx->wake_fd >= 0) {
+    close(ctx->wake_fd);
+    ctx->wake_fd = -1;
+  }
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
   maru_context_free(&ctx->base, ctx);
@@ -373,6 +391,9 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
 
+  close(ctx->wake_fd);
+  ctx->wake_fd = -1;
+
   maru_context_free(&ctx->base, context);
   return MARU_SUCCESS;
 }
@@ -387,7 +408,11 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
 
 MARU_Status maru_wakeContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  
+  const uint64_t one = 1;
+  const ssize_t written = write(ctx->wake_fd, &one, sizeof(one));
+  if (written == (ssize_t)sizeof(one) || (written < 0 && errno == EAGAIN)) {
+    return MARU_SUCCESS;
+  }
   return MARU_FAILURE;
 }
 
@@ -401,9 +426,14 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   _maru_drain_user_events(&ctx->base);
 
   int display_fd = maru_wl_display_get_fd(ctx, ctx->wl.display);
-  struct pollfd fds[] = {
-      {display_fd, POLLIN, 0},
-  };
+  struct pollfd fds[2];
+  const nfds_t nfds = 2;
+  fds[0].fd = display_fd;
+  fds[0].events = POLLIN;
+  fds[0].revents = 0;
+  fds[1].fd = ctx->wake_fd;
+  fds[1].events = POLLIN;
+  fds[1].revents = 0;
 
   while (maru_wl_display_prepare_read(ctx, ctx->wl.display) != 0) {
     maru_wl_display_dispatch_pending(ctx, ctx->wl.display);
@@ -412,8 +442,18 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   maru_wl_display_flush(ctx, ctx->wl.display);
 
   int timeout = (timeout_ms == MARU_NEVER) ? -1 : (int)timeout_ms;
-  if (poll(fds, 1, timeout) > 0) {
-    maru_wl_display_read_events(ctx, ctx->wl.display);
+  int poll_result = poll(fds, nfds, timeout);
+  if (poll_result > 0) {
+    bool display_ready = (fds[0].revents & (POLLIN | POLLERR | POLLHUP)) != 0;
+    if (display_ready) {
+      maru_wl_display_read_events(ctx, ctx->wl.display);
+    } else {
+      maru_wl_display_cancel_read(ctx, ctx->wl.display);
+    }
+
+    if ((fds[1].revents & POLLIN) != 0) {
+      _maru_wayland_drain_wake_fd(ctx);
+    }
   } else {
     maru_wl_display_cancel_read(ctx, ctx->wl.display);
   }
