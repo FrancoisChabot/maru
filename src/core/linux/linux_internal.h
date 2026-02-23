@@ -28,6 +28,7 @@ typedef struct MARU_Context_Linux_Common {
     MARU_Window *focused_window;
     double x;
     double y;
+    uint32_t enter_serial;
   } pointer;
 
   MARU_Lib_Xkb xkb_lib;

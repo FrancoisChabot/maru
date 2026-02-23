@@ -20,6 +20,8 @@ typedef struct MARU_Context_WL {
     struct wl_seat *seat;
     struct wl_pointer *pointer;
     struct wl_keyboard *keyboard;
+    struct wl_cursor_theme *cursor_theme;
+    struct wl_surface *cursor_surface;
   } wl;
 
   MARU_Wayland_Protocols_WL protocols;

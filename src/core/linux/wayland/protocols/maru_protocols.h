@@ -30,6 +30,7 @@ extern const struct wl_seat_listener _maru_wayland_seat_listener;
 #define MARU_WL_REGISTRY_REQUIRED_BINDINGS                                 \
   MARU_WL_REGISTRY_BINDING_ENTRY(xdg_wm_base, 1, &_maru_xdg_wm_base_listener) \
   MARU_WL_REGISTRY_BINDING_ENTRY(wl_compositor, 6, NULL)                   \
+  MARU_WL_REGISTRY_BINDING_ENTRY(wl_shm, 1, NULL)                          \
   
 
 // Optional interfaces

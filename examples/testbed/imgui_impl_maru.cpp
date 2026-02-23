@@ -150,9 +150,52 @@ void ImGui_ImplMaru_Shutdown() {
     IM_ASSERT(bd != nullptr && "No platform backend to shutdown, or already shutdown?");
     ImGuiIO& io = ImGui::GetIO();
 
+    for (int i = 0; i < ImGuiMouseCursor_COUNT; i++) {
+        if (bd->MouseCursors[i]) maru_destroyCursor(bd->MouseCursors[i]);
+        bd->MouseCursors[i] = NULL;
+    }
+
     io.BackendPlatformName = nullptr;
     io.BackendPlatformUserData = nullptr;
     IM_DELETE(bd);
+}
+
+static void ImGui_ImplMaru_UpdateMouseCursor() {
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplMaru_Data* bd = ImGui_ImplMaru_GetBackendData();
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+        return;
+
+    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {
+        MARU_WindowAttributes attrs = {};
+        attrs.cursor_mode = MARU_CURSOR_HIDDEN;
+        maru_updateWindow(bd->Window, MARU_WINDOW_ATTR_CURSOR_MODE, &attrs);
+    } else {
+        MARU_Cursor* cursor = bd->MouseCursors[imgui_cursor];
+        if (!cursor) {
+             MARU_CursorShape shape = MARU_CURSOR_SHAPE_DEFAULT;
+             switch (imgui_cursor) {
+                 case ImGuiMouseCursor_Arrow: shape = MARU_CURSOR_SHAPE_DEFAULT; break;
+                 case ImGuiMouseCursor_TextInput: shape = MARU_CURSOR_SHAPE_TEXT; break;
+                 case ImGuiMouseCursor_ResizeAll: shape = MARU_CURSOR_SHAPE_MOVE; break;
+                 case ImGuiMouseCursor_ResizeNS: shape = MARU_CURSOR_SHAPE_NS_RESIZE; break;
+                 case ImGuiMouseCursor_ResizeEW: shape = MARU_CURSOR_SHAPE_EW_RESIZE; break;
+                 case ImGuiMouseCursor_ResizeNESW: shape = MARU_CURSOR_SHAPE_NESW_RESIZE; break;
+                 case ImGuiMouseCursor_ResizeNWSE: shape = MARU_CURSOR_SHAPE_NWSE_RESIZE; break;
+                 case ImGuiMouseCursor_Hand: shape = MARU_CURSOR_SHAPE_HAND; break;
+                 case ImGuiMouseCursor_NotAllowed: shape = MARU_CURSOR_SHAPE_NOT_ALLOWED; break;
+             }
+             MARU_Context* ctx = maru_getWindowContext(bd->Window);
+             maru_getStandardCursor(ctx, shape, &cursor);
+             bd->MouseCursors[imgui_cursor] = cursor;
+        }
+
+        MARU_WindowAttributes attrs = {};
+        attrs.cursor_mode = MARU_CURSOR_NORMAL;
+        attrs.cursor = cursor;
+        maru_updateWindow(bd->Window, MARU_WINDOW_ATTR_CURSOR_MODE | MARU_WINDOW_ATTR_CURSOR, &attrs);
+    }
 }
 
 void ImGui_ImplMaru_NewFrame() {
@@ -166,6 +209,8 @@ void ImGui_ImplMaru_NewFrame() {
         io.DisplayFramebufferScale = ImVec2((float)geometry.pixel_size.x / (float)geometry.logical_size.x, (float)geometry.pixel_size.y / (float)geometry.logical_size.y);
 
     // TODO: delta time
+
+    ImGui_ImplMaru_UpdateMouseCursor();
 }
 
 void ImGui_ImplMaru_HandleEvent(MARU_EventType type, const MARU_Event* event) {

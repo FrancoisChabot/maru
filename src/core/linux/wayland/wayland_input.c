@@ -28,8 +28,71 @@
 #define WL_POINTER_AXIS_VERTICAL_SCROLL 0
 #define WL_POINTER_AXIS_HORIZONTAL_SCROLL 1
 
+static const char *_maru_cursor_shape_to_name(MARU_CursorShape shape) {
+    switch (shape) {
+        case MARU_CURSOR_SHAPE_DEFAULT: return "left_ptr";
+        case MARU_CURSOR_SHAPE_HELP: return "question_arrow";
+        case MARU_CURSOR_SHAPE_HAND: return "hand1";
+        case MARU_CURSOR_SHAPE_WAIT: return "watch";
+        case MARU_CURSOR_SHAPE_CROSSHAIR: return "crosshair";
+        case MARU_CURSOR_SHAPE_TEXT: return "xterm";
+        case MARU_CURSOR_SHAPE_MOVE: return "move";
+        case MARU_CURSOR_SHAPE_NOT_ALLOWED: return "forbidden";
+        case MARU_CURSOR_SHAPE_EW_RESIZE: return "sb_h_double_arrow";
+        case MARU_CURSOR_SHAPE_NS_RESIZE: return "sb_v_double_arrow";
+        case MARU_CURSOR_SHAPE_NESW_RESIZE: return "fd_double_arrow";
+        case MARU_CURSOR_SHAPE_NWSE_RESIZE: return "bd_double_arrow";
+        default: return "left_ptr";
+    }
+}
+
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial) {
-    // TODO: Implement cursor update logic
+    if (!ctx->wl.pointer) return;
+
+    MARU_Cursor *cursor_handle = (MARU_Cursor *)window->base.pub.current_cursor;
+    MARU_CursorMode mode = window->base.pub.cursor_mode;
+
+    if (mode == MARU_CURSOR_HIDDEN || mode == MARU_CURSOR_LOCKED) {
+        maru_wl_pointer_set_cursor(ctx, ctx->wl.pointer, serial, NULL, 0, 0);
+        return;
+    }
+
+    struct wl_cursor *wl_cursor = NULL;
+    if (cursor_handle) {
+        MARU_Cursor_WL *cursor = (MARU_Cursor_WL *)cursor_handle;
+        wl_cursor = cursor->wl_cursor;
+    } else {
+        if (!ctx->wl.cursor_theme) {
+             if (ctx->protocols.wl_shm) {
+                 const char *size_env = getenv("XCURSOR_SIZE");
+                 int size = 24;
+                 if (size_env) size = atoi(size_env);
+                 if (size == 0) size = 24;
+                 ctx->wl.cursor_theme = maru_wl_cursor_theme_load(ctx, NULL, size, ctx->protocols.wl_shm);
+             }
+        }
+        if (ctx->wl.cursor_theme) {
+            wl_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, "left_ptr");
+        }
+    }
+
+    if (!wl_cursor) return;
+
+    struct wl_cursor_image *image = wl_cursor->images[0];
+    struct wl_buffer *buffer = maru_wl_cursor_image_get_buffer(ctx, image);
+    
+    if (!buffer) return;
+
+    if (!ctx->wl.cursor_surface) {
+        ctx->wl.cursor_surface = maru_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
+        if (!ctx->wl.cursor_surface) return;
+    }
+
+    maru_wl_surface_attach(ctx, ctx->wl.cursor_surface, buffer, 0, 0);
+    maru_wl_surface_damage(ctx, ctx->wl.cursor_surface, 0, 0, (int32_t)image->width, (int32_t)image->height);
+    maru_wl_surface_commit(ctx, ctx->wl.cursor_surface);
+
+    maru_wl_pointer_set_cursor(ctx, ctx->wl.pointer, serial, ctx->wl.cursor_surface, (int32_t)image->hotspot_x, (int32_t)image->hotspot_y);
 }
 
 static void _pointer_handle_enter(void *data, struct wl_pointer *pointer,
@@ -44,6 +107,7 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer,
         ctx->linux_common.pointer.focused_window = (MARU_Window *)window;
         ctx->linux_common.pointer.x = wl_fixed_to_double(sx);
         ctx->linux_common.pointer.y = wl_fixed_to_double(sy);
+        ctx->linux_common.pointer.enter_serial = serial;
         _maru_wayland_update_cursor(ctx, window, serial);
     }
 }
@@ -384,14 +448,38 @@ MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape sh
                                      MARU_Cursor **out_cursor) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
-  return MARU_FAILURE;
+  if (!ctx->wl.cursor_theme) {
+      if (!ctx->protocols.wl_shm) return MARU_FAILURE;
+      
+      const char *size_env = getenv("XCURSOR_SIZE");
+      int size = 24;
+      if (size_env) size = atoi(size_env);
+      if (size == 0) size = 24;
+
+      ctx->wl.cursor_theme = maru_wl_cursor_theme_load(ctx, NULL, size, ctx->protocols.wl_shm);
+      if (!ctx->wl.cursor_theme) return MARU_FAILURE;
+  }
+
+  struct wl_cursor *wl_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(shape));
+  if (!wl_cursor) return MARU_FAILURE;
+
+  MARU_Cursor_WL *cursor = maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_WL));
+  if (!cursor) return MARU_FAILURE;
+  memset(cursor, 0, sizeof(MARU_Cursor_WL));
+
+  cursor->base.ctx_base = &ctx->base;
+  cursor->wl_cursor = wl_cursor;
+  cursor->cursor_shape = shape;
+  
+  *out_cursor = (MARU_Cursor *)cursor;
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_createCursor_WL(MARU_Context *context,
                                 const MARU_CursorCreateInfo *create_info,
                                 MARU_Cursor **out_cursor) {
-  MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-
+  // Custom cursor creation requires creating a wl_buffer from pixels.
+  // Not implemented yet.
   return MARU_FAILURE;
 }
 
@@ -399,5 +487,10 @@ MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor) {
   MARU_Cursor_WL *cursor_wl = (MARU_Cursor_WL *)cursor;
   MARU_Context_WL *ctx = (MARU_Context_WL *)cursor_wl->base.ctx_base;
 
-  return MARU_FAILURE;
+  if (cursor_wl->buffer) {
+      maru_wl_buffer_destroy(ctx, cursor_wl->buffer);
+  }
+
+  maru_context_free(&ctx->base, cursor);
+  return MARU_SUCCESS;
 }

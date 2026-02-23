@@ -150,6 +150,19 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
+  if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
+      window->base.pub.current_cursor = attributes->cursor;
+  }
+  if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
+      window->base.pub.cursor_mode = attributes->cursor_mode;
+  }
+
+  if ((field_mask & MARU_WINDOW_ATTR_CURSOR) || (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE)) {
+      if (ctx->linux_common.pointer.focused_window == window_handle) {
+          _maru_wayland_update_cursor(ctx, window, ctx->linux_common.pointer.enter_serial);
+      }
+  }
+
   return MARU_SUCCESS;
 }
 
