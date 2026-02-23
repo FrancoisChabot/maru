@@ -16,8 +16,14 @@ extern "C" {
 typedef struct MARU_ContextExposed {
   void *userdata;
   uint64_t flags;
+  MARU_BackendType backend_type;
   const MARU_ContextMetrics *metrics;
+  void *extensions[MARU_EXT_COUNT];
 } MARU_ContextExposed;
+
+static inline MARU_BackendType maru_getContextBackend(const MARU_Context *context) {
+  return ((const MARU_ContextExposed *)context)->backend_type;
+}
 
 static inline void *maru_getContextUserdata(const MARU_Context *context) {
   return ((const MARU_ContextExposed *)context)->userdata;

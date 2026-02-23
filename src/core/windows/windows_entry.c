@@ -14,13 +14,11 @@ const MARU_Backend maru_backend_Windows = {
   .getWindowGeometry = maru_getWindowGeometry_Windows,
   .updateWindow = maru_updateWindow_Windows,
   .requestWindowFocus = maru_requestWindowFocus_Windows,
-  .getWindowBackendHandle = maru_getWindowBackendHandle_Windows,
   .getStandardCursor = maru_getStandardCursor_Windows,
   .createCursor = maru_createCursor_Windows,
   .destroyCursor = maru_destroyCursor_Windows,
   .wakeContext = maru_wakeContext_Windows,
   .updateMonitors = maru_updateMonitors_Windows,
-  .destroyMonitor = maru_destroyMonitor_Windows,
   .getMonitorModes = maru_getMonitorModes_Windows,
   .setMonitorMode = maru_setMonitorMode_Windows,
   .getContextNativeHandle = _maru_getContextNativeHandle_Windows,
@@ -76,13 +74,6 @@ MARU_API void maru_getWindowGeometry(MARU_Window *window,
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
   return maru_requestWindowFocus_Windows(window);
-}
-
-MARU_API MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
-                                               MARU_BackendType *out_type,
-                                               MARU_BackendHandle *out_handle) {
-  MARU_API_VALIDATE(getWindowBackendHandle, window, out_type, out_handle);
-  return maru_getWindowBackendHandle_Windows(window, out_type, out_handle);
 }
 
 MARU_API MARU_Status maru_getStandardCursor(MARU_Context *context, MARU_CursorShape shape,

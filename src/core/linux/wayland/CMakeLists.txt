@@ -3,7 +3,6 @@ set(MARU_WAYLAND_SOURCES
     wayland_context.c
     wayland_input.c
     wayland_monitor.c
-    wayland_csd.c
     wayland_window.c
     wayland_misc.c
     wayland_utils.c

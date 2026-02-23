@@ -2,21 +2,25 @@
 // Copyright (c) 2026 François Chabot
 
 #include "imgui_impl_maru.h"
-#include <string.h>
+
+#include <maru/c/events.h>
+#include <maru/c/inputs.h>
+#include <maru/c/windows.h>
+#include <maru/maru.h>
 
 struct ImGui_ImplMaru_Data {
     MARU_Window* Window;
-    uint64_t     Time;
-    uint64_t     Frequency;
+    uint32_t TimeMs;
+    MARU_Cursor* MouseCursors[ImGuiMouseCursor_COUNT];
 
-    ImGui_ImplMaru_Data() { memset((void*)this, 0, sizeof(*this)); }
+    ImGui_ImplMaru_Data() { memset(this, 0, sizeof(*this)); }
 };
 
 static ImGui_ImplMaru_Data* ImGui_ImplMaru_GetBackendData() {
     return ImGui::GetCurrentContext() ? (ImGui_ImplMaru_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
 }
 
-static ImGuiKey ImGui_ImplMaru_MapKey(MARU_Key key) {
+static ImGuiKey ImGui_ImplMaru_KeyToImGuiKey(MARU_Key key) {
     switch (key) {
         case MARU_KEY_TAB: return ImGuiKey_Tab;
         case MARU_KEY_LEFT: return ImGuiKey_LeftArrow;
@@ -129,7 +133,7 @@ static ImGuiKey ImGui_ImplMaru_MapKey(MARU_Key key) {
 
 bool ImGui_ImplMaru_Init(MARU_Window* window) {
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
+    IMGUI_CHECKVERSION();
 
     ImGui_ImplMaru_Data* bd = IM_NEW(ImGui_ImplMaru_Data)();
     bd->Window = window;
@@ -161,41 +165,34 @@ void ImGui_ImplMaru_NewFrame() {
     if (geometry.logical_size.x > 0 && geometry.logical_size.y > 0)
         io.DisplayFramebufferScale = ImVec2((float)geometry.pixel_size.x / (float)geometry.logical_size.x, (float)geometry.pixel_size.y / (float)geometry.logical_size.y);
 
-    // Time handling (simplified)
-    io.DeltaTime = 1.0f / 60.0f; 
+    // TODO: delta time
 }
 
 void ImGui_ImplMaru_HandleEvent(MARU_EventType type, const MARU_Event* event) {
     ImGuiIO& io = ImGui::GetIO();
-    switch (type) {
-        case MARU_MOUSE_MOVED:
-            io.AddMousePosEvent((float)event->mouse_motion.position.x, (float)event->mouse_motion.position.y);
-            break;
-        case MARU_MOUSE_BUTTON_STATE_CHANGED: {
-            int button = -1;
-            if (event->mouse_button.button == MARU_MOUSE_BUTTON_LEFT) button = 0;
-            else if (event->mouse_button.button == MARU_MOUSE_BUTTON_RIGHT) button = 1;
-            else if (event->mouse_button.button == MARU_MOUSE_BUTTON_MIDDLE) button = 2;
-            if (button != -1)
-                io.AddMouseButtonEvent(button, event->mouse_button.state == MARU_BUTTON_STATE_PRESSED);
-            break;
+    if (type == MARU_MOUSE_MOVED) {
+        io.AddMousePosEvent((float)event->mouse_motion.position.x, (float)event->mouse_motion.position.y);
+    } else if (type == MARU_MOUSE_BUTTON_STATE_CHANGED) {
+        int mouse_button = -1;
+        if (event->mouse_button.button == MARU_MOUSE_BUTTON_LEFT) mouse_button = 0;
+        if (event->mouse_button.button == MARU_MOUSE_BUTTON_RIGHT) mouse_button = 1;
+        if (event->mouse_button.button == MARU_MOUSE_BUTTON_MIDDLE) mouse_button = 2;
+        if (mouse_button != -1)
+            io.AddMouseButtonEvent(mouse_button, event->mouse_button.state == MARU_BUTTON_STATE_PRESSED);
+    } else if (type == MARU_MOUSE_SCROLLED) {
+        io.AddMouseWheelEvent((float)event->mouse_scroll.delta.x, (float)event->mouse_scroll.delta.y);
+    } else if (type == MARU_KEY_STATE_CHANGED) {
+        ImGuiKey key = ImGui_ImplMaru_KeyToImGuiKey(event->key.raw_key);
+        if (key != ImGuiKey_None) {
+            io.AddKeyEvent(key, event->key.state == MARU_BUTTON_STATE_PRESSED);
+            io.AddKeyEvent(ImGuiMod_Ctrl, (event->key.modifiers & MARU_MODIFIER_CONTROL) != 0);
+            io.AddKeyEvent(ImGuiMod_Shift, (event->key.modifiers & MARU_MODIFIER_SHIFT) != 0);
+            io.AddKeyEvent(ImGuiMod_Alt, (event->key.modifiers & MARU_MODIFIER_ALT) != 0);
+            io.AddKeyEvent(ImGuiMod_Super, (event->key.modifiers & MARU_MODIFIER_META) != 0);
         }
-        case MARU_MOUSE_SCROLLED:
-            io.AddMouseWheelEvent((float)event->mouse_scroll.delta.x, (float)event->mouse_scroll.delta.y);
-            break;
-        case MARU_KEY_STATE_CHANGED: {
-            ImGuiKey key = ImGui_ImplMaru_MapKey(event->key.raw_key);
-            if (key != ImGuiKey_None) {
-                io.AddKeyEvent(key, event->key.state == MARU_BUTTON_STATE_PRESSED);
-                io.AddKeyEvent(ImGuiMod_Ctrl, (event->key.modifiers & MARU_MODIFIER_CONTROL) != 0);
-                io.AddKeyEvent(ImGuiMod_Shift, (event->key.modifiers & MARU_MODIFIER_SHIFT) != 0);
-                io.AddKeyEvent(ImGuiMod_Alt, (event->key.modifiers & MARU_MODIFIER_ALT) != 0);
-                io.AddKeyEvent(ImGuiMod_Super, (event->key.modifiers & MARU_MODIFIER_META) != 0);
-            }
-            break;
-        }
-        case MARU_TEXT_INPUT_RECEIVED:
-            io.AddInputCharactersUTF8(event->text_input.text);
-            break;
+    } else if (type == MARU_TEXT_INPUT_RECEIVED) {
+        io.AddInputCharactersUTF8(event->text_input.text);
+    } else if (type == MARU_FOCUS_CHANGED) {
+        io.AddFocusEvent(event->focus.focused);
     }
 }

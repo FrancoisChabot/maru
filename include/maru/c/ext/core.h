@@ -28,7 +28,7 @@ typedef void (*MARU_ExtensionCleanupCallback)(MARU_Context *context, void *state
  */
 MARU_API MARU_Status maru_registerExtension(MARU_Context *context, MARU_ExtensionID id, void *state, MARU_ExtensionCleanupCallback cleanup);
 
-/** @brief Retrieves a registered extension vtable. Returns NULL if not registered. */
+/** @brief Retrieves a registered extension state. Returns NULL if not registered. */
 MARU_API void *maru_getExtension(const MARU_Context *context, MARU_ExtensionID id);
 
 /** @brief Allocates memory using the context's configured allocator. */
@@ -38,10 +38,10 @@ MARU_API void *maru_contextAlloc(MARU_Context *context, size_t size);
 MARU_API void maru_contextFree(MARU_Context *context, void *ptr);
 
 /** @brief Retrieves the native display handle for the context (e.g., wl_display*, Display*, HINSTANCE). */
-MARU_API void *maru_contextGetNativeHandle(MARU_Context *context);
+MARU_API void *maru_getContextNativeHandle(MARU_Context *context);
 
 /** @brief Retrieves the native window handle (e.g., wl_surface*, Window, HWND). */
-MARU_API void *maru_windowGetNativeHandle(MARU_Window *window);
+MARU_API void *maru_getWindowNativeHandle(MARU_Window *window);
 
 #ifdef __cplusplus
 }

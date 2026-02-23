@@ -678,15 +678,6 @@ MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window_handle) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_getWindowBackendHandle_Windows(MARU_Window *window_handle,
-                                               MARU_BackendType *out_type,
-                                               MARU_BackendHandle *out_handle) {
-  MARU_Window_Windows *window = (MARU_Window_Windows *)window_handle;
-  *out_type = MARU_BACKEND_WINDOWS;
-  out_handle->win32_hwnd = window->hwnd;
-  return MARU_SUCCESS;
-}
-
 void *_maru_getWindowNativeHandle_Windows(MARU_Window *window) {
   MARU_Window_Windows *win = (MARU_Window_Windows *)window;
   return win->hwnd;

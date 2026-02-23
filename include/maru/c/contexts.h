@@ -105,7 +105,7 @@ typedef struct MARU_ContextCreateInfo {
               .inhibit_idle = false,            \
               .diagnostic_cb = NULL,           \
               .diagnostic_userdata = NULL,      \
-              .event_mask = (MARU_EventMask)-1, \
+              .event_mask = MARU_ALL_EVENTS, \
           },                                    \
       .tuning = NULL,                           \
   }

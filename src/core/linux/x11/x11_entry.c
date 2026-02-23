@@ -14,7 +14,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     return MARU_FAILURE;
   }
 
-  ctx->backend_type = MARU_BACKEND_X11;
+  ctx->pub.backend_type = MARU_BACKEND_X11;
 
   if (create_info->allocator.alloc_cb) {
     ctx->allocator = create_info->allocator;
@@ -81,13 +81,10 @@ const MARU_Backend maru_backend_X11 = {
   .getWindowGeometry = NULL,
   .updateWindow = NULL,
   .requestWindowFocus = NULL,
-  .getWindowBackendHandle = NULL,
   .getStandardCursor = NULL,
   .createCursor = NULL,
   .destroyCursor = NULL,
   .wakeContext = NULL,
-  .updateMonitors = NULL,
-  .destroyMonitor = NULL,
   .getMonitorModes = NULL,
   .setMonitorMode = NULL,
   .resetMonitorMetrics = NULL,
@@ -155,13 +152,6 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
   return MARU_SUCCESS;
-}
-
-MARU_API MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
-                                                  MARU_BackendType *out_type,
-                                                  MARU_BackendHandle *out_handle) {
-  MARU_API_VALIDATE(getWindowBackendHandle, window, out_type, out_handle);
-  return MARU_FAILURE;
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {

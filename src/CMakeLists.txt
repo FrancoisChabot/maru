@@ -20,17 +20,20 @@ configure_file(
 )
 
 # 3. Base interfaces
-# Common settings: C11 standard and aggressive warnings
+# Common settings: aggressive warnings
 add_library(maru_common_settings INTERFACE)
-target_compile_features(maru_common_settings INTERFACE c_std_11)
+
+option(MARU_WERROR "Treat warnings as errors" ON)
 
 if(MSVC)
-  target_compile_options(maru_common_settings INTERFACE /W4 /WX /wd4100 /wd4189 /wd5105)
+  target_compile_options(maru_common_settings INTERFACE /W4 /wd4100 /wd4189 /wd5105)
+  if(MARU_WERROR)
+    target_compile_options(maru_common_settings INTERFACE /WX)
+  endif()
 else()
   target_compile_options(maru_common_settings INTERFACE
     -Wall
     -Wextra
-    -Werror
     -Wpedantic
     -Wshadow
     -Wcast-align
@@ -43,23 +46,26 @@ else()
     -Wno-unused-parameter
     -Wno-unused-variable
   )
+  if(MARU_WERROR)
+    target_compile_options(maru_common_settings INTERFACE -Werror)
+  endif()
 endif()
 
 # Public interface: only public headers
 add_library(maru_iface INTERFACE)
+target_compile_features(maru_iface INTERFACE c_std_11)
 target_include_directories(maru_iface INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(maru_iface INTERFACE maru_common_settings)
 if(NOT MARU_BUILD_SHARED)
   target_compile_definitions(maru_iface INTERFACE MARU_STATIC)
 endif()
 
-# Internal interface: public headers + private core headers
+# Internal interface: public headers + private core headers + internal warnings
 add_library(maru_core_iface INTERFACE)
-target_link_libraries(maru_core_iface INTERFACE maru_iface)
+target_link_libraries(maru_core_iface INTERFACE maru_iface maru_common_settings)
 target_include_directories(maru_core_iface INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core>
 )

@@ -76,8 +76,6 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
 
   ctx->owner_thread_id = GetCurrentThreadId();
 
-  _maru_init_all_extensions((MARU_Context *)ctx);
-
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
   return MARU_SUCCESS;
@@ -383,14 +381,6 @@ MARU_Status maru_updateMonitors_Windows(MARU_Context *context) {
     }
   }
 
-  return MARU_SUCCESS;
-}
-
-MARU_Status maru_destroyMonitor_Windows(MARU_Monitor *monitor) {
-  MARU_Monitor_Windows *mon = (MARU_Monitor_Windows *)monitor;
-  if (mon->modes) {
-    maru_context_free(mon->base.ctx_base, mon->modes);
-  }
   return MARU_SUCCESS;
 }
 

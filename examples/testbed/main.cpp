@@ -1,506 +1,522 @@
-// SPDX-License-Identifier: Zlib
-// Copyright (c) 2026 François Chabot
-
-#include "maru/maru.h"
-#include "maru/c/ext/vulkan.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
-#include <string>
-#include <vulkan/vulkan.h>
+// Dear ImGui: standalone example application for Maru + Vulkan
 
 #include "imgui.h"
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif
-#include "backends/imgui_impl_vulkan.h"
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
 #include "imgui_impl_maru.h"
+#include "imgui_impl_vulkan.h"
+#include <stdio.h>          // printf, fprintf
+#include <stdlib.h>         // abort
 
-#include "event_viewer.h"
-#include "monitor_explorer.h"
-#include "cursor_tester.h"
-#include "window_manager.h"
+#include <vulkan/vulkan.h>
+#include "maru/maru.h"
+#include "maru/c/ext/vulkan.h"
 
-#define MAX_FRAMES_IN_FLIGHT 2
+// Volk headers
+#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+#define VOLK_IMPLEMENTATION
+#include <volk.h>
+#endif
 
-static bool keep_running = true;
-static bool window_ready = false;
-static bool framebuffer_resized = false;
-static uint64_t frame_id = 0;
+// [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
+// To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
+// Your own project should not be affected, as you are likely to link with a newer binary of GLFW that is adequate for your version of Visual Studio.
+#if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
+#pragma comment(lib, "legacy_stdio_definitions")
+#endif
 
-static MARU_Window* main_window = nullptr;
+//#define APP_USE_UNLIMITED_FRAME_RATE
+#ifdef _DEBUG
+#define APP_USE_VULKAN_DEBUG_REPORT
+static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
+#endif
 
-static bool show_event_viewer = true;
-static bool show_monitor_explorer = false;
-static bool show_cursor_tester = false;
-static bool show_window_manager = false;
+// Data
+static VkAllocationCallbacks*   g_Allocator = nullptr;
+static VkInstance               g_Instance = VK_NULL_HANDLE;
+static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
+static VkDevice                 g_Device = VK_NULL_HANDLE;
+static uint32_t                 g_QueueFamily = (uint32_t)-1;
+static VkQueue                  g_Queue = VK_NULL_HANDLE;
+static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
+static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
-struct VulkanState {
-    VkInstance instance;
-    VkSurfaceKHR surface;
-    VkPhysicalDevice physicalDevice;
-    VkDevice device;
-    VkQueue graphicsQueue;
-    VkQueue presentQueue;
-    VkSwapchainKHR swapChain;
-    std::vector<VkImage> swapChainImages;
-    VkFormat swapChainImageFormat;
-    VkExtent2D swapChainExtent;
-    std::vector<VkImageView> swapChainImageViews;
-    std::vector<VkFramebuffer> swapChainFramebuffers;
-    VkRenderPass renderPass;
-    VkCommandPool commandPool;
-    VkCommandBuffer commandBuffers[MAX_FRAMES_IN_FLIGHT];
-    VkSemaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
-    VkSemaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
-    VkFence inFlightFences[MAX_FRAMES_IN_FLIGHT];
-    uint32_t currentFrame = 0;
-    VkDescriptorPool imguiDescriptorPool;
-} vk;
+static ImGui_ImplVulkanH_Window g_MainWindowData;
+static uint32_t                 g_MinImageCount = 2;
+static bool                     g_SwapChainRebuild = false;
 
-static void handle_event(MARU_EventType type, MARU_Window *window,
-                         const MARU_Event *event, void *userdata) {
-  (void)userdata;
-  EventViewer_HandleEvent(type, event, frame_id);
-  WindowManager_HandleEvent(type, window, event);
+static bool                     g_KeepRunning = true;
+static bool                     g_WindowReady = false;
 
-  if (ImGui::GetCurrentContext() != nullptr)
+static void handle_maru_event(MARU_EventType type, MARU_Window* window, const MARU_Event* event, void* userdata)
+{
+    (void)window;
+    (void)userdata;
     ImGui_ImplMaru_HandleEvent(type, event);
 
-  if (type == MARU_CLOSE_REQUESTED) {
-    if (window == main_window) {
-        keep_running = false;
-    }
-  } else if (type == MARU_WINDOW_RESIZED) {
-    framebuffer_resized = true;
-  } else if (type == MARU_WINDOW_READY) {
-    window_ready = true;
-  } else if (type == MARU_KEY_STATE_CHANGED) {
-    if (event->key.raw_key == MARU_KEY_ESCAPE && event->key.state == MARU_BUTTON_STATE_PRESSED) {
-      maru_setWindowCursorMode(window, MARU_CURSOR_NORMAL);
-    }
-  }
+    if (type == MARU_CLOSE_REQUESTED)
+        g_KeepRunning = false;
+    else if (type == MARU_WINDOW_READY)
+        g_WindowReady = true;
+    else if (type == MARU_WINDOW_RESIZED)
+        g_SwapChainRebuild = true;
 }
 
-// Minimal Vulkan helpers
-static void create_vulkan_instance(uint32_t extension_count, const char** extensions) {
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Maru ImGui Testbed";
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+static void check_vk_result(VkResult err)
+{
+    if (err == VK_SUCCESS)
+        return;
+    fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
+    if (err < 0)
+        abort();
+}
 
-    VkInstanceCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = extension_count;
-    createInfo.ppEnabledExtensionNames = extensions;
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
+{
+    (void)flags; (void)object; (void)location; (void)messageCode; (void)pUserData; (void)pLayerPrefix; // Unused arguments
+    fprintf(stderr, "[vulkan] Debug report from ObjectType: %i\nMessage: %s\n\n", objectType, pMessage);
+    return VK_FALSE;
+}
+#endif // APP_USE_VULKAN_DEBUG_REPORT
 
-    if (vkCreateInstance(&createInfo, nullptr, &vk.instance) != VK_SUCCESS) {
-        fprintf(stderr, "failed to create instance!\n");
-        exit(1);
+static bool IsExtensionAvailable(const ImVector<VkExtensionProperties>& properties, const char* extension)
+{
+    for (const VkExtensionProperties& p : properties)
+        if (strcmp(p.extensionName, extension) == 0)
+            return true;
+    return false;
+}
+
+static void SetupVulkan(ImVector<const char*> instance_extensions)
+{
+    VkResult err;
+#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+    volkInitialize();
+#endif
+
+    // Create Vulkan Instance
+    {
+        VkInstanceCreateInfo create_info = {};
+        create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+
+        // Enumerate available extensions
+        uint32_t properties_count;
+        vkEnumerateInstanceExtensionProperties(nullptr, &properties_count, nullptr);
+        ImVector<VkExtensionProperties> properties;
+        properties.resize((int)properties_count);
+        err = vkEnumerateInstanceExtensionProperties(nullptr, &properties_count, properties.Data);
+        check_vk_result(err);
+
+        // Enable required extensions
+        if (IsExtensionAvailable(properties, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+            instance_extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+#ifdef VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+        if (IsExtensionAvailable(properties, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
+        {
+            instance_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+            create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+        }
+#endif
+
+        // Enabling validation layers
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
+        const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
+        create_info.enabledLayerCount = 1;
+        create_info.ppEnabledLayerNames = layers;
+        instance_extensions.push_back("VK_EXT_debug_report");
+#endif
+
+        // Create Vulkan Instance
+        create_info.enabledExtensionCount = (uint32_t)instance_extensions.Size;
+        create_info.ppEnabledExtensionNames = instance_extensions.Data;
+        err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
+        check_vk_result(err);
+#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
+        volkLoadInstance(g_Instance);
+#endif
+
+        // Setup the debug report callback
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
+        auto f_vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
+        IM_ASSERT(f_vkCreateDebugReportCallbackEXT != nullptr);
+        VkDebugReportCallbackCreateInfoEXT debug_report_ci = {};
+        debug_report_ci.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+        debug_report_ci.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+        debug_report_ci.pfnCallback = debug_report;
+        debug_report_ci.pUserData = nullptr;
+        err = f_vkCreateDebugReportCallbackEXT(g_Instance, &debug_report_ci, g_Allocator, &g_DebugReport);
+        check_vk_result(err);
+#endif
+    }
+
+    // Select Physical Device (GPU)
+    g_PhysicalDevice = ImGui_ImplVulkanH_SelectPhysicalDevice(g_Instance);
+    IM_ASSERT(g_PhysicalDevice != VK_NULL_HANDLE);
+
+    // Select graphics queue family
+    g_QueueFamily = ImGui_ImplVulkanH_SelectQueueFamilyIndex(g_PhysicalDevice);
+    IM_ASSERT(g_QueueFamily != (uint32_t)-1);
+
+    // Create Logical Device (with 1 queue)
+    {
+        ImVector<const char*> device_extensions;
+        device_extensions.push_back("VK_KHR_swapchain");
+
+        // Enumerate physical device extension
+        uint32_t properties_count;
+        vkEnumerateDeviceExtensionProperties(g_PhysicalDevice, nullptr, &properties_count, nullptr);
+        ImVector<VkExtensionProperties> properties;
+        properties.resize((int)properties_count);
+        vkEnumerateDeviceExtensionProperties(g_PhysicalDevice, nullptr, &properties_count, properties.Data);
+#ifdef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+        if (IsExtensionAvailable(properties, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
+            device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+#endif
+
+        const float queue_priority[] = { 1.0f };
+        VkDeviceQueueCreateInfo queue_info[1] = {};
+        queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queue_info[0].queueFamilyIndex = g_QueueFamily;
+        queue_info[0].queueCount = 1;
+        queue_info[0].pQueuePriorities = queue_priority;
+        VkDeviceCreateInfo create_info = {};
+        create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        create_info.queueCreateInfoCount = sizeof(queue_info) / sizeof(queue_info[0]);
+        create_info.pQueueCreateInfos = queue_info;
+        create_info.enabledExtensionCount = (uint32_t)device_extensions.Size;
+        create_info.ppEnabledExtensionNames = device_extensions.Data;
+        err = vkCreateDevice(g_PhysicalDevice, &create_info, g_Allocator, &g_Device);
+        check_vk_result(err);
+        vkGetDeviceQueue(g_Device, g_QueueFamily, 0, &g_Queue);
+    }
+
+    // Create Descriptor Pool
+    // If you wish to load e.g. additional textures you may need to alter pools sizes and maxSets.
+    {
+        VkDescriptorPoolSize pool_sizes[] =
+        {
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE },
+        };
+        VkDescriptorPoolCreateInfo pool_info = {};
+        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        pool_info.maxSets = 0;
+        for (uint32_t i = 0; i < (uint32_t)(sizeof(pool_sizes) / sizeof(pool_sizes[0])); i++)
+            pool_info.maxSets += pool_sizes[i].descriptorCount;
+        pool_info.poolSizeCount = (uint32_t)(sizeof(pool_sizes) / sizeof(pool_sizes[0]));
+        pool_info.pPoolSizes = pool_sizes;
+        err = vkCreateDescriptorPool(g_Device, &pool_info, g_Allocator, &g_DescriptorPool);
+        check_vk_result(err);
     }
 }
 
-static void pick_physical_device() {
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(vk.instance, &deviceCount, nullptr);
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(vk.instance, &deviceCount, devices.data());
-    vk.physicalDevice = devices[0]; // Just pick the first one for simplicity
-}
-
-static void create_logical_device() {
-    float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueCreateInfo = {};
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = 0; // Assuming family 0 has graphics and present
-    queueCreateInfo.queueCount = 1;
-    queueCreateInfo.pQueuePriorities = &queuePriority;
-
-    const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-    VkDeviceCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.queueCreateInfoCount = 1;
-    createInfo.pQueueCreateInfos = &queueCreateInfo;
-    createInfo.enabledExtensionCount = 1;
-    createInfo.ppEnabledExtensionNames = deviceExtensions;
-
-    if (vkCreateDevice(vk.physicalDevice, &createInfo, nullptr, &vk.device) != VK_SUCCESS) {
-        fprintf(stderr, "failed to create logical device!\n");
-        exit(1);
+// All the ImGui_ImplVulkanH_XXX structures/functions are optional helpers used by the demo.
+// Your real engine/app may not use them.
+static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
+{
+    // Check for WSI support
+    VkBool32 res;
+    vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily, surface, &res);
+    if (res != VK_TRUE)
+    {
+        fprintf(stderr, "Error no WSI support on physical device 0\n");
+        exit(-1);
     }
-    vkGetDeviceQueue(vk.device, 0, 0, &vk.graphicsQueue);
-    vkGetDeviceQueue(vk.device, 0, 0, &vk.presentQueue);
+
+    // Select Surface Format
+    const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
+    const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    wd->Surface = surface;
+    wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(g_PhysicalDevice, wd->Surface, requestSurfaceImageFormat, (int)(sizeof(requestSurfaceImageFormat) / sizeof(requestSurfaceImageFormat[0])), requestSurfaceColorSpace);
+
+    // Select Present Mode
+#ifdef APP_USE_UNLIMITED_FRAME_RATE
+    VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
+#else
+    VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_FIFO_KHR };
+#endif
+    wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(g_PhysicalDevice, wd->Surface, &present_modes[0], (int)(sizeof(present_modes) / sizeof(present_modes[0])));
+    //printf("[vulkan] Selected PresentMode = %d\n", wd->PresentMode);
+
+    // Create SwapChain, RenderPass, Framebuffer, etc.
+    IM_ASSERT(g_MinImageCount >= 2);
+    ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
 }
 
-static void create_render_pass() {
-    VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = vk.swapChainImageFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+static void CleanupVulkan()
+{
+    vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
 
-    VkAttachmentReference colorAttachmentRef = {};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
+    // Remove the debug report callback
+    auto f_vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(g_Instance, "vkCreateDebugReportCallbackEXT");
+    f_vkDestroyDebugReportCallbackEXT(g_Instance, g_DebugReport, g_Allocator);
+#endif // APP_USE_VULKAN_DEBUG_REPORT
 
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
+    vkDestroyDevice(g_Device, g_Allocator);
+    vkDestroyInstance(g_Instance, g_Allocator);
+}
 
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
+static void CleanupVulkanWindow(ImGui_ImplVulkanH_Window* wd)
+{
+    ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, wd, g_Allocator);
+    vkDestroySurfaceKHR(g_Instance, wd->Surface, g_Allocator);
+}
 
-    if (vkCreateRenderPass(vk.device, &renderPassInfo, nullptr, &vk.renderPass) != VK_SUCCESS) {
-        fprintf(stderr, "failed to create render pass!\n");
-        exit(1);
+static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
+{
+    VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[(int)wd->SemaphoreIndex].ImageAcquiredSemaphore;
+    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[(int)wd->SemaphoreIndex].RenderCompleteSemaphore;
+    VkResult err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
+        g_SwapChainRebuild = true;
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+        return;
+    if (err != VK_SUBOPTIMAL_KHR)
+        check_vk_result(err);
+
+    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[(int)wd->FrameIndex];
+    {
+        err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);    // wait indefinitely instead of periodically checking
+        check_vk_result(err);
+
+        err = vkResetFences(g_Device, 1, &fd->Fence);
+        check_vk_result(err);
+    }
+    {
+        err = vkResetCommandPool(g_Device, fd->CommandPool, 0);
+        check_vk_result(err);
+        VkCommandBufferBeginInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        err = vkBeginCommandBuffer(fd->CommandBuffer, &info);
+        check_vk_result(err);
+    }
+    {
+        VkRenderPassBeginInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        info.renderPass = wd->RenderPass;
+        info.framebuffer = fd->Framebuffer;
+        info.renderArea.extent.width = (uint32_t)wd->Width;
+        info.renderArea.extent.height = (uint32_t)wd->Height;
+        info.clearValueCount = 1;
+        info.pClearValues = &wd->ClearValue;
+        vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    // Record dear imgui primitives into command buffer
+    ImGui_ImplVulkan_RenderDrawData(draw_data, fd->CommandBuffer);
+
+    // Submit command buffer
+    vkCmdEndRenderPass(fd->CommandBuffer);
+    {
+        VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        VkSubmitInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        info.waitSemaphoreCount = 1;
+        info.pWaitSemaphores = &image_acquired_semaphore;
+        info.pWaitDstStageMask = &wait_stage;
+        info.commandBufferCount = 1;
+        info.pCommandBuffers = &fd->CommandBuffer;
+        info.signalSemaphoreCount = 1;
+        info.pSignalSemaphores = &render_complete_semaphore;
+
+        err = vkEndCommandBuffer(fd->CommandBuffer);
+        check_vk_result(err);
+        err = vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
+        check_vk_result(err);
     }
 }
 
-static void create_swap_chain(MARU_Window* window) {
+static void FramePresent(ImGui_ImplVulkanH_Window* wd)
+{
+    if (g_SwapChainRebuild)
+        return;
+    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[(int)wd->SemaphoreIndex].RenderCompleteSemaphore;
+    VkPresentInfoKHR info = {};
+    info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    info.waitSemaphoreCount = 1;
+    info.pWaitSemaphores = &render_complete_semaphore;
+    info.swapchainCount = 1;
+    info.pSwapchains = &wd->Swapchain;
+    info.pImageIndices = &wd->FrameIndex;
+    VkResult err = vkQueuePresentKHR(g_Queue, &info);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
+        g_SwapChainRebuild = true;
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+        return;
+    if (err != VK_SUBOPTIMAL_KHR)
+        check_vk_result(err);
+    wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->SemaphoreCount; // Now we can use the next set of semaphores
+}
+
+// Main code
+int main(int, char**)
+{
+    MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+    MARU_Context *context = NULL;
+    if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {
+        fprintf(stderr, "Failed to create context.\n");
+        return 1;
+    }
+
+    maru_vulkan_enable(context, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr);
+
+    uint32_t extensions_count = 0;
+    const char **maru_extensions = maru_vulkan_getVkExtensions(context, &extensions_count);
+    ImVector<const char*> extensions;
+    for (uint32_t i = 0; i < extensions_count; i++)
+        extensions.push_back(maru_extensions[i]);
+    SetupVulkan(extensions);
+
+    MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
+    window_info.attributes.title = "Dear ImGui Maru+Vulkan example";
+    window_info.attributes.logical_size.x = 1280;
+    window_info.attributes.logical_size.y = 800;
+
+    MARU_Window *window = NULL;
+    if (maru_createWindow(context, &window_info, &window) != MARU_SUCCESS) {
+        fprintf(stderr, "Failed to create window.\n");
+        CleanupVulkan();
+        maru_destroyContext(context);
+        return 1;
+    }
+
+    // Create Window Surface
+    VkSurfaceKHR surface;
+    if (maru_vulkan_createVkSurface(window, g_Instance, &surface) != MARU_SUCCESS) {
+        fprintf(stderr, "Failed to create Vulkan surface.\n");
+        maru_destroyWindow(window);
+        CleanupVulkan();
+        maru_destroyContext(context);
+        return 1;
+    }
+
+    // Create Framebuffers
     MARU_WindowGeometry geometry;
     maru_getWindowGeometry(window, &geometry);
-    vk.swapChainExtent = { (uint32_t)geometry.pixel_size.x, (uint32_t)geometry.pixel_size.y };
-    vk.swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
+    SetupVulkanWindow(wd, surface, (int)geometry.pixel_size.x, (int)geometry.pixel_size.y);
 
-    VkSwapchainCreateInfoKHR createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = vk.surface;
-    createInfo.minImageCount = 2;
-    createInfo.imageFormat = vk.swapChainImageFormat;
-    createInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-    createInfo.imageExtent = vk.swapChainExtent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-    createInfo.clipped = VK_TRUE;
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-    if (vkCreateSwapchainKHR(vk.device, &createInfo, nullptr, &vk.swapChain) != VK_SUCCESS) {
-        fprintf(stderr, "failed to create swap chain!\n");
-        exit(1);
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplMaru_Init(window);
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = g_Instance;
+    init_info.PhysicalDevice = g_PhysicalDevice;
+    init_info.Device = g_Device;
+    init_info.QueueFamily = g_QueueFamily;
+    init_info.Queue = g_Queue;
+    init_info.DescriptorPool = g_DescriptorPool;
+    init_info.RenderPass = wd->RenderPass;
+    init_info.MinImageCount = g_MinImageCount;
+    init_info.ImageCount = wd->ImageCount;
+    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    init_info.Allocator = g_Allocator;
+    init_info.CheckVkResultFn = check_vk_result;
+    ImGui_ImplVulkan_Init(&init_info);
+
+    // Our state
+    bool show_demo_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    // Main loop
+    while (g_KeepRunning)
+    {
+        maru_pumpEvents(context, 0, handle_maru_event, NULL);
+
+        if (!g_WindowReady)
+            continue;
+
+        // Resize swap chain?
+        maru_getWindowGeometry(window, &geometry);
+        if (geometry.pixel_size.x > 0 && geometry.pixel_size.y > 0 && (g_SwapChainRebuild || g_MainWindowData.Width != (int)geometry.pixel_size.x || g_MainWindowData.Height != (int)geometry.pixel_size.y))
+        {
+            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, (int)geometry.pixel_size.x, (int)geometry.pixel_size.y, g_MinImageCount);
+            g_MainWindowData.FrameIndex = 0;
+            g_SwapChainRebuild = false;
+        }
+
+        // Start the Dear ImGui frame
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplMaru_NewFrame();
+        ImGui::NewFrame();
+
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        {
+            static float f = 0.0f;
+            static int counter = 0;
+
+            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Checkbox("Another Window", &show_another_window);
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", (double)(1000.0f / io.Framerate), (double)io.Framerate);
+            ImGui::End();
+        }
+
+        // 3. Show another simple window.
+        if (show_another_window)
+        {
+            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+            ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
+            ImGui::End();
+        }
+
+        // Rendering
+        ImGui::Render();
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+        if (!is_minimized)
+        {
+            wd->ClearValue.color.float32[0] = clear_color.x * clear_color.w;
+            wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
+            wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
+            wd->ClearValue.color.float32[3] = clear_color.w;
+            FrameRender(wd, draw_data);
+            FramePresent(wd);
+        }
     }
 
-    uint32_t imageCount;
-    vkGetSwapchainImagesKHR(vk.device, vk.swapChain, &imageCount, nullptr);
-    vk.swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(vk.device, vk.swapChain, &imageCount, vk.swapChainImages.data());
+    // Cleanup
+    VkResult vk_err = vkDeviceWaitIdle(g_Device);
+    check_vk_result(vk_err);
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplMaru_Shutdown();
+    ImGui::DestroyContext();
 
-    vk.swapChainImageViews.resize(imageCount);
-    for (size_t i = 0; i < imageCount; i++) {
-        VkImageViewCreateInfo viewInfo = {};
-        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image = vk.swapChainImages[i];
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.format = vk.swapChainImageFormat;
-        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        viewInfo.subresourceRange.baseMipLevel = 0;
-        viewInfo.subresourceRange.levelCount = 1;
-        viewInfo.subresourceRange.baseArrayLayer = 0;
-        viewInfo.subresourceRange.layerCount = 1;
-        vkCreateImageView(vk.device, &viewInfo, nullptr, &vk.swapChainImageViews[i]);
-    }
+    CleanupVulkanWindow(&g_MainWindowData);
+    CleanupVulkan();
 
-    vk.swapChainFramebuffers.resize(imageCount);
-    for (size_t i = 0; i < imageCount; i++) {
-        VkFramebufferCreateInfo framebufferInfo = {};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = vk.renderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = &vk.swapChainImageViews[i];
-        framebufferInfo.width = vk.swapChainExtent.width;
-        framebufferInfo.height = vk.swapChainExtent.height;
-        framebufferInfo.layers = 1;
-        vkCreateFramebuffer(vk.device, &framebufferInfo, nullptr, &vk.swapChainFramebuffers[i]);
-    }
-}
+    maru_destroyWindow(window);
+    maru_destroyContext(context);
 
-static void cleanup_swap_chain() {
-    for (auto framebuffer : vk.swapChainFramebuffers) vkDestroyFramebuffer(vk.device, framebuffer, nullptr);
-    for (auto imageView : vk.swapChainImageViews) vkDestroyImageView(vk.device, imageView, nullptr);
-    vkDestroySwapchainKHR(vk.device, vk.swapChain, nullptr);
-}
-
-#ifdef __linux__
-#include <dlfcn.h>
-
-static void cleanup_system_leaks() {
-    // These libraries often leak memory on exit if not explicitly shut down.
-    // We use dlsym to find and call their cleanup functions if they are loaded.
-    
-    void* fc_handle = dlopen("libfontconfig.so.1", RTLD_LAZY | RTLD_NOLOAD);
-    if (fc_handle) {
-        void (*fini)(void) = (void (*)(void))dlsym(fc_handle, "FcFini");
-        if (fini) fini();
-        dlclose(fc_handle);
-    }
-
-    void* dbus_handle = dlopen("libdbus-1.so.3", RTLD_LAZY | RTLD_NOLOAD);
-    if (dbus_handle) {
-        void (*shutdown)(void) = (void (*)(void))dlsym(dbus_handle, "dbus_shutdown");
-        if (shutdown) shutdown();
-        dlclose(dbus_handle);
-    }
-}
-#endif
-
-int main() {
-  MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-#ifdef _WIN32
-  create_info.backend = MARU_BACKEND_WINDOWS;
-#else
-  create_info.backend = MARU_BACKEND_WAYLAND;
-#endif
-  create_info.attributes.inhibit_idle = false;
-  create_info.attributes.diagnostic_cb = NULL;
-  create_info.attributes.diagnostic_userdata = NULL;
-  create_info.attributes.event_mask = MARU_ALL_EVENTS;
-  create_info.allocator.alloc_cb = NULL;
-  create_info.allocator.realloc_cb = NULL;
-  create_info.allocator.free_cb = NULL;
-  create_info.allocator.userdata = NULL;
-  create_info.userdata = NULL;
-  
-  MARU_ContextTuning tuning = MARU_CONTEXT_TUNING_DEFAULT;
-  create_info.tuning = &tuning;
-
-  MARU_Context *context = NULL;
-  MARU_Status status = maru_createContext(&create_info, &context);
-  if (status != MARU_SUCCESS || !context) {
-      fprintf(stderr, "Failed to create context: status=%d\n", status);
-      return 1;
-  }
-
-  maru_vulkan_enable(context, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr);
-
-  uint32_t vk_extension_count = 0;
-  const char **vk_extensions = maru_vulkan_getVkExtensions(context, &vk_extension_count);
-
-  create_vulkan_instance(vk_extension_count, vk_extensions);
-  pick_physical_device();
-
-  MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
-  window_info.attributes.title = "Maru ImGui Testbed";
-  window_info.attributes.logical_size = {1280, 720};
-  window_info.attributes.position = {0, 0};
-  window_info.userdata = NULL;
-  window_info.app_id = "maru.testbed";
-
-  MARU_Status win_status = maru_createWindow(context, &window_info, &main_window);
-  if (win_status != MARU_SUCCESS) {
-      fprintf(stderr, "Failed to create window: status=%d\n", win_status);
-      return 1;
-  }
-
-  while (keep_running && !window_ready) {
-      maru_pumpEvents(context, 16, handle_event, NULL);
-  }
-  if (!window_ready) {
-      fprintf(stderr, "Window failed to become ready\n");
-      return 1;
-  }
-
-  maru_vulkan_createVkSurface(main_window, vk.instance, &vk.surface);
-  create_logical_device();
-  vk.swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
-  create_render_pass();
-  create_swap_chain(main_window);
-
-  WindowManager_VulkanContext wm_vk_ctx = {};
-  wm_vk_ctx.instance = vk.instance;
-  wm_vk_ctx.physicalDevice = vk.physicalDevice;
-  wm_vk_ctx.device = vk.device;
-  wm_vk_ctx.graphicsQueue = vk.graphicsQueue;
-  wm_vk_ctx.queueFamilyIndex = 0; // Assuming 0 for simplicity as in main.cpp
-  WindowManager_Init(context, main_window, wm_vk_ctx);
-
-  // Sync objects
-  VkSemaphoreCreateInfo semaphoreInfo;
-  semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  semaphoreInfo.pNext = VK_NULL_HANDLE;
-  VkFenceCreateInfo fenceInfo;
-  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  fenceInfo.pNext = VK_NULL_HANDLE;
-  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-  for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vkCreateSemaphore(vk.device, &semaphoreInfo, nullptr, &vk.imageAvailableSemaphores[i]);
-    vkCreateSemaphore(vk.device, &semaphoreInfo, nullptr, &vk.renderFinishedSemaphores[i]);
-    vkCreateFence(vk.device, &fenceInfo, nullptr, &vk.inFlightFences[i]);
-  }
-
-  // Command pool & buffers
-  VkCommandPoolCreateInfo poolInfo;
-  poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  poolInfo.pNext = VK_NULL_HANDLE;
-  poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-  poolInfo.queueFamilyIndex = 0;
-  vkCreateCommandPool(vk.device, &poolInfo, nullptr, &vk.commandPool);
-
-  VkCommandBufferAllocateInfo allocInfo;
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.pNext = VK_NULL_HANDLE;
-  allocInfo.commandPool = vk.commandPool;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
-  vkAllocateCommandBuffers(vk.device, &allocInfo, vk.commandBuffers);
-
-  // Setup Dear ImGui context
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGuiIO& io = ImGui::GetIO();
-  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-  ImGui::StyleColorsDark();
-  ImGui_ImplMaru_Init(main_window);
-  
-  // ImGui Descriptor Pool
-  VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } };
-  VkDescriptorPoolCreateInfo descPoolInfo;
-  descPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  descPoolInfo.pNext = VK_NULL_HANDLE;
-  descPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-  descPoolInfo.maxSets = 1;
-  descPoolInfo.poolSizeCount = 1;
-  descPoolInfo.pPoolSizes = pool_sizes;
-  vkCreateDescriptorPool(vk.device, &descPoolInfo, nullptr, &vk.imguiDescriptorPool);
-
-  ImGui_ImplVulkan_InitInfo init_info = {};
-  init_info.Instance = vk.instance;
-  init_info.PhysicalDevice = vk.physicalDevice;
-  init_info.Device = vk.device;
-  init_info.QueueFamily = 0;
-  init_info.Queue = vk.graphicsQueue;
-  init_info.DescriptorPool = vk.imguiDescriptorPool;
-  init_info.RenderPass = vk.renderPass;
-  init_info.MinImageCount = 2;
-  init_info.ImageCount = (uint32_t)vk.swapChainImages.size();
-  init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-  ImGui_ImplVulkan_Init(&init_info);
-
-  while (keep_running) {
-    frame_id++;
-    maru_pumpEvents(context, 0, handle_event, NULL);
-
-    if (framebuffer_resized) {
-        cleanup_swap_chain();
-        create_swap_chain(main_window);
-        framebuffer_resized = false;
-    }
-
-    vkWaitForFences(vk.device, 1, &vk.inFlightFences[vk.currentFrame], VK_TRUE, UINT64_MAX);
-    uint32_t imageIndex;
-    VkResult res = vkAcquireNextImageKHR(vk.device, vk.swapChain, UINT64_MAX, vk.imageAvailableSemaphores[vk.currentFrame], VK_NULL_HANDLE, &imageIndex);
-    if (res == VK_ERROR_OUT_OF_DATE_KHR) { framebuffer_resized = true; continue; }
-    vkResetFences(vk.device, 1, &vk.inFlightFences[vk.currentFrame]);
-
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplMaru_NewFrame();
-    ImGui::NewFrame();
-    
-    // TOC Window
-    ImGui::SetNextWindowSize(ImVec2(200, 150), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("Table of Contents")) {
-        ImGui::Checkbox("Event Viewer", &show_event_viewer);
-        ImGui::Checkbox("Monitor Explorer", &show_monitor_explorer);
-        ImGui::Checkbox("Cursor Tester", &show_cursor_tester);
-        ImGui::Checkbox("Window Manager", &show_window_manager);
-    }
-    ImGui::End();
-
-    if (show_event_viewer) EventViewer_Render(main_window, &show_event_viewer);
-    if (show_monitor_explorer) MonitorExplorer_Render(context, &show_monitor_explorer);
-    if (show_cursor_tester) CursorTester_Render(context, main_window, &show_cursor_tester);
-    if (show_window_manager) WindowManager_Render(context, &show_window_manager);
-
-    WindowManager_Update();
-
-    ImGui::Render();
-
-    vkResetCommandBuffer(vk.commandBuffers[vk.currentFrame], 0);
-    VkCommandBufferBeginInfo beginInfo;
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.pNext = VK_NULL_HANDLE;
-    vkBeginCommandBuffer(vk.commandBuffers[vk.currentFrame], &beginInfo);
-
-    VkRenderPassBeginInfo rpBegin;
-    rpBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpBegin.pNext = VK_NULL_HANDLE;
-    rpBegin.renderPass = vk.renderPass;
-    rpBegin.framebuffer = vk.swapChainFramebuffers[imageIndex];
-    rpBegin.renderArea.extent = vk.swapChainExtent;
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    rpBegin.clearValueCount = 1;
-    rpBegin.pClearValues = &clearColor;
-    vkCmdBeginRenderPass(vk.commandBuffers[vk.currentFrame], &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
-    
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vk.commandBuffers[vk.currentFrame]);
-
-    vkCmdEndRenderPass(vk.commandBuffers[vk.currentFrame]);
-    vkEndCommandBuffer(vk.commandBuffers[vk.currentFrame]);
-
-    VkSubmitInfo submit;
-    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit.pNext = VK_NULL_HANDLE;
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submit.waitSemaphoreCount = 1;
-    submit.pWaitSemaphores = &vk.imageAvailableSemaphores[vk.currentFrame];
-    submit.pWaitDstStageMask = waitStages;
-    submit.commandBufferCount = 1;
-    submit.pCommandBuffers = &vk.commandBuffers[vk.currentFrame];
-    submit.signalSemaphoreCount = 1;
-    submit.pSignalSemaphores = &vk.renderFinishedSemaphores[vk.currentFrame];
-    vkQueueSubmit(vk.graphicsQueue, 1, &submit, vk.inFlightFences[vk.currentFrame]);
-
-    VkPresentInfoKHR present;
-    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present.pNext = VK_NULL_HANDLE;
-    present.waitSemaphoreCount = 1;
-    present.pWaitSemaphores = &vk.renderFinishedSemaphores[vk.currentFrame];
-    present.swapchainCount = 1;
-    present.pSwapchains = &vk.swapChain;
-    present.pImageIndices = &imageIndex;
-    vkQueuePresentKHR(vk.presentQueue, &present);
-
-    vk.currentFrame = (vk.currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-  }
-
-  vkDeviceWaitIdle(vk.device);
-  WindowManager_Cleanup();
-  ImGui_ImplVulkan_Shutdown();
-  ImGui_ImplMaru_Shutdown();
-  ImGui::DestroyContext();
-  
-  cleanup_swap_chain();
-  vkDestroyDescriptorPool(vk.device, vk.imguiDescriptorPool, nullptr);
-  vkDestroyCommandPool(vk.device, vk.commandPool, nullptr);
-  for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vkDestroySemaphore(vk.device, vk.imageAvailableSemaphores[i], nullptr);
-    vkDestroySemaphore(vk.device, vk.renderFinishedSemaphores[i], nullptr);
-    vkDestroyFence(vk.device, vk.inFlightFences[i], nullptr);
-  }
-  vkDestroyRenderPass(vk.device, vk.renderPass, nullptr);
-  vkDestroyDevice(vk.device, nullptr);
-  vkDestroySurfaceKHR(vk.instance, vk.surface, nullptr);
-  vkDestroyInstance(vk.instance, nullptr);
-  maru_destroyWindow(main_window);
-  maru_destroyContext(context);
-  
-#ifdef __linux__
-  cleanup_system_leaks();
-#endif
-  return 0;
+    return 0;
 }

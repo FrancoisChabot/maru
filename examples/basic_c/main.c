@@ -30,21 +30,30 @@ static void handle_event(MARU_EventType type, MARU_Window *window,
   }
 }
 
+static void handle_diagnostic(const struct MARU_DiagnosticInfo *info, void *userdata) {
+  (void)userdata;
+  const char* severity = "INFO";
+  if (info->diagnostic >= MARU_DIAGNOSTIC_INVALID_ARGUMENT) {
+    severity = "ERROR";
+  } else if (info->diagnostic > MARU_DIAGNOSTIC_INFO) {
+    severity = "WARNING";
+  }
+  
+  fprintf(stderr, "[MARU %s] %d: %s\n", severity, (int)info->diagnostic, info->message);
+}
+
 int main() {
   MARU_Version version = maru_getVersion();
   printf("Maru version: %u.%u.%u\n", version.major, version.minor,
          version.patch);
 
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-#ifdef _WIN32
-  create_info.backend = MARU_BACKEND_WINDOWS;
-#else
-  create_info.backend = MARU_BACKEND_WAYLAND;
-#endif
+  
   
   MARU_ContextTuning tuning = MARU_CONTEXT_TUNING_DEFAULT;
   create_info.tuning = &tuning;
 
+  create_info.attributes.diagnostic_cb = handle_diagnostic;
   create_info.attributes.event_mask = MARU_ALL_EVENTS;
   MARU_Context *context = NULL;
   if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {

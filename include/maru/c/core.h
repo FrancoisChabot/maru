@@ -82,6 +82,15 @@ typedef enum MARU_Status {
 typedef uint32_t MARU_ExtensionID;
 #define MARU_EXT_INVALID ((MARU_ExtensionID)-1)
 
+#define MARU_EXT_VULKAN 0
+#define MARU_EXT_COUNT 1
+
+typedef struct MARU_Context MARU_Context;
+typedef struct MARU_Window MARU_Window;
+
+/** @brief Function signature for extension cleanup callbacks. */
+typedef void (*MARU_ExtensionCleanupCallback)(MARU_Context *context, void *state);
+
 /** @brief Supported windowing backends. */
 typedef enum MARU_BackendType {
   MARU_BACKEND_UNKNOWN = 0,

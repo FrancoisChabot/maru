@@ -8,31 +8,32 @@
 
 #ifdef MARU_INDIRECT_BACKEND
 typedef struct MARU_Backend {
+  // maru_createContext() is intentionally ommited, as this is what populates the vtable
+
   __typeof__(maru_destroyContext) *destroyContext;
-  __typeof__(maru_pumpEvents) *pumpEvents;
   __typeof__(maru_updateContext) *updateContext;
+
+  __typeof__(maru_pumpEvents) *pumpEvents;
+  __typeof__(maru_wakeContext) *wakeContext;
 
   __typeof__(maru_createWindow) *createWindow;
   __typeof__(maru_destroyWindow) *destroyWindow;
   __typeof__(maru_getWindowGeometry) *getWindowGeometry;
   __typeof__(maru_updateWindow) *updateWindow;
   __typeof__(maru_requestWindowFocus) *requestWindowFocus;
-  MARU_Status (*requestWindowFrame)(MARU_Window *window);
-  __typeof__(maru_getWindowBackendHandle) *getWindowBackendHandle;
+  __typeof__(maru_requestWindowFrame) *requestWindowFrame;
 
   __typeof__(maru_getStandardCursor) *getStandardCursor;
   __typeof__(maru_createCursor) *createCursor;
   __typeof__(maru_destroyCursor) *destroyCursor;
-  __typeof__(maru_wakeContext) *wakeContext;
-
-  MARU_Status (*updateMonitors)(MARU_Context *context);
-  void (*destroyMonitor)(MARU_Monitor *monitor);
+  
+  __typeof__(maru_getMonitors) *getMonitors;
   __typeof__(maru_getMonitorModes) *getMonitorModes;
   __typeof__(maru_setMonitorMode) *setMonitorMode;
   __typeof__(maru_resetMonitorMetrics) *resetMonitorMetrics;
 
-  void *(*getContextNativeHandle)(MARU_Context *context);
-  void *(*getWindowNativeHandle)(MARU_Window *window);
+  __typeof__(maru_getContextNativeHandle) *getContextNativeHandle;
+  __typeof__(maru_getWindowNativeHandle) *getWindowNativeHandle;
 
   // More to be added directly here
 } MARU_Backend;

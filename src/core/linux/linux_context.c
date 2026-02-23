@@ -1,5 +1,12 @@
 #include "maru_api_constraints.h"
 
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
+
+
+
+
 extern MARU_Status
 maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                       MARU_Context **out_context);

@@ -8,6 +8,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <string.h>
 #endif
 
 typedef enum VkResult {
@@ -37,28 +39,6 @@ typedef VkResult (*PFN_vkCreateWin32SurfaceKHR)(VkInstance instance,
 
 extern __attribute__((weak)) MARU_VulkanVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char* pName);
 
-#if defined(_WIN32)
-    __declspec(allocate(".maru_ext$a")) extern const void* const _maru_ext_start_marker;
-#else
-    extern const MARU_ExtensionDescriptor* const __start_maru_ext_hooks;
-#endif
-
-static void _maru_vulkan_auto_init(MARU_Context *ctx, MARU_ExtensionID id);
-MARU_REGISTER_EXTENSION("vulkan", _maru_vulkan_auto_init)
-
-static MARU_ExtensionID _maru_vulkan_get_id(void) {
-#if defined(_WIN32)
-    return (MARU_ExtensionID)(&_maru_ext_ptr__maru_vulkan_auto_init - (&_maru_ext_start_marker + 1));
-#else
-    return (MARU_ExtensionID)(&_maru_ext_ptr__maru_vulkan_auto_init - &__start_maru_ext_hooks);
-#endif
-}
-
-static void _maru_vulkan_auto_init(MARU_Context *ctx, MARU_ExtensionID id) {
-    (void)id;
-    maru_vulkan_enable(ctx, NULL);
-}
-
 typedef struct MARU_VulkanExtContextState_Win32 {
   #ifdef MARU_INDIRECT_BACKEND
     const MARU_ExtVulkanVTable* vtable;
@@ -81,8 +61,7 @@ static MARU_Status _createVkSurface_Windows(MARU_Window* window,
                                          VkInstance instance,
                                          VkSurfaceKHR* out_surface) {
   MARU_Context* ctx = maru_getWindowContext(window);
-  MARU_ExtensionID id = _maru_vulkan_get_id();
-  MARU_VulkanExtContextState_Win32 *state = (MARU_VulkanExtContextState_Win32 *)maru_getExtension(ctx, id);
+  MARU_VulkanExtContextState_Win32 *state = (MARU_VulkanExtContextState_Win32 *)maru_getExtension(ctx, MARU_EXT_VULKAN);
 
   MARU_VkGetInstanceProcAddrFunc vk_loader = state->vk_loader;
 
@@ -139,8 +118,7 @@ static void _maru_vulkan_cleanup_Win32(MARU_Context *context, void *state) {
 MARU_API MARU_Status maru_vulkan_enable(MARU_Context *context, MARU_VkGetInstanceProcAddrFunc vk_loader) {
   MARU_VULKAN_API_VALIDATE(enable, context, vk_loader);
 
-  MARU_ExtensionID id = _maru_vulkan_get_id();
-  MARU_VulkanExtContextState_Win32 *state = (MARU_VulkanExtContextState_Win32 *)maru_getExtension(context, id);
+  MARU_VulkanExtContextState_Win32 *state = (MARU_VulkanExtContextState_Win32 *)maru_getExtension(context, MARU_EXT_VULKAN);
   if (!state) {
     state = (MARU_VulkanExtContextState_Win32 *)maru_contextAlloc(context, sizeof(MARU_VulkanExtContextState_Win32));
     if (!state) return MARU_FAILURE;
@@ -149,7 +127,7 @@ MARU_API MARU_Status maru_vulkan_enable(MARU_Context *context, MARU_VkGetInstanc
     #ifdef MARU_INDIRECT_BACKEND
     state->vtable = &maru_ext_vk_backend_Win32;
     #endif
-    maru_registerExtension(context, id, state, _maru_vulkan_cleanup_Win32);
+    maru_registerExtension(context, MARU_EXT_VULKAN, state, _maru_vulkan_cleanup_Win32);
   }
 
   if (vk_loader) {

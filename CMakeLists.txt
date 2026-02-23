@@ -22,8 +22,8 @@ endif()
 # Debug and diagnostics options
 option(MARU_ENABLE_DIAGNOSTICS "Enable diagnostics reporting through callbacks" ON)
 option(MARU_GATHER_METRICS "Enable metrics gathering" ON)
-option(MARU_VALIDATE_API_CALLS "Should API calls be validated?" OFF)
-option(MARU_ENABLE_INTERNAL_CHECKS "Should the library agressively validate internal state" OFF)
+option(MARU_VALIDATE_API_CALLS "Should API calls be validated?" ON)
+option(MARU_ENABLE_INTERNAL_CHECKS "Should the library agressively validate internal state" ON)
 option(MARU_ENABLE_FAULT_INJECTION "Enable fault injection testing hooks" OFF)
 
 # Auxiliary targets

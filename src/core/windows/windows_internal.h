@@ -67,10 +67,6 @@ MARU_Status maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_Wind
 MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes);
 MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window);
-MARU_Status maru_getWindowBackendHandle_Windows(MARU_Window *window,
-                                               MARU_BackendType *out_type,
-                                               MARU_BackendHandle *out_handle);
-
 MARU_Status maru_getStandardCursor_Windows(MARU_Context *context, MARU_CursorShape shape,
                                             MARU_Cursor **out_cursor);
 MARU_Status maru_createCursor_Windows(MARU_Context *context,
@@ -80,7 +76,6 @@ MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor);
 MARU_Status maru_wakeContext_Windows(MARU_Context *context);
 
 MARU_Status maru_updateMonitors_Windows(MARU_Context *context);
-MARU_Status maru_destroyMonitor_Windows(MARU_Monitor *monitor);
 const MARU_VideoMode *maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
                                          uint32_t *out_count);
 MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,

@@ -17,35 +17,9 @@ typedef struct MARU_Context_WL {
   struct {
     struct wl_display *display;
     struct wl_registry *registry;
-    struct wl_cursor_theme *cursor_theme;
-    struct wl_surface *cursor_surface;
   } wl;
 
-  struct {
-    struct wl_seat *seat;
-    struct wl_keyboard *keyboard;
-    struct wl_pointer *pointer;
-    struct wp_cursor_shape_device_v1 *cursor_shape_device;
-  } input;
-
-  struct {
-    MARU_Window *keyboard_focus;
-    MARU_Window *pointer_focus;
-    struct wl_surface *pointer_surface;
-    uint32_t pointer_serial;
-    uint32_t activation_serial;
-  } focused;
-
   MARU_Wayland_Protocols_WL protocols;
-
-  struct {
-    struct libdecor *ctx;
-  } libdecor;
-
-  MARU_WaylandDecorationMode decoration_mode;
-  MARU_ModifierFlags cached_modifiers;
-  char *activation_token;
-  int wake_fd;
 
   struct {
     MARU_Lib_WaylandClient wl;
@@ -273,9 +247,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window, uint64_t field_mask,
                                  const MARU_WindowAttributes *attributes);
 MARU_Status maru_destroyWindow_WL(MARU_Window *window);
 MARU_Status maru_requestWindowFocus_WL(MARU_Window *window);
-MARU_Status maru_getWindowBackendHandle_WL(MARU_Window *window,
-                                         MARU_BackendType *out_type,
-                                         MARU_BackendHandle *out_handle);
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 
 MARU_Monitor *const *maru_getMonitors_WL(MARU_Context *context, uint32_t *out_count);

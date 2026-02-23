@@ -2,6 +2,7 @@
 #define MARU_VULKAN_API_CONSTRAINTS_H_INCLUDED
 
 #include "maru_api_constraints.h"
+#include "maru/c/core.h"
 #include "maru/c/ext/vulkan.h"
 
 #ifdef MARU_VALIDATE_API_CALLS

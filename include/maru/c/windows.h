@@ -222,11 +222,6 @@ MARU_Status maru_requestWindowFocus(MARU_Window *window);
 /** @brief Requests a frame callback for the window. */
 MARU_Status maru_requestWindowFrame(MARU_Window *window);
 
-/** @brief Retrieves the native OS handle for the window. */
-MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
-                                        MARU_BackendType *out_type,
-                                        MARU_BackendHandle *out_handle);
-
 /** @brief Resets the metrics counters attached to a window handle. */
 MARU_Status maru_resetWindowMetrics(MARU_Window *window);
 

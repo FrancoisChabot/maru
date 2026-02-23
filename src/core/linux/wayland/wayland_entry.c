@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern void *_maru_getContextNativeHandle_WL(MARU_Context *context);
-extern void *_maru_getWindowNativeHandle_WL(MARU_Window *window);
+extern void *maru_getContextNativeHandle_WL(MARU_Context *context);
+extern void *maru_getWindowNativeHandle_WL(MARU_Window *window);
 
 #ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_WL = {
@@ -18,18 +18,15 @@ const MARU_Backend maru_backend_WL = {
   .getWindowGeometry = maru_getWindowGeometry_WL,
   .updateWindow = maru_updateWindow_WL,
   .requestWindowFocus = maru_requestWindowFocus_WL,
-  .getWindowBackendHandle = maru_getWindowBackendHandle_WL,
   .getStandardCursor = maru_getStandardCursor_WL,
   .createCursor = maru_createCursor_WL,
   .destroyCursor = maru_destroyCursor_WL,
   .wakeContext = maru_wakeContext_WL,
-  .updateMonitors = maru_updateMonitors_WL,
-  .destroyMonitor = maru_destroyMonitor_WL,
   .getMonitorModes = maru_getMonitorModes_WL,
   .setMonitorMode = maru_setMonitorMode_WL,
   .resetMonitorMetrics = NULL,
-  .getContextNativeHandle = _maru_getContextNativeHandle_WL,
-  .getWindowNativeHandle = _maru_getWindowNativeHandle_WL,
+  .getContextNativeHandle = maru_getContextNativeHandle_WL,
+  .getWindowNativeHandle = maru_getWindowNativeHandle_WL,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
@@ -106,13 +103,6 @@ MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   return MARU_SUCCESS;
 }
 
-MARU_API MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
-                                               MARU_BackendType *out_type,
-                                               MARU_BackendHandle *out_handle) {
-  MARU_API_VALIDATE(getWindowBackendHandle, window, out_type, out_handle);
-  return maru_getWindowBackendHandle_WL(window, out_type, out_handle);
-}
-
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
   return maru_wakeContext_WL(context);
@@ -157,11 +147,11 @@ MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
 }
 
-void *_maru_getContextNativeHandle(MARU_Context *context) {
-    return _maru_getContextNativeHandle_WL(context);
+void *maru_getContextNativeHandle(MARU_Context *context) {
+    return maru_getContextNativeHandle_WL(context);
 }
 
-void *_maru_getWindowNativeHandle(MARU_Window *window) {
-    return _maru_getWindowNativeHandle_WL(window);
+void *maru_getWindowNativeHandle(MARU_Window *window) {
+    return maru_getWindowNativeHandle_WL(window);
 }
 #endif

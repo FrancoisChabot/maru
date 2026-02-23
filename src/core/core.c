@@ -1,5 +1,6 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
+#include "maru/c/details/contexts.h"
 #include <string.h>
 
 #include <stdlib.h>
@@ -52,16 +53,9 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type,
   }
 }
 
-void _maru_monitor_free(MARU_Monitor_Base *monitor) {
-#ifdef MARU_INDIRECT_BACKEND
-  if (monitor->backend->destroyMonitor) {
-    monitor->backend->destroyMonitor((MARU_Monitor *)monitor);
-  }
-#endif
-  maru_context_free(monitor->ctx_base, monitor);
-}
-
 void _maru_init_context_base(MARU_Context_Base *ctx_base) {
+  memset(ctx_base->pub.extensions, 0, sizeof(ctx_base->pub.extensions));
+
   uint32_t capacity = ctx_base->tuning.user_event_queue_size;
   if (capacity == 0) capacity = 256;
   _maru_event_queue_init(&ctx_base->user_event_queue, ctx_base, capacity);
@@ -101,19 +95,6 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
 }
 
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
-  for (uint32_t i = 0; i < ctx_base->extension_count; i++) {
-    if (ctx_base->extension_cleanups[i]) {
-      ctx_base->extension_cleanups[i]((MARU_Context *)ctx_base, ctx_base->extension_vtables[i]);
-    }
-  }
-
-  if (ctx_base->extension_vtables) {
-    maru_context_free(ctx_base, ctx_base->extension_vtables);
-  }
-  if (ctx_base->extension_cleanups) {
-    maru_context_free(ctx_base, ctx_base->extension_cleanups);
-  }
-
   for (uint32_t i = 0; i < ctx_base->monitor_cache_count; i++) {
     MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)ctx_base->monitor_cache[i];
     mon_base->is_active = false;
@@ -187,6 +168,13 @@ MARU_API MARU_Status maru_createWindow(MARU_Context *context,
   return ctx_base->backend->createWindow(context, create_info, out_window);
 }
 
+MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
+  MARU_API_VALIDATE(wakeContext, context);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend->wakeContext(context);
+}
+
+
 MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
   MARU_API_VALIDATE(destroyWindow, window);
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
@@ -243,14 +231,6 @@ MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
   return MARU_FAILURE;
 }
 
-MARU_API MARU_Status maru_getWindowBackendHandle(MARU_Window *window,
-                                                MARU_BackendType *out_type,
-                                                MARU_BackendHandle *out_handle) {
-  MARU_API_VALIDATE(getWindowBackendHandle, window, out_type, out_handle);
-  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
-  return win_base->backend->getWindowBackendHandle(window, out_type, out_handle);
-}
-
 MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventType type,
                                       MARU_Window *window, MARU_UserDefinedEvent evt) {
   MARU_API_VALIDATE(postEvent, context, type, window, evt);
@@ -260,23 +240,6 @@ MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventType type,
     return maru_wakeContext(context);
   }
   return MARU_FAILURE;
-}
-
-MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
-  MARU_API_VALIDATE(wakeContext, context);
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  return ctx_base->backend->wakeContext(context);
-}
-
-MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
-  MARU_API_VALIDATE(getMonitors, context, out_count);
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  if (ctx_base->backend->updateMonitors(context) != MARU_SUCCESS) {
-    *out_count = 0;
-    return NULL;
-  }
-  *out_count = ctx_base->monitor_cache_count;
-  return ctx_base->monitor_cache;
 }
 
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
@@ -308,6 +271,19 @@ MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   mon_base->backend->resetMonitorMetrics(monitor);
 }
+
+MARU_API void *maru_getContextNativeHandle(MARU_Context *context) {
+  MARU_API_VALIDATE(getContextNativeHandle, context);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  return ctx_base->backend->getContextNativeHandle(context);
+}
+
+MARU_API void *maru_getWindowNativeHandle(MARU_Window *window) {
+  MARU_API_VALIDATE(getWindowNativeHandle, window);
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  return win_base->backend->getWindowNativeHandle(window);
+}
+
 #endif
 
 void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask,
@@ -419,57 +395,6 @@ MARU_API MARU_Version maru_getVersion(void) {
                         .patch = MARU_VERSION_PATCH};
 }
 
-MARU_API MARU_BackendType maru_getContextBackendType(const MARU_Context *context) {
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  return ctx_base->backend_type;
-}
-
-MARU_API MARU_Status maru_registerExtension(MARU_Context *context, MARU_ExtensionID id, void *state, MARU_ExtensionCleanupCallback cleanup) {
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  ctx_base->extension_vtables[id] = state;
-  ctx_base->extension_cleanups[id] = cleanup;
-  return MARU_SUCCESS;
-}
-
-MARU_API void *maru_getExtension(const MARU_Context *context, MARU_ExtensionID id) {
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  return ctx_base->extension_vtables[id];
-}
-
-#if defined(_WIN32)
-    __declspec(allocate(".maru_ext$a")) static const void* const _maru_ext_start_marker = NULL;
-    __declspec(allocate(".maru_ext$c")) static const void* const _maru_ext_stop_marker = NULL;
-#endif
-
-void _maru_init_all_extensions(MARU_Context *ctx) {
-#if defined(_WIN32)
-    const MARU_ExtensionDescriptor* const* it = (const MARU_ExtensionDescriptor* const*)(&_maru_ext_start_marker + 1);
-    const MARU_ExtensionDescriptor* const* end = (const MARU_ExtensionDescriptor* const*)(&_maru_ext_stop_marker);
-#else
-    extern const MARU_ExtensionDescriptor* const __start_maru_ext_hooks __attribute__((weak));
-    extern const MARU_ExtensionDescriptor* const __stop_maru_ext_hooks __attribute__((weak));
-    const MARU_ExtensionDescriptor* const* it = &__start_maru_ext_hooks;
-    const MARU_ExtensionDescriptor* const* end = &__stop_maru_ext_hooks;
-
-    if (!it || !end) return;
-#endif
-
-    uint32_t count = (uint32_t)(end - it);
-    if (count == 0) return;
-
-    MARU_Context_Base *base = (MARU_Context_Base*)ctx;
-    base->extension_count = count;
-    base->extension_vtables = maru_context_alloc(base, sizeof(void*) * count);
-    base->extension_cleanups = maru_context_alloc(base, sizeof(MARU_ExtensionCleanupCallback) * count);
-    memset(base->extension_vtables, 0, sizeof(void*) * count);
-    memset(base->extension_cleanups, 0, sizeof(MARU_ExtensionCleanupCallback) * count);
-
-    for (uint32_t i = 0; i < count; ++i) {
-        if (it[i] && it[i]->init_func) {
-            it[i]->init_func(ctx, i);
-        }
-    }
-}
 
 MARU_API void *maru_contextAlloc(MARU_Context *context, size_t size) {
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
@@ -481,31 +406,23 @@ MARU_API void maru_contextFree(MARU_Context *context, void *ptr) {
   maru_context_free(ctx_base, ptr);
 }
 
-MARU_API void *maru_contextGetNativeHandle(MARU_Context *context) {
-  MARU_API_VALIDATE(contextGetNativeHandle, context);
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-#ifdef MARU_INDIRECT_BACKEND
-  if (ctx_base->backend->getContextNativeHandle) {
-    return ctx_base->backend->getContextNativeHandle(context);
+MARU_API MARU_Status maru_registerExtension(MARU_Context *context, MARU_ExtensionID id, void *state, MARU_ExtensionCleanupCallback cleanup) {
+  if (!context || id >= MARU_EXT_COUNT || !state || !cleanup) {
+    return MARU_FAILURE;
   }
-  return NULL;
-#else
-  // This will be resolved by the backend-specific implementation linked in.
-  extern void *_maru_getContextNativeHandle(MARU_Context *context);
-  return _maru_getContextNativeHandle(context);
-#endif
+  MARU_ContextExposed *ctx_exp = (MARU_ContextExposed *)context;
+  if (ctx_exp->extensions[id] != NULL) {
+    return MARU_FAILURE;
+  }
+  ctx_exp->extensions[id] = state;
+  (void)cleanup;
+  return MARU_SUCCESS;
 }
 
-MARU_API void *maru_windowGetNativeHandle(MARU_Window *window) {
-  MARU_API_VALIDATE(windowGetNativeHandle, window);
-  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
-#ifdef MARU_INDIRECT_BACKEND
-  if (win_base->backend->getWindowNativeHandle) {
-    return win_base->backend->getWindowNativeHandle(window);
+MARU_API void *maru_getExtension(const MARU_Context *context, MARU_ExtensionID id) {
+  if (!context || id >= MARU_EXT_COUNT) {
+    return NULL;
   }
-  return NULL;
-#else
-  extern void *_maru_getWindowNativeHandle(MARU_Window *window);
-  return _maru_getWindowNativeHandle(window);
-#endif
+  const MARU_ContextExposed *ctx_exp = (const MARU_ContextExposed *)context;
+  return ctx_exp->extensions[id];
 }

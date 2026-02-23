@@ -32,40 +32,6 @@ typedef VkResult (*PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance,
 extern __attribute__((weak)) MARU_VulkanVoidFunction vkGetInstanceProcAddr(VkInstance instance,
                                                                       const char *pName);
 
-#if defined(_WIN32)
-    __declspec(allocate(".maru_ext$a")) extern const void* const _maru_ext_start_marker;
-#else
-    extern const MARU_ExtensionDescriptor* const __start_maru_ext_hooks;
-#endif
-
-#ifndef MARU_INDIRECT_BACKEND
-static void _maru_vulkan_auto_init(MARU_Context *ctx, MARU_ExtensionID id);
-#endif
-
-#ifndef MARU_INDIRECT_BACKEND
-MARU_REGISTER_EXTENSION("vulkan", _maru_vulkan_auto_init)
-#endif
-
-static MARU_ExtensionID _maru_vulkan_get_id(MARU_Context *ctx) {
-#ifdef MARU_INDIRECT_BACKEND
-    (void)ctx;
-    return 0; // Placeholder
-#else
-#if defined(_WIN32)
-    return (MARU_ExtensionID)(&_maru_ext_ptr__maru_vulkan_auto_init - (&_maru_ext_start_marker + 1));
-#else
-    return (MARU_ExtensionID)(&_maru_ext_ptr__maru_vulkan_auto_init - &__start_maru_ext_hooks);
-#endif
-#endif
-}
-
-#ifndef MARU_INDIRECT_BACKEND
-static void _maru_vulkan_auto_init(MARU_Context *ctx, MARU_ExtensionID id) {
-    (void)id;
-    maru_vulkan_enable(ctx, NULL);
-}
-#endif
-
 typedef struct MARU_VulkanExtContextState_WL {
   #ifdef MARU_INDIRECT_BACKEND
     const MARU_ExtVulkanVTable* vtable;                 // MUST BE THE FIRST MEMBER!
@@ -88,8 +54,7 @@ static MARU_Status _createVkSurface_WL(MARU_Window *window,
                                  VkInstance instance,
                                  VkSurfaceKHR *out_surface) {
   MARU_Context *ctx = maru_getWindowContext(window);
-  MARU_ExtensionID id = _maru_vulkan_get_id(ctx);
-  MARU_VulkanExtContextState_WL *state = (MARU_VulkanExtContextState_WL *)maru_getExtension(ctx, id);
+  MARU_VulkanExtContextState_WL *state = (MARU_VulkanExtContextState_WL *)maru_getExtension(ctx, MARU_EXT_VULKAN);
 
   MARU_VkGetInstanceProcAddrFunc vk_loader = state->vk_loader;
   if (!vk_loader) vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
@@ -113,8 +78,8 @@ static MARU_Status _createVkSurface_WL(MARU_Window *window,
       .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
       .pNext = NULL,
       .flags = 0,
-      .display = (struct wl_display *)maru_contextGetNativeHandle(ctx),
-      .surface = (struct wl_surface *)maru_windowGetNativeHandle(window),
+      .display = (struct wl_display *)maru_getContextNativeHandle(ctx),
+      .surface = (struct wl_surface *)maru_getWindowNativeHandle(window),
   };
 
   VkResult vk_res = create_surface_fn(instance, &cinfo, NULL, out_surface);
@@ -141,8 +106,7 @@ static void _maru_vulkan_cleanup_WL(MARU_Context *context, void *state) {
 MARU_Status maru_vulkan_enable_wayland(MARU_Context *context, MARU_VkGetInstanceProcAddrFunc vk_loader) {
   MARU_VULKAN_API_VALIDATE(enable, context, vk_loader);
 
-  MARU_ExtensionID id = _maru_vulkan_get_id(context);
-  MARU_VulkanExtContextState_WL *state = (MARU_VulkanExtContextState_WL *)maru_getExtension(context, id);
+  MARU_VulkanExtContextState_WL *state = (MARU_VulkanExtContextState_WL *)maru_getExtension(context, MARU_EXT_VULKAN);
   if (!state) {
     state = (MARU_VulkanExtContextState_WL *)maru_contextAlloc(context, sizeof(MARU_VulkanExtContextState_WL));
     if (!state) return MARU_FAILURE;
@@ -151,7 +115,7 @@ MARU_Status maru_vulkan_enable_wayland(MARU_Context *context, MARU_VkGetInstance
     #ifdef MARU_INDIRECT_BACKEND
     state->vtable = &maru_ext_vk_backend_WL;
     #endif
-    maru_registerExtension(context, id, state, _maru_vulkan_cleanup_WL);
+    maru_registerExtension(context, MARU_EXT_VULKAN, state, _maru_vulkan_cleanup_WL);
   }
 
   if (vk_loader) {
