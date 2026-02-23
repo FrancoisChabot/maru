@@ -53,7 +53,7 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
     MARU_CursorMode mode = window->base.pub.cursor_mode;
 
     if (mode == MARU_CURSOR_HIDDEN || mode == MARU_CURSOR_LOCKED) {
-        maru_wl_pointer_set_cursor(ctx, ctx->wl.pointer, serial, NULL, 0, 0);
+        maru_wl_pointer_set_cursor(ctx, ctx->wl.pointer, ctx->linux_common.pointer.enter_serial, NULL, 0, 0);
         return;
     }
 
@@ -72,7 +72,10 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
              }
         }
         if (ctx->wl.cursor_theme) {
-            wl_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, "left_ptr");
+            const char* shape_name = "left_ptr";
+            // If the user hasn't set a cursor handle, we use default.
+            // But we could support more logic here.
+            wl_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, shape_name);
         }
     }
 
@@ -186,6 +189,38 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *wl_pointer) {}
 static void _pointer_handle_axis_source(void *data, struct wl_pointer *wl_pointer, uint32_t axis_source) {}
 static void _pointer_handle_axis_stop(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis) {}
 static void _pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t discrete) {}
+
+static void _relative_pointer_handle_relative_motion(void *data, struct zwp_relative_pointer_v1 *pointer,
+                                                     uint32_t utime_hi, uint32_t utime_lo,
+                                                     wl_fixed_t dx, wl_fixed_t dy,
+                                                     wl_fixed_t dx_unaccel, wl_fixed_t dy_unaccel) {
+    MARU_Window_WL *window = (MARU_Window_WL *)data;
+    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+
+    // printf("DEBUG: Relative motion: %f, %f\n", wl_fixed_to_double(dx), wl_fixed_to_double(dy));
+
+    MARU_Event evt = {0};
+    evt.mouse_motion.position.x = ctx->linux_common.pointer.x;
+    evt.mouse_motion.position.y = ctx->linux_common.pointer.y;
+    evt.mouse_motion.delta.x = wl_fixed_to_double(dx);
+    evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
+    evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
+    evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
+
+    _maru_dispatch_event(&ctx->base, MARU_MOUSE_MOVED, (MARU_Window *)window, &evt);
+}
+
+const struct zwp_relative_pointer_v1_listener _maru_wayland_relative_pointer_listener = {
+    .relative_motion = _relative_pointer_handle_relative_motion,
+};
+
+static void _locked_pointer_handle_locked(void *data, struct zwp_locked_pointer_v1 *locked_pointer) {}
+static void _locked_pointer_handle_unlocked(void *data, struct zwp_locked_pointer_v1 *locked_pointer) {}
+
+const struct zwp_locked_pointer_v1_listener _maru_wayland_locked_pointer_listener = {
+    .locked = _locked_pointer_handle_locked,
+    .unlocked = _locked_pointer_handle_unlocked,
+};
 
 const struct wl_pointer_listener _maru_wayland_pointer_listener = {
     .enter = _pointer_handle_enter,

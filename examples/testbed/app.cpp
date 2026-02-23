@@ -60,6 +60,23 @@ AppStatus App::update(MARU_Context* ctx, MARU_Window* window) {
     return AppStatus::KEEP_GOING;
 }
 
+void App::updateCursor(MARU_Context* ctx, MARU_Window* window) {
+    (void)ctx;
+    MARU_CursorMode requested_mode = MARU_CURSOR_NORMAL;
+    for (auto& mod : modules_) {
+        if (auto cursor_mod = dynamic_cast<CursorModule*>(mod.get())) {
+            requested_mode = cursor_mod->getRequestedMode();
+            break;
+        }
+    }
+
+    if (requested_mode != MARU_CURSOR_NORMAL) {
+        MARU_WindowAttributes attrs = {};
+        attrs.cursor_mode = requested_mode;
+        maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR_MODE, &attrs);
+    }
+}
+
 void App::renderUi(MARU_Context* ctx, MARU_Window* window) {
     {
         ImGui::Begin("MARU Testbed");

@@ -37,6 +37,8 @@ extern const struct wl_seat_listener _maru_wayland_seat_listener;
 #define MARU_WL_REGISTRY_OPTIONAL_BINDINGS                                 \
   MARU_WL_REGISTRY_BINDING_ENTRY(wl_seat, 5, &_maru_wayland_seat_listener)  \
   MARU_WL_REGISTRY_BINDING_ENTRY(zxdg_decoration_manager_v1, 1, NULL)       \
+  MARU_WL_REGISTRY_BINDING_ENTRY(zwp_relative_pointer_manager_v1, 1, NULL)  \
+  MARU_WL_REGISTRY_BINDING_ENTRY(zwp_pointer_constraints_v1, 1, NULL)       \
 
 #define MARU_WL_REGISTRY_BINDING_ENTRY(name, version, listener) struct name *name;
 typedef struct MARU_Wayland_Protocols_WL {

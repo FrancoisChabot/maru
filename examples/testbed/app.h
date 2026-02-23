@@ -26,6 +26,7 @@ public:
     AppStatus update(MARU_Context* ctx, MARU_Window* window);
     void renderUi(MARU_Context* ctx, MARU_Window* window);
     void onContextRecreated(MARU_Context* ctx, MARU_Window* window);
+    void updateCursor(MARU_Context* ctx, MARU_Window* window);
 
     ImVec4 getClearColor() const { return clear_color_; }
 

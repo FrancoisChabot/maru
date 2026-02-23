@@ -429,6 +429,7 @@ int main(int, char**)
 
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplMaru_NewFrame();
+        app.updateCursor(context, window);
         ImGui::NewFrame();
 
         app.renderUi(context, window);

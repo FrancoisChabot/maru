@@ -50,6 +50,8 @@ typedef struct MARU_Window_WL {
     struct wp_fractional_scale_v1 *fractional_scale;
     struct zwp_idle_inhibitor_v1 *idle_inhibitor;
     struct wp_content_type_v1 *content_type;
+    struct zwp_relative_pointer_v1 *relative_pointer;
+    struct zwp_locked_pointer_v1 *locked_pointer;
   } ext;
 
   struct {
@@ -289,6 +291,9 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
                                              const MARU_WindowCreateInfo *create_info);
 void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial);
+void _maru_wayland_update_cursor_mode(MARU_Window_WL *window);
+extern const struct zwp_relative_pointer_v1_listener _maru_wayland_relative_pointer_listener;
+extern const struct zwp_locked_pointer_v1_listener _maru_wayland_locked_pointer_listener;
 MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(MARU_Context_WL *ctx);
 
 bool _maru_wayland_create_ssd_decoration(MARU_Window_WL *window);

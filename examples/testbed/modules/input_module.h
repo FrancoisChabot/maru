@@ -17,4 +17,7 @@ public:
 private:
     bool enabled_ = true;
     MARU_Vec2Dip mouse_pos_ = {0, 0};
+    MARU_Vec2Dip mouse_delta_ = {0, 0};
+    MARU_Vec2Dip mouse_raw_delta_ = {0, 0};
+    MARU_CursorMode cursor_mode_ = MARU_CURSOR_NORMAL;
 };
