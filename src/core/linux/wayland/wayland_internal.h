@@ -276,6 +276,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window, uint64_t field_mask,
                                  const MARU_WindowAttributes *attributes);
 MARU_Status maru_destroyWindow_WL(MARU_Window *window);
 MARU_Status maru_requestWindowFocus_WL(MARU_Window *window);
+MARU_Status maru_requestWindowFrame_WL(MARU_Window *window);
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 
 MARU_Monitor *const *maru_getMonitors_WL(MARU_Context *context, uint32_t *out_count);

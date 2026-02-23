@@ -39,6 +39,7 @@ private:
 
     bool auto_scroll_ = true;
     bool show_details_ = true;
+    bool log_frame_events_ = false;
 
     const char* typeToString(MARU_EventType type);
 };

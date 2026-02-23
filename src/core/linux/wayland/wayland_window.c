@@ -163,6 +163,42 @@ static const struct xdg_surface_listener _xdg_surface_listener = {
     .configure = _xdg_surface_handle_configure,
 };
 
+static void _wl_frame_callback_done(void *data, struct wl_callback *callback,
+                                    uint32_t callback_data) {
+  MARU_Window_WL *window = (MARU_Window_WL *)data;
+  if (!window) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  window->wl.frame_callback = NULL;
+  maru_wl_callback_destroy(ctx, callback);
+
+  MARU_Event evt = {0};
+  evt.frame.timestamp_ms = callback_data;
+  _maru_dispatch_event(&ctx->base, MARU_WINDOW_FRAME, (MARU_Window *)window, &evt);
+}
+
+static const struct wl_callback_listener _maru_wayland_frame_listener = {
+    .done = _wl_frame_callback_done,
+};
+
+void _maru_wayland_request_frame(MARU_Window_WL *window) {
+  if (!window || !window->wl.surface || window->wl.frame_callback) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  window->wl.frame_callback = maru_wl_surface_frame(ctx, window->wl.surface);
+  if (!window->wl.frame_callback) {
+    return;
+  }
+
+  maru_wl_callback_add_listener(ctx, window->wl.frame_callback,
+                                &_maru_wayland_frame_listener, window);
+  maru_wl_surface_commit(ctx, window->wl.surface);
+}
+
 bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
                                              const MARU_WindowCreateInfo *create_info) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
@@ -379,6 +415,10 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   if (window->ext.fractional_scale) {
     maru_wp_fractional_scale_v1_destroy(ctx, window->ext.fractional_scale);
     window->ext.fractional_scale = NULL;
+  }
+  if (window->wl.frame_callback) {
+    maru_wl_callback_destroy(ctx, window->wl.frame_callback);
+    window->wl.frame_callback = NULL;
   }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {

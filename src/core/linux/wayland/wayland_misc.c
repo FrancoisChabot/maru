@@ -12,3 +12,13 @@ MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
   return MARU_FAILURE;
 
 }
+
+MARU_Status maru_requestWindowFrame_WL(MARU_Window *window_handle) {
+  MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
+  if (!window || !window->wl.surface) {
+    return MARU_FAILURE;
+  }
+
+  _maru_wayland_request_frame(window);
+  return MARU_SUCCESS;
+}

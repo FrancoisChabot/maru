@@ -18,6 +18,7 @@ const MARU_Backend maru_backend_WL = {
   .getWindowGeometry = maru_getWindowGeometry_WL,
   .updateWindow = maru_updateWindow_WL,
   .requestWindowFocus = maru_requestWindowFocus_WL,
+  .requestWindowFrame = maru_requestWindowFrame_WL,
   .getStandardCursor = maru_getStandardCursor_WL,
   .createCursor = maru_createCursor_WL,
   .destroyCursor = maru_destroyCursor_WL,
@@ -102,6 +103,11 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
   return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowFrame, window);
+  return maru_requestWindowFrame_WL(window);
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {

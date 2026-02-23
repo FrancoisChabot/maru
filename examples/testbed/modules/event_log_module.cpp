@@ -31,9 +31,6 @@ static std::string formatModifiers(MARU_ModifierFlags mods) {
 void EventLogModule::onEvent(MARU_EventType type, MARU_Window* win, const MARU_Event& e) {
     if (!enabled_) return;
     
-    // Skip noisy frame events
-    if (type == MARU_WINDOW_FRAME) return;
-
     std::stringstream ss;
     if (type == MARU_WINDOW_RESIZED) {
         ss << "Size: " << e.resized.geometry.logical_size.x << "x" << e.resized.geometry.logical_size.y 
@@ -109,6 +106,8 @@ void EventLogModule::render(MARU_Context* ctx, MARU_Window* window) {
     ImGui::Checkbox("Auto-scroll", &auto_scroll_);
     ImGui::SameLine();
     ImGui::Checkbox("Details", &show_details_);
+    ImGui::SameLine();
+    ImGui::Checkbox("Frame Events", &log_frame_events_);
 
     ImGui::Separator();
 

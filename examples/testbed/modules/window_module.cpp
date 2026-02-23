@@ -127,7 +127,6 @@ void WindowModule::update(MARU_Context* ctx, MARU_Window* window) {
         }
 
         renderSecondaryWindow(*sw);
-        maru_requestWindowFrame(sw->window);
     }
 
     (void)ctx;
@@ -391,6 +390,10 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             if (ImGui::Button("Request Focus")) {
                 maru_requestWindowFocus(target);
             }
+            ImGui::SameLine();
+            if (ImGui::Button("Request Frame Callback")) {
+                maru_requestWindowFrame(target);
+            }
         }
     }
 
@@ -487,6 +490,10 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
 
             if (ImGui::Button("Request Focus") && sw.window) {
                 maru_requestWindowFocus(sw.window);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Request Frame Callback") && sw.window) {
+                maru_requestWindowFrame(sw.window);
             }
             ImGui::SameLine();
             if (ImGui::Button("Close")) {
