@@ -127,7 +127,7 @@ MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes) {
   MARU_API_VALIDATE(updateWindow, window, field_mask, attributes);
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
-  _maru_update_window_base(win_base, field_mask, attributes);
+
   return MARU_SUCCESS;
 }
 

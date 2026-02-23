@@ -311,14 +311,29 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
 
-  MARU_Status status = MARU_SUCCESS;
+  _maru_drain_user_events(&ctx->base);
 
-  // TODO: Implement
+  int display_fd = maru_wl_display_get_fd(ctx, ctx->wl.display);
+  struct pollfd fds[] = {
+      {display_fd, POLLIN, 0},
+  };
 
+  while (maru_wl_display_prepare_read(ctx, ctx->wl.display) != 0) {
+    maru_wl_display_dispatch_pending(ctx, ctx->wl.display);
+  }
 
+  maru_wl_display_flush(ctx, ctx->wl.display);
+
+  if (poll(fds, 1, timeout_ms) > 0) {
+    maru_wl_display_read_events(ctx, ctx->wl.display);
+  } else {
+    maru_wl_display_cancel_read(ctx, ctx->wl.display);
+  }
+
+  maru_wl_display_dispatch_pending(ctx, ctx->wl.display);
 
   ctx->base.pump_ctx = NULL;
-  return status;
+  return MARU_SUCCESS;
 }
 
 void *maru_getContextNativeHandle_WL(MARU_Context *context) {

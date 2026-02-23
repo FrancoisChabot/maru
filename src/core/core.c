@@ -132,6 +132,23 @@ void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
   }
 }
 
+
+void *_maru_default_alloc(size_t size, void *userdata) {
+  (void)userdata;
+  return malloc(size);
+}
+
+void *_maru_default_realloc(void *ptr, size_t new_size, void *userdata) {
+  (void)userdata;
+  return realloc(ptr, new_size);
+}
+
+void _maru_default_free(void *ptr, void *userdata) {
+  (void)userdata;
+  free(ptr);
+}
+
+
 #ifdef MARU_INDIRECT_BACKEND
 MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
   MARU_API_VALIDATE(destroyContext, context);
@@ -144,14 +161,7 @@ maru_updateContext(MARU_Context *context, uint64_t field_mask,
                    const MARU_ContextAttributes *attributes) {
   MARU_API_VALIDATE(updateContext, context, field_mask, attributes);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-
-  _maru_update_context_base(ctx_base, field_mask, attributes);
-
-  if (ctx_base->backend->updateContext) {
-    return ctx_base->backend->updateContext(context, field_mask, attributes);
-  }
-
-  return MARU_SUCCESS;
+  return ctx_base->backend->updateContext(context, field_mask, attributes);
 }
 
 MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
@@ -231,17 +241,6 @@ MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
   return MARU_FAILURE;
 }
 
-MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventType type,
-                                      MARU_Window *window, MARU_UserDefinedEvent evt) {
-  MARU_API_VALIDATE(postEvent, context, type, window, evt);
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-
-  if (_maru_event_queue_push(&ctx_base->user_event_queue, type, window, evt)) {
-    return maru_wakeContext(context);
-  }
-  return MARU_FAILURE;
-}
-
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(retainMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
@@ -286,79 +285,18 @@ MARU_API void *maru_getWindowNativeHandle(MARU_Window *window) {
 
 #endif
 
-void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask,
-                              const MARU_WindowAttributes *attributes) {
-  if (field_mask & MARU_WINDOW_ATTR_TITLE) {
-    if (win_base->title) {
-      maru_context_free(win_base->ctx_base, win_base->title);
-    }
-    size_t len = strlen(attributes->title);
-    win_base->title = (char *)maru_context_alloc(win_base->ctx_base, len + 1);
-    memcpy(win_base->title, attributes->title, len + 1);
-    win_base->pub.title = win_base->title;
-  }
 
-  if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
-    win_base->pub.event_mask = attributes->event_mask;
-  }
+MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventType type,
+                                      MARU_Window *window, MARU_UserDefinedEvent evt) {
+  MARU_API_VALIDATE(postEvent, context, type, window, evt);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
 
-  if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
-    if (attributes->mouse_passthrough) {
-      win_base->pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
-    } else {
-      win_base->pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
-    }
+  if (_maru_event_queue_push(&ctx_base->user_event_queue, type, window, evt)) {
+    return maru_wakeContext(context);
   }
-
-  if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
-    if (attributes->resizable) {
-      win_base->pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
-    } else {
-      win_base->pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_RESIZABLE;
-    }
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_DECORATED) {
-    if (attributes->decorated) {
-      win_base->pub.flags |= MARU_WINDOW_STATE_DECORATED;
-    } else {
-      win_base->pub.flags &= ~(uint64_t)MARU_WINDOW_STATE_DECORATED;
-    }
-  }
+  return MARU_FAILURE;
 }
 
-void _maru_init_window_base(MARU_Window_Base *win_base, MARU_Context_Base *ctx_base, const MARU_WindowCreateInfo *create_info) {
-  memset(win_base, 0, sizeof(MARU_Window_Base));
-  win_base->ctx_base = ctx_base;
-  win_base->pub.context = (MARU_Context *)ctx_base;
-  win_base->pub.userdata = create_info->userdata;
-  win_base->pub.metrics = &win_base->metrics;
-  win_base->pub.keyboard_state = win_base->keyboard_state;
-  win_base->pub.keyboard_key_count = MARU_KEY_COUNT;
-  win_base->pub.event_mask = create_info->attributes.event_mask;
-  win_base->pub.cursor_mode = create_info->attributes.cursor_mode;
-  win_base->pub.current_cursor = create_info->attributes.cursor;
-
-  if (create_info->attributes.resizable) {
-    win_base->pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
-  }
-  if (create_info->attributes.decorated) {
-    win_base->pub.flags |= MARU_WINDOW_STATE_DECORATED;
-  }
-
-  if (create_info->attributes.title) {
-    size_t len = strlen(create_info->attributes.title);
-    win_base->title = (char *)maru_context_alloc(ctx_base, len + 1);
-    memcpy(win_base->title, create_info->attributes.title, len + 1);
-    win_base->pub.title = win_base->title;
-  }
-}
-
-void _maru_cleanup_window_base(MARU_Window_Base *win_base) {
-  if (win_base->title) {
-    maru_context_free(win_base->ctx_base, win_base->title);
-  }
-}
 
 MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
   MARU_API_VALIDATE(resetContextMetrics, context);
@@ -372,21 +310,6 @@ MARU_API MARU_Status maru_resetWindowMetrics(MARU_Window *window) {
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   memset(&win_base->metrics, 0, sizeof(MARU_WindowMetrics));
   return MARU_SUCCESS;
-}
-
-void *_maru_default_alloc(size_t size, void *userdata) {
-  (void)userdata;
-  return malloc(size);
-}
-
-void *_maru_default_realloc(void *ptr, size_t new_size, void *userdata) {
-  (void)userdata;
-  return realloc(ptr, new_size);
-}
-
-void _maru_default_free(void *ptr, void *userdata) {
-  (void)userdata;
-  free(ptr);
 }
 
 MARU_API MARU_Version maru_getVersion(void) {

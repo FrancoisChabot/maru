@@ -530,8 +530,6 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field
                                        const MARU_WindowAttributes *attributes) {
   MARU_Window_Windows *window = (MARU_Window_Windows *)window_handle;
 
-  _maru_update_window_base(&window->base, field_mask, attributes);
-
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
     SetWindowTextA(window->hwnd, attributes->title);
   }
