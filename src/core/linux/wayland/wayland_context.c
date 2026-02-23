@@ -403,6 +403,15 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
   _maru_update_context_base(&ctx->base, field_mask, attributes);
+
+  if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
+    for (uint32_t i = 0; i < ctx->base.window_cache_count; ++i) {
+      MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
+      if (window) {
+        _maru_wayland_update_idle_inhibitor(window);
+      }
+    }
+  }
   return MARU_SUCCESS;
 }
 

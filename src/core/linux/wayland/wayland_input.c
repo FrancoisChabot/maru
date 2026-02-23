@@ -415,6 +415,7 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
     MARU_Window_WL *window = (MARU_Window_WL *)ctx->dlib.wl.proxy_get_user_data((struct wl_proxy *)surface);
     if (window) {
         ctx->linux_common.xkb.focused_window = (MARU_Window *)window;
+        window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
         
         MARU_Event evt = {0};
         evt.focus.focused = true;
@@ -427,6 +428,9 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
     MARU_Context_WL *ctx = (MARU_Context_WL *)data;
     
     if (ctx->linux_common.xkb.focused_window) {
+        MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.xkb.focused_window;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
+
         MARU_Event evt = {0};
         evt.focus.focused = false;
         _maru_dispatch_event(&ctx->base, MARU_FOCUS_CHANGED, ctx->linux_common.xkb.focused_window, &evt);

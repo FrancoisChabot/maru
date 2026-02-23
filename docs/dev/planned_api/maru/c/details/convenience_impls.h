@@ -85,12 +85,6 @@ static inline MARU_Status maru_setWindowResizable(MARU_Window *window, bool enab
   return maru_updateWindow(window, MARU_WINDOW_ATTR_RESIZABLE, &attrs);
 }
 
-static inline MARU_Status maru_setWindowDecorated(MARU_Window *window, bool enabled) {
-  MARU_WindowAttributes attrs = {0};
-  attrs.decorated = enabled;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_DECORATED, &attrs);
-}
-
 static inline MARU_Status maru_setWindowMousePassthrough(MARU_Window *window, bool enabled) {
   MARU_WindowAttributes attrs = {0};
   attrs.mouse_passthrough = enabled;

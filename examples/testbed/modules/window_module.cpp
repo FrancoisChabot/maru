@@ -182,7 +182,7 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
     MARU_WindowCreateInfo win_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
     win_info.attributes.title = title.c_str();
     win_info.attributes.logical_size = {640, 480};
-    win_info.attributes.decorated = true;
+    win_info.decorated = true;
 
     MARU_Window* created_window = nullptr;
     if (maru_createWindow(ctx, &win_info, &created_window) != MARU_SUCCESS) {
@@ -193,7 +193,6 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
     auto sw = std::make_unique<SecondaryWindow>();
     sw->window = created_window;
     sw->title = std::move(title);
-    sw->is_decorated = true;
     sw->is_resizable = true;
     sw->mouse_passthrough = false;
     sw->primary_selection = true;
@@ -388,15 +387,9 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 maru_updateWindow(target, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
             }
 
-            bool is_decorated = maru_isWindowDecorated(target);
             bool is_resizable = maru_isWindowResizable(target);
             bool mouse_passthrough = maru_isWindowMousePassthrough(target);
-            if (ImGui::Checkbox("Decorated", &is_decorated)) {
-                MARU_WindowAttributes attrs = {};
-                attrs.decorated = is_decorated;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_DECORATED, &attrs);
-            }
-            ImGui::SameLine();
+            ImGui::Text("Decorated: %s", maru_isWindowDecorated(target) ? "Yes" : "No");
             if (ImGui::Checkbox("Resizable", &is_resizable)) {
                 MARU_WindowAttributes attrs = {};
                 attrs.resizable = is_resizable;
@@ -485,17 +478,11 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             }
 
             if (sw.window) {
-                sw.is_decorated = maru_isWindowDecorated(sw.window);
                 sw.is_resizable = maru_isWindowResizable(sw.window);
                 sw.mouse_passthrough = maru_isWindowMousePassthrough(sw.window);
             }
 
-            if (ImGui::Checkbox("Decorated", &sw.is_decorated) && sw.window) {
-                MARU_WindowAttributes attrs = {};
-                attrs.decorated = sw.is_decorated;
-                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_DECORATED, &attrs);
-            }
-            ImGui::SameLine();
+            ImGui::Text("Decorated: %s", (sw.window && maru_isWindowDecorated(sw.window)) ? "Yes" : "No");
             if (ImGui::Checkbox("Resizable", &sw.is_resizable) && sw.window) {
                 MARU_WindowAttributes attrs = {};
                 attrs.resizable = sw.is_resizable;

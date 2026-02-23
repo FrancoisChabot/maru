@@ -61,9 +61,6 @@ static inline bool maru_isContextReady(const MARU_Context *context);
 /** @brief Retrieves the runtime performance metrics for a context. */
 static inline const MARU_ContextMetrics *maru_getContextMetrics(const MARU_Context *context);
 
-/** @brief Retrieves the backend type used by the context. */
-MARU_BackendType maru_getContextBackendType(const MARU_Context *context);
-
 /* ----- Context Management ----- */
 
 /** @brief Special value for timeouts to indicate it should never trigger. */

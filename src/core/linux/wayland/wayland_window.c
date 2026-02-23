@@ -37,6 +37,70 @@ static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
   maru_wp_viewport_set_destination(ctx, window->ext.viewport, dst_w, dst_h);
 }
 
+static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
+  if (!window) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  int32_t min_w = (int32_t)window->min_size.x;
+  int32_t min_h = (int32_t)window->min_size.y;
+  int32_t max_w = (int32_t)window->max_size.x;
+  int32_t max_h = (int32_t)window->max_size.y;
+
+  if (!window->is_resizable) {
+    int32_t fixed_w = (int32_t)window->size.x;
+    int32_t fixed_h = (int32_t)window->size.y;
+    if (fixed_w > 0 && fixed_h > 0) {
+      min_w = fixed_w;
+      min_h = fixed_h;
+      max_w = fixed_w;
+      max_h = fixed_h;
+    }
+  }
+
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+    maru_libdecor_frame_set_min_content_size(ctx, window->libdecor.frame, min_w, min_h);
+    maru_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame, max_w, max_h);
+  } else if (window->xdg.toplevel) {
+    maru_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, min_w, min_h);
+    maru_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, max_w, max_h);
+  }
+}
+
+static void _maru_wayland_apply_mouse_passthrough(MARU_Window_WL *window) {
+  if (!window || !window->wl.surface) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  if ((window->base.pub.flags & MARU_WINDOW_STATE_MOUSE_PASSTHROUGH) != 0) {
+    struct wl_region *empty_region = maru_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
+    if (empty_region) {
+      maru_wl_surface_set_input_region(ctx, window->wl.surface, empty_region);
+      maru_wl_region_destroy(ctx, empty_region);
+    }
+  } else {
+    maru_wl_surface_set_input_region(ctx, window->wl.surface, NULL);
+  }
+
+  maru_wl_surface_commit(ctx, window->wl.surface);
+}
+
+static uint32_t _maru_wayland_map_content_type(MARU_ContentType type) {
+  switch (type) {
+    case MARU_CONTENT_TYPE_PHOTO:
+      return WP_CONTENT_TYPE_V1_TYPE_PHOTO;
+    case MARU_CONTENT_TYPE_VIDEO:
+      return WP_CONTENT_TYPE_V1_TYPE_VIDEO;
+    case MARU_CONTENT_TYPE_GAME:
+      return WP_CONTENT_TYPE_V1_TYPE_GAME;
+    case MARU_CONTENT_TYPE_NONE:
+    default:
+      return WP_CONTENT_TYPE_V1_TYPE_NONE;
+  }
+}
+
 static void _fractional_scale_handle_preferred_scale(
     void *data, struct wp_fractional_scale_v1 *fractional_scale, uint32_t scale) {
   (void)fractional_scale;
@@ -115,7 +179,9 @@ const struct wl_surface_listener _maru_wayland_surface_listener = {
 static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_toplevel,
                                            int32_t width, int32_t height,
                                            struct wl_array *states) {
+  (void)xdg_toplevel;
   MARU_Window_WL *window = (MARU_Window_WL *)data;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
   if (width > 0 && height > 0) {
     const MARU_Scalar new_width = (MARU_Scalar)width;
@@ -125,6 +191,37 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       window->size.y = new_height;
       _maru_wayland_dispatch_window_resized(window);
     }
+  }
+
+  bool is_maximized = false;
+  bool is_fullscreen = false;
+  const uint32_t *state = NULL;
+  wl_array_for_each(state, states) {
+    if (*state == XDG_TOPLEVEL_STATE_MAXIMIZED) {
+      is_maximized = true;
+    } else if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) {
+      is_fullscreen = true;
+    }
+  }
+
+  if (window->is_maximized != is_maximized) {
+    window->is_maximized = is_maximized;
+    if (is_maximized) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+    } else {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+    }
+
+    MARU_Event evt = {0};
+    evt.maximized.maximized = is_maximized;
+    _maru_dispatch_event(&ctx->base, MARU_WINDOW_MAXIMIZED, (MARU_Window *)window, &evt);
+  }
+
+  window->is_fullscreen = is_fullscreen;
+  if (is_fullscreen) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+  } else {
+    window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
   }
 }
 
@@ -246,12 +343,45 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
 
   memset(window, 0, sizeof(MARU_Window_WL));
   window->base.ctx_base = &ctx->base;
+  window->base.pub.userdata = create_info->userdata;
   window->base.pub.context = context;
+  window->base.pub.metrics = &window->base.metrics;
+  window->base.pub.keyboard_state = window->base.keyboard_state;
+  window->base.pub.keyboard_key_count = MARU_KEY_COUNT;
   window->base.pub.event_mask = create_info->attributes.event_mask;
+  window->base.pub.cursor_mode = create_info->attributes.cursor_mode;
+  window->base.pub.current_cursor = create_info->attributes.cursor;
   window->size = create_info->attributes.logical_size;
+  window->min_size = create_info->attributes.min_size;
+  window->max_size = create_info->attributes.max_size;
   window->scale = (MARU_Scalar)1.0;
   window->viewport_size = create_info->attributes.viewport_size;
+  window->text_input_rect = create_info->attributes.text_input_rect;
+  window->aspect_ratio = create_info->attributes.aspect_ratio;
+  window->text_input_type = create_info->attributes.text_input_type;
   window->decor_mode = ctx->decor_mode;
+  window->is_maximized = create_info->attributes.maximized;
+  window->is_fullscreen = create_info->attributes.fullscreen;
+  window->is_resizable = create_info->attributes.resizable;
+  window->is_decorated = create_info->decorated;
+  window->accepts_drop = create_info->attributes.accept_drop;
+  window->primary_selection = create_info->attributes.primary_selection;
+
+  if (window->is_maximized) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+  }
+  if (window->is_fullscreen) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+  }
+  if (window->is_resizable) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+  }
+  if (window->is_decorated) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
+  }
+  if (create_info->attributes.mouse_passthrough) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
+  }
   
   #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_WL;
@@ -274,6 +404,14 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   maru_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
   maru_wl_surface_set_user_data(ctx, window->wl.surface, window);
   maru_wl_surface_add_listener(ctx, window->wl.surface, &_maru_wayland_surface_listener, window);
+  if (ctx->protocols.opt.wp_content_type_manager_v1) {
+    window->ext.content_type = maru_wp_content_type_manager_v1_get_surface_content_type(
+        ctx, ctx->protocols.opt.wp_content_type_manager_v1, window->wl.surface);
+    if (window->ext.content_type) {
+      maru_wp_content_type_v1_set_content_type(
+          ctx, window->ext.content_type, _maru_wayland_map_content_type(create_info->content_type));
+    }
+  }
   if (ctx->protocols.opt.wp_viewporter) {
     window->ext.viewport = maru_wp_viewporter_get_viewport(ctx, ctx->protocols.opt.wp_viewporter, window->wl.surface);
     _maru_wayland_apply_viewport_size(window);
@@ -298,6 +436,10 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
     }
   }
 
+  _maru_wayland_apply_size_constraints(window);
+  _maru_wayland_update_idle_inhibitor(window);
+  _maru_wayland_apply_mouse_passthrough(window);
+
   _maru_register_window(&ctx->base, (MARU_Window *)window);
 
   *out_window = (MARU_Window *)window;
@@ -319,6 +461,151 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
                                  const MARU_WindowAttributes *attributes) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+
+  if (field_mask & MARU_WINDOW_ATTR_TITLE) {
+      if (window->base.title) {
+          maru_context_free(&ctx->base, window->base.title);
+          window->base.title = NULL;
+      }
+      window->base.pub.title = NULL;
+
+      if (attributes->title) {
+          size_t len = strlen(attributes->title);
+          window->base.title = maru_context_alloc(&ctx->base, len + 1);
+          if (window->base.title) {
+              memcpy(window->base.title, attributes->title, len + 1);
+              window->base.pub.title = window->base.title;
+          }
+      }
+
+      if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+          _maru_wayland_libdecor_set_title(window, attributes->title ? attributes->title : "");
+      } else if (window->xdg.toplevel) {
+          maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel,
+                                      attributes->title ? attributes->title : "");
+      }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
+      window->is_fullscreen = attributes->fullscreen;
+      if (attributes->fullscreen) {
+          window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+              maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, NULL);
+          } else if (window->xdg.toplevel) {
+              maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, NULL);
+          }
+      } else {
+          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+              maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
+          } else if (window->xdg.toplevel) {
+              maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
+          }
+      }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
+      window->size = attributes->logical_size;
+      if (window->xdg.surface) {
+          maru_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
+                                               (int32_t)window->size.x, (int32_t)window->size.y);
+      }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
+      window->min_size = attributes->min_size;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
+      window->max_size = attributes->max_size;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
+      window->aspect_ratio = attributes->aspect_ratio;
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Wayland backend does not enforce aspect ratio constraints yet");
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
+      window->is_maximized = attributes->maximized;
+      if (attributes->maximized) {
+          window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+              maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
+          } else if (window->xdg.toplevel) {
+              maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
+          }
+      } else {
+          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+              maru_libdecor_frame_unset_maximized(ctx, window->libdecor.frame);
+          } else if (window->xdg.toplevel) {
+              maru_xdg_toplevel_unset_maximized(ctx, window->xdg.toplevel);
+          }
+      }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
+      window->is_resizable = attributes->resizable;
+      if (attributes->resizable) {
+          window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+      } else {
+          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
+      }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
+      if (attributes->mouse_passthrough) {
+          window->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
+      } else {
+          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
+      }
+      _maru_wayland_apply_mouse_passthrough(window);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_POSITION) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Window positioning is compositor-controlled on Wayland");
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
+      if ((field_mask & MARU_WINDOW_ATTR_FULLSCREEN) && attributes->fullscreen && window->xdg.toplevel) {
+          struct wl_output *output = NULL;
+          if (attributes->monitor && maru_getMonitorContext(attributes->monitor) == window->base.pub.context) {
+              MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)attributes->monitor;
+              output = monitor->output;
+          }
+          maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
+      } else {
+          MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                                 "Monitor targeting is only honored for fullscreen on Wayland");
+      }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
+      window->accepts_drop = attributes->accept_drop;
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Drop acceptance filtering is not implemented on Wayland");
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
+      window->primary_selection = attributes->primary_selection;
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Primary selection toggling is not implemented on Wayland");
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
+      window->text_input_type = attributes->text_input_type;
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Text input type hints are not implemented on Wayland");
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_RECT) {
+      window->text_input_rect = attributes->text_input_rect;
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Text input rectangle hints are not implemented on Wayland");
+  }
 
   if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
       window->base.pub.current_cursor = attributes->cursor;
@@ -343,6 +630,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 
   if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
       window->base.pub.event_mask = attributes->event_mask;
+  }
+
+  if (field_mask & (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE | MARU_WINDOW_ATTR_RESIZABLE)) {
+      _maru_wayland_apply_size_constraints(window);
   }
 
   return MARU_SUCCESS;
@@ -416,6 +707,14 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   if (window->ext.viewport) {
     maru_wp_viewport_destroy(ctx, window->ext.viewport);
     window->ext.viewport = NULL;
+  }
+  if (window->ext.idle_inhibitor) {
+    maru_zwp_idle_inhibitor_v1_destroy(ctx, window->ext.idle_inhibitor);
+    window->ext.idle_inhibitor = NULL;
+  }
+  if (window->ext.content_type) {
+    maru_wp_content_type_v1_destroy(ctx, window->ext.content_type);
+    window->ext.content_type = NULL;
   }
   if (window->ext.fractional_scale) {
     maru_wp_fractional_scale_v1_destroy(ctx, window->ext.fractional_scale);

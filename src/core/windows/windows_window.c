@@ -380,7 +380,7 @@ static HWND _maru_win32_create_window(HINSTANCE hinstance,
   }
 
   DWORD style = 0;
-  if (create_info->attributes.decorated) {
+  if (create_info->decorated) {
     style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
     if (create_info->attributes.resizable) {
       style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
@@ -635,9 +635,9 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field
     }
   }
 
-  if (field_mask & (MARU_WINDOW_ATTR_RESIZABLE | MARU_WINDOW_ATTR_DECORATED)) {
-    bool resizable = (field_mask & MARU_WINDOW_ATTR_RESIZABLE) ? attributes->resizable : (GetWindowLongA(window->hwnd, GWL_STYLE) & WS_THICKFRAME);
-    bool decorated = (field_mask & MARU_WINDOW_ATTR_DECORATED) ? attributes->decorated : (GetWindowLongA(window->hwnd, GWL_STYLE) & WS_CAPTION);
+  if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
+    bool resizable = attributes->resizable;
+    bool decorated = (GetWindowLongA(window->hwnd, GWL_STYLE) & WS_CAPTION) != 0;
 
     DWORD style = GetWindowLongA(window->hwnd, GWL_STYLE);
     style &= ~(WS_OVERLAPPEDWINDOW | WS_POPUP | WS_THICKFRAME | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);

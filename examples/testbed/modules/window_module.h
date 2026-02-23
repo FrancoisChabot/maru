@@ -32,7 +32,6 @@ private:
         bool should_close = false;
         bool swapchain_rebuild = false;
         std::string title;
-        bool is_decorated = true;
         bool is_resizable = true;
         bool mouse_passthrough = false;
         bool primary_selection = true;

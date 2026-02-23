@@ -71,6 +71,9 @@ typedef struct MARU_Window_WL {
   MARU_Vec2Dip min_size;
   MARU_Vec2Dip max_size;
   MARU_Vec2Dip viewport_size;
+  MARU_RectDip text_input_rect;
+  MARU_Fraction aspect_ratio;
+  MARU_TextInputType text_input_type;
   MARU_Scalar scale;
   MARU_WaylandDecorationMode decor_mode;
   MARU_CursorMode cursor_mode;
@@ -81,6 +84,8 @@ typedef struct MARU_Window_WL {
   bool is_fullscreen;
   bool is_resizable;
   bool is_decorated;
+  bool accepts_drop;
+  bool primary_selection;
 } MARU_Window_WL;
 
 typedef struct MARU_Monitor_WL {

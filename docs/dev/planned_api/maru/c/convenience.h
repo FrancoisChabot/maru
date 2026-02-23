@@ -40,7 +40,6 @@ static inline MARU_Status maru_setWindowMinSize(MARU_Window *window, MARU_Vec2Di
 static inline MARU_Status maru_setWindowMaxSize(MARU_Window *window, MARU_Vec2Dip max_size);
 static inline MARU_Status maru_setWindowAspectRatio(MARU_Window *window, MARU_Fraction aspect_ratio);
 static inline MARU_Status maru_setWindowResizable(MARU_Window *window, bool enabled);
-static inline MARU_Status maru_setWindowDecorated(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowMousePassthrough(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowTextInputType(MARU_Window *window, MARU_TextInputType type);
 static inline MARU_Status maru_setWindowTextInputRect(MARU_Window *window, MARU_RectDip rect);

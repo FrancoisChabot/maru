@@ -51,10 +51,6 @@ MARU_API MARU_Status
 maru_updateContext(MARU_Context *context, uint64_t field_mask,
                    const MARU_ContextAttributes *attributes) {
   MARU_API_VALIDATE(updateContext, context, field_mask, attributes);
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-
-  _maru_update_context_base(ctx_base, field_mask, attributes);
-
   return maru_updateContext_WL(context, field_mask, attributes);
 }
 

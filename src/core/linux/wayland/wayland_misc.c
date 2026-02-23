@@ -23,6 +23,30 @@ static const struct xdg_activation_token_v1_listener _maru_wayland_activation_to
     .done = _maru_wayland_activation_token_done,
 };
 
+void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window) {
+  if (!window || !window->wl.surface) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  const bool want_inhibit = ctx->base.inhibit_idle;
+
+  if (want_inhibit) {
+    if (!window->ext.idle_inhibitor) {
+      if (ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
+        window->ext.idle_inhibitor = maru_zwp_idle_inhibit_manager_v1_create_inhibitor(
+            ctx, ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
+      } else {
+        MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                               "Idle inhibit protocol unavailable");
+      }
+    }
+  } else if (window->ext.idle_inhibitor) {
+    maru_zwp_idle_inhibitor_v1_destroy(ctx, window->ext.idle_inhibitor);
+    window->ext.idle_inhibitor = NULL;
+  }
+}
+
 MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;

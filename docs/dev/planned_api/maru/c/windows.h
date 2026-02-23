@@ -127,14 +127,13 @@ typedef enum MARU_WindowAttributesField {
   MARU_WINDOW_ATTR_POSITION = 1ULL << 9,
   MARU_WINDOW_ATTR_ASPECT_RATIO = 1ULL << 10,
   MARU_WINDOW_ATTR_RESIZABLE = 1ULL << 11,
-  MARU_WINDOW_ATTR_DECORATED = 1ULL << 12,
-  MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH = 1ULL << 13,
-  MARU_WINDOW_ATTR_ACCEPT_DROP = 1ULL << 14,
-  MARU_WINDOW_ATTR_TEXT_INPUT_TYPE = 1ULL << 15,
-  MARU_WINDOW_ATTR_TEXT_INPUT_RECT = 1ULL << 16,
-  MARU_WINDOW_ATTR_PRIMARY_SELECTION = 1ULL << 17,
-  MARU_WINDOW_ATTR_EVENT_MASK = 1ULL << 18,
-  MARU_WINDOW_ATTR_VIEWPORT_SIZE = 1ULL << 19,
+  MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH = 1ULL << 12,
+  MARU_WINDOW_ATTR_ACCEPT_DROP = 1ULL << 13,
+  MARU_WINDOW_ATTR_TEXT_INPUT_TYPE = 1ULL << 14,
+  MARU_WINDOW_ATTR_TEXT_INPUT_RECT = 1ULL << 15,
+  MARU_WINDOW_ATTR_PRIMARY_SELECTION = 1ULL << 16,
+  MARU_WINDOW_ATTR_EVENT_MASK = 1ULL << 17,
+  MARU_WINDOW_ATTR_VIEWPORT_SIZE = 1ULL << 18,
 
   MARU_WINDOW_ATTR_ALL = 0xFFFFFFFFFFFFFFFFULL,
 } MARU_WindowAttributesField;
@@ -153,7 +152,6 @@ typedef struct MARU_WindowAttributes {
   MARU_Vec2Dip position;
   MARU_Fraction aspect_ratio;
   bool resizable;
-  bool decorated;
   bool mouse_passthrough;
   bool accept_drop;
   bool primary_selection;
@@ -168,6 +166,7 @@ typedef struct MARU_WindowCreateInfo {
   MARU_WindowAttributes attributes;
   const char *app_id;
   MARU_ContentType content_type;
+  bool decorated;
   bool transparent;
   void *userdata;
 } MARU_WindowCreateInfo;
@@ -201,7 +200,6 @@ typedef union MARU_BackendHandle {
                   .max_size = {0, 0},                           \
                   .aspect_ratio = {0, 0},                       \
                   .resizable = true,                            \
-                  .decorated = true,                            \
                   .mouse_passthrough = false,                   \
                   .accept_drop = false,                          \
                   .primary_selection = true,                    \
@@ -211,6 +209,7 @@ typedef union MARU_BackendHandle {
                   .viewport_size = {0, 0}},                     \
    .app_id = "maru.app",                                        \
    .content_type = MARU_CONTENT_TYPE_NONE,                      \
+   .decorated = true,                                            \
    .transparent = false                                         \
   }
 
