@@ -182,7 +182,7 @@ void ImGui_ImplMaru_Shutdown() {
     ImGuiIO& io = ImGui::GetIO();
 
     for (int i = 0; i < ImGuiMouseCursor_COUNT; i++) {
-        if (bd->MouseCursors[i] && !maru_isCursorSystem(bd->MouseCursors[i])) maru_destroyCursor(bd->MouseCursors[i]);
+        if (bd->MouseCursors[i]) maru_destroyCursor(bd->MouseCursors[i]);
         bd->MouseCursors[i] = NULL;
     }
 
@@ -240,7 +240,10 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
                  case ImGuiMouseCursor_NotAllowed: shape = MARU_CURSOR_SHAPE_NOT_ALLOWED; break;
              }
              MARU_Context* ctx = maru_getWindowContext(bd->Window);
-             maru_getStandardCursor(ctx, shape, &cursor);
+             MARU_CursorCreateInfo ci = {};
+             ci.source = MARU_CURSOR_SOURCE_SYSTEM;
+             ci.system_shape = shape;
+             maru_createCursor(ctx, &ci, &cursor);
              bd->MouseCursors[imgui_cursor] = cursor;
         }
 

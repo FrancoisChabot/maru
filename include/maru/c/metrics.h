@@ -32,7 +32,12 @@ typedef struct MARU_UserEventMetrics {
  */
 typedef struct MARU_ContextMetrics {
   const MARU_UserEventMetrics *user_events;
-  void* reserved[3];
+  uint64_t cursor_create_count_total;
+  uint64_t cursor_destroy_count_total;
+  uint64_t cursor_create_count_system;
+  uint64_t cursor_create_count_custom;
+  uint64_t cursor_alive_current;
+  uint64_t cursor_alive_peak;
 } MARU_ContextMetrics;
 
 /**

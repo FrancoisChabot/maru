@@ -80,7 +80,6 @@ const MARU_Backend maru_backend_X11 = {
   .getWindowGeometry = NULL,
   .updateWindow = NULL,
   .requestWindowFocus = NULL,
-  .getStandardCursor = NULL,
   .createCursor = NULL,
   .destroyCursor = NULL,
   .wakeContext = NULL,
@@ -128,12 +127,6 @@ MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
 
   return MARU_SUCCESS;
-}
-
-MARU_API MARU_Status maru_getStandardCursor(MARU_Context *context, MARU_CursorShape shape,
-                                             MARU_Cursor **out_cursor) {
-  MARU_API_VALIDATE(getStandardCursor, context, shape, out_cursor);
-  return MARU_FAILURE; // Not implemented in X11 yet
 }
 
 MARU_API MARU_Status maru_createCursor(MARU_Context *context,
@@ -195,5 +188,4 @@ MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
 }
 #endif
-
 

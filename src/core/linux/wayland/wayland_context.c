@@ -398,12 +398,6 @@ cleanup_symbols:
 MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
-  for (int i = 0; i < 16; ++i) {
-    if (ctx->standard_cursors[i]) {
-      maru_destroyCursor_WL(ctx->standard_cursors[i]);
-    }
-  }
-
   _maru_cleanup_context_base(&ctx->base);
 
   if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {

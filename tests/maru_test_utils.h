@@ -30,7 +30,6 @@ static const MARU_Backend _maru_mock_backend = {
     .updateWindow = NULL,
     .requestWindowFocus = NULL,
     .requestWindowFrame = NULL,
-    .getStandardCursor = NULL,
     .createCursor = NULL,
     .destroyCursor = NULL,
 

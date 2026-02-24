@@ -31,6 +31,11 @@ typedef enum MARU_CursorStateFlagBits {
   MARU_CURSOR_FLAG_SYSTEM = 1ULL << 0,
 } MARU_CursorStateFlagBits;
 
+/** @brief Source used to create a cursor handle. */
+typedef enum MARU_CursorSource {
+  MARU_CURSOR_SOURCE_CUSTOM = 0,
+  MARU_CURSOR_SOURCE_SYSTEM = 1,
+} MARU_CursorSource;
 
 
 
@@ -72,22 +77,20 @@ static inline const MARU_CursorMetrics *maru_getCursorMetrics(const MARU_Cursor 
 
 /** @brief Parameters for creating a custom cursor from pixels. */
 typedef struct MARU_CursorCreateInfo {
+  MARU_CursorSource source;
+  MARU_CursorShape system_shape;
   MARU_Vec2Px size;
   MARU_Vec2Px hot_spot;
   const uint32_t *pixels;
   void *userdata;
 } MARU_CursorCreateInfo;
 
-/** @brief Retrieves a handle to a standard OS cursor. */
-MARU_Status maru_getStandardCursor(MARU_Context *context, MARU_CursorShape shape,
-                                              MARU_Cursor **out_cursor);
-
-/** @brief Creates a custom hardware cursor. */
+/** @brief Creates a hardware cursor (system or custom). */
 MARU_Status maru_createCursor(MARU_Context *context,
                                          const MARU_CursorCreateInfo *create_info,
                                          MARU_Cursor **out_cursor);
 
-/** @brief Destroys a custom hardware cursor. */
+/** @brief Destroys a hardware cursor. */
 MARU_Status maru_destroyCursor(MARU_Cursor *cursor);
 
 /** @brief Resets the metrics counters attached to a cursor handle. */

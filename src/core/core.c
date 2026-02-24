@@ -214,13 +214,6 @@ MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
   return win_base->backend->updateWindow(window, field_mask, attributes);
 }
 
-MARU_API MARU_Status maru_getStandardCursor(MARU_Context *context, MARU_CursorShape shape,
-                                            MARU_Cursor **out_cursor) {
-  MARU_API_VALIDATE(getStandardCursor, context, shape, out_cursor);
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  return ctx_base->backend->getStandardCursor(context, shape, out_cursor);
-}
-
 MARU_API MARU_Status maru_createCursor(MARU_Context *context,
                                         const MARU_CursorCreateInfo *create_info,
                                         MARU_Cursor **out_cursor) {
@@ -317,6 +310,11 @@ MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
   MARU_API_VALIDATE(resetContextMetrics, context);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   memset(&ctx_base->user_event_metrics, 0, sizeof(MARU_UserEventMetrics));
+  ctx_base->metrics.cursor_create_count_total = 0;
+  ctx_base->metrics.cursor_destroy_count_total = 0;
+  ctx_base->metrics.cursor_create_count_system = 0;
+  ctx_base->metrics.cursor_create_count_custom = 0;
+  ctx_base->metrics.cursor_alive_peak = ctx_base->metrics.cursor_alive_current;
   return MARU_SUCCESS;
 }
 

@@ -6,6 +6,17 @@
 #include <cstdio>
 #include <vector>
 
+CursorModule::~CursorModule() {
+    if (custom_cursor_) {
+        maru_destroyCursor(custom_cursor_);
+        custom_cursor_ = nullptr;
+    }
+    if (standard_cursor_) {
+        maru_destroyCursor(standard_cursor_);
+        standard_cursor_ = nullptr;
+    }
+}
+
 void CursorModule::update(MARU_Context* ctx, MARU_Window* window) {
     (void)ctx; (void)window;
 }
@@ -35,7 +46,14 @@ void CursorModule::render(MARU_Context* ctx, MARU_Window* window) {
             auto show_shape = [&](const char* name, MARU_CursorShape shape) {
                 if (ImGui::Button(name)) {
                     MARU_Cursor* cursor = nullptr;
-                    if (maru_getStandardCursor(ctx, shape, &cursor) == MARU_SUCCESS) {
+                    MARU_CursorCreateInfo ci = {};
+                    ci.source = MARU_CURSOR_SOURCE_SYSTEM;
+                    ci.system_shape = shape;
+                    if (maru_createCursor(ctx, &ci, &cursor) == MARU_SUCCESS) {
+                        if (standard_cursor_) {
+                            maru_destroyCursor(standard_cursor_);
+                        }
+                        standard_cursor_ = cursor;
                         MARU_WindowAttributes attrs = {};
                         attrs.cursor = cursor;
                         maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR, &attrs);
@@ -74,6 +92,7 @@ void CursorModule::render(MARU_Context* ctx, MARU_Window* window) {
                 }
 
                 MARU_CursorCreateInfo ci = {};
+                ci.source = MARU_CURSOR_SOURCE_CUSTOM;
                 ci.size = {16, 16};
                 ci.hot_spot = {8, 8};
                 ci.pixels = pixels;

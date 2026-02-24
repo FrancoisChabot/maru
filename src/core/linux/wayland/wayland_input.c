@@ -686,20 +686,19 @@ const struct zwp_text_input_v3_listener _maru_wayland_text_input_listener = {
 };
 
 
-MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape shape,
-                                     MARU_Cursor **out_cursor) {
+MARU_Status maru_createCursor_WL(MARU_Context *context,
+                                const MARU_CursorCreateInfo *create_info,
+                                MARU_Cursor **out_cursor) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
+  const bool system_cursor = (create_info->source == MARU_CURSOR_SOURCE_SYSTEM);
 
-  if (shape <= 0 || shape >= 16) return MARU_FAILURE;
-
-  if (ctx->standard_cursors[shape]) {
-      *out_cursor = ctx->standard_cursors[shape];
-      return MARU_SUCCESS;
-  }
-
-  if (!ctx->wl.cursor_theme) {
+  if (system_cursor) {
+    if (create_info->system_shape <= 0 || create_info->system_shape >= 16) {
+      return MARU_FAILURE;
+    }
+    if (!ctx->wl.cursor_theme) {
       if (!ctx->protocols.wl_shm) return MARU_FAILURE;
-      
+
       const char *size_env = getenv("XCURSOR_SIZE");
       int size = 24;
       if (size_env) size = atoi(size_env);
@@ -707,35 +706,39 @@ MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape sh
 
       ctx->wl.cursor_theme = maru_wl_cursor_theme_load(ctx, NULL, size, ctx->protocols.wl_shm);
       if (!ctx->wl.cursor_theme) return MARU_FAILURE;
+    }
+
+    struct wl_cursor *wl_cursor =
+        maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(create_info->system_shape));
+    if (!wl_cursor) return MARU_FAILURE;
+
+    MARU_Cursor_WL *cursor = maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_WL));
+    if (!cursor) return MARU_FAILURE;
+    memset(cursor, 0, sizeof(MARU_Cursor_WL));
+
+    cursor->base.ctx_base = &ctx->base;
+#ifdef MARU_INDIRECT_BACKEND
+    extern const MARU_Backend maru_backend_WL;
+    cursor->base.backend = &maru_backend_WL;
+#endif
+    cursor->base.pub.metrics = &cursor->base.metrics;
+    cursor->base.pub.userdata = create_info->userdata;
+    cursor->base.pub.flags = MARU_CURSOR_FLAG_SYSTEM;
+    cursor->wl_cursor = wl_cursor;
+    cursor->cursor_shape = create_info->system_shape;
+    cursor->shm_fd = -1;
+
+    ctx->base.metrics.cursor_create_count_total++;
+    ctx->base.metrics.cursor_create_count_system++;
+    ctx->base.metrics.cursor_alive_current++;
+    if (ctx->base.metrics.cursor_alive_current > ctx->base.metrics.cursor_alive_peak) {
+      ctx->base.metrics.cursor_alive_peak = ctx->base.metrics.cursor_alive_current;
+    }
+
+    *out_cursor = (MARU_Cursor *)cursor;
+    return MARU_SUCCESS;
   }
 
-  struct wl_cursor *wl_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(shape));
-  if (!wl_cursor) return MARU_FAILURE;
-
-  MARU_Cursor_WL *cursor = maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_WL));
-  if (!cursor) return MARU_FAILURE;
-  memset(cursor, 0, sizeof(MARU_Cursor_WL));
-
-  cursor->base.ctx_base = &ctx->base;
-  #ifdef MARU_INDIRECT_BACKEND
-  extern const MARU_Backend maru_backend_WL;
-  cursor->base.backend = &maru_backend_WL;
-  #endif
-  cursor->base.pub.metrics = &cursor->base.metrics;
-  cursor->base.pub.flags = MARU_CURSOR_FLAG_SYSTEM;
-  cursor->wl_cursor = wl_cursor;
-  cursor->cursor_shape = shape;
-  cursor->shm_fd = -1;
-  
-  ctx->standard_cursors[shape] = (MARU_Cursor *)cursor;
-  *out_cursor = (MARU_Cursor *)cursor;
-  return MARU_SUCCESS;
-}
-
-MARU_Status maru_createCursor_WL(MARU_Context *context,
-                                const MARU_CursorCreateInfo *create_info,
-                                MARU_Cursor **out_cursor) {
-  MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   const int32_t width = create_info->size.x;
   const int32_t height = create_info->size.y;
 
@@ -806,6 +809,13 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
   cursor->hotspot_x = create_info->hot_spot.x;
   cursor->hotspot_y = create_info->hot_spot.y;
 
+  ctx->base.metrics.cursor_create_count_total++;
+  ctx->base.metrics.cursor_create_count_custom++;
+  ctx->base.metrics.cursor_alive_current++;
+  if (ctx->base.metrics.cursor_alive_current > ctx->base.metrics.cursor_alive_peak) {
+    ctx->base.metrics.cursor_alive_peak = ctx->base.metrics.cursor_alive_current;
+  }
+
   *out_cursor = (MARU_Cursor *)cursor;
   return MARU_SUCCESS;
 }
@@ -822,6 +832,11 @@ MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor) {
   }
   if (cursor_wl->shm_fd >= 0) {
       close(cursor_wl->shm_fd);
+  }
+
+  ctx->base.metrics.cursor_destroy_count_total++;
+  if (ctx->base.metrics.cursor_alive_current > 0) {
+    ctx->base.metrics.cursor_alive_current--;
   }
 
   maru_context_free(&ctx->base, cursor);

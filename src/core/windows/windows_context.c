@@ -133,120 +133,112 @@ MARU_Status maru_updateContext_Windows(MARU_Context *context, uint64_t field_mas
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_getStandardCursor_Windows(MARU_Context *context, MARU_CursorShape shape,
-                                            MARU_Cursor **out_cursor) {
-  MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
-  LPCSTR id;
-
-  switch (shape) {
-    case MARU_CURSOR_SHAPE_DEFAULT: id = IDC_ARROW; break;
-    case MARU_CURSOR_SHAPE_HELP: id = IDC_HELP; break;
-    case MARU_CURSOR_SHAPE_HAND: id = IDC_HAND; break;
-    case MARU_CURSOR_SHAPE_WAIT: id = IDC_WAIT; break;
-    case MARU_CURSOR_SHAPE_CROSSHAIR: id = IDC_CROSS; break;
-    case MARU_CURSOR_SHAPE_TEXT: id = IDC_IBEAM; break;
-    case MARU_CURSOR_SHAPE_MOVE: id = IDC_SIZEALL; break;
-    case MARU_CURSOR_SHAPE_NOT_ALLOWED: id = IDC_NO; break;
-    case MARU_CURSOR_SHAPE_EW_RESIZE: id = IDC_SIZEWE; break;
-    case MARU_CURSOR_SHAPE_NS_RESIZE: id = IDC_SIZENS; break;
-    case MARU_CURSOR_SHAPE_NESW_RESIZE: id = IDC_SIZENESW; break;
-    case MARU_CURSOR_SHAPE_NWSE_RESIZE: id = IDC_SIZENWSE; break;
-    default: return MARU_FAILURE;
-  }
-
-  HCURSOR hcursor = LoadCursor(NULL, id);
-  if (!hcursor) {
-    return MARU_FAILURE;
-  }
-
-  MARU_Cursor_Windows *cursor = (MARU_Cursor_Windows *)maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_Windows));
-  if (!cursor) {
-    return MARU_FAILURE;
-  }
-  memset(cursor, 0, sizeof(MARU_Cursor_Windows));
-
-  cursor->base.ctx_base = &ctx->base;
-  cursor->base.pub.metrics = &cursor->base.metrics;
-  cursor->base.pub.flags = MARU_CURSOR_FLAG_SYSTEM;
-#ifdef MARU_INDIRECT_BACKEND
-  cursor->base.backend = ctx->base.backend;
-#endif
-  cursor->hcursor = hcursor;
-  cursor->is_system = true;
-
-  *out_cursor = (MARU_Cursor *)cursor;
-  return MARU_SUCCESS;
-}
-
 MARU_Status maru_createCursor_Windows(MARU_Context *context,
                                        const MARU_CursorCreateInfo *create_info,
                                        MARU_Cursor **out_cursor) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+  const bool system_cursor = (create_info->source == MARU_CURSOR_SOURCE_SYSTEM);
+  HCURSOR hcursor = NULL;
+  bool is_system = false;
 
-  // Win32 cursors are BGRA
-  // We need to create a mask and color bitmap
-  int width = create_info->size.x;
-  int height = create_info->size.y;
+  if (system_cursor) {
+    LPCSTR id = NULL;
+    switch (create_info->system_shape) {
+      case MARU_CURSOR_SHAPE_DEFAULT: id = IDC_ARROW; break;
+      case MARU_CURSOR_SHAPE_HELP: id = IDC_HELP; break;
+      case MARU_CURSOR_SHAPE_HAND: id = IDC_HAND; break;
+      case MARU_CURSOR_SHAPE_WAIT: id = IDC_WAIT; break;
+      case MARU_CURSOR_SHAPE_CROSSHAIR: id = IDC_CROSS; break;
+      case MARU_CURSOR_SHAPE_TEXT: id = IDC_IBEAM; break;
+      case MARU_CURSOR_SHAPE_MOVE: id = IDC_SIZEALL; break;
+      case MARU_CURSOR_SHAPE_NOT_ALLOWED: id = IDC_NO; break;
+      case MARU_CURSOR_SHAPE_EW_RESIZE: id = IDC_SIZEWE; break;
+      case MARU_CURSOR_SHAPE_NS_RESIZE: id = IDC_SIZENS; break;
+      case MARU_CURSOR_SHAPE_NESW_RESIZE: id = IDC_SIZENESW; break;
+      case MARU_CURSOR_SHAPE_NWSE_RESIZE: id = IDC_SIZENWSE; break;
+      default: return MARU_FAILURE;
+    }
+    hcursor = LoadCursor(NULL, id);
+    if (!hcursor) return MARU_FAILURE;
+    is_system = true;
+  } else {
+    // Win32 cursors are BGRA; create a mask and color bitmap.
+    int width = create_info->size.x;
+    int height = create_info->size.y;
+    if (!create_info->pixels || width <= 0 || height <= 0) {
+      return MARU_FAILURE;
+    }
 
-  BITMAPV5HEADER bi;
-  memset(&bi, 0, sizeof(bi));
-  bi.bV5Size = sizeof(bi);
-  bi.bV5Width = width;
-  bi.bV5Height = -height; // Top-down
-  bi.bV5Planes = 1;
-  bi.bV5BitCount = 32;
-  bi.bV5Compression = BI_BITFIELDS;
-  bi.bV5RedMask = 0x00FF0000;
-  bi.bV5GreenMask = 0x0000FF00;
-  bi.bV5BlueMask = 0x000000FF;
-  bi.bV5AlphaMask = 0xFF000000;
+    BITMAPV5HEADER bi;
+    memset(&bi, 0, sizeof(bi));
+    bi.bV5Size = sizeof(bi);
+    bi.bV5Width = width;
+    bi.bV5Height = -height; // Top-down
+    bi.bV5Planes = 1;
+    bi.bV5BitCount = 32;
+    bi.bV5Compression = BI_BITFIELDS;
+    bi.bV5RedMask = 0x00FF0000;
+    bi.bV5GreenMask = 0x0000FF00;
+    bi.bV5BlueMask = 0x000000FF;
+    bi.bV5AlphaMask = 0xFF000000;
 
-  void* bits = NULL;
-  HDC hdc = GetDC(NULL);
-  HBITMAP hcolor = CreateDIBSection(hdc, (BITMAPINFO*)&bi, DIB_RGB_COLORS, &bits, NULL, 0);
-  ReleaseDC(NULL, hdc);
+    void* bits = NULL;
+    HDC hdc = GetDC(NULL);
+    HBITMAP hcolor = CreateDIBSection(hdc, (BITMAPINFO*)&bi, DIB_RGB_COLORS, &bits, NULL, 0);
+    ReleaseDC(NULL, hdc);
 
-  if (!hcolor) return MARU_FAILURE;
+    if (!hcolor) return MARU_FAILURE;
 
-  memcpy(bits, create_info->pixels, (size_t)width * (size_t)height * 4);
+    memcpy(bits, create_info->pixels, (size_t)width * (size_t)height * 4);
 
-  // Create an empty mask bitmap
-  HBITMAP hmask = CreateBitmap(width, height, 1, 1, NULL);
-  if (!hmask) {
+    HBITMAP hmask = CreateBitmap(width, height, 1, 1, NULL);
+    if (!hmask) {
+      DeleteObject(hcolor);
+      return MARU_FAILURE;
+    }
+
+    ICONINFO ii;
+    memset(&ii, 0, sizeof(ii));
+    ii.fIcon = FALSE; // It's a cursor
+    ii.xHotspot = (DWORD)create_info->hot_spot.x;
+    ii.yHotspot = (DWORD)create_info->hot_spot.y;
+    ii.hbmMask = hmask;
+    ii.hbmColor = hcolor;
+
+    hcursor = CreateIconIndirect(&ii);
+
     DeleteObject(hcolor);
-    return MARU_FAILURE;
+    DeleteObject(hmask);
+
+    if (!hcursor) return MARU_FAILURE;
   }
-
-  ICONINFO ii;
-  memset(&ii, 0, sizeof(ii));
-  ii.fIcon = FALSE; // It's a cursor
-  ii.xHotspot = (DWORD)create_info->hot_spot.x;
-  ii.yHotspot = (DWORD)create_info->hot_spot.y;
-  ii.hbmMask = hmask;
-  ii.hbmColor = hcolor;
-
-  HCURSOR hcursor = CreateIconIndirect(&ii);
-
-  DeleteObject(hcolor);
-  DeleteObject(hmask);
-
-  if (!hcursor) return MARU_FAILURE;
 
   MARU_Cursor_Windows *cursor = (MARU_Cursor_Windows *)maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_Windows));
   if (!cursor) {
-    DestroyCursor(hcursor);
+    if (!is_system) {
+      DestroyCursor(hcursor);
+    }
     return MARU_FAILURE;
   }
   memset(cursor, 0, sizeof(MARU_Cursor_Windows));
 
   cursor->base.ctx_base = &ctx->base;
   cursor->base.pub.metrics = &cursor->base.metrics;
-  cursor->base.pub.flags = 0;
+  cursor->base.pub.userdata = create_info->userdata;
+  cursor->base.pub.flags = is_system ? MARU_CURSOR_FLAG_SYSTEM : 0;
 #ifdef MARU_INDIRECT_BACKEND
   cursor->base.backend = ctx->base.backend;
 #endif
   cursor->hcursor = hcursor;
-  cursor->is_system = false;
+  cursor->is_system = is_system;
+
+  ctx->base.metrics.cursor_create_count_total++;
+  if (is_system) ctx->base.metrics.cursor_create_count_system++;
+  else ctx->base.metrics.cursor_create_count_custom++;
+  ctx->base.metrics.cursor_alive_current++;
+  if (ctx->base.metrics.cursor_alive_current > ctx->base.metrics.cursor_alive_peak) {
+    ctx->base.metrics.cursor_alive_peak = ctx->base.metrics.cursor_alive_current;
+  }
 
   *out_cursor = (MARU_Cursor *)cursor;
   return MARU_SUCCESS;
@@ -254,8 +246,13 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
 
 MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor_handle) {
   MARU_Cursor_Windows *cursor = (MARU_Cursor_Windows *)cursor_handle;
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)cursor->base.ctx_base;
   if (!cursor->is_system && cursor->hcursor) {
     DestroyCursor(cursor->hcursor);
+  }
+  ctx->base.metrics.cursor_destroy_count_total++;
+  if (ctx->base.metrics.cursor_alive_current > 0) {
+    ctx->base.metrics.cursor_alive_current--;
   }
   maru_context_free(cursor->base.ctx_base, cursor);
   return MARU_SUCCESS;

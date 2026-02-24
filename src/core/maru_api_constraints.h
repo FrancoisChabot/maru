@@ -89,13 +89,6 @@ static inline void _maru_validate_resetWindowMetrics(MARU_Window *window) {
     MARU_CONSTRAINT_CHECK(window != NULL);
 }
 
-static inline void _maru_validate_getStandardCursor(MARU_Context *context, MARU_CursorShape shape,
-                                                            MARU_Cursor **out_cursor) {
-    MARU_CONSTRAINT_CHECK(context != NULL);
-    MARU_CONSTRAINT_CHECK(out_cursor != NULL);
-    (void)shape;
-}
-
 static inline void _maru_validate_createCursor(MARU_Context *context,
                                                      const MARU_CursorCreateInfo *create_info,
                                                      MARU_Cursor **out_cursor) {
@@ -106,7 +99,6 @@ static inline void _maru_validate_createCursor(MARU_Context *context,
 
 static inline void _maru_validate_destroyCursor(MARU_Cursor *cursor) {
     MARU_CONSTRAINT_CHECK(cursor != NULL);
-    MARU_CONSTRAINT_CHECK(!maru_isCursorSystem(cursor));
 }
 
 static inline void _maru_validate_resetCursorMetrics(MARU_Cursor *cursor) {

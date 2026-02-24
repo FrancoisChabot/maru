@@ -27,8 +27,6 @@ typedef struct MARU_Context_WL {
     struct wl_surface *cursor_surface;
   } wl;
 
-  MARU_Cursor *standard_cursors[16];
-
   struct {
     int32_t rate;
     int32_t delay;
@@ -321,8 +319,6 @@ void maru_destroyMonitor_WL(MARU_Monitor *monitor);
 
 void _maru_wayland_register_xdg_output(MARU_Context_WL *ctx, MARU_Monitor_WL *monitor);
 
-MARU_Status maru_getStandardCursor_WL(MARU_Context *context, MARU_CursorShape shape,
-                                     MARU_Cursor **out_cursor);
 MARU_Status maru_createCursor_WL(MARU_Context *context,
                                 const MARU_CursorCreateInfo *create_info,
                                 MARU_Cursor **out_cursor);

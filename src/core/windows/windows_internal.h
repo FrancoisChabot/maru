@@ -67,8 +67,6 @@ MARU_Status maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_Wind
 MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes);
 MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window);
-MARU_Status maru_getStandardCursor_Windows(MARU_Context *context, MARU_CursorShape shape,
-                                            MARU_Cursor **out_cursor);
 MARU_Status maru_createCursor_Windows(MARU_Context *context,
                                        const MARU_CursorCreateInfo *create_info,
                                        MARU_Cursor **out_cursor);
