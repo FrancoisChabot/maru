@@ -99,7 +99,7 @@ static void _wl_refresh_locked_window_pointers(MARU_Context_WL *ctx) {
   for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
     MARU_Window_WL *window = (MARU_Window_WL *)it;
     if (window->base.pub.cursor_mode == MARU_CURSOR_LOCKED) {
-      _maru_wayland_update_cursor_mode(window);
+      (void)_maru_wayland_update_cursor_mode(window);
     }
   }
 }

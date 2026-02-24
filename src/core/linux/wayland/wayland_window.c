@@ -1045,10 +1045,16 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
   if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
       requested->cursor_mode = attributes->cursor_mode;
-      effective->cursor_mode = attributes->cursor_mode;
       if (window->base.pub.cursor_mode != attributes->cursor_mode) {
+          MARU_CursorMode previous_mode = window->base.pub.cursor_mode;
           window->base.pub.cursor_mode = attributes->cursor_mode;
-          _maru_wayland_update_cursor_mode(window);
+          if (_maru_wayland_update_cursor_mode(window)) {
+              effective->cursor_mode = attributes->cursor_mode;
+          } else {
+              window->base.pub.cursor_mode = previous_mode;
+              effective->cursor_mode = previous_mode;
+              status = MARU_FAILURE;
+          }
       }
   }
 
@@ -1081,9 +1087,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   return status;
 }
 
-void _maru_wayland_update_cursor_mode(MARU_Window_WL *window) {
+bool _maru_wayland_update_cursor_mode(MARU_Window_WL *window) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   MARU_CursorMode mode = window->base.pub.cursor_mode;
+  bool success = true;
 
   // Cleanup old state
   if (window->ext.relative_pointer) {
@@ -1105,10 +1112,15 @@ void _maru_wayland_update_cursor_mode(MARU_Window_WL *window) {
         maru_zwp_locked_pointer_v1_add_listener(ctx, window->ext.locked_pointer,
                                                 &_maru_wayland_locked_pointer_listener,
                                                 window);
+      } else {
+        MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                               "Pointer lock request failed");
+        success = false;
       }
     } else {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED, 
                              "Pointer constraints protocol missing or no pointer available");
+      success = false;
     }
 
     if (ctx->protocols.opt.zwp_relative_pointer_manager_v1 && ctx->wl.pointer) {
@@ -1119,12 +1131,19 @@ void _maru_wayland_update_cursor_mode(MARU_Window_WL *window) {
         maru_zwp_relative_pointer_v1_add_listener(ctx, window->ext.relative_pointer,
                                                   &_maru_wayland_relative_pointer_listener,
                                                   window);
+      } else {
+        MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                               "Relative pointer request failed");
+        success = false;
       }
     } else {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED, 
                              "Relative pointer protocol missing or no pointer available");
+      success = false;
     }
   }
+
+  return success;
 }
 
 MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {

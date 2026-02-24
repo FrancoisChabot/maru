@@ -340,7 +340,7 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
                                              const MARU_WindowCreateInfo *create_info);
 void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial);
-void _maru_wayland_update_cursor_mode(MARU_Window_WL *window);
+bool _maru_wayland_update_cursor_mode(MARU_Window_WL *window);
 void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window);
 void _maru_wayland_update_text_input(MARU_Window_WL *window);
 void _maru_wayland_clear_text_input_pending(MARU_Window_WL *window);
