@@ -187,6 +187,15 @@ static void _maru_wayland_update_idle_notification(MARU_Context_WL *ctx) {
     ctx->wl.idle_notification = NULL;
   }
 
+  if (ctx->wl.cursor_surface) {
+    maru_wl_surface_destroy(ctx, ctx->wl.cursor_surface);
+    ctx->wl.cursor_surface = NULL;
+  }
+  if (ctx->wl.cursor_theme) {
+    maru_wl_cursor_theme_destroy(ctx, ctx->wl.cursor_theme);
+    ctx->wl.cursor_theme = NULL;
+  }
+
   uint32_t timeout_ms = ctx->base.tuning.idle_timeout_ms;
   if (timeout_ms > 0 && ctx->protocols.opt.ext_idle_notifier_v1 && ctx->protocols.opt.wl_seat) {
     ctx->wl.idle_notification = maru_ext_idle_notifier_v1_get_idle_notification(

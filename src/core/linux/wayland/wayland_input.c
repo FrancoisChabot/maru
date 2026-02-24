@@ -628,12 +628,22 @@ static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_
     evt.text_edit_update.session_id = window->text_input_session_id;
     evt.text_edit_update.preedit_utf8 = text ? text : "";
     evt.text_edit_update.preedit_length = text ? (uint32_t)strlen(text) : 0;
-    
-    evt.text_edit_update.caret.start_byte = (uint32_t)cursor_begin;
+
+    int32_t safe_begin = cursor_begin;
+    int32_t safe_end = cursor_end;
+    const int32_t preedit_length_i32 = (int32_t)evt.text_edit_update.preedit_length;
+
+    if (safe_begin < 0) safe_begin = 0;
+    if (safe_begin > preedit_length_i32) safe_begin = preedit_length_i32;
+
+    if (safe_end < safe_begin) safe_end = safe_begin;
+    if (safe_end > preedit_length_i32) safe_end = preedit_length_i32;
+
+    evt.text_edit_update.caret.start_byte = (uint32_t)safe_begin;
     evt.text_edit_update.caret.length_byte = 0;
-    
-    evt.text_edit_update.selection.start_byte = (uint32_t)cursor_begin;
-    evt.text_edit_update.selection.length_byte = (uint32_t)(cursor_end - cursor_begin);
+
+    evt.text_edit_update.selection.start_byte = (uint32_t)safe_begin;
+    evt.text_edit_update.selection.length_byte = (uint32_t)(safe_end - safe_begin);
     
     _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_UPDATE, (MARU_Window *)window, &evt);
 }
