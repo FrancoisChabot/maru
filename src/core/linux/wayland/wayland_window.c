@@ -150,14 +150,28 @@ void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
 }
 
 static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
-  if (!window || !window->ext.viewport) {
+  if (!window) {
     return;
   }
 
-  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   const MARU_Vec2Dip viewport_size = window->base.attrs_effective.viewport_size;
   const bool disabled = (viewport_size.x <= (MARU_Scalar)0.0 ||
                          viewport_size.y <= (MARU_Scalar)0.0);
+
+  if (!window->ext.viewport) {
+    if (!disabled && !window->missing_viewporter_reported) {
+      MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "wp_viewporter unavailable; viewport size requests are ignored");
+      window->missing_viewporter_reported = true;
+    }
+    return;
+  }
+
+  // Capability is present; clear one-shot warning latch.
+  window->missing_viewporter_reported = false;
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   if (disabled) {
     maru_wp_viewport_set_destination(ctx, window->ext.viewport, -1, -1);
     return;
@@ -791,7 +805,25 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   struct wl_seat *seat = ctx->wl.seat ? ctx->wl.seat : ctx->protocols.opt.wl_seat;
 
-  if (!ctx->protocols.opt.zwp_text_input_manager_v3 || !seat) {
+  if (!ctx->protocols.opt.zwp_text_input_manager_v3) {
+    const MARU_WindowAttributes *attrs = &window->base.attrs_effective;
+    const bool ime_requested =
+        (attrs->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) ||
+        (attrs->surrounding_text != NULL) ||
+        (attrs->text_input_rect.size.x > (MARU_Scalar)0.0) ||
+        (attrs->text_input_rect.size.y > (MARU_Scalar)0.0);
+    if (ime_requested && !window->missing_text_input_v3_reported) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "zwp_text_input_manager_v3 unavailable; IME features running in fallback mode");
+      window->missing_text_input_v3_reported = true;
+    }
+    return;
+  }
+
+  // Protocol is present; clear one-shot warning latch.
+  window->missing_text_input_v3_reported = false;
+
+  if (!seat) {
     return;
   }
 

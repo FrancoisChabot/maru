@@ -115,6 +115,8 @@ typedef struct MARU_Window_WL {
   bool accepts_drop;
   bool primary_selection;
   bool ime_preedit_active;
+  bool missing_text_input_v3_reported;
+  bool missing_viewporter_reported;
   bool is_transparent;
   MARU_BufferTransform preferred_buffer_transform;
 } MARU_Window_WL;

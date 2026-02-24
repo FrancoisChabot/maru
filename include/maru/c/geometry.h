@@ -62,7 +62,13 @@ typedef enum MARU_BufferTransform {
   MARU_BUFFER_TRANSFORM_FLIPPED_270 = 7,
 } MARU_BufferTransform;
 
-/** @brief Snapshot of window dimensions and position. */
+/** @brief Snapshot of window geometry state.
+ *
+ * `origin` is a best-effort logical window position in a global desktop space
+ * when the platform exposes one. On platforms where global placement is
+ * compositor/OS-controlled or not observable, `origin` is guaranteed to be
+ * `{0, 0}`.
+ */
 typedef struct MARU_WindowGeometry {
   MARU_Vec2Dip origin;
   MARU_Vec2Dip logical_size;
