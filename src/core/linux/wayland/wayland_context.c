@@ -218,6 +218,7 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
       window->ext.text_input = NULL;
     }
     window->ime_preedit_active = false;
+    _maru_wayland_clear_text_input_pending(window);
   }
 
   ctx->linux_common.pointer.focused_window = NULL;
@@ -252,6 +253,7 @@ static void _wl_handle_optional_global_removed(MARU_Context_WL *ctx,
         window->ext.text_input = NULL;
       }
       window->ime_preedit_active = false;
+      _maru_wayland_clear_text_input_pending(window);
     } else if (strcmp(iface_name, "zwp_pointer_constraints_v1") == 0) {
       if (window->ext.locked_pointer) {
         maru_zwp_locked_pointer_v1_destroy(ctx, window->ext.locked_pointer);

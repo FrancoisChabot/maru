@@ -89,6 +89,18 @@ typedef struct MARU_Window_WL {
   } libdecor;
 
   uint64_t text_input_session_id;
+  struct {
+    char *preedit_utf8;
+    uint32_t caret_begin;
+    uint32_t caret_end;
+    bool has_preedit;
+
+    char *commit_utf8;
+    uint32_t delete_before_bytes;
+    uint32_t delete_after_bytes;
+    bool has_commit;
+    bool has_delete;
+  } text_input_pending;
   MARU_Scalar scale;
   MARU_WaylandDecorationMode decor_mode;
   MARU_Monitor **monitors;
@@ -321,6 +333,7 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
 void _maru_wayland_update_cursor_mode(MARU_Window_WL *window);
 void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window);
 void _maru_wayland_update_text_input(MARU_Window_WL *window);
+void _maru_wayland_clear_text_input_pending(MARU_Window_WL *window);
 void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
                                         const MARU_Window_WL *window);
 extern const struct zwp_relative_pointer_v1_listener _maru_wayland_relative_pointer_listener;

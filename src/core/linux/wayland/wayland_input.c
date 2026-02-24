@@ -30,6 +30,36 @@
 
 static MARU_ModifierFlags _get_modifiers(MARU_Context_WL *ctx);
 
+static void _maru_wayland_replace_pending_utf8(MARU_Window_WL *window, char **slot,
+                                               const char *value) {
+    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+    if (*slot) {
+        maru_context_free(&ctx->base, *slot);
+        *slot = NULL;
+    }
+
+    if (!value) {
+        return;
+    }
+
+    size_t len = strlen(value);
+    char *copy = (char *)maru_context_alloc(&ctx->base, len + 1);
+    if (!copy) {
+        return;
+    }
+    memcpy(copy, value, len + 1);
+    *slot = copy;
+}
+
+void _maru_wayland_clear_text_input_pending(MARU_Window_WL *window) {
+    if (!window) {
+        return;
+    }
+    _maru_wayland_replace_pending_utf8(window, &window->text_input_pending.preedit_utf8, NULL);
+    _maru_wayland_replace_pending_utf8(window, &window->text_input_pending.commit_utf8, NULL);
+    memset(&window->text_input_pending, 0, sizeof(window->text_input_pending));
+}
+
 static const char *_maru_cursor_shape_to_name(MARU_CursorShape shape) {
     switch (shape) {
         case MARU_CURSOR_SHAPE_DEFAULT: return "left_ptr";
@@ -653,6 +683,7 @@ static void _text_input_handle_enter(void *data, struct zwp_text_input_v3 *text_
 
     window->text_input_session_id++;
     window->ime_preedit_active = false;
+    _maru_wayland_clear_text_input_pending(window);
     
     MARU_Event evt = {0};
     evt.text_edit_start.session_id = window->text_input_session_id;
@@ -665,6 +696,7 @@ static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_
     (void)text_input;
     (void)surface;
     window->ime_preedit_active = false;
+    _maru_wayland_clear_text_input_pending(window);
 
     MARU_Event evt = {0};
     evt.text_edit_end.session_id = window->text_input_session_id;
@@ -675,70 +707,79 @@ static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_
 static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_v3 *text_input,
                                                const char *text, int32_t cursor_begin, int32_t cursor_end) {
     MARU_Window_WL *window = (MARU_Window_WL *)data;
-    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
     (void)text_input;
-    window->ime_preedit_active = (text && text[0] != '\0');
 
-    MARU_Event evt = {0};
-    evt.text_edit_update.session_id = window->text_input_session_id;
-    evt.text_edit_update.preedit_utf8 = text ? text : "";
-    evt.text_edit_update.preedit_length = text ? (uint32_t)strlen(text) : 0;
-
-    int32_t safe_begin = cursor_begin;
-    int32_t safe_end = cursor_end;
-    const int32_t preedit_length_i32 = (int32_t)evt.text_edit_update.preedit_length;
-
-    if (safe_begin < 0) safe_begin = 0;
-    if (safe_begin > preedit_length_i32) safe_begin = preedit_length_i32;
-
-    if (safe_end < safe_begin) safe_end = safe_begin;
-    if (safe_end > preedit_length_i32) safe_end = preedit_length_i32;
-
-    evt.text_edit_update.caret.start_byte = (uint32_t)safe_begin;
-    evt.text_edit_update.caret.length_byte = 0;
-
-    evt.text_edit_update.selection.start_byte = (uint32_t)safe_begin;
-    evt.text_edit_update.selection.length_byte = (uint32_t)(safe_end - safe_begin);
-    
-    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_UPDATE, (MARU_Window *)window, &evt);
+    _maru_wayland_replace_pending_utf8(window, &window->text_input_pending.preedit_utf8, text ? text : "");
+    window->text_input_pending.caret_begin = (cursor_begin >= 0) ? (uint32_t)cursor_begin : 0u;
+    window->text_input_pending.caret_end = (cursor_end >= 0) ? (uint32_t)cursor_end : 0u;
+    window->text_input_pending.has_preedit = true;
 }
 
 static void _text_input_handle_commit_string(void *data, struct zwp_text_input_v3 *text_input, const char *text) {
     MARU_Window_WL *window = (MARU_Window_WL *)data;
-    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
     (void)text_input;
-    window->ime_preedit_active = false;
 
-    MARU_Event evt = {0};
-    evt.text_edit_commit.session_id = window->text_input_session_id;
-    evt.text_edit_commit.committed_utf8 = text ? text : "";
-    evt.text_edit_commit.committed_length = text ? (uint32_t)strlen(text) : 0;
-    
-    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
+    _maru_wayland_replace_pending_utf8(window, &window->text_input_pending.commit_utf8, text ? text : "");
+    window->text_input_pending.has_commit = true;
 }
 
 static void _text_input_handle_delete_surrounding_text(void *data, struct zwp_text_input_v3 *text_input,
                                                        uint32_t before_length, uint32_t after_length) {
     MARU_Window_WL *window = (MARU_Window_WL *)data;
-    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
     (void)text_input;
-    window->ime_preedit_active = false;
 
-    MARU_Event evt = {0};
-    evt.text_edit_commit.session_id = window->text_input_session_id;
-    evt.text_edit_commit.delete_before_bytes = before_length;
-    evt.text_edit_commit.delete_after_bytes = after_length;
-    evt.text_edit_commit.committed_utf8 = "";
-    evt.text_edit_commit.committed_length = 0;
-    
-    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
+    window->text_input_pending.delete_before_bytes = before_length;
+    window->text_input_pending.delete_after_bytes = after_length;
+    window->text_input_pending.has_delete = true;
 }
 
 static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_input, uint32_t serial) {
-    (void)data;
+    MARU_Window_WL *window = (MARU_Window_WL *)data;
+    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
     (void)text_input;
     (void)serial;
-    // text-input-v3 'done' event is for synchronization of multiple state changes
+
+    if (window->text_input_pending.has_preedit) {
+        MARU_Event evt = {0};
+        const char *preedit = window->text_input_pending.preedit_utf8 ? window->text_input_pending.preedit_utf8 : "";
+        const uint32_t preedit_length = (uint32_t)strlen(preedit);
+        uint32_t safe_begin = window->text_input_pending.caret_begin;
+        uint32_t safe_end = window->text_input_pending.caret_end;
+
+        if (safe_begin > preedit_length) safe_begin = preedit_length;
+        if (safe_end < safe_begin) safe_end = safe_begin;
+        if (safe_end > preedit_length) safe_end = preedit_length;
+
+        evt.text_edit_update.session_id = window->text_input_session_id;
+        evt.text_edit_update.preedit_utf8 = preedit;
+        evt.text_edit_update.preedit_length = preedit_length;
+        evt.text_edit_update.caret.start_byte = safe_begin;
+        evt.text_edit_update.caret.length_byte = 0;
+        evt.text_edit_update.selection.start_byte = safe_begin;
+        evt.text_edit_update.selection.length_byte = safe_end - safe_begin;
+        _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_UPDATE, (MARU_Window *)window, &evt);
+
+        window->ime_preedit_active = (preedit_length != 0);
+    }
+
+    if (window->text_input_pending.has_commit || window->text_input_pending.has_delete) {
+        MARU_Event evt = {0};
+        const char *commit = window->text_input_pending.commit_utf8 ? window->text_input_pending.commit_utf8 : "";
+        evt.text_edit_commit.session_id = window->text_input_session_id;
+        evt.text_edit_commit.delete_before_bytes = window->text_input_pending.has_delete
+                                                       ? window->text_input_pending.delete_before_bytes
+                                                       : 0u;
+        evt.text_edit_commit.delete_after_bytes = window->text_input_pending.has_delete
+                                                      ? window->text_input_pending.delete_after_bytes
+                                                      : 0u;
+        evt.text_edit_commit.committed_utf8 = commit;
+        evt.text_edit_commit.committed_length = (uint32_t)strlen(commit);
+        _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
+
+        window->ime_preedit_active = false;
+    }
+
+    _maru_wayland_clear_text_input_pending(window);
 }
 
 const struct zwp_text_input_v3_listener _maru_wayland_text_input_listener = {

@@ -958,6 +958,7 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
     maru_zwp_text_input_v3_destroy(ctx, window->ext.text_input);
     window->ext.text_input = NULL;
   }
+  _maru_wayland_clear_text_input_pending(window);
   if (window->ext.content_type) {
     maru_wp_content_type_v1_destroy(ctx, window->ext.content_type);
     window->ext.content_type = NULL;
