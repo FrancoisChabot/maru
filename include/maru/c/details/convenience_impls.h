@@ -5,6 +5,7 @@
 #define MARU_CONVENIENCE_IMPLS_H_INCLUDED
 
 #include "maru/c/convenience.h"
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -122,6 +123,66 @@ static inline MARU_Status maru_setWindowIcon(MARU_Window *window, MARU_Image *ic
   MARU_WindowAttributes attrs;
   attrs.icon = icon;
   return maru_updateWindow(window, MARU_WINDOW_ATTR_ICON, &attrs);
+}
+
+static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window *window, MARU_TextInputType type) {
+  MARU_WindowAttributes attrs;
+  attrs.text_input_type = type;
+  attrs.event_mask = maru_getWindowEventMask(window);
+  attrs.event_mask = maru_eventMaskAdd(attrs.event_mask, MARU_EVENT_TEXT_EDIT_COMMIT);
+  attrs.event_mask = maru_eventMaskRemove(attrs.event_mask, MARU_EVENT_TEXT_EDIT_START);
+  attrs.event_mask = maru_eventMaskRemove(attrs.event_mask, MARU_EVENT_TEXT_EDIT_UPDATE);
+  attrs.event_mask = maru_eventMaskRemove(attrs.event_mask, MARU_EVENT_TEXT_EDIT_END);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
+}
+
+static inline MARU_Status maru_applyTextEditCommitUtf8(char *buffer,
+                                                       uint32_t capacity_bytes,
+                                                       uint32_t *inout_length,
+                                                       uint32_t *inout_cursor_byte,
+                                                       const MARU_TextEditCommitEvent *commit) {
+  if (!buffer || !inout_length || !inout_cursor_byte || !commit) {
+    return MARU_FAILURE;
+  }
+
+  const uint32_t length = *inout_length;
+  const uint32_t cursor = *inout_cursor_byte;
+  if (cursor > length) {
+    return MARU_FAILURE;
+  }
+  if (commit->delete_before_bytes > cursor) {
+    return MARU_FAILURE;
+  }
+
+  const uint32_t delete_start = cursor - commit->delete_before_bytes;
+  const uint32_t delete_end = cursor + commit->delete_after_bytes;
+  if (delete_end > length || delete_end < delete_start) {
+    return MARU_FAILURE;
+  }
+  if (commit->committed_length > 0 && !commit->committed_utf8) {
+    return MARU_FAILURE;
+  }
+
+  const uint32_t delete_len = delete_end - delete_start;
+  const uint32_t tail_len = length - delete_end;
+  const uint32_t new_length = length - delete_len + commit->committed_length;
+  if (new_length > capacity_bytes) {
+    return MARU_FAILURE;
+  }
+
+  if (commit->committed_length != delete_len) {
+    memmove(buffer + delete_start + commit->committed_length, buffer + delete_end, tail_len);
+  }
+  if (commit->committed_length > 0) {
+    memcpy(buffer + delete_start, commit->committed_utf8, commit->committed_length);
+  }
+
+  *inout_length = new_length;
+  *inout_cursor_byte = delete_start + commit->committed_length;
+  if (new_length < capacity_bytes) {
+    buffer[new_length] = '\0';
+  }
+  return MARU_SUCCESS;
 }
 
 static inline const MARU_UserEventMetrics *maru_getContextEventMetrics(const MARU_Context *context) {

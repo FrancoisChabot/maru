@@ -286,7 +286,14 @@ typedef struct MARU_TextEditUpdateEvent {
   MARU_TextRangeUtf8 selection;
 } MARU_TextEditUpdateEvent;
 
-/** @brief Payload for MARU_EVENT_TEXT_EDIT_COMMIT. */
+/** @brief Payload for MARU_EVENT_TEXT_EDIT_COMMIT.
+ *
+ * - `delete_before_bytes` and `delete_after_bytes` are UTF-8 byte counts around
+ *   the application's current insertion point (cursor), not codepoint counts.
+ * - `committed_utf8` points to transient UTF-8 data valid only during the event
+ *   callback. It may be NULL only when `committed_length == 0`.
+ * - `committed_length` is the byte length and may be 0 for pure deletion commits.
+ */
 typedef struct MARU_TextEditCommitEvent {
   uint64_t session_id;
   uint32_t delete_before_bytes;

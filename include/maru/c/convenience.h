@@ -44,6 +44,33 @@ static inline MARU_Status maru_setWindowVisible(MARU_Window *window, bool visibl
 static inline MARU_Status maru_setWindowMinimized(MARU_Window *window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window *window, MARU_Image *icon);
 
+/**
+ * @brief Configures a window for simple text input consumption.
+ *
+ * This helper keeps the full IME pipeline enabled internally but configures the
+ * window-side event mask to only deliver commit events for text input:
+ * - enables `MARU_MASK_TEXT_EDIT_COMMIT`
+ * - disables `MARU_MASK_TEXT_EDIT_START`, `MARU_MASK_TEXT_EDIT_UPDATE`,
+ *   and `MARU_MASK_TEXT_EDIT_END`
+ */
+static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window *window, MARU_TextInputType type);
+
+/**
+ * @brief Applies a text-commit operation to a UTF-8 byte buffer in place.
+ *
+ * The function interprets `delete_before_bytes`/`delete_after_bytes` relative to
+ * `*inout_cursor_byte`, replaces that range with `committed_utf8`, updates
+ * `*inout_length` and advances `*inout_cursor_byte` to the end of inserted text.
+ *
+ * `capacity_bytes` is the writable size of `buffer`. If there is capacity after
+ * the resulting content, a trailing '\0' is written as a convenience.
+ */
+static inline MARU_Status maru_applyTextEditCommitUtf8(char *buffer,
+                                                       uint32_t capacity_bytes,
+                                                       uint32_t *inout_length,
+                                                       uint32_t *inout_cursor_byte,
+                                                       const MARU_TextEditCommitEvent *commit);
+
 static inline const MARU_UserEventMetrics *maru_getContextEventMetrics(const MARU_Context *context);
 
 static inline const char *maru_getDiagnosticString(MARU_Diagnostic diagnostic);
