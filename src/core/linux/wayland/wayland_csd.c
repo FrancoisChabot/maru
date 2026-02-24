@@ -48,8 +48,25 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     is_fullscreen = (window_state & LIBDECOR_WINDOW_STATE_FULLSCREEN) != 0;
   }
 
-  effective->maximized = is_maximized;
+  if (effective->maximized != is_maximized) {
+    effective->maximized = is_maximized;
+    if (is_maximized) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+    } else {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+    }
+
+    MARU_Event evt = {0};
+    evt.maximized.maximized = is_maximized;
+    _maru_dispatch_event(&ctx->base, MARU_WINDOW_MAXIMIZED, (MARU_Window *)window, &evt);
+  }
+
   effective->fullscreen = is_fullscreen;
+  if (is_fullscreen) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+  } else {
+    window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+  }
 
   if (!maru_libdecor_configuration_get_content_size(ctx, configuration, frame, &width, &height)) {
     width = (int)effective->logical_size.x;
