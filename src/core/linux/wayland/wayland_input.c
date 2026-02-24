@@ -585,6 +585,18 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
     if (window) {
         ctx->linux_common.xkb.focused_window = (MARU_Window *)window;
         window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
+
+        // Re-sync key cache from compositor-provided pressed keys on focus enter.
+        memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
+        if (keys) {
+            const uint32_t *key = NULL;
+            wl_array_for_each(key, keys) {
+                MARU_Key maru_key = _linux_scancode_to_maru_key(*key);
+                if (maru_key != MARU_KEY_UNKNOWN) {
+                    window->base.keyboard_state[maru_key] = (MARU_ButtonState8)MARU_BUTTON_STATE_PRESSED;
+                }
+            }
+        }
         
         MARU_Event evt = {0};
         evt.focus.focused = true;
