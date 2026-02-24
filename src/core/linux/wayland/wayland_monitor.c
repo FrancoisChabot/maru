@@ -187,17 +187,19 @@ static void _xdg_output_handle_done(void *data, struct zxdg_output_v1 *xdg_outpu
 static void _xdg_output_handle_name(void *data,
                                     struct zxdg_output_v1 *xdg_output,
                                     const char *name) {
-  (void)data;
   (void)xdg_output;
-  (void)name;
+  MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)data;
+  _maru_wayland_set_monitor_name(monitor, name);
 }
 
 static void _xdg_output_handle_description(void *data,
                                            struct zxdg_output_v1 *xdg_output,
                                            const char *description) {
-  (void)data;
   (void)xdg_output;
-  (void)description;
+  MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)data;
+  if (!monitor->base.pub.name || monitor->base.pub.name[0] == '\0') {
+    _maru_wayland_set_monitor_name(monitor, description);
+  }
 }
 
 static const struct zxdg_output_v1_listener _maru_wayland_xdg_output_listener = {

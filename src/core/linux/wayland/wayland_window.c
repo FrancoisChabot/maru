@@ -548,8 +548,8 @@ static void _xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_su
     _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window *)window, &evt);
   }
 
-  // TODO: If window has a pending buffer, commit it here.
-  // For now, we just commit to acknowledge the configuration.
+  // Maru does not stage/own window content buffers; applications/renderers do.
+  // This commit acknowledges configure and applies pending surface state only.
   maru_wl_surface_commit(ctx, window->wl.surface);
 }
 
