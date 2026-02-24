@@ -2,26 +2,99 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct MARU_WL_ActivationTokenResult {
-  bool done;
-  const char *token;
-} MARU_WL_ActivationTokenResult;
+void _maru_wayland_cancel_activation(MARU_Context_WL *ctx) {
+  if (!ctx) {
+    return;
+  }
+
+  if (ctx->activation.token_obj) {
+    maru_xdg_activation_token_v1_destroy(ctx, ctx->activation.token_obj);
+    ctx->activation.token_obj = NULL;
+  }
+  if (ctx->activation.token_copy) {
+    maru_context_free(&ctx->base, ctx->activation.token_copy);
+    ctx->activation.token_copy = NULL;
+  }
+
+  ctx->activation.target_window = NULL;
+  ctx->activation.pending = false;
+  ctx->activation.done = false;
+  ctx->activation.failed = false;
+}
+
+void _maru_wayland_cancel_activation_for_window(MARU_Context_WL *ctx,
+                                                MARU_Window_WL *window) {
+  if (!ctx || !window) {
+    return;
+  }
+  if (ctx->activation.target_window == window) {
+    _maru_wayland_cancel_activation(ctx);
+  }
+}
 
 static void _maru_wayland_activation_token_done(void *data,
                                                 struct xdg_activation_token_v1 *token_obj,
                                                 const char *token) {
-  (void)token_obj;
-  MARU_WL_ActivationTokenResult *result = (MARU_WL_ActivationTokenResult *)data;
-  result->token = token;
-  result->done = true;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  if (!ctx || token_obj != ctx->activation.token_obj) {
+    return;
+  }
+
+  if (ctx->activation.token_copy) {
+    maru_context_free(&ctx->base, ctx->activation.token_copy);
+    ctx->activation.token_copy = NULL;
+  }
+
+  size_t len = token ? strlen(token) : 0;
+  char *copy = (char *)maru_context_alloc(&ctx->base, len + 1);
+  if (!copy) {
+    ctx->activation.failed = true;
+    ctx->activation.done = true;
+    return;
+  }
+
+  if (len > 0) {
+    memcpy(copy, token, len);
+  }
+  copy[len] = '\0';
+  ctx->activation.token_copy = copy;
+  ctx->activation.done = true;
 }
 
 static const struct xdg_activation_token_v1_listener _maru_wayland_activation_token_listener = {
     .done = _maru_wayland_activation_token_done,
 };
+
+void _maru_wayland_check_activation(MARU_Context_WL *ctx) {
+  if (!ctx || !ctx->activation.pending || !ctx->activation.done) {
+    return;
+  }
+
+  MARU_Window_WL *window = ctx->activation.target_window;
+  const char *token = ctx->activation.token_copy;
+  bool can_activate = !ctx->activation.failed && window && window->wl.surface &&
+                      ctx->protocols.opt.xdg_activation_v1 && token && token[0] != '\0';
+
+  if (!can_activate) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE,
+                           "Asynchronous activation request failed");
+    _maru_wayland_cancel_activation(ctx);
+    return;
+  }
+
+  maru_xdg_activation_v1_activate(ctx, ctx->protocols.opt.xdg_activation_v1, token,
+                                  window->wl.surface);
+  maru_wl_surface_commit(ctx, window->wl.surface);
+  if (maru_wl_display_flush(ctx, ctx->wl.display) < 0 && errno != EAGAIN) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE,
+                           "wl_display_flush() failure while activating focus request");
+  }
+  _maru_wayland_cancel_activation(ctx);
+}
 
 void _maru_wayland_update_opaque_region(MARU_Window_WL *window) {
   if (!window || !window->wl.surface) {
@@ -94,9 +167,16 @@ MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
     return MARU_FAILURE;
   }
 
-  MARU_WL_ActivationTokenResult result = {0};
+  // Cancel any previous in-flight request and replace it with the latest one.
+  _maru_wayland_cancel_activation(ctx);
+  ctx->activation.token_obj = token_obj;
+  ctx->activation.target_window = window;
+  ctx->activation.pending = true;
+  ctx->activation.done = false;
+  ctx->activation.failed = false;
+
   maru_xdg_activation_token_v1_add_listener(ctx, token_obj,
-                                            &_maru_wayland_activation_token_listener, &result);
+                                            &_maru_wayland_activation_token_listener, ctx);
   maru_xdg_activation_token_v1_set_surface(ctx, token_obj, window->wl.surface);
   if (ctx->protocols.opt.wl_seat && ctx->linux_common.pointer.enter_serial != 0) {
     maru_xdg_activation_token_v1_set_serial(
@@ -104,16 +184,11 @@ MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
   }
   maru_xdg_activation_token_v1_commit(ctx, token_obj);
 
-  if (maru_wl_display_roundtrip(ctx, ctx->wl.display) < 0 || !result.done || !result.token) {
-    maru_xdg_activation_token_v1_destroy(ctx, token_obj);
+  if (maru_wl_display_flush(ctx, ctx->wl.display) < 0 && errno != EAGAIN) {
+    _maru_wayland_cancel_activation(ctx);
     return MARU_FAILURE;
   }
 
-  maru_xdg_activation_v1_activate(ctx, ctx->protocols.opt.xdg_activation_v1, result.token,
-                                  window->wl.surface);
-  maru_wl_surface_commit(ctx, window->wl.surface);
-  maru_wl_display_flush(ctx, ctx->wl.display);
-  maru_xdg_activation_token_v1_destroy(ctx, token_obj);
   return MARU_SUCCESS;
 }
 

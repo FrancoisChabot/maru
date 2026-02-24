@@ -1182,6 +1182,8 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
+  _maru_wayland_cancel_activation_for_window(ctx, window);
+
   if (ctx->linux_common.pointer.focused_window == window_handle) {
     ctx->linux_common.pointer.focused_window = NULL;
   }

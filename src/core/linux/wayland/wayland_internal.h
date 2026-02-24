@@ -10,6 +10,8 @@
 #include "dlib/libdecor.h"
 #include "protocols/maru_protocols.h"
 
+typedef struct MARU_Window_WL MARU_Window_WL;
+
 typedef struct MARU_Context_WL {
   MARU_Context_Base base;
   MARU_Context_Linux_Common linux_common;
@@ -62,6 +64,15 @@ typedef struct MARU_Context_WL {
 
   MARU_WaylandDecorationMode decor_mode;
   struct libdecor *libdecor_context;
+
+  struct {
+    struct xdg_activation_token_v1 *token_obj;
+    MARU_Window_WL *target_window;
+    char *token_copy;
+    bool pending;
+    bool done;
+    bool failed;
+  } activation;
 } MARU_Context_WL;
 
 typedef struct MARU_Window_WL {
@@ -356,6 +367,8 @@ bool _maru_wayland_create_ssd_decoration(MARU_Window_WL *window);
 void _maru_wayland_destroy_ssd_decoration(MARU_Window_WL *window);
 
 void _maru_wayland_check_activation(MARU_Context_WL *ctx);
+void _maru_wayland_cancel_activation(MARU_Context_WL *ctx);
+void _maru_wayland_cancel_activation_for_window(MARU_Context_WL *ctx, MARU_Window_WL *window);
 void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window);
 void _maru_wayland_request_frame(MARU_Window_WL *window);
 uint64_t _maru_wayland_get_monotonic_time_ns(void);

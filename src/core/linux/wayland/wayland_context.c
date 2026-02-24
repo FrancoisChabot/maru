@@ -368,6 +368,8 @@ static void _wl_handle_optional_global_removed(MARU_Context_WL *ctx,
     _wl_update_cursor_shape_device(ctx);
   } else if (strcmp(iface_name, "ext_idle_notifier_v1") == 0) {
     _wl_clear_idle_notification_only(ctx);
+  } else if (strcmp(iface_name, "xdg_activation_v1") == 0) {
+    _maru_wayland_cancel_activation(ctx);
   } else if (strcmp(iface_name, "zxdg_output_manager_v1") == 0) {
     for (uint32_t i = 0; i < ctx->base.monitor_cache_count; ++i) {
       MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)ctx->base.monitor_cache[i];
@@ -673,6 +675,8 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
     maru_destroyWindow_WL((MARU_Window *)ctx->base.window_list_head);
   }
 
+  _maru_wayland_cancel_activation(ctx);
+
   _maru_cleanup_context_base(&ctx->base);
 
   if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
@@ -905,6 +909,8 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     status = MARU_ERROR_CONTEXT_LOST;
     goto pump_exit;
   }
+
+  _maru_wayland_check_activation(ctx);
 
   if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 && ctx->repeat.next_repeat_ns != 0 &&
       ctx->linux_common.xkb.state && ctx->linux_common.xkb.focused_window) {
