@@ -41,6 +41,8 @@ typedef struct MARU_PumpContext {
   void *userdata;
 } MARU_PumpContext;
 
+typedef struct MARU_Window_Base MARU_Window_Base;
+
 typedef struct MARU_Context_Base {
   MARU_ContextExposed pub;
 #ifdef MARU_INDIRECT_BACKEND
@@ -65,9 +67,8 @@ typedef struct MARU_Context_Base {
   uint32_t monitor_cache_count;
   uint32_t monitor_cache_capacity;
 
-  MARU_Window **window_cache;
-  uint32_t window_cache_count;
-  uint32_t window_cache_capacity;
+  MARU_Window_Base *window_list_head;
+  uint32_t window_count;
 
   MARU_EventQueue user_event_queue;
 
@@ -84,6 +85,8 @@ typedef struct MARU_Window_Base {
 #endif
 
   MARU_Context_Base *ctx_base;
+  MARU_Window_Base *ctx_prev;
+  MARU_Window_Base *ctx_next;
   
   MARU_WindowMetrics metrics;
 

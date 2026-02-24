@@ -109,32 +109,35 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
   if (ctx_base->monitor_cache) {
     maru_context_free(ctx_base, ctx_base->monitor_cache);
   }
-  if (ctx_base->window_cache) {
-    maru_context_free(ctx_base, ctx_base->window_cache);
-  }
-
   _maru_event_queue_cleanup(&ctx_base->user_event_queue, ctx_base);
 }
 
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
-  if (ctx_base->window_cache_count >= ctx_base->window_cache_capacity) {
-    uint32_t old_cap = ctx_base->window_cache_capacity;
-    uint32_t new_cap = old_cap ? old_cap * 2 : 4;
-    ctx_base->window_cache = (MARU_Window **)maru_context_realloc(ctx_base, ctx_base->window_cache, old_cap * sizeof(MARU_Window *), new_cap * sizeof(MARU_Window *));
-    ctx_base->window_cache_capacity = new_cap;
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  win_base->ctx_prev = NULL;
+  win_base->ctx_next = ctx_base->window_list_head;
+  if (ctx_base->window_list_head) {
+    ctx_base->window_list_head->ctx_prev = win_base;
   }
-  ctx_base->window_cache[ctx_base->window_cache_count++] = window;
+  ctx_base->window_list_head = win_base;
+  ctx_base->window_count++;
 }
 
 void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
-  for (uint32_t i = 0; i < ctx_base->window_cache_count; i++) {
-    if (ctx_base->window_cache[i] == window) {
-      for (uint32_t j = i; j < ctx_base->window_cache_count - 1; j++) {
-        ctx_base->window_cache[j] = ctx_base->window_cache[j + 1];
-      }
-      ctx_base->window_cache_count--;
-      return;
-    }
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  if (win_base->ctx_prev) {
+    win_base->ctx_prev->ctx_next = win_base->ctx_next;
+  } else if (ctx_base->window_list_head == win_base) {
+    ctx_base->window_list_head = win_base->ctx_next;
+  }
+  if (win_base->ctx_next) {
+    win_base->ctx_next->ctx_prev = win_base->ctx_prev;
+  }
+
+  win_base->ctx_prev = NULL;
+  win_base->ctx_next = NULL;
+  if (ctx_base->window_count > 0) {
+    ctx_base->window_count--;
   }
 }
 

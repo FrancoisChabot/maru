@@ -46,9 +46,8 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.monitor_cache_count = 0;
   ctx->base.monitor_cache_capacity = 0;
 
-  ctx->base.window_cache = NULL;
-  ctx->base.window_cache_count = 0;
-  ctx->base.window_cache_capacity = 0;
+  ctx->base.window_list_head = NULL;
+  ctx->base.window_count = 0;
 
   ctx->base.tuning = create_info->tuning;
 

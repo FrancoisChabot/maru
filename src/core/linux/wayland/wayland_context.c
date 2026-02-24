@@ -30,12 +30,8 @@ const struct xdg_wm_base_listener _maru_xdg_wm_base_listener = {
 };
 
 static void _wl_refresh_locked_window_pointers(MARU_Context_WL *ctx) {
-  for (uint32_t i = 0; i < ctx->base.window_cache_count; i++) {
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
-    if (!window) {
-      continue;
-    }
-
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_WL *window = (MARU_Window_WL *)it;
     if (window->base.pub.cursor_mode == MARU_CURSOR_LOCKED) {
       _maru_wayland_update_cursor_mode(window);
     }
@@ -43,12 +39,8 @@ static void _wl_refresh_locked_window_pointers(MARU_Context_WL *ctx) {
 }
 
 static void _wl_clear_locked_window_pointers(MARU_Context_WL *ctx) {
-  for (uint32_t i = 0; i < ctx->base.window_cache_count; i++) {
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
-    if (!window) {
-      continue;
-    }
-
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_WL *window = (MARU_Window_WL *)it;
     if (window->ext.relative_pointer) {
       maru_zwp_relative_pointer_v1_destroy(ctx, window->ext.relative_pointer);
       window->ext.relative_pointer = NULL;
@@ -88,11 +80,8 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
   }
 
   // Seat capabilities often arrive after windows are created; refresh text-input objects/state.
-  for (uint32_t i = 0; i < ctx->base.window_cache_count; ++i) {
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
-    if (!window) {
-      continue;
-    }
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_WL *window = (MARU_Window_WL *)it;
     _maru_wayland_update_text_input(window);
   }
 }
@@ -480,11 +469,9 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
   _maru_update_context_base(&ctx->base, field_mask, attributes);
 
   if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
-    for (uint32_t i = 0; i < ctx->base.window_cache_count; ++i) {
-      MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
-      if (window) {
-        _maru_wayland_update_idle_inhibitor(window);
-      }
+    for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+      MARU_Window_WL *window = (MARU_Window_WL *)it;
+      _maru_wayland_update_idle_inhibitor(window);
     }
   }
 
@@ -609,8 +596,8 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     }
   }
 
-  for (uint32_t i = 0; i < ctx->base.window_cache_count; ++i) {
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_WL *window = (MARU_Window_WL *)it;
     if (window && window->pending_resized_event && maru_isWindowReady((MARU_Window *)window)) {
       _maru_wayland_dispatch_window_resized(window);
     }
