@@ -26,8 +26,13 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   }
   
   ctx->pub.flags = MARU_CONTEXT_STATE_READY;
+  ctx->attrs_requested = create_info->attributes;
+  ctx->attrs_effective = create_info->attributes;
+  ctx->attrs_dirty_mask = 0;
   ctx->diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->diagnostic_userdata = create_info->attributes.diagnostic_userdata;
+  ctx->event_mask = create_info->attributes.event_mask;
+  ctx->inhibit_idle = create_info->attributes.inhibit_idle;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_X11;
@@ -188,4 +193,3 @@ MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
 }
 #endif
-

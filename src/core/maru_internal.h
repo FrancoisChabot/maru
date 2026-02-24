@@ -56,6 +56,10 @@ typedef struct MARU_Context_Base {
 
   MARU_ContextTuning tuning;
 
+  MARU_ContextAttributes attrs_requested;
+  MARU_ContextAttributes attrs_effective;
+  uint64_t attrs_dirty_mask;
+
   MARU_PumpContext *pump_ctx;
   MARU_EventMask event_mask;
   bool inhibit_idle;
@@ -90,9 +94,14 @@ typedef struct MARU_Window_Base {
   
   MARU_WindowMetrics metrics;
 
+  MARU_WindowAttributes attrs_requested;
+  MARU_WindowAttributes attrs_effective;
+  uint64_t attrs_dirty_mask;
+
   MARU_ButtonState8 keyboard_state[MARU_KEY_COUNT];
   
-  char *title;
+  char *title_storage;
+  char *surrounding_text_storage;
 } MARU_Window_Base;
 
 typedef struct MARU_Cursor_Base {

@@ -87,27 +87,12 @@ typedef struct MARU_Window_WL {
     struct libdecor_configuration *last_configuration;
   } libdecor;
 
-  MARU_Vec2Dip size;
-  MARU_Vec2Dip min_size;
-  MARU_Vec2Dip max_size;
-  MARU_Vec2Dip viewport_size;
-  MARU_RectDip text_input_rect;
-  char *surrounding_text;
-  uint32_t surrounding_cursor_offset;
-  uint32_t surrounding_anchor_offset;
   uint64_t text_input_session_id;
-  MARU_Fraction aspect_ratio;
-  MARU_TextInputType text_input_type;
   MARU_Scalar scale;
   MARU_WaylandDecorationMode decor_mode;
-  MARU_CursorMode cursor_mode;
   MARU_Monitor **monitors;
   uint32_t monitor_count;
   uint32_t monitor_capacity;
-  bool is_maximized;
-  bool is_fullscreen;
-  bool is_resizable;
-  bool is_decorated;
   bool pending_resized_event;
   bool accepts_drop;
   bool primary_selection;

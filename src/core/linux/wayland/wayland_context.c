@@ -279,9 +279,14 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   _maru_init_context_base(&ctx->base);
 
-  ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
-  ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_mask = create_info->attributes.event_mask;
+  ctx->base.attrs_requested = create_info->attributes;
+  ctx->base.attrs_effective = create_info->attributes;
+  ctx->base.attrs_dirty_mask = MARU_CONTEXT_ATTR_ALL;
+  ctx->base.diagnostic_cb = ctx->base.attrs_effective.diagnostic_cb;
+  ctx->base.diagnostic_userdata = ctx->base.attrs_effective.diagnostic_userdata;
+  ctx->base.event_mask = ctx->base.attrs_effective.event_mask;
+  ctx->base.inhibit_idle = ctx->base.attrs_effective.inhibit_idle;
+  ctx->base.tuning.idle_timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
 
   MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_INFO,
                          "Beginning Wayland initialization...");
@@ -374,6 +379,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   }
 
   _maru_wayland_update_idle_notification(ctx);
+  ctx->base.attrs_dirty_mask = 0;
 
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
@@ -563,7 +569,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
           break;
         }
         const bool text_input_active =
-            (window->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
+            (window->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
             (window->ext.text_input != NULL) &&
             (ctx->protocols.opt.zwp_text_input_manager_v3 != NULL) &&
             window->ime_preedit_active;

@@ -35,9 +35,13 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   }
 
   ctx->base.pub.userdata = create_info->userdata;
-  ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
-  ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_mask = create_info->attributes.event_mask;
+  ctx->base.attrs_requested = create_info->attributes;
+  ctx->base.attrs_effective = create_info->attributes;
+  ctx->base.attrs_dirty_mask = 0;
+  ctx->base.diagnostic_cb = ctx->base.attrs_effective.diagnostic_cb;
+  ctx->base.diagnostic_userdata = ctx->base.attrs_effective.diagnostic_userdata;
+  ctx->base.event_mask = ctx->base.attrs_effective.event_mask;
+  ctx->base.inhibit_idle = ctx->base.attrs_effective.inhibit_idle;
 
   ctx->base.metrics.user_events = &ctx->base.user_event_metrics;
   ctx->base.pub.metrics = &ctx->base.metrics;
@@ -50,6 +54,7 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.window_count = 0;
 
   ctx->base.tuning = create_info->tuning;
+  ctx->base.tuning.idle_timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_Windows;

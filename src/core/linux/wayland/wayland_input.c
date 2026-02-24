@@ -495,7 +495,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     MARU_Key maru_key = _linux_scancode_to_maru_key(key);
     MARU_ButtonState maru_state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
     const bool text_input_active =
-        (window->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
+        (window->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
         (window->ext.text_input != NULL) &&
         (ctx->protocols.opt.zwp_text_input_manager_v3 != NULL) &&
         window->ime_preedit_active;

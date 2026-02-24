@@ -27,15 +27,16 @@ static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
   }
 
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-  const bool disabled = (window->viewport_size.x <= (MARU_Scalar)0.0 ||
-                         window->viewport_size.y <= (MARU_Scalar)0.0);
+  const MARU_Vec2Dip viewport_size = window->base.attrs_effective.viewport_size;
+  const bool disabled = (viewport_size.x <= (MARU_Scalar)0.0 ||
+                         viewport_size.y <= (MARU_Scalar)0.0);
   if (disabled) {
     maru_wp_viewport_set_destination(ctx, window->ext.viewport, -1, -1);
     return;
   }
 
-  int32_t dst_w = (int32_t)window->viewport_size.x;
-  int32_t dst_h = (int32_t)window->viewport_size.y;
+  int32_t dst_w = (int32_t)viewport_size.x;
+  int32_t dst_h = (int32_t)viewport_size.y;
   if (dst_w <= 0 || dst_h <= 0) {
     return;
   }
@@ -50,20 +51,21 @@ static uint32_t _maru_wayland_clamp_size(uint32_t value, uint32_t min_value, uin
 
 void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
                                         const MARU_Window_WL *window) {
+  const MARU_WindowAttributes *attrs = &window->base.attrs_effective;
   if (!width || !height || !window) return;
   if (*width == 0 || *height == 0) return;
-  if (window->aspect_ratio.num == 0 || window->aspect_ratio.denom == 0) return;
+  if (attrs->aspect_ratio.num == 0 || attrs->aspect_ratio.denom == 0) return;
 
-  uint32_t min_width = window->min_size.x > 0 ? (uint32_t)window->min_size.x : 0u;
-  uint32_t min_height = window->min_size.y > 0 ? (uint32_t)window->min_size.y : 0u;
-  uint32_t max_width = window->max_size.x > 0 ? (uint32_t)window->max_size.x : UINT32_MAX;
-  uint32_t max_height = window->max_size.y > 0 ? (uint32_t)window->max_size.y : UINT32_MAX;
+  uint32_t min_width = attrs->min_size.x > 0 ? (uint32_t)attrs->min_size.x : 0u;
+  uint32_t min_height = attrs->min_size.y > 0 ? (uint32_t)attrs->min_size.y : 0u;
+  uint32_t max_width = attrs->max_size.x > 0 ? (uint32_t)attrs->max_size.x : UINT32_MAX;
+  uint32_t max_height = attrs->max_size.y > 0 ? (uint32_t)attrs->max_size.y : UINT32_MAX;
 
   if (max_width < min_width) max_width = min_width;
   if (max_height < min_height) max_height = min_height;
 
-  const uint64_t ratio_num = (uint32_t)window->aspect_ratio.num;
-  const uint64_t ratio_den = (uint32_t)window->aspect_ratio.denom;
+  const uint64_t ratio_num = (uint32_t)attrs->aspect_ratio.num;
+  const uint64_t ratio_den = (uint32_t)attrs->aspect_ratio.denom;
 
   for (int pass = 0; pass < 2; ++pass) {
     uint64_t lhs = (uint64_t)(*width) * ratio_den;
@@ -88,17 +90,18 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
   }
 
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-  const MARU_Scalar old_width = window->size.x;
-  const MARU_Scalar old_height = window->size.y;
+  MARU_WindowAttributes *attrs = &window->base.attrs_effective;
+  const MARU_Scalar old_width = attrs->logical_size.x;
+  const MARU_Scalar old_height = attrs->logical_size.y;
   bool size_changed = false;
-  int32_t min_w = (int32_t)window->min_size.x;
-  int32_t min_h = (int32_t)window->min_size.y;
-  int32_t max_w = (int32_t)window->max_size.x;
-  int32_t max_h = (int32_t)window->max_size.y;
+  int32_t min_w = (int32_t)attrs->min_size.x;
+  int32_t min_h = (int32_t)attrs->min_size.y;
+  int32_t max_w = (int32_t)attrs->max_size.x;
+  int32_t max_h = (int32_t)attrs->max_size.y;
 
-  if (!window->is_resizable) {
-    int32_t fixed_w = (int32_t)window->size.x;
-    int32_t fixed_h = (int32_t)window->size.y;
+  if ((window->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) == 0) {
+    int32_t fixed_w = (int32_t)attrs->logical_size.x;
+    int32_t fixed_h = (int32_t)attrs->logical_size.y;
     if (fixed_w > 0 && fixed_h > 0) {
       min_w = fixed_w;
       min_h = fixed_h;
@@ -107,13 +110,14 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
     }
   }
 
-  if (!window->is_maximized && !window->is_fullscreen) {
-    uint32_t constrained_w = (uint32_t)((window->size.x > 0) ? window->size.x : 1);
-    uint32_t constrained_h = (uint32_t)((window->size.y > 0) ? window->size.y : 1);
+  if (((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) == 0) &&
+      ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0)) {
+    uint32_t constrained_w = (uint32_t)((attrs->logical_size.x > 0) ? attrs->logical_size.x : 1);
+    uint32_t constrained_h = (uint32_t)((attrs->logical_size.y > 0) ? attrs->logical_size.y : 1);
     _maru_wayland_enforce_aspect_ratio(&constrained_w, &constrained_h, window);
-    window->size.x = (MARU_Scalar)constrained_w;
-    window->size.y = (MARU_Scalar)constrained_h;
-    size_changed = (window->size.x != old_width || window->size.y != old_height);
+    attrs->logical_size.x = (MARU_Scalar)constrained_w;
+    attrs->logical_size.y = (MARU_Scalar)constrained_h;
+    size_changed = (attrs->logical_size.x != old_width || attrs->logical_size.y != old_height);
   }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
@@ -133,13 +137,14 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
 
   if (window->xdg.surface) {
     maru_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
-                                         (int32_t)window->size.x, (int32_t)window->size.y);
+                                         (int32_t)attrs->logical_size.x, (int32_t)attrs->logical_size.y);
   }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame &&
-      !window->is_maximized && !window->is_fullscreen) {
+      ((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) == 0) &&
+      ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0)) {
     struct libdecor_state *state = maru_libdecor_state_new(
-        ctx, (int)window->size.x, (int)window->size.y);
+        ctx, (int)attrs->logical_size.x, (int)attrs->logical_size.y);
     if (state) {
       maru_libdecor_frame_commit(ctx, window->libdecor.frame, state, window->libdecor.last_configuration);
       maru_libdecor_state_free(ctx, state);
@@ -267,6 +272,7 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
   (void)xdg_toplevel;
   MARU_Window_WL *window = (MARU_Window_WL *)data;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  MARU_WindowAttributes *effective = &window->base.attrs_effective;
 
   bool is_maximized = false;
   bool is_fullscreen = false;
@@ -287,15 +293,15 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
     }
     const MARU_Scalar new_width = (MARU_Scalar)pending_width;
     const MARU_Scalar new_height = (MARU_Scalar)pending_height;
-    if (window->size.x != new_width || window->size.y != new_height) {
-      window->size.x = new_width;
-      window->size.y = new_height;
+    if (effective->logical_size.x != new_width || effective->logical_size.y != new_height) {
+      effective->logical_size.x = new_width;
+      effective->logical_size.y = new_height;
       _maru_wayland_dispatch_window_resized(window);
     }
   }
 
-  if (window->is_maximized != is_maximized) {
-    window->is_maximized = is_maximized;
+  if (effective->maximized != is_maximized) {
+    effective->maximized = is_maximized;
     if (is_maximized) {
       window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
     } else {
@@ -307,7 +313,7 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
     _maru_dispatch_event(&ctx->base, MARU_WINDOW_MAXIMIZED, (MARU_Window *)window, &evt);
   }
 
-  window->is_fullscreen = is_fullscreen;
+  effective->fullscreen = is_fullscreen;
   if (is_fullscreen) {
     window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
   } else {
@@ -438,48 +444,30 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.pub.metrics = &window->base.metrics;
   window->base.pub.keyboard_state = window->base.keyboard_state;
   window->base.pub.keyboard_key_count = MARU_KEY_COUNT;
-  window->base.pub.event_mask = create_info->attributes.event_mask;
-  window->base.pub.cursor_mode = create_info->attributes.cursor_mode;
-  window->base.pub.current_cursor = create_info->attributes.cursor;
-  window->size = create_info->attributes.logical_size;
-  window->min_size = create_info->attributes.min_size;
-  window->max_size = create_info->attributes.max_size;
+  window->base.attrs_requested = create_info->attributes;
+  window->base.attrs_effective = create_info->attributes;
+  window->base.attrs_dirty_mask = MARU_WINDOW_ATTR_ALL;
+  window->base.pub.event_mask = window->base.attrs_effective.event_mask;
+  window->base.pub.cursor_mode = window->base.attrs_effective.cursor_mode;
+  window->base.pub.current_cursor = window->base.attrs_effective.cursor;
   window->scale = (MARU_Scalar)1.0;
-  window->viewport_size = create_info->attributes.viewport_size;
-  window->text_input_rect = create_info->attributes.text_input_rect;
-  window->aspect_ratio = create_info->attributes.aspect_ratio;
-  window->text_input_type = create_info->attributes.text_input_type;
-  window->surrounding_cursor_offset = create_info->attributes.surrounding_cursor_offset;
-  window->surrounding_anchor_offset = create_info->attributes.surrounding_anchor_offset;
-
-  if (create_info->attributes.surrounding_text) {
-      size_t len = strlen(create_info->attributes.surrounding_text);
-      window->surrounding_text = maru_context_alloc(&ctx->base, len + 1);
-      if (window->surrounding_text) {
-          memcpy(window->surrounding_text, create_info->attributes.surrounding_text, len + 1);
-      }
-  }
 
   window->decor_mode = ctx->decor_mode;
-  window->is_maximized = create_info->attributes.maximized;
-  window->is_fullscreen = create_info->attributes.fullscreen;
-  window->is_resizable = create_info->attributes.resizable;
-  window->is_decorated = create_info->decorated;
   window->pending_resized_event = true;
 
-  if (window->is_maximized) {
+  if (window->base.attrs_effective.maximized) {
     window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
   }
-  if (window->is_fullscreen) {
+  if (window->base.attrs_effective.fullscreen) {
     window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
   }
-  if (window->is_resizable) {
+  if (window->base.attrs_effective.resizable) {
     window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
   }
-  if (window->is_decorated) {
+  if (create_info->decorated) {
     window->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
   }
-  if (create_info->attributes.mouse_passthrough) {
+  if (window->base.attrs_effective.mouse_passthrough) {
     window->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
   }
   
@@ -490,10 +478,29 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
 
   if (create_info->attributes.title) {
     size_t len = strlen(create_info->attributes.title);
-    window->base.title = maru_context_alloc(&ctx->base, len + 1);
-    if (window->base.title) {
-      memcpy(window->base.title, create_info->attributes.title, len + 1);
-      window->base.pub.title = window->base.title;
+    window->base.title_storage = maru_context_alloc(&ctx->base, len + 1);
+    if (window->base.title_storage) {
+      memcpy(window->base.title_storage, create_info->attributes.title, len + 1);
+      window->base.attrs_requested.title = window->base.title_storage;
+      window->base.attrs_effective.title = window->base.title_storage;
+      window->base.pub.title = window->base.title_storage;
+    } else {
+      window->base.attrs_requested.title = NULL;
+      window->base.attrs_effective.title = NULL;
+      window->base.pub.title = NULL;
+    }
+  }
+
+  if (create_info->attributes.surrounding_text) {
+    size_t len = strlen(create_info->attributes.surrounding_text);
+    window->base.surrounding_text_storage = maru_context_alloc(&ctx->base, len + 1);
+    if (window->base.surrounding_text_storage) {
+      memcpy(window->base.surrounding_text_storage, create_info->attributes.surrounding_text, len + 1);
+      window->base.attrs_requested.surrounding_text = window->base.surrounding_text_storage;
+      window->base.attrs_effective.surrounding_text = window->base.surrounding_text_storage;
+    } else {
+      window->base.attrs_requested.surrounding_text = NULL;
+      window->base.attrs_effective.surrounding_text = NULL;
     }
   }
 
@@ -540,6 +547,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   _maru_wayland_update_idle_inhibitor(window);
   _maru_wayland_apply_mouse_passthrough(window);
   _maru_wayland_update_text_input(window);
+  window->base.attrs_dirty_mask = 0;
 
   _maru_register_window(&ctx->base, (MARU_Window *)window);
 
@@ -553,7 +561,8 @@ cleanup_surface:
   }
   maru_wl_surface_destroy(ctx, window->wl.surface);
 cleanup_window:
-  if (window->base.title) maru_context_free(&ctx->base, window->base.title);
+  if (window->base.title_storage) maru_context_free(&ctx->base, window->base.title_storage);
+  if (window->base.surrounding_text_storage) maru_context_free(&ctx->base, window->base.surrounding_text_storage);
   maru_context_free(&ctx->base, window);
   return MARU_FAILURE;
 }
@@ -576,11 +585,11 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
                                         &_maru_wayland_text_input_listener, window);
   }
 
-  if (window->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
+  if (window->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
     uint32_t hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_NONE;
     uint32_t purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL;
 
-    switch (window->text_input_type) {
+    switch (window->base.attrs_effective.text_input_type) {
       case MARU_TEXT_INPUT_TYPE_PASSWORD:
         hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_HIDDEN_TEXT |
                ZWP_TEXT_INPUT_V3_CONTENT_HINT_SENSITIVE_DATA;
@@ -599,14 +608,16 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     maru_zwp_text_input_v3_enable(ctx, window->ext.text_input);
     maru_zwp_text_input_v3_set_content_type(ctx, window->ext.text_input, hint, purpose);
     maru_zwp_text_input_v3_set_cursor_rectangle(
-        ctx, window->ext.text_input, (int32_t)window->text_input_rect.origin.x,
-        (int32_t)window->text_input_rect.origin.y, (int32_t)window->text_input_rect.size.x,
-        (int32_t)window->text_input_rect.size.y);
+        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.text_input_rect.origin.x,
+        (int32_t)window->base.attrs_effective.text_input_rect.origin.y,
+        (int32_t)window->base.attrs_effective.text_input_rect.size.x,
+        (int32_t)window->base.attrs_effective.text_input_rect.size.y);
     
-    if (window->surrounding_text) {
+    if (window->base.attrs_effective.surrounding_text) {
         maru_zwp_text_input_v3_set_surrounding_text(ctx, window->ext.text_input, 
-            window->surrounding_text, (int32_t)window->surrounding_cursor_offset, 
-            (int32_t)window->surrounding_anchor_offset);
+            window->base.attrs_effective.surrounding_text,
+            (int32_t)window->base.attrs_effective.surrounding_cursor_offset, 
+            (int32_t)window->base.attrs_effective.surrounding_anchor_offset);
     }
 
     maru_zwp_text_input_v3_commit(ctx, window->ext.text_input);
@@ -620,34 +631,43 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
                                  const MARU_WindowAttributes *attributes) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  MARU_WindowAttributes *requested = &window->base.attrs_requested;
+  MARU_WindowAttributes *effective = &window->base.attrs_effective;
+
+  window->base.attrs_dirty_mask |= field_mask;
 
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
-      if (window->base.title) {
-          maru_context_free(&ctx->base, window->base.title);
-          window->base.title = NULL;
+      if (window->base.title_storage) {
+          maru_context_free(&ctx->base, window->base.title_storage);
+          window->base.title_storage = NULL;
       }
+      requested->title = NULL;
+      effective->title = NULL;
       window->base.pub.title = NULL;
 
       if (attributes->title) {
           size_t len = strlen(attributes->title);
-          window->base.title = maru_context_alloc(&ctx->base, len + 1);
-          if (window->base.title) {
-              memcpy(window->base.title, attributes->title, len + 1);
-              window->base.pub.title = window->base.title;
+          window->base.title_storage = maru_context_alloc(&ctx->base, len + 1);
+          if (window->base.title_storage) {
+              memcpy(window->base.title_storage, attributes->title, len + 1);
+              requested->title = window->base.title_storage;
+              effective->title = window->base.title_storage;
+              window->base.pub.title = window->base.title_storage;
           }
       }
 
       if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
-          _maru_wayland_libdecor_set_title(window, attributes->title ? attributes->title : "");
+          _maru_wayland_libdecor_set_title(window, requested->title ? requested->title : "");
       } else if (window->xdg.toplevel) {
           maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel,
-                                      attributes->title ? attributes->title : "");
+                                      requested->title ? requested->title : "");
       }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
-      window->is_fullscreen = attributes->fullscreen;
-      if (attributes->fullscreen) {
+      requested->fullscreen = attributes->fullscreen;
+      effective->fullscreen = attributes->fullscreen;
+      if (requested->fullscreen) {
           window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
           if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
               maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, NULL);
@@ -665,28 +685,33 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
-      window->size = attributes->logical_size;
+      requested->logical_size = attributes->logical_size;
+      effective->logical_size = attributes->logical_size;
       if (window->xdg.surface) {
           maru_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
-                                               (int32_t)window->size.x, (int32_t)window->size.y);
+                                               (int32_t)effective->logical_size.x, (int32_t)effective->logical_size.y);
       }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
-      window->min_size = attributes->min_size;
+      requested->min_size = attributes->min_size;
+      effective->min_size = attributes->min_size;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
-      window->max_size = attributes->max_size;
+      requested->max_size = attributes->max_size;
+      effective->max_size = attributes->max_size;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
-      window->aspect_ratio = attributes->aspect_ratio;
+      requested->aspect_ratio = attributes->aspect_ratio;
+      effective->aspect_ratio = attributes->aspect_ratio;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
-      window->is_maximized = attributes->maximized;
-      if (attributes->maximized) {
+      requested->maximized = attributes->maximized;
+      effective->maximized = attributes->maximized;
+      if (requested->maximized) {
           window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
           if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
               maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
@@ -704,8 +729,9 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
-      window->is_resizable = attributes->resizable;
-      if (attributes->resizable) {
+      requested->resizable = attributes->resizable;
+      effective->resizable = attributes->resizable;
+      if (requested->resizable) {
           window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
@@ -713,7 +739,9 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
-      if (attributes->mouse_passthrough) {
+      requested->mouse_passthrough = attributes->mouse_passthrough;
+      effective->mouse_passthrough = attributes->mouse_passthrough;
+      if (requested->mouse_passthrough) {
           window->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
@@ -727,10 +755,12 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
-      if ((field_mask & MARU_WINDOW_ATTR_FULLSCREEN) && attributes->fullscreen && window->xdg.toplevel) {
+      requested->monitor = attributes->monitor;
+      effective->monitor = attributes->monitor;
+      if ((field_mask & MARU_WINDOW_ATTR_FULLSCREEN) && requested->fullscreen && window->xdg.toplevel) {
           struct wl_output *output = NULL;
-          if (attributes->monitor && maru_getMonitorContext(attributes->monitor) == window->base.pub.context) {
-              MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)attributes->monitor;
+          if (requested->monitor && maru_getMonitorContext(requested->monitor) == window->base.pub.context) {
+              MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)requested->monitor;
               output = monitor->output;
           }
           maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
@@ -741,30 +771,38 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
-      window->text_input_type = attributes->text_input_type;
+      requested->text_input_type = attributes->text_input_type;
+      effective->text_input_type = attributes->text_input_type;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_RECT) {
-      window->text_input_rect = attributes->text_input_rect;
+      requested->text_input_rect = attributes->text_input_rect;
+      effective->text_input_rect = attributes->text_input_rect;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
-      if (window->surrounding_text) {
-          maru_context_free(&ctx->base, window->surrounding_text);
-          window->surrounding_text = NULL;
+      if (window->base.surrounding_text_storage) {
+          maru_context_free(&ctx->base, window->base.surrounding_text_storage);
+          window->base.surrounding_text_storage = NULL;
       }
+      requested->surrounding_text = NULL;
+      effective->surrounding_text = NULL;
       if (attributes->surrounding_text) {
           size_t len = strlen(attributes->surrounding_text);
-          window->surrounding_text = maru_context_alloc(&ctx->base, len + 1);
-          if (window->surrounding_text) {
-              memcpy(window->surrounding_text, attributes->surrounding_text, len + 1);
+          window->base.surrounding_text_storage = maru_context_alloc(&ctx->base, len + 1);
+          if (window->base.surrounding_text_storage) {
+              memcpy(window->base.surrounding_text_storage, attributes->surrounding_text, len + 1);
+              requested->surrounding_text = window->base.surrounding_text_storage;
+              effective->surrounding_text = window->base.surrounding_text_storage;
           }
       }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET) {
-      window->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
-      window->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
+      requested->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
+      requested->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
+      effective->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
+      effective->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
   }
 
   if (field_mask & (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
@@ -773,9 +811,13 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
+      requested->cursor = attributes->cursor;
+      effective->cursor = attributes->cursor;
       window->base.pub.current_cursor = attributes->cursor;
   }
   if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
+      requested->cursor_mode = attributes->cursor_mode;
+      effective->cursor_mode = attributes->cursor_mode;
       if (window->base.pub.cursor_mode != attributes->cursor_mode) {
           window->base.pub.cursor_mode = attributes->cursor_mode;
           _maru_wayland_update_cursor_mode(window);
@@ -789,11 +831,14 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
-      window->viewport_size = attributes->viewport_size;
+      requested->viewport_size = attributes->viewport_size;
+      effective->viewport_size = attributes->viewport_size;
       _maru_wayland_apply_viewport_size(window);
   }
 
   if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
+      requested->event_mask = attributes->event_mask;
+      effective->event_mask = attributes->event_mask;
       window->base.pub.event_mask = attributes->event_mask;
   }
 
@@ -801,6 +846,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
                     MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE)) {
       _maru_wayland_apply_size_constraints(window);
   }
+
+  window->base.attrs_dirty_mask &= ~field_mask;
 
   return MARU_SUCCESS;
 }
@@ -911,8 +958,8 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
     maru_wl_surface_destroy(ctx, window->wl.surface);
   }
 
-  if (window->base.title) maru_context_free(&ctx->base, window->base.title);
-  if (window->surrounding_text) maru_context_free(&ctx->base, window->surrounding_text);
+  if (window->base.title_storage) maru_context_free(&ctx->base, window->base.title_storage);
+  if (window->base.surrounding_text_storage) maru_context_free(&ctx->base, window->base.surrounding_text_storage);
   maru_context_free(&ctx->base, window);
 
   return MARU_SUCCESS;
@@ -921,10 +968,10 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
   const MARU_Window_WL *window = (const MARU_Window_WL *)window_handle;
   memset(out_geometry, 0, sizeof(MARU_WindowGeometry));
-  out_geometry->logical_size = window->size;
+  out_geometry->logical_size = window->base.attrs_effective.logical_size;
   out_geometry->scale = (window->scale > (MARU_Scalar)0) ? window->scale : (MARU_Scalar)1.0;
-  out_geometry->pixel_size.x = (int32_t)(window->size.x * out_geometry->scale);
-  out_geometry->pixel_size.y = (int32_t)(window->size.y * out_geometry->scale);
+  out_geometry->pixel_size.x = (int32_t)(out_geometry->logical_size.x * out_geometry->scale);
+  out_geometry->pixel_size.y = (int32_t)(out_geometry->logical_size.y * out_geometry->scale);
 }
 
 void *maru_getWindowNativeHandle_WL(MARU_Window *window) {

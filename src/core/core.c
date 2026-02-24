@@ -82,22 +82,36 @@ void _maru_drain_user_events(MARU_Context_Base *ctx_base) {
 
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
                                const MARU_ContextAttributes *attributes) {
+  ctx_base->attrs_dirty_mask |= field_mask;
+
   if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
-    ctx_base->inhibit_idle = attributes->inhibit_idle;
+    ctx_base->attrs_requested.inhibit_idle = attributes->inhibit_idle;
+    ctx_base->attrs_effective.inhibit_idle = attributes->inhibit_idle;
+    ctx_base->inhibit_idle = ctx_base->attrs_effective.inhibit_idle;
   }
 
   if (field_mask & MARU_CONTEXT_ATTR_DIAGNOSTICS) {
-    ctx_base->diagnostic_cb = attributes->diagnostic_cb;
-    ctx_base->diagnostic_userdata = attributes->diagnostic_userdata;
+    ctx_base->attrs_requested.diagnostic_cb = attributes->diagnostic_cb;
+    ctx_base->attrs_requested.diagnostic_userdata = attributes->diagnostic_userdata;
+    ctx_base->attrs_effective.diagnostic_cb = attributes->diagnostic_cb;
+    ctx_base->attrs_effective.diagnostic_userdata = attributes->diagnostic_userdata;
+    ctx_base->diagnostic_cb = ctx_base->attrs_effective.diagnostic_cb;
+    ctx_base->diagnostic_userdata = ctx_base->attrs_effective.diagnostic_userdata;
   }
 
   if (field_mask & MARU_CONTEXT_ATTR_EVENT_MASK) {
-    ctx_base->event_mask = attributes->event_mask;
+    ctx_base->attrs_requested.event_mask = attributes->event_mask;
+    ctx_base->attrs_effective.event_mask = attributes->event_mask;
+    ctx_base->event_mask = ctx_base->attrs_effective.event_mask;
   }
 
   if (field_mask & MARU_CONTEXT_ATTR_IDLE_TIMEOUT) {
-    ctx_base->tuning.idle_timeout_ms = attributes->idle_timeout_ms;
+    ctx_base->attrs_requested.idle_timeout_ms = attributes->idle_timeout_ms;
+    ctx_base->attrs_effective.idle_timeout_ms = attributes->idle_timeout_ms;
+    ctx_base->tuning.idle_timeout_ms = ctx_base->attrs_effective.idle_timeout_ms;
   }
+
+  ctx_base->attrs_dirty_mask &= ~field_mask;
 }
 
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
