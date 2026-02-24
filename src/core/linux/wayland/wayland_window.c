@@ -787,11 +787,39 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   return MARU_SUCCESS;
 
 cleanup_surface:
+  if (window->ext.fractional_scale) {
+    maru_wp_fractional_scale_v1_destroy(ctx, window->ext.fractional_scale);
+    window->ext.fractional_scale = NULL;
+  }
+  if (window->ext.content_type) {
+    maru_wp_content_type_v1_destroy(ctx, window->ext.content_type);
+    window->ext.content_type = NULL;
+  }
+  if (window->wl.frame_callback) {
+    maru_wl_callback_destroy(ctx, window->wl.frame_callback);
+    window->wl.frame_callback = NULL;
+  }
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+    _maru_wayland_destroy_libdecor_frame(window);
+  } else {
+    _maru_wayland_destroy_ssd_decoration(window);
+  }
+  if (window->xdg.toplevel) {
+    maru_xdg_toplevel_destroy(ctx, window->xdg.toplevel);
+    window->xdg.toplevel = NULL;
+  }
+  if (window->xdg.surface) {
+    maru_xdg_surface_destroy(ctx, window->xdg.surface);
+    window->xdg.surface = NULL;
+  }
   if (window->ext.viewport) {
     maru_wp_viewport_destroy(ctx, window->ext.viewport);
     window->ext.viewport = NULL;
   }
-  maru_wl_surface_destroy(ctx, window->wl.surface);
+  if (window->wl.surface) {
+    maru_wl_surface_destroy(ctx, window->wl.surface);
+    window->wl.surface = NULL;
+  }
 cleanup_window:
   if (window->base.mouse_button_states) maru_context_free(&ctx->base, window->base.mouse_button_states);
   if (window->base.mouse_button_channels) maru_context_free(&ctx->base, window->base.mouse_button_channels);
@@ -1085,6 +1113,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           } else {
               window->base.pub.cursor_mode = previous_mode;
               effective->cursor_mode = previous_mode;
+              (void)_maru_wayland_update_cursor_mode(window);
               status = MARU_FAILURE;
           }
       }
@@ -1172,6 +1201,17 @@ bool _maru_wayland_update_cursor_mode(MARU_Window_WL *window) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED, 
                              "Relative pointer protocol missing or no pointer available");
       success = false;
+    }
+  }
+
+  if (!success) {
+    if (window->ext.relative_pointer) {
+      maru_zwp_relative_pointer_v1_destroy(ctx, window->ext.relative_pointer);
+      window->ext.relative_pointer = NULL;
+    }
+    if (window->ext.locked_pointer) {
+      maru_zwp_locked_pointer_v1_destroy(ctx, window->ext.locked_pointer);
+      window->ext.locked_pointer = NULL;
     }
   }
 

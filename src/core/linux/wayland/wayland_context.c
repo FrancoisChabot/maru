@@ -707,6 +707,14 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
     maru_ext_idle_notification_v1_destroy(ctx, ctx->wl.idle_notification);
     ctx->wl.idle_notification = NULL;
   }
+  if (ctx->wl.cursor_surface) {
+    maru_wl_surface_destroy(ctx, ctx->wl.cursor_surface);
+    ctx->wl.cursor_surface = NULL;
+  }
+  if (ctx->wl.cursor_theme) {
+    maru_wl_cursor_theme_destroy(ctx, ctx->wl.cursor_theme);
+    ctx->wl.cursor_theme = NULL;
+  }
 
 #define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)    \
   if (ctx->protocols.iface_name) {                                             \
