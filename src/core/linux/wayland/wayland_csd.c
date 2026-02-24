@@ -84,6 +84,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     _maru_wayland_dispatch_window_resized(window);
   }
 
+  _maru_wayland_update_opaque_region(window);
   maru_wl_surface_commit(ctx, window->wl.surface);
 }
 

@@ -97,6 +97,7 @@ typedef struct MARU_Window_WL {
   bool accepts_drop;
   bool primary_selection;
   bool ime_preedit_active;
+  bool is_transparent;
 } MARU_Window_WL;
 
 typedef struct MARU_Monitor_WL {

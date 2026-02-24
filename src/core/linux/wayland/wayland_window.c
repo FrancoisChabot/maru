@@ -140,6 +140,8 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
                                          (int32_t)attrs->logical_size.x, (int32_t)attrs->logical_size.y);
   }
 
+  _maru_wayland_update_opaque_region(window);
+
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame &&
       ((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) == 0) &&
       ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0)) {
@@ -299,6 +301,8 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       _maru_wayland_dispatch_window_resized(window);
     }
   }
+
+  _maru_wayland_update_opaque_region(window);
 
   if (effective->maximized != is_maximized) {
     effective->maximized = is_maximized;
@@ -468,7 +472,12 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->scale = (MARU_Scalar)1.0;
 
   window->decor_mode = ctx->decor_mode;
+  if (!create_info->decorated &&
+      window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+    window->decor_mode = MARU_WAYLAND_DECORATION_MODE_NONE;
+  }
   window->pending_resized_event = true;
+  window->is_transparent = create_info->transparent;
 
   if (window->base.attrs_effective.maximized) {
     window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;

@@ -7,6 +7,26 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+# Patch ImGui Vulkan helper to allow compositor alpha for Wayland transparency.
+# Upstream defaults to VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, which forces opaque composition.
+set(IMGUI_VULKAN_BACKEND "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp")
+file(READ "${IMGUI_VULKAN_BACKEND}" IMGUI_VULKAN_BACKEND_SRC)
+set(IMGUI_VULKAN_OLD_LINE "        info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;")
+set(IMGUI_VULKAN_NEW_BLOCK
+"        VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        if (cap.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
+            composite_alpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+        else if (cap.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR)
+            composite_alpha = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
+        else if (cap.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+            composite_alpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+        info.compositeAlpha = composite_alpha;")
+string(FIND "${IMGUI_VULKAN_BACKEND_SRC}" "${IMGUI_VULKAN_OLD_LINE}" IMGUI_VULKAN_PATCH_POS)
+if (IMGUI_VULKAN_PATCH_POS GREATER -1)
+    string(REPLACE "${IMGUI_VULKAN_OLD_LINE}" "${IMGUI_VULKAN_NEW_BLOCK}" IMGUI_VULKAN_BACKEND_SRC "${IMGUI_VULKAN_BACKEND_SRC}")
+    file(WRITE "${IMGUI_VULKAN_BACKEND}" "${IMGUI_VULKAN_BACKEND_SRC}")
+endif()
+
 # Create an imgui target since it doesn't provide one
 add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp

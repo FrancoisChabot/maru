@@ -543,7 +543,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 maru_updateWindow(sw.window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
             }
 
-            ImGui::ColorEdit3("Clear Color", (float*)&sw.clear_color);
+            ImGui::ColorEdit4("Clear Color", (float*)&sw.clear_color);
 
             if (ImGui::Button("Request Focus") && sw.window) {
                 maru_requestWindowFocus(sw.window);

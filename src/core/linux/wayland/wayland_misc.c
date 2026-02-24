@@ -23,6 +23,34 @@ static const struct xdg_activation_token_v1_listener _maru_wayland_activation_to
     .done = _maru_wayland_activation_token_done,
 };
 
+void _maru_wayland_update_opaque_region(MARU_Window_WL *window) {
+  if (!window || !window->wl.surface) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  if (window->is_transparent) {
+    maru_wl_surface_set_opaque_region(ctx, window->wl.surface, NULL);
+    return;
+  }
+
+  const int32_t width = (int32_t)window->base.attrs_effective.logical_size.x;
+  const int32_t height = (int32_t)window->base.attrs_effective.logical_size.y;
+  if (width <= 0 || height <= 0) {
+    maru_wl_surface_set_opaque_region(ctx, window->wl.surface, NULL);
+    return;
+  }
+
+  struct wl_region *opaque = maru_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
+  if (!opaque) {
+    return;
+  }
+
+  maru_wl_region_add(ctx, opaque, 0, 0, width, height);
+  maru_wl_surface_set_opaque_region(ctx, window->wl.surface, opaque);
+  maru_wl_region_destroy(ctx, opaque);
+}
+
 void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window) {
   if (!window || !window->wl.surface) {
     return;
