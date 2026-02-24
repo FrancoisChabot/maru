@@ -546,14 +546,33 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   _maru_drain_user_events(&ctx->base);
 
   int display_fd = maru_wl_display_get_fd(ctx, ctx->wl.display);
-  struct pollfd fds[2];
-  const nfds_t nfds = 2;
+  int libdecor_fd = -1;
+  bool have_libdecor_fd =
+      (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) &&
+      (ctx->libdecor_context != NULL);
+  if (have_libdecor_fd) {
+    libdecor_fd = maru_libdecor_get_fd(ctx, ctx->libdecor_context);
+    if (libdecor_fd < 0) {
+      have_libdecor_fd = false;
+    }
+  }
+
+  struct pollfd fds[3];
+  nfds_t nfds = 2;
   fds[0].fd = display_fd;
   fds[0].events = POLLIN;
   fds[0].revents = 0;
   fds[1].fd = ctx->wake_fd;
   fds[1].events = POLLIN;
   fds[1].revents = 0;
+  int libdecor_index = -1;
+  if (have_libdecor_fd) {
+    libdecor_index = (int)nfds;
+    fds[nfds].fd = libdecor_fd;
+    fds[nfds].events = POLLIN;
+    fds[nfds].revents = 0;
+    nfds++;
+  }
 
   while (maru_wl_display_prepare_read(ctx, ctx->wl.display) != 0) {
     if (maru_wl_display_dispatch_pending(ctx, ctx->wl.display) < 0) {
@@ -608,6 +627,24 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
 
     if ((fds[1].revents & POLLIN) != 0) {
       _maru_wayland_drain_wake_fd(ctx);
+    }
+
+    if (libdecor_index >= 0) {
+      const short libdecor_revents = fds[libdecor_index].revents;
+      if ((libdecor_revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+        _maru_wayland_mark_lost(
+            ctx, "libdecor fd reported POLLERR/POLLHUP/POLLNVAL");
+        status = MARU_FAILURE;
+        goto pump_exit;
+      }
+
+      if ((libdecor_revents & POLLIN) != 0) {
+        if (maru_libdecor_dispatch(ctx, ctx->libdecor_context, 0) < 0) {
+          _maru_wayland_mark_lost(ctx, "libdecor_dispatch() failure");
+          status = MARU_FAILURE;
+          goto pump_exit;
+        }
+      }
     }
   } else if (poll_result == 0) {
     maru_wl_display_cancel_read(ctx, ctx->wl.display);

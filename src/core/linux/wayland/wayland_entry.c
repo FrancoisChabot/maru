@@ -94,6 +94,13 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   return maru_destroyCursor_WL(cursor);
 }
 
+MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
+  MARU_API_VALIDATE(resetCursorMetrics, cursor);
+  MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
+  memset(&cur_base->metrics, 0, sizeof(MARU_CursorMetrics));
+  return MARU_SUCCESS;
+}
+
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
   return maru_requestWindowFocus_WL(window);
