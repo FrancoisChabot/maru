@@ -40,6 +40,9 @@ static inline void maru_setWindowMousePassthrough(MARU_Window *window, bool enab
 static inline void maru_setWindowTextInputType(MARU_Window *window, MARU_TextInputType type);
 static inline void maru_setWindowTextInputRect(MARU_Window *window, MARU_RectDip rect);
 static inline void maru_setWindowEventMask(MARU_Window *window, MARU_EventMask mask);
+static inline void maru_setWindowVisible(MARU_Window *window, bool visible);
+static inline void maru_setWindowMinimized(MARU_Window *window, bool minimized);
+static inline void maru_setWindowIcon(MARU_Window *window, MARU_Image *icon);
 
 static inline const MARU_UserEventMetrics *maru_getContextEventMetrics(const MARU_Context *context);
 

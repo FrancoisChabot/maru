@@ -15,6 +15,7 @@ const MARU_Backend maru_backend_Windows = {
   .getWindowGeometry = maru_getWindowGeometry_Windows,
   .updateWindow = maru_updateWindow_Windows,
   .requestWindowFocus = maru_requestWindowFocus_Windows,
+  .requestWindowAttention = maru_requestWindowAttention_Windows,
   .createCursor = maru_createCursor_Windows,
   .destroyCursor = maru_destroyCursor_Windows,
   .createImage = maru_createImage_Windows,
@@ -76,6 +77,11 @@ MARU_API void maru_getWindowGeometry(MARU_Window *window,
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
   return maru_requestWindowFocus_Windows(window);
+}
+
+MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowAttention, window);
+  return maru_requestWindowAttention_Windows(window);
 }
 
 MARU_API MARU_Status maru_createCursor(MARU_Context *context,

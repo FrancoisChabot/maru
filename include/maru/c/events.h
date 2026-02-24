@@ -57,10 +57,8 @@ static const MARU_EventMask MARU_MONITOR_CONNECTION_CHANGED = ((MARU_EventMask)1
 static const MARU_EventMask MARU_MONITOR_MODE_CHANGED = ((MARU_EventMask)1 << 9);
 /** @brief Event fired when the window should render its next frame. */
 static const MARU_EventMask MARU_WINDOW_FRAME = ((MARU_EventMask)1 << 10);
-/** @brief Event fired when a window gains or loses focus. */
-static const MARU_EventMask MARU_FOCUS_CHANGED = ((MARU_EventMask)1 << 12);
-/** @brief Event fired when a window is maximized or restored. */
-static const MARU_EventMask MARU_WINDOW_MAXIMIZED = ((MARU_EventMask)1 << 13);
+/** @brief Event fired when a window presentation state changes. */
+static const MARU_EventMask MARU_WINDOW_PRESENTATION_STATE_CHANGED = ((MARU_EventMask)1 << 12);
 
 /** @brief Event fired when an IME composition session starts. */
 static const MARU_EventMask MARU_TEXT_EDIT_START = ((MARU_EventMask)1 << 19);
@@ -115,10 +113,24 @@ typedef struct MARU_WindowResizedEvent {
   MARU_WindowGeometry geometry;
 } MARU_WindowResizedEvent;
 
-/** @brief Payload for MARU_WINDOW_MAXIMIZED. */
-typedef struct MARU_WindowMaximizationEvent {
+/** @brief Bitmask describing which presentation fields changed. */
+typedef enum MARU_WindowPresentationChangedBits {
+  MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE = 1u << 0,
+  MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED = 1u << 1,
+  MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED = 1u << 2,
+  MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED = 1u << 3,
+  MARU_WINDOW_PRESENTATION_CHANGED_ICON = 1u << 4,
+} MARU_WindowPresentationChangedBits;
+
+/** @brief Payload for MARU_WINDOW_PRESENTATION_STATE_CHANGED. */
+typedef struct MARU_WindowPresentationStateEvent {
+  uint32_t changed_fields;
+  bool visible;
+  bool minimized;
   bool maximized;
-} MARU_WindowMaximizationEvent;
+  bool focused;
+  bool icon_effective;
+} MARU_WindowPresentationStateEvent;
 
 /** @brief Payload for MARU_KEY_STATE_CHANGED. */
 // N.B. This represents raw keyboard data.
@@ -171,11 +183,6 @@ typedef struct MARU_MonitorModeEvent {
   MARU_Monitor *monitor;
 } MARU_MonitorModeEvent;
 
-/** @brief Payload for MARU_FOCUS_CHANGED. */
-typedef struct MARU_FocusEvent {
-  bool focused;
-} MARU_FocusEvent;
-
 /** @brief UTF-8 byte range. */
 typedef struct MARU_TextRangeUtf8 {
   uint32_t start_byte;
@@ -225,7 +232,7 @@ typedef struct MARU_Event {
     MARU_WindowReadyEvent window_ready;
     MARU_WindowCloseEvent close_requested;
     MARU_WindowResizedEvent resized;
-    MARU_WindowMaximizationEvent maximized;
+    MARU_WindowPresentationStateEvent presentation;
     MARU_KeyboardEvent key;
     MARU_MouseMotionEvent mouse_motion;
     MARU_MouseButtonEvent mouse_button;
@@ -234,7 +241,6 @@ typedef struct MARU_Event {
     MARU_MonitorConnectionEvent monitor_connection;
     MARU_MonitorModeEvent monitor_mode;
     MARU_WindowFrameEvent frame;
-    MARU_FocusEvent focus;
     MARU_TextEditStartEvent text_edit_start;
     MARU_TextEditUpdateEvent text_edit_update;
     MARU_TextEditCommitEvent text_edit_commit;

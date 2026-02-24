@@ -51,6 +51,8 @@ typedef struct MARU_Window_Windows {
   MARU_Vec2Dip min_size;
   MARU_Vec2Dip max_size;
   MARU_Fraction aspect_ratio;
+  HICON icon_small;
+  HICON icon_big;
 } MARU_Window_Windows;
 
 MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info,
@@ -68,6 +70,7 @@ MARU_Status maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_Wind
 MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes);
 MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window);
+MARU_Status maru_requestWindowAttention_Windows(MARU_Window *window);
 MARU_Status maru_createCursor_Windows(MARU_Context *context,
                                        const MARU_CursorCreateInfo *create_info,
                                        MARU_Cursor **out_cursor);

@@ -308,6 +308,15 @@ MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
   return MARU_FAILURE;
 }
 
+MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowAttention, window);
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  if (win_base->backend->requestWindowAttention) {
+    return win_base->backend->requestWindowAttention(window);
+  }
+  return MARU_FAILURE;
+}
+
 MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
   MARU_API_VALIDATE(getMonitors, context, out_count);
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;

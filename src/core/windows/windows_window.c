@@ -131,6 +131,95 @@ static MARU_ModifierFlags _maru_win32_get_modifiers(void) {
   return mods;
 }
 
+static void _maru_windows_dispatch_presentation_state(MARU_Window_Windows *window,
+                                                      uint32_t changed_fields,
+                                                      bool icon_effective) {
+  MARU_Context_Base *ctx = window->base.ctx_base;
+  const uint64_t flags = window->base.pub.flags;
+  MARU_Event evt = {0};
+  evt.presentation.changed_fields = changed_fields;
+  evt.presentation.visible = (flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+  evt.presentation.minimized = (flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+  evt.presentation.maximized = (flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+  evt.presentation.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+  evt.presentation.icon_effective = icon_effective;
+
+  _maru_dispatch_event(ctx, MARU_WINDOW_PRESENTATION_STATE_CHANGED,
+                       (MARU_Window *)window, &evt);
+}
+
+static HICON _maru_windows_create_icon_from_image(const MARU_Image *image,
+                                                  int target_size) {
+  if (!image || target_size <= 0) {
+    return NULL;
+  }
+
+  const MARU_Image_Base *img = (const MARU_Image_Base *)image;
+  if (!img->pixels || img->width == 0 || img->height == 0) {
+    return NULL;
+  }
+
+  BITMAPV5HEADER bi = {0};
+  bi.bV5Size = sizeof(bi);
+  bi.bV5Width = target_size;
+  bi.bV5Height = -target_size; // top-down
+  bi.bV5Planes = 1;
+  bi.bV5BitCount = 32;
+  bi.bV5Compression = BI_BITFIELDS;
+  bi.bV5RedMask = 0x00FF0000;
+  bi.bV5GreenMask = 0x0000FF00;
+  bi.bV5BlueMask = 0x000000FF;
+  bi.bV5AlphaMask = 0xFF000000;
+
+  void *dib_bits = NULL;
+  HDC screen_dc = GetDC(NULL);
+  HBITMAP color_bmp = CreateDIBSection(screen_dc, (BITMAPINFO *)&bi, DIB_RGB_COLORS,
+                                       &dib_bits, NULL, 0);
+  ReleaseDC(NULL, screen_dc);
+  if (!color_bmp || !dib_bits) {
+    if (color_bmp) {
+      DeleteObject(color_bmp);
+    }
+    return NULL;
+  }
+
+  uint32_t *dst = (uint32_t *)dib_bits;
+  const uint8_t *src_pixels = (const uint8_t *)img->pixels;
+  const uint32_t src_w = img->width;
+  const uint32_t src_h = img->height;
+  const uint32_t src_stride = img->stride_bytes;
+
+  for (int y = 0; y < target_size; ++y) {
+    const uint32_t sy = (uint32_t)(((uint64_t)y * src_h) / (uint32_t)target_size);
+    for (int x = 0; x < target_size; ++x) {
+      const uint32_t sx = (uint32_t)(((uint64_t)x * src_w) / (uint32_t)target_size);
+      const uint8_t *p = src_pixels + (size_t)sy * src_stride + (size_t)sx * 4;
+      const uint32_t r = p[0];
+      const uint32_t g = p[1];
+      const uint32_t b = p[2];
+      const uint32_t a = p[3];
+      dst[y * target_size + x] = (a << 24) | (r << 16) | (g << 8) | b;
+    }
+  }
+
+  HBITMAP mask_bmp = CreateBitmap(target_size, target_size, 1, 1, NULL);
+  if (!mask_bmp) {
+    DeleteObject(color_bmp);
+    return NULL;
+  }
+
+  ICONINFO ii = {0};
+  ii.fIcon = TRUE;
+  ii.hbmMask = mask_bmp;
+  ii.hbmColor = color_bmp;
+  HICON icon = CreateIconIndirect(&ii);
+
+  DeleteObject(mask_bmp);
+  DeleteObject(color_bmp);
+
+  return icon;
+}
+
 static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
   MARU_Window_Windows *window = (MARU_Window_Windows *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 
@@ -150,10 +239,37 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
       window->size.x = (MARU_Scalar)width;
       window->size.y = (MARU_Scalar)height;
 
+      uint32_t changed_fields = 0;
+      const bool was_maximized = (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+      const bool was_minimized = (window->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+      const bool was_visible = (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+
       if (wparam == SIZE_MAXIMIZED) {
         window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+        window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      } else if (wparam == SIZE_MINIMIZED) {
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+        window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
       } else if (wparam == SIZE_RESTORED) {
-        window->base.pub.flags &= ~MARU_WINDOW_STATE_MAXIMIZED;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+        window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      }
+
+      const bool is_maximized = (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+      const bool is_minimized = (window->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+      const bool is_visible = (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+
+      if (was_maximized != is_maximized) {
+        changed_fields |= MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED;
+      }
+      if (was_minimized != is_minimized) {
+        changed_fields |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+      }
+      if (was_visible != is_visible) {
+        changed_fields |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
       }
 
       MARU_Event evt = {
@@ -166,11 +282,23 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
       };
       _maru_dispatch_event(ctx, MARU_WINDOW_RESIZED, (MARU_Window *)window, &evt);
 
-      if (wparam == SIZE_MAXIMIZED || wparam == SIZE_RESTORED) {
-        MARU_Event max_evt = {
-          .maximized = { .maximized = (wparam == SIZE_MAXIMIZED) }
-        };
-        _maru_dispatch_event(ctx, MARU_WINDOW_MAXIMIZED, (MARU_Window *)window, &max_evt);
+      if (changed_fields != 0) {
+        _maru_windows_dispatch_presentation_state(window, changed_fields, true);
+      }
+      return 0;
+    }
+
+    case WM_SHOWWINDOW: {
+      const bool was_visible = (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+      const bool is_visible = (wparam != 0);
+      if (is_visible) {
+        window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      } else {
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+      }
+      if (was_visible != is_visible) {
+        _maru_windows_dispatch_presentation_state(
+            window, MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE, true);
       }
       return 0;
     }
@@ -263,19 +391,15 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
 
     case WM_SETFOCUS: {
       window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
-      MARU_Event evt = {
-        .focus = { .focused = true }
-      };
-      _maru_dispatch_event(ctx, MARU_FOCUS_CHANGED, (MARU_Window *)window, &evt);
+      _maru_windows_dispatch_presentation_state(
+          window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED, true);
       return 0;
     }
 
     case WM_KILLFOCUS: {
       window->base.pub.flags &= ~MARU_WINDOW_STATE_FOCUSED;
-      MARU_Event evt = {
-        .focus = { .focused = false }
-      };
-      _maru_dispatch_event(ctx, MARU_FOCUS_CHANGED, (MARU_Window *)window, &evt);
+      _maru_windows_dispatch_presentation_state(
+          window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED, true);
       return 0;
     }
 
@@ -473,9 +597,27 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
 
   ShowWindow(window->hwnd, SW_SHOW);
   UpdateWindow(window->hwnd);
+  window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
 
   if (create_info->attributes.mouse_passthrough) {
     SetLayeredWindowAttributes(window->hwnd, 0, 255, LWA_ALPHA);
+  }
+
+  uint64_t init_mask = 0;
+  if (create_info->attributes.maximized) {
+    init_mask |= MARU_WINDOW_ATTR_MAXIMIZED;
+  }
+  if (!create_info->attributes.visible) {
+    init_mask |= MARU_WINDOW_ATTR_VISIBLE;
+  }
+  if (create_info->attributes.minimized) {
+    init_mask |= MARU_WINDOW_ATTR_MINIMIZED;
+  }
+  if (create_info->attributes.icon) {
+    init_mask |= MARU_WINDOW_ATTR_ICON;
+  }
+  if (init_mask != 0) {
+    maru_updateWindow_Windows((MARU_Window *)window, init_mask, &create_info->attributes);
   }
 
   window->base.pub.flags |= MARU_WINDOW_STATE_READY;
@@ -496,6 +638,13 @@ MARU_Status maru_destroyWindow_Windows(MARU_Window *window_handle) {
 
   if (window->hdc) {
     ReleaseDC(window->hwnd, window->hdc);
+  }
+
+  if (window->icon_small) {
+    DestroyIcon(window->icon_small);
+  }
+  if (window->icon_big) {
+    DestroyIcon(window->icon_big);
   }
 
   if (window->hwnd) {
@@ -608,6 +757,67 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field
     ShowWindow(window->hwnd, attributes->maximized ? SW_MAXIMIZE : SW_RESTORE);
   }
 
+  if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
+    ShowWindow(window->hwnd, attributes->visible ? SW_SHOW : SW_HIDE);
+    if (attributes->visible) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+    } else {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MINIMIZED) {
+    ShowWindow(window->hwnd, attributes->minimized ? SW_MINIMIZE : SW_RESTORE);
+    if (attributes->minimized) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+    } else {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_ICON) {
+    HICON new_small = NULL;
+    HICON new_big = NULL;
+    bool icon_effective = false;
+    const bool clear_icon = (attributes->icon == NULL);
+
+    if (!clear_icon) {
+      new_small = _maru_windows_create_icon_from_image(attributes->icon, 16);
+      new_big = _maru_windows_create_icon_from_image(attributes->icon, 32);
+      icon_effective = (new_small != NULL) || (new_big != NULL);
+    } else {
+      icon_effective = true;
+    }
+
+    if (clear_icon || icon_effective) {
+      HICON prev_small =
+          (HICON)SendMessageA(window->hwnd, WM_SETICON, ICON_SMALL, (LPARAM)new_small);
+      HICON prev_big =
+          (HICON)SendMessageA(window->hwnd, WM_SETICON, ICON_BIG, (LPARAM)new_big);
+
+      if (window->icon_small) {
+        DestroyIcon(window->icon_small);
+      }
+      if (window->icon_big) {
+        DestroyIcon(window->icon_big);
+      }
+      if (prev_small && prev_small != window->icon_small && prev_small != new_small) {
+        DestroyIcon(prev_small);
+      }
+      if (prev_big && prev_big != window->icon_big && prev_big != new_big) {
+        DestroyIcon(prev_big);
+      }
+
+      window->icon_small = new_small;
+      window->icon_big = new_big;
+    }
+    _maru_windows_dispatch_presentation_state(
+        window, MARU_WINDOW_PRESENTATION_CHANGED_ICON, icon_effective);
+  }
+
   if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
     window->min_size = attributes->min_size;
     SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -673,6 +883,17 @@ MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window_handle) {
   SetForegroundWindow(window->hwnd);
   SetFocus(window->hwnd);
   return MARU_SUCCESS;
+}
+
+MARU_Status maru_requestWindowAttention_Windows(MARU_Window *window_handle) {
+  MARU_Window_Windows *window = (MARU_Window_Windows *)window_handle;
+  FLASHWINFO flash = {0};
+  flash.cbSize = sizeof(flash);
+  flash.hwnd = window->hwnd;
+  flash.dwFlags = FLASHW_TRAY;
+  flash.uCount = 3;
+  flash.dwTimeout = 0;
+  return FlashWindowEx(&flash) ? MARU_SUCCESS : MARU_FAILURE;
 }
 
 void *_maru_getWindowNativeHandle_Windows(MARU_Window *window) {

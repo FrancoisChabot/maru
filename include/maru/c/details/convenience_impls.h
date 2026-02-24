@@ -106,6 +106,24 @@ static inline void maru_setWindowEventMask(MARU_Window *window, MARU_EventMask m
   maru_updateWindow(window, MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
 }
 
+static inline void maru_setWindowVisible(MARU_Window *window, bool visible) {
+  MARU_WindowAttributes attrs;
+  attrs.visible = visible;
+  maru_updateWindow(window, MARU_WINDOW_ATTR_VISIBLE, &attrs);
+}
+
+static inline void maru_setWindowMinimized(MARU_Window *window, bool minimized) {
+  MARU_WindowAttributes attrs;
+  attrs.minimized = minimized;
+  maru_updateWindow(window, MARU_WINDOW_ATTR_MINIMIZED, &attrs);
+}
+
+static inline void maru_setWindowIcon(MARU_Window *window, MARU_Image *icon) {
+  MARU_WindowAttributes attrs;
+  attrs.icon = icon;
+  maru_updateWindow(window, MARU_WINDOW_ATTR_ICON, &attrs);
+}
+
 static inline const MARU_UserEventMetrics *maru_getContextEventMetrics(const MARU_Context *context) {
   const MARU_ContextMetrics *metrics = maru_getContextMetrics(context);
   return metrics ? metrics->user_events : NULL;

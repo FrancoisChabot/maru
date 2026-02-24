@@ -24,6 +24,7 @@ const MARU_Backend maru_backend_WL = {
   .updateWindow = maru_updateWindow_WL,
   .requestWindowFocus = maru_requestWindowFocus_WL,
   .requestWindowFrame = maru_requestWindowFrame_WL,
+  .requestWindowAttention = maru_requestWindowAttention_WL,
   .createCursor = maru_createCursor_WL,
   .destroyCursor = maru_destroyCursor_WL,
   .createImage = maru_createImage_WL,
@@ -125,6 +126,11 @@ MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
 MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFrame, window);
   return maru_requestWindowFrame_WL(window);
+}
+
+MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowAttention, window);
+  return maru_requestWindowAttention_WL(window);
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {

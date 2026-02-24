@@ -78,12 +78,11 @@ static void renderWindowEventMaskControls(const char* id_label, MARU_Window* tar
         event_checkbox("MONITOR_CONNECTION_CHANGED", MARU_MONITOR_CONNECTION_CHANGED);
         event_checkbox("MONITOR_MODE_CHANGED", MARU_MONITOR_MODE_CHANGED);
         event_checkbox("WINDOW_FRAME", MARU_WINDOW_FRAME);
+        event_checkbox("WINDOW_PRESENTATION_STATE_CHANGED", MARU_WINDOW_PRESENTATION_STATE_CHANGED);
         event_checkbox("TEXT_EDIT_START", MARU_TEXT_EDIT_START);
         event_checkbox("TEXT_EDIT_UPDATE", MARU_TEXT_EDIT_UPDATE);
         event_checkbox("TEXT_EDIT_COMMIT", MARU_TEXT_EDIT_COMMIT);
         event_checkbox("TEXT_EDIT_END", MARU_TEXT_EDIT_END);
-        event_checkbox("FOCUS_CHANGED", MARU_FOCUS_CHANGED);
-        event_checkbox("WINDOW_MAXIMIZED", MARU_WINDOW_MAXIMIZED);
     }
     ImGui::PopID();
 }

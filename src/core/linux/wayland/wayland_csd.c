@@ -78,10 +78,8 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
     }
-
-    MARU_Event evt = {0};
-    evt.maximized.maximized = is_maximized;
-    _maru_dispatch_event(&ctx->base, MARU_WINDOW_MAXIMIZED, (MARU_Window *)window, &evt);
+    _maru_wayland_dispatch_presentation_state(
+        window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED, true);
   }
 
   effective->fullscreen = is_fullscreen;
@@ -186,6 +184,13 @@ bool _maru_wayland_create_libdecor_frame(MARU_Window_WL *window,
 
   if (attrs->maximized) {
     maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
+  }
+  if (attrs->minimized || !attrs->visible) {
+    struct xdg_toplevel *toplevel =
+        maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
+    if (toplevel) {
+      maru_xdg_toplevel_set_minimized(ctx, toplevel);
+    }
   }
 
   maru_libdecor_frame_map(ctx, window->libdecor.frame);

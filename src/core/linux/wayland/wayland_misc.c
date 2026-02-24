@@ -6,6 +6,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t changed_fields,
+                                               bool icon_effective) {
+  if (!window || changed_fields == 0u) {
+    return;
+  }
+
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  const uint64_t flags = window->base.pub.flags;
+
+  MARU_Event evt = {0};
+  evt.presentation.changed_fields = changed_fields;
+  evt.presentation.visible = (flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+  evt.presentation.minimized = (flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+  evt.presentation.maximized = (flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+  evt.presentation.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+  evt.presentation.icon_effective = icon_effective;
+  _maru_dispatch_event(&ctx->base, MARU_WINDOW_PRESENTATION_STATE_CHANGED,
+                       (MARU_Window *)window, &evt);
+}
+
 void _maru_wayland_cancel_activation(MARU_Context_WL *ctx) {
   if (!ctx) {
     return;
@@ -200,4 +220,12 @@ MARU_Status maru_requestWindowFrame_WL(MARU_Window *window_handle) {
 
   _maru_wayland_request_frame(window);
   return MARU_SUCCESS;
+}
+
+MARU_Status maru_requestWindowAttention_WL(MARU_Window *window_handle) {
+  MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
+  if (!window) {
+    return MARU_FAILURE;
+  }
+  return maru_requestWindowFocus_WL(window_handle);
 }

@@ -23,6 +23,7 @@ typedef struct MARU_Backend {
   __typeof__(maru_updateWindow) *updateWindow;
   __typeof__(maru_requestWindowFocus) *requestWindowFocus;
   __typeof__(maru_requestWindowFrame) *requestWindowFrame;
+  __typeof__(maru_requestWindowAttention) *requestWindowAttention;
 
   __typeof__(maru_createCursor) *createCursor;
   __typeof__(maru_destroyCursor) *destroyCursor;

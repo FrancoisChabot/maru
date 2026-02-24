@@ -346,6 +346,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window, uint64_t field_mask,
 MARU_Status maru_destroyWindow_WL(MARU_Window *window);
 MARU_Status maru_requestWindowFocus_WL(MARU_Window *window);
 MARU_Status maru_requestWindowFrame_WL(MARU_Window *window);
+MARU_Status maru_requestWindowAttention_WL(MARU_Window *window);
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 
 MARU_Monitor *const *maru_getMonitors_WL(MARU_Context *context, uint32_t *out_count);
@@ -377,6 +378,8 @@ void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial);
 bool _maru_wayland_update_cursor_mode(MARU_Window_WL *window);
 void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window);
+void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t changed_fields,
+                                               bool icon_effective);
 void _maru_wayland_update_text_input(MARU_Window_WL *window);
 void _maru_wayland_clear_text_input_pending(MARU_Window_WL *window);
 void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,

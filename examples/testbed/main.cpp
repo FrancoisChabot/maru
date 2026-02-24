@@ -5,6 +5,7 @@
 #include "imgui_impl_maru.h"
 #include "imgui_impl_vulkan.h"
 #include <chrono>
+#include <vector>
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 
@@ -51,6 +52,35 @@ static bool                     g_KeepRunning = true;
 static bool                     g_WindowReady = false;
 static MARU_Window*             g_PrimaryWindow = nullptr;
 static App*                     g_App = nullptr;
+
+static std::vector<uint32_t> create_testbed_icon_pixels(uint32_t size)
+{
+    std::vector<uint32_t> pixels(size * size);
+    const int center = (int)size / 2;
+    const int radius = (int)size / 2 - 2;
+    const int radius2 = radius * radius;
+
+    for (uint32_t y = 0; y < size; ++y) {
+        for (uint32_t x = 0; x < size; ++x) {
+            const int dx = (int)x - center;
+            const int dy = (int)y - center;
+            const bool in_circle = (dx * dx + dy * dy) <= radius2;
+
+            const bool stripe = ((x + y) % 8) < 4;
+            const uint8_t r = in_circle ? (stripe ? 0x20 : 0x35) : 0x10;
+            const uint8_t g = in_circle ? (stripe ? 0xB8 : 0x95) : 0x10;
+            const uint8_t b = in_circle ? (stripe ? 0xF2 : 0xD8) : 0x10;
+            const uint8_t a = in_circle ? 0xFF : 0x00;
+
+            pixels[y * size + x] = ((uint32_t)a << 24) |
+                                   ((uint32_t)b << 16) |
+                                   ((uint32_t)g << 8) |
+                                   (uint32_t)r;
+        }
+    }
+
+    return pixels;
+}
 
 static uint64_t now_ms()
 {
@@ -382,14 +412,32 @@ int main(int, char**)
         extensions.push_back(maru_extensions[i]);
     SetupVulkan(extensions);
 
+    MARU_Image *window_icon = NULL;
+    const uint32_t icon_size = 64;
+    const std::vector<uint32_t> icon_pixels = create_testbed_icon_pixels(icon_size);
+    MARU_ImageCreateInfo icon_info = {};
+    icon_info.size.x = (int32_t)icon_size;
+    icon_info.size.y = (int32_t)icon_size;
+    icon_info.pixels = icon_pixels.data();
+    icon_info.stride_bytes = icon_size * 4u;
+    if (maru_createImage(context, &icon_info, &window_icon) != MARU_SUCCESS) {
+        fprintf(stderr, "Warning: failed to create testbed window icon.\n");
+        window_icon = NULL;
+    }
+
     MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
     window_info.attributes.title = "MARU Testbed";
     window_info.attributes.logical_size.x = 1280;
     window_info.attributes.logical_size.y = 800;
+    window_info.app_id = "org.birdsafe.maru.testbed";
+    window_info.attributes.icon = window_icon;
 
     MARU_Window *window = NULL;
     if (maru_createWindow(context, &window_info, &window) != MARU_SUCCESS) {
         fprintf(stderr, "Failed to create window.\n");
+        if (window_icon) {
+            maru_destroyImage(window_icon);
+        }
         CleanupVulkan();
         maru_destroyContext(context);
         return 1;
@@ -400,6 +448,9 @@ int main(int, char**)
     if (maru_vulkan_createVkSurface(window, g_Instance, &surface) != MARU_SUCCESS) {
         fprintf(stderr, "Failed to create Vulkan surface.\n");
         maru_destroyWindow(window);
+        if (window_icon) {
+            maru_destroyImage(window_icon);
+        }
         CleanupVulkan();
         maru_destroyContext(context);
         return 1;
@@ -500,6 +551,9 @@ int main(int, char**)
 
     maru_destroyWindow(window);
     g_PrimaryWindow = nullptr;
+    if (window_icon) {
+        maru_destroyImage(window_icon);
+    }
     maru_destroyContext(context);
 
     return 0;

@@ -80,6 +80,11 @@ MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
   return MARU_SUCCESS;
 }
 
+MARU_Status maru_requestWindowAttention_X11(MARU_Window *window) {
+  (void)window;
+  return MARU_FAILURE;
+}
+
 #ifdef MARU_INDIRECT_BACKEND
 static MARU_Status maru_createImage_X11(MARU_Context *context,
                                         const MARU_ImageCreateInfo *create_info,
@@ -103,6 +108,7 @@ const MARU_Backend maru_backend_X11 = {
   .getWindowGeometry = NULL,
   .updateWindow = NULL,
   .requestWindowFocus = NULL,
+  .requestWindowAttention = maru_requestWindowAttention_X11,
   .createCursor = NULL,
   .destroyCursor = NULL,
   .createImage = maru_createImage_X11,
@@ -192,6 +198,11 @@ MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
   return MARU_SUCCESS;
+}
+
+MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowAttention, window);
+  return maru_requestWindowAttention_X11(window);
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {

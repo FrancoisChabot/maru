@@ -738,9 +738,8 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
             }
         }
         
-        MARU_Event evt = {0};
-        evt.focus.focused = true;
-        _maru_dispatch_event(&ctx->base, MARU_FOCUS_CHANGED, (MARU_Window *)window, &evt);
+        _maru_wayland_dispatch_presentation_state(
+            window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED, true);
     }
 }
 
@@ -755,9 +754,8 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
         // Clear keyboard state on focus loss
         memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
 
-        MARU_Event evt = {0};
-        evt.focus.focused = false;
-        _maru_dispatch_event(&ctx->base, MARU_FOCUS_CHANGED, ctx->linux_common.xkb.focused_window, &evt);
+        _maru_wayland_dispatch_presentation_state(
+            window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED, true);
         ctx->linux_common.xkb.focused_window = NULL;
     }
 

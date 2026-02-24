@@ -35,6 +35,8 @@ typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 /** @brief Opaque handle representing a hardware-accelerated cursor. */
 typedef struct MARU_Cursor MARU_Cursor;
+/** @brief Opaque handle representing an immutable image. */
+typedef struct MARU_Image MARU_Image;
 /** @brief Persistent handle representing a physical monitor. */
 typedef struct MARU_Monitor MARU_Monitor;
 
@@ -48,6 +50,8 @@ typedef enum MARU_WindowStateFlagBits {
   MARU_WINDOW_STATE_MOUSE_PASSTHROUGH = 1ULL << 5,
   MARU_WINDOW_STATE_RESIZABLE = 1ULL << 6,
   MARU_WINDOW_STATE_DECORATED = 1ULL << 7,
+  MARU_WINDOW_STATE_VISIBLE = 1ULL << 8,
+  MARU_WINDOW_STATE_MINIMIZED = 1ULL << 9,
 } MARU_WindowStateFlagBits;
 
 /** @brief Cursor visibility and constraint modes. */
@@ -94,6 +98,10 @@ static inline bool maru_isWindowFullscreen(const MARU_Window *window);
 
 /** @brief Checks if the window currently has mouse passthrough enabled. */
 static inline bool maru_isWindowMousePassthrough(const MARU_Window *window);
+/** @brief Checks if the window is currently visible. */
+static inline bool maru_isWindowVisible(const MARU_Window *window);
+/** @brief Checks if the window is currently minimized. */
+static inline bool maru_isWindowMinimized(const MARU_Window *window);
 
 /** @brief Retrieves the current event mask for a window. */
 static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window);
@@ -140,6 +148,9 @@ typedef enum MARU_WindowAttributesField {
   MARU_WINDOW_ATTR_VIEWPORT_SIZE = 1ULL << 18,
   MARU_WINDOW_ATTR_SURROUNDING_TEXT = 1ULL << 19,
   MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET = 1ULL << 20,
+  MARU_WINDOW_ATTR_VISIBLE = 1ULL << 21,
+  MARU_WINDOW_ATTR_MINIMIZED = 1ULL << 22,
+  MARU_WINDOW_ATTR_ICON = 1ULL << 23,
 
   MARU_WINDOW_ATTR_ALL = 0xFFFFFFFFFFFFFFFFULL,
 } MARU_WindowAttributesField;
@@ -166,6 +177,9 @@ typedef struct MARU_WindowAttributes {
   const char *surrounding_text;
   uint32_t surrounding_cursor_offset;
   uint32_t surrounding_anchor_offset;
+  bool visible;
+  bool minimized;
+  MARU_Image *icon;
 } MARU_WindowAttributes;
 
 /** @brief Parameters for maru_createWindow(). */
@@ -215,7 +229,10 @@ typedef union MARU_BackendHandle {
                   .viewport_size = {0, 0},                      \
                   .surrounding_text = NULL,                     \
                   .surrounding_cursor_offset = 0,               \
-                  .surrounding_anchor_offset = 0},              \
+                  .surrounding_anchor_offset = 0,               \
+                  .visible = true,                              \
+                  .minimized = false,                           \
+                  .icon = NULL},                                \
    .app_id = "maru.app",                                        \
    .content_type = MARU_CONTENT_TYPE_NONE,                      \
    .decorated = true,                                            \
@@ -248,6 +265,8 @@ MARU_Status maru_requestWindowFocus(MARU_Window *window);
 
 /** @brief Requests a frame callback for the window. */
 MARU_Status maru_requestWindowFrame(MARU_Window *window);
+/** @brief Requests user attention for the specified window (best effort). */
+MARU_Status maru_requestWindowAttention(MARU_Window *window);
 
 /** @brief Resets the metrics counters attached to a window handle. */
 MARU_Status maru_resetWindowMetrics(MARU_Window *window);

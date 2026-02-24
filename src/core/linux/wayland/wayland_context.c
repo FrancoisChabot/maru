@@ -269,11 +269,8 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
     if ((window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0) {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
       memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
-
-      MARU_Event evt = {0};
-      evt.focus.focused = false;
-      _maru_dispatch_event(&ctx->base, MARU_FOCUS_CHANGED, (MARU_Window *)window,
-                           &evt);
+      _maru_wayland_dispatch_presentation_state(
+          window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED, true);
     }
 
     if (window->base.mouse_button_states && window->base.pub.mouse_button_count > 0) {

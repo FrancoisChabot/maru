@@ -1,6 +1,11 @@
 #include "macos_internal.h"
 #include "maru_api_constraints.h"
 
+static MARU_Status maru_requestWindowAttention_Cocoa(MARU_Window *window) {
+  (void)window;
+  return MARU_FAILURE;
+}
+
 #ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_Cocoa = {
   .destroyContext = maru_destroyContext_Cocoa,
@@ -8,6 +13,7 @@ const MARU_Backend maru_backend_Cocoa = {
   .createWindow = maru_createWindow_Cocoa,
   .destroyWindow = maru_destroyWindow_Cocoa,
   .getWindowGeometry = maru_getWindowGeometry_Cocoa,
+  .requestWindowAttention = maru_requestWindowAttention_Cocoa,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
@@ -42,5 +48,10 @@ MARU_API void maru_getWindowGeometry(MARU_Window *window,
                                              MARU_WindowGeometry *out_geometry) {
   MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
   maru_getWindowGeometry_Cocoa(window, out_geometry);
+}
+
+MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowAttention, window);
+  return maru_requestWindowAttention_Cocoa(window);
 }
 #endif

@@ -63,10 +63,13 @@ void EventLogModule::onEvent(MARU_EventType type, MARU_Window* win, const MARU_E
            << " Text: '" << (e.text_edit_commit.committed_utf8 ? e.text_edit_commit.committed_utf8 : "") << "'";
     } else if (type == MARU_TEXT_EDIT_END) {
         ss << "IME End: Session=" << e.text_edit_end.session_id << " Canceled: " << (e.text_edit_end.canceled ? "YES" : "NO");
-    } else if (type == MARU_FOCUS_CHANGED) {
-        ss << "Focused: " << (e.focus.focused ? "YES" : "NO");
-    } else if (type == MARU_WINDOW_MAXIMIZED) {
-        ss << "Maximized: " << (e.maximized.maximized ? "YES" : "NO");
+    } else if (type == MARU_WINDOW_PRESENTATION_STATE_CHANGED) {
+        ss << "ChangedMask=0x" << std::hex << e.presentation.changed_fields << std::dec
+           << " Visible: " << (e.presentation.visible ? "YES" : "NO")
+           << " Minimized: " << (e.presentation.minimized ? "YES" : "NO")
+           << " Maximized: " << (e.presentation.maximized ? "YES" : "NO")
+           << " Focused: " << (e.presentation.focused ? "YES" : "NO")
+           << " IconEffective: " << (e.presentation.icon_effective ? "YES" : "NO");
     } else if (type == MARU_MONITOR_CONNECTION_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_connection.monitor << " Connected: " << (e.monitor_connection.connected ? "YES" : "NO");
     } else {
@@ -182,8 +185,7 @@ const char* EventLogModule::typeToString(MARU_EventType type) {
     if (type == MARU_MONITOR_CONNECTION_CHANGED) return "MONITOR_CONNECTION_CHANGED";
     if (type == MARU_MONITOR_MODE_CHANGED) return "MONITOR_MODE_CHANGED";
     if (type == MARU_WINDOW_FRAME) return "WINDOW_FRAME";
-    if (type == MARU_FOCUS_CHANGED) return "FOCUS_CHANGED";
-    if (type == MARU_WINDOW_MAXIMIZED) return "WINDOW_MAXIMIZED";
+    if (type == MARU_WINDOW_PRESENTATION_STATE_CHANGED) return "WINDOW_PRESENTATION_STATE_CHANGED";
     if (type == MARU_TEXT_EDIT_START) return "TEXT_EDIT_START";
     if (type == MARU_TEXT_EDIT_UPDATE) return "TEXT_EDIT_UPDATE";
     if (type == MARU_TEXT_EDIT_COMMIT) return "TEXT_EDIT_COMMIT";

@@ -62,7 +62,7 @@ private:
 
     struct SecondaryCreateConfig {
         char title[256] = "";
-        char app_id[128] = "maru.app";
+        char app_id[128] = "org.birdsafe.maru.testbed";
         int logical_size[2] = {640, 480};
         bool decorated = true;
         bool transparent = false;

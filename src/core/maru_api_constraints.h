@@ -105,7 +105,10 @@ static inline void _maru_validate_updateWindow(MARU_Window *window, uint64_t fie
         MARU_WINDOW_ATTR_EVENT_MASK |
         MARU_WINDOW_ATTR_VIEWPORT_SIZE |
         MARU_WINDOW_ATTR_SURROUNDING_TEXT |
-        MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET;
+        MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET |
+        MARU_WINDOW_ATTR_VISIBLE |
+        MARU_WINDOW_ATTR_MINIMIZED |
+        MARU_WINDOW_ATTR_ICON;
 
     MARU_CONSTRAINT_CHECK((field_mask & ~known_fields) == 0);
 
@@ -161,6 +164,14 @@ static inline void _maru_validate_updateWindow(MARU_Window *window, uint64_t fie
                                   maru_getWindowContext(window));
         }
     }
+
+    if (field_mask & MARU_WINDOW_ATTR_ICON) {
+        if (attributes->icon != NULL) {
+            const MARU_Image_Base *img = (const MARU_Image_Base *)attributes->icon;
+            const MARU_Window_Base *win = (const MARU_Window_Base *)window;
+            MARU_CONSTRAINT_CHECK(img->ctx_base == win->ctx_base);
+        }
+    }
 }
 
 static inline void _maru_validate_requestWindowFocus(MARU_Window *window) {
@@ -168,6 +179,10 @@ static inline void _maru_validate_requestWindowFocus(MARU_Window *window) {
 }
 
 static inline void _maru_validate_requestWindowFrame(MARU_Window *window) {
+    MARU_CONSTRAINT_CHECK(window != NULL);
+}
+
+static inline void _maru_validate_requestWindowAttention(MARU_Window *window) {
     MARU_CONSTRAINT_CHECK(window != NULL);
 }
 
