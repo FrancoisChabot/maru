@@ -434,55 +434,59 @@ int main(int, char**)
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info);
 
-    App app(window, g_Instance, g_PhysicalDevice, g_Device, g_QueueFamily, g_Queue, g_DescriptorPool);
-    g_App = &app;
-
-    while (g_KeepRunning)
     {
-        maru_pumpEvents(context, 0, handle_maru_event, NULL);
+        App app(window, g_Instance, g_PhysicalDevice, g_Device, g_QueueFamily, g_Queue, g_DescriptorPool);
+        g_App = &app;
 
-        if (!g_WindowReady)
-            continue;
-
-        if (app.update(context, window) == AppStatus::EXIT)
-            g_KeepRunning = false;
-
-        maru_getWindowGeometry(window, &geometry);
-        const uint64_t now = now_ms();
-        const bool debounce_elapsed = g_PendingResize && (now >= g_LastResizeAtMs) && ((now - g_LastResizeAtMs) >= g_ResizeDebounceMs);
-        const bool need_rebuild = g_SwapChainRebuild || debounce_elapsed;
-        if (geometry.pixel_size.x > 0 && geometry.pixel_size.y > 0 && need_rebuild)
+        while (g_KeepRunning)
         {
-            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, (int)geometry.pixel_size.x, (int)geometry.pixel_size.y, g_MinImageCount);
-            g_MainWindowData.FrameIndex = 0;
-            g_SwapChainRebuild = false;
-            g_PendingResize = false;
-            g_LastResizeAtMs = 0;
-            g_PendingViewportSize = {0, 0};
-            set_window_viewport_size(window, g_PendingViewportSize);
+            maru_pumpEvents(context, 0, handle_maru_event, NULL);
+
+            if (!g_WindowReady)
+                continue;
+
+            if (app.update(context, window) == AppStatus::EXIT)
+                g_KeepRunning = false;
+
+            maru_getWindowGeometry(window, &geometry);
+            const uint64_t now = now_ms();
+            const bool debounce_elapsed = g_PendingResize && (now >= g_LastResizeAtMs) && ((now - g_LastResizeAtMs) >= g_ResizeDebounceMs);
+            const bool need_rebuild = g_SwapChainRebuild || debounce_elapsed;
+            if (geometry.pixel_size.x > 0 && geometry.pixel_size.y > 0 && need_rebuild)
+            {
+                ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, (int)geometry.pixel_size.x, (int)geometry.pixel_size.y, g_MinImageCount);
+                g_MainWindowData.FrameIndex = 0;
+                g_SwapChainRebuild = false;
+                g_PendingResize = false;
+                g_LastResizeAtMs = 0;
+                g_PendingViewportSize = {0, 0};
+                set_window_viewport_size(window, g_PendingViewportSize);
+            }
+
+            ImGui_ImplVulkan_NewFrame();
+            ImGui_ImplMaru_NewFrame();
+            app.updateCursor(context, window);
+            ImGui::NewFrame();
+
+            app.renderUi(context, window);
+
+            ImGui::Render();
+            ImDrawData* draw_data = ImGui::GetDrawData();
+            const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+            if (!is_minimized)
+            {
+                ImVec4 clear_color = app.getClearColor();
+                wd->ClearValue.color.float32[0] = clear_color.x * clear_color.w;
+                wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
+                wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
+                wd->ClearValue.color.float32[3] = clear_color.w;
+                FrameRender(wd, draw_data);
+                FramePresent(wd);
+            }
         }
 
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplMaru_NewFrame();
-        app.updateCursor(context, window);
-        ImGui::NewFrame();
-
-        app.renderUi(context, window);
-
-        ImGui::Render();
-        ImDrawData* draw_data = ImGui::GetDrawData();
-        const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
-        if (!is_minimized)
-        {
-            ImVec4 clear_color = app.getClearColor();
-            wd->ClearValue.color.float32[0] = clear_color.x * clear_color.w;
-            wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
-            wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
-            wd->ClearValue.color.float32[3] = clear_color.w;
-            FrameRender(wd, draw_data);
-            FramePresent(wd);
-        }
+        g_App = nullptr;
     }
 
     VkResult vk_err = vkDeviceWaitIdle(g_Device);

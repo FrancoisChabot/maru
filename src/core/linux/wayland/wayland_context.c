@@ -398,6 +398,10 @@ cleanup_symbols:
 MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
+  while (ctx->base.window_list_head) {
+    maru_destroyWindow_WL((MARU_Window *)ctx->base.window_list_head);
+  }
+
   _maru_cleanup_context_base(&ctx->base);
 
   if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
