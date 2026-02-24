@@ -62,6 +62,7 @@ static void _wl_clear_locked_window_pointers(MARU_Context_WL *ctx) {
 
 static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, uint32_t caps) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  ctx->wl.seat = wl_seat;
 
   if ((caps & WL_SEAT_CAPABILITY_POINTER) && !ctx->wl.pointer) {
     ctx->wl.pointer = maru_wl_seat_get_pointer(ctx, wl_seat);
@@ -84,6 +85,15 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
     ctx->repeat.repeat_key = 0;
     ctx->repeat.next_repeat_ns = 0;
     ctx->repeat.interval_ns = 0;
+  }
+
+  // Seat capabilities often arrive after windows are created; refresh text-input objects/state.
+  for (uint32_t i = 0; i < ctx->base.window_cache_count; ++i) {
+    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
+    if (!window) {
+      continue;
+    }
+    _maru_wayland_update_text_input(window);
   }
 }
 
@@ -218,6 +228,7 @@ static void _registry_handle_global(void *data, struct wl_registry *registry,
 #undef MARU_WL_REGISTRY_BINDING_ENTRY
 
   if (strcmp(interface, "wl_seat") == 0) {
+    ctx->wl.seat = ctx->protocols.opt.wl_seat;
     _maru_wayland_update_idle_notification(ctx);
   }
 }
@@ -377,6 +388,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
+
   return MARU_SUCCESS;
 
 cleanup_registry:
@@ -453,6 +465,7 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
 
+
   close(ctx->wake_fd);
   ctx->wake_fd = -1;
 
@@ -498,17 +511,6 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   ctx->base.pump_ctx = &pump_ctx;
 
   _maru_drain_user_events(&ctx->base);
-  for (uint32_t i = 0; i < ctx->base.window_cache_count; ++i) {
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
-    if (!window || !window->pending_resized_event) {
-      continue;
-    }
-
-    if (maru_isWindowReady((MARU_Window *)window)) {
-      window->pending_resized_event = false;
-      _maru_wayland_dispatch_window_resized(window);
-    }
-  }
 
   int display_fd = maru_wl_display_get_fd(ctx, ctx->wl.display);
   struct pollfd fds[2];
@@ -575,15 +577,26 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
         if (!window) {
           break;
         }
+        const bool text_input_active =
+            (window->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
+            (window->ext.text_input != NULL) &&
+            (ctx->protocols.opt.zwp_text_input_manager_v3 != NULL) &&
+            window->ime_preedit_active;
+        if (text_input_active) {
+          ctx->repeat.repeat_key = 0;
+          ctx->repeat.next_repeat_ns = 0;
+          ctx->repeat.interval_ns = 0;
+          break;
+        }
 
         char buf[32];
         int n = maru_xkb_state_key_get_utf8(ctx, ctx->linux_common.xkb.state,
                                             ctx->repeat.repeat_key, buf, sizeof(buf));
         if (n > 0) {
           MARU_Event text_evt = {0};
-          text_evt.text_input.text = buf;
-          text_evt.text_input.length = (uint32_t)n;
-          _maru_dispatch_event(&ctx->base, MARU_TEXT_INPUT_RECEIVED, (MARU_Window *)window, &text_evt);
+          text_evt.text_edit_commit.committed_utf8 = buf;
+          text_evt.text_edit_commit.committed_length = (uint32_t)n;
+          _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &text_evt);
         }
 
         ctx->repeat.next_repeat_ns += interval_ns;
@@ -593,6 +606,13 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
       if (dispatch_count == max_dispatch_per_pump && now_ns >= ctx->repeat.next_repeat_ns) {
         ctx->repeat.next_repeat_ns = now_ns + interval_ns;
       }
+    }
+  }
+
+  for (uint32_t i = 0; i < ctx->base.window_cache_count; ++i) {
+    MARU_Window_WL *window = (MARU_Window_WL *)ctx->base.window_cache[i];
+    if (window && window->pending_resized_event && maru_isWindowReady((MARU_Window *)window)) {
+      _maru_wayland_dispatch_window_resized(window);
     }
   }
 

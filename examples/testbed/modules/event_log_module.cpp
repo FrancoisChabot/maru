@@ -54,6 +54,19 @@ void EventLogModule::onEvent(MARU_EventType type, MARU_Window* win, const MARU_E
         ss << "Text: '" << (e.text_input.text ? e.text_input.text : "") << "' Len: " << e.text_input.length;
     } else if (type == MARU_TEXT_COMPOSITION_UPDATED) {
         ss << "Preedit: '" << (e.text_composition.text ? e.text_composition.text : "") << "' Cursor: " << e.text_composition.cursor_index;
+    } else if (type == MARU_TEXT_EDIT_START) {
+        ss << "IME Start: Session=" << e.text_edit_start.session_id;
+    } else if (type == MARU_TEXT_EDIT_UPDATE) {
+        ss << "IME Update: Session=" << e.text_edit_update.session_id 
+           << " Preedit: '" << (e.text_edit_update.preedit_utf8 ? e.text_edit_update.preedit_utf8 : "") << "'"
+           << " Caret: " << e.text_edit_update.caret.start_byte 
+           << " Sel: [" << e.text_edit_update.selection.start_byte << ", " << e.text_edit_update.selection.length_byte << "]";
+    } else if (type == MARU_TEXT_EDIT_COMMIT) {
+        ss << "IME Commit: Session=" << e.text_edit_commit.session_id
+           << " Del: (" << e.text_edit_commit.delete_before_bytes << ", " << e.text_edit_commit.delete_after_bytes << ")"
+           << " Text: '" << (e.text_edit_commit.committed_utf8 ? e.text_edit_commit.committed_utf8 : "") << "'";
+    } else if (type == MARU_TEXT_EDIT_END) {
+        ss << "IME End: Session=" << e.text_edit_end.session_id << " Canceled: " << (e.text_edit_end.canceled ? "YES" : "NO");
     } else if (type == MARU_FOCUS_CHANGED) {
         ss << "Focused: " << (e.focus.focused ? "YES" : "NO");
     } else if (type == MARU_WINDOW_MAXIMIZED) {
@@ -177,6 +190,10 @@ const char* EventLogModule::typeToString(MARU_EventType type) {
     if (type == MARU_FOCUS_CHANGED) return "FOCUS_CHANGED";
     if (type == MARU_WINDOW_MAXIMIZED) return "WINDOW_MAXIMIZED";
     if (type == MARU_TEXT_COMPOSITION_UPDATED) return "TEXT_COMPOSITION_UPDATED";
+    if (type == MARU_TEXT_EDIT_START) return "TEXT_EDIT_START";
+    if (type == MARU_TEXT_EDIT_UPDATE) return "TEXT_EDIT_UPDATE";
+    if (type == MARU_TEXT_EDIT_COMMIT) return "TEXT_EDIT_COMMIT";
+    if (type == MARU_TEXT_EDIT_END) return "TEXT_EDIT_END";
     if (type == MARU_USER_EVENT_0) return "USER_EVENT_0";
     return "UNKNOWN";
 }

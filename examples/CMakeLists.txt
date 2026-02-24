@@ -44,6 +44,7 @@ add_executable(maru_testbed
     testbed/modules/window_module.cpp
     testbed/modules/input_module.cpp
     testbed/modules/instrumentation_module.cpp
+    testbed/modules/composition_module.cpp
 )
 target_link_libraries(maru_testbed PRIVATE maru::maru maru::vulkan imgui)
 set_target_properties(maru_testbed PROPERTIES CXX_STANDARD 20)

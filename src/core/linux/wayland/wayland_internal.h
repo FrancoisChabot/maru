@@ -21,6 +21,7 @@ typedef struct MARU_Context_WL {
     struct wl_seat *seat;
     struct wl_pointer *pointer;
     struct wl_keyboard *keyboard;
+    struct zwp_text_input_manager_v3 *text_input_manager;
     struct ext_idle_notification_v1 *idle_notification;
     struct wl_cursor_theme *cursor_theme;
     struct wl_surface *cursor_surface;
@@ -72,6 +73,7 @@ typedef struct MARU_Window_WL {
     struct wp_viewport *viewport;
     struct zwp_idle_inhibitor_v1 *idle_inhibitor;
     struct wp_content_type_v1 *content_type;
+    struct zwp_text_input_v3 *text_input;
     struct zwp_relative_pointer_v1 *relative_pointer;
     struct zwp_locked_pointer_v1 *locked_pointer;
   } ext;
@@ -92,6 +94,10 @@ typedef struct MARU_Window_WL {
   MARU_Vec2Dip max_size;
   MARU_Vec2Dip viewport_size;
   MARU_RectDip text_input_rect;
+  char *surrounding_text;
+  uint32_t surrounding_cursor_offset;
+  uint32_t surrounding_anchor_offset;
+  uint64_t text_input_session_id;
   MARU_Fraction aspect_ratio;
   MARU_TextInputType text_input_type;
   MARU_Scalar scale;
@@ -107,6 +113,7 @@ typedef struct MARU_Window_WL {
   bool pending_resized_event;
   bool accepts_drop;
   bool primary_selection;
+  bool ime_preedit_active;
 } MARU_Window_WL;
 
 typedef struct MARU_Monitor_WL {
@@ -287,6 +294,7 @@ extern const struct wp_fractional_scale_v1_listener _maru_wayland_fractional_sca
 extern const struct wl_pointer_listener _maru_wayland_pointer_listener;
 extern const struct wl_keyboard_listener _maru_wayland_keyboard_listener;
 extern const struct wl_output_listener _maru_wayland_output_listener;
+extern const struct zwp_text_input_v3_listener _maru_wayland_text_input_listener;
 
 MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                                   MARU_Context **out_context);
@@ -329,6 +337,7 @@ void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial);
 void _maru_wayland_update_cursor_mode(MARU_Window_WL *window);
 void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window);
+void _maru_wayland_update_text_input(MARU_Window_WL *window);
 void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
                                         const MARU_Window_WL *window);
 extern const struct zwp_relative_pointer_v1_listener _maru_wayland_relative_pointer_listener;

@@ -10,6 +10,7 @@
 #include "modules/event_module.h"
 #include "modules/input_module.h"
 #include "modules/instrumentation_module.h"
+#include "modules/composition_module.h"
 #include "imgui.h"
 
 App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, VkQueue queue, VkDescriptorPool descriptor_pool) {
@@ -27,6 +28,7 @@ App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_dev
     modules_.push_back(std::make_unique<CursorModule>());
     modules_.push_back(std::make_unique<WindowModule>(window, instance, physical_device, device, queue_family, queue));
     modules_.push_back(std::make_unique<InputModule>());
+    modules_.push_back(std::make_unique<CompositionModule>());
 }
 
 App::~App() {

@@ -57,14 +57,27 @@ static const MARU_EventMask MARU_MONITOR_CONNECTION_CHANGED = ((MARU_EventMask)1
 static const MARU_EventMask MARU_MONITOR_MODE_CHANGED = ((MARU_EventMask)1 << 9);
 /** @brief Event fired when the window should render its next frame. */
 static const MARU_EventMask MARU_WINDOW_FRAME = ((MARU_EventMask)1 << 10);
-/** @brief Event fired when Unicode text input is received. */
+/** @brief Event fired when Unicode text input is received. 
+ *  @deprecated Use MARU_TEXT_EDIT_COMMIT instead.
+ */
 static const MARU_EventMask MARU_TEXT_INPUT_RECEIVED = ((MARU_EventMask)1 << 11);
 /** @brief Event fired when a window gains or loses focus. */
 static const MARU_EventMask MARU_FOCUS_CHANGED = ((MARU_EventMask)1 << 12);
 /** @brief Event fired when a window is maximized or restored. */
 static const MARU_EventMask MARU_WINDOW_MAXIMIZED = ((MARU_EventMask)1 << 13);
-/** @brief Event fired when IME text composition state changes. */
+/** @brief Event fired when IME text composition state changes. 
+ *  @deprecated Use MARU_TEXT_EDIT_UPDATE instead.
+ */
 static const MARU_EventMask MARU_TEXT_COMPOSITION_UPDATED = ((MARU_EventMask)1 << 18);
+
+/** @brief Event fired when an IME composition session starts. */
+static const MARU_EventMask MARU_TEXT_EDIT_START = ((MARU_EventMask)1 << 19);
+/** @brief Event fired when the current preedit text in an IME session is updated. */
+static const MARU_EventMask MARU_TEXT_EDIT_UPDATE = ((MARU_EventMask)1 << 20);
+/** @brief Event fired when text is committed to the application, potentially replacing surrounding text. */
+static const MARU_EventMask MARU_TEXT_EDIT_COMMIT = ((MARU_EventMask)1 << 21);
+/** @brief Event fired when an IME composition session ends. */
+static const MARU_EventMask MARU_TEXT_EDIT_END = ((MARU_EventMask)1 << 22);
 
   // N.B. These bits are reserved for user-defined events
 static const MARU_EventMask MARU_USER_EVENT_0 = ((MARU_EventMask)1 << 48);
@@ -131,6 +144,7 @@ typedef struct MARU_MouseMotionEvent {
   MARU_Vec2Dip position;
   MARU_Vec2Dip delta;
   MARU_Vec2Dip raw_delta;
+  MARU_ModifierFlags modifiers;
 } MARU_MouseMotionEvent;
 
 /** @brief Payload for MARU_MOUSE_BUTTON_STATE_CHANGED. */
@@ -144,6 +158,7 @@ typedef struct MARU_MouseButtonEvent {
 typedef struct MARU_MouseScrollEvent {
   MARU_Vec2Dip delta;
   struct { int32_t x; int32_t y; } steps;
+  MARU_ModifierFlags modifiers;
 } MARU_MouseScrollEvent;
 
 /** @brief Payload for MARU_IDLE_STATE_CHANGED. */
@@ -182,6 +197,41 @@ typedef struct MARU_FocusEvent {
   bool focused;
 } MARU_FocusEvent;
 
+/** @brief UTF-8 byte range. */
+typedef struct MARU_TextRangeUtf8 {
+  uint32_t start_byte;
+  uint32_t length_byte;
+} MARU_TextRangeUtf8;
+
+/** @brief Payload for MARU_TEXT_EDIT_START. */
+typedef struct MARU_TextEditStartEvent {
+  uint64_t session_id;
+} MARU_TextEditStartEvent;
+
+/** @brief Payload for MARU_TEXT_EDIT_UPDATE. */
+typedef struct MARU_TextEditUpdateEvent {
+  uint64_t session_id;
+  const char *preedit_utf8;
+  uint32_t preedit_length;
+  MARU_TextRangeUtf8 caret;
+  MARU_TextRangeUtf8 selection;
+} MARU_TextEditUpdateEvent;
+
+/** @brief Payload for MARU_TEXT_EDIT_COMMIT. */
+typedef struct MARU_TextEditCommitEvent {
+  uint64_t session_id;
+  uint32_t delete_before_bytes;
+  uint32_t delete_after_bytes;
+  const char *committed_utf8;
+  uint32_t committed_length;
+} MARU_TextEditCommitEvent;
+
+/** @brief Payload for MARU_TEXT_EDIT_END. */
+typedef struct MARU_TextEditEndEvent {
+  uint64_t session_id;
+  bool canceled;
+} MARU_TextEditEndEvent;
+
 /** @brief Payload for user-defined events. */
 typedef struct MARU_UserDefinedEvent {
   union {
@@ -208,6 +258,10 @@ typedef struct MARU_Event {
     MARU_TextInputEvent text_input;
     MARU_TextCompositionEvent text_composition;
     MARU_FocusEvent focus;
+    MARU_TextEditStartEvent text_edit_start;
+    MARU_TextEditUpdateEvent text_edit_update;
+    MARU_TextEditCommitEvent text_edit_commit;
+    MARU_TextEditEndEvent text_edit_end;
 
     MARU_UserDefinedEvent user;
   };

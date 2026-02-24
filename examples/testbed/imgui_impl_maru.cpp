@@ -133,6 +133,32 @@ static ImGuiKey ImGui_ImplMaru_KeyToImGuiKey(MARU_Key key) {
     }
 }
 
+static void ImGui_ImplMaru_SetImeData(ImGuiContext*, ImGuiViewport* viewport, ImGuiPlatformImeData* data) {
+    ImGui_ImplMaru_Data* bd = ImGui_ImplMaru_GetBackendData();
+    if (!bd) return;
+
+    MARU_WindowAttributes attrs = {};
+    if (data->WantVisible) {
+        // ImGui provides an absolute position; Wayland text-input expects surface-local coordinates.
+        const float viewport_x = viewport ? viewport->Pos.x : 0.0f;
+        const float viewport_y = viewport ? viewport->Pos.y : 0.0f;
+        const float local_x = data->InputPos.x - viewport_x;
+        const float local_y = data->InputPos.y - viewport_y;
+        const float line_h = (data->InputLineHeight > 1.0f) ? data->InputLineHeight : 1.0f;
+
+        attrs.text_input_type = MARU_TEXT_INPUT_TYPE_TEXT;
+        attrs.text_input_rect.origin.x = (MARU_Scalar)local_x;
+        attrs.text_input_rect.origin.y = (MARU_Scalar)local_y;
+        attrs.text_input_rect.size.x = (MARU_Scalar)1.0;
+        attrs.text_input_rect.size.y = (MARU_Scalar)line_h;
+        maru_updateWindow(
+            bd->Window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT, &attrs);
+    } else {
+        attrs.text_input_type = MARU_TEXT_INPUT_TYPE_NONE;
+        maru_updateWindow(bd->Window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &attrs);
+    }
+}
+
 bool ImGui_ImplMaru_Init(MARU_Window* window) {
     ImGuiIO& io = ImGui::GetIO();
     IMGUI_CHECKVERSION();
@@ -143,6 +169,9 @@ bool ImGui_ImplMaru_Init(MARU_Window* window) {
     io.BackendPlatformName = "imgui_impl_maru";
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
+
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_SetImeDataFn = ImGui_ImplMaru_SetImeData;
 
     return true;
 }
@@ -190,9 +219,11 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {
-        MARU_WindowAttributes attrs = {};
-        attrs.cursor_mode = MARU_CURSOR_HIDDEN;
-        maru_updateWindow(bd->Window, MARU_WINDOW_ATTR_CURSOR_MODE, &attrs);
+        if (maru_getWindowCursorMode(bd->Window) != MARU_CURSOR_HIDDEN) {
+            MARU_WindowAttributes attrs = {};
+            attrs.cursor_mode = MARU_CURSOR_HIDDEN;
+            maru_updateWindow(bd->Window, MARU_WINDOW_ATTR_CURSOR_MODE, &attrs);
+        }
     } else {
         MARU_Cursor* cursor = bd->MouseCursors[imgui_cursor];
         if (!cursor) {
@@ -213,10 +244,15 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
              bd->MouseCursors[imgui_cursor] = cursor;
         }
 
-        MARU_WindowAttributes attrs = {};
-        attrs.cursor_mode = MARU_CURSOR_NORMAL;
-        attrs.cursor = cursor;
-        maru_updateWindow(bd->Window, MARU_WINDOW_ATTR_CURSOR_MODE | MARU_WINDOW_ATTR_CURSOR, &attrs);
+        const MARU_WindowExposed* win = (const MARU_WindowExposed*)bd->Window;
+        const bool mode_ok = (maru_getWindowCursorMode(bd->Window) == MARU_CURSOR_NORMAL);
+        const bool cursor_ok = (win->current_cursor == cursor);
+        if (!mode_ok || !cursor_ok) {
+            MARU_WindowAttributes attrs = {};
+            attrs.cursor_mode = MARU_CURSOR_NORMAL;
+            attrs.cursor = cursor;
+            maru_updateWindow(bd->Window, MARU_WINDOW_ATTR_CURSOR_MODE | MARU_WINDOW_ATTR_CURSOR, &attrs);
+        }
     }
 }
 
@@ -257,8 +293,12 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventType type, const MARU_Event* event) {
             io.AddKeyEvent(ImGuiMod_Alt, (event->key.modifiers & MARU_MODIFIER_ALT) != 0);
             io.AddKeyEvent(ImGuiMod_Super, (event->key.modifiers & MARU_MODIFIER_META) != 0);
         }
-    } else if (type == MARU_TEXT_INPUT_RECEIVED) {
-        io.AddInputCharactersUTF8(event->text_input.text);
+    } else if (type == MARU_TEXT_INPUT_RECEIVED || type == MARU_TEXT_EDIT_COMMIT) {
+        if (type == MARU_TEXT_INPUT_RECEIVED) {
+            io.AddInputCharactersUTF8(event->text_input.text);
+        } else {
+            io.AddInputCharactersUTF8(event->text_edit_commit.committed_utf8);
+        }
     } else if (type == MARU_FOCUS_CHANGED) {
         io.AddFocusEvent(event->focus.focused);
     }

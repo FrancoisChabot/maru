@@ -6,12 +6,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+void _maru_wayland_update_text_input(MARU_Window_WL *window);
+
 void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   if (!maru_isWindowReady((MARU_Window *)window)) {
+    window->pending_resized_event = true;
     return;
   }
 
+  window->pending_resized_event = false;
   MARU_Event evt = {0};
   maru_getWindowGeometry_WL((MARU_Window *)window, &evt.resized.geometry);
   _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window *)window, &evt);
@@ -445,11 +449,23 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->text_input_rect = create_info->attributes.text_input_rect;
   window->aspect_ratio = create_info->attributes.aspect_ratio;
   window->text_input_type = create_info->attributes.text_input_type;
+  window->surrounding_cursor_offset = create_info->attributes.surrounding_cursor_offset;
+  window->surrounding_anchor_offset = create_info->attributes.surrounding_anchor_offset;
+
+  if (create_info->attributes.surrounding_text) {
+      size_t len = strlen(create_info->attributes.surrounding_text);
+      window->surrounding_text = maru_context_alloc(&ctx->base, len + 1);
+      if (window->surrounding_text) {
+          memcpy(window->surrounding_text, create_info->attributes.surrounding_text, len + 1);
+      }
+  }
+
   window->decor_mode = ctx->decor_mode;
   window->is_maximized = create_info->attributes.maximized;
   window->is_fullscreen = create_info->attributes.fullscreen;
   window->is_resizable = create_info->attributes.resizable;
   window->is_decorated = create_info->decorated;
+  window->pending_resized_event = true;
 
   if (window->is_maximized) {
     window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
@@ -523,6 +539,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   _maru_wayland_apply_size_constraints(window);
   _maru_wayland_update_idle_inhibitor(window);
   _maru_wayland_apply_mouse_passthrough(window);
+  _maru_wayland_update_text_input(window);
 
   _maru_register_window(&ctx->base, (MARU_Window *)window);
 
@@ -539,6 +556,64 @@ cleanup_window:
   if (window->base.title) maru_context_free(&ctx->base, window->base.title);
   maru_context_free(&ctx->base, window);
   return MARU_FAILURE;
+}
+
+void _maru_wayland_update_text_input(MARU_Window_WL *window) {
+  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  struct wl_seat *seat = ctx->wl.seat ? ctx->wl.seat : ctx->protocols.opt.wl_seat;
+
+  if (!ctx->protocols.opt.zwp_text_input_manager_v3 || !seat) {
+    return;
+  }
+
+  if (!window->ext.text_input) {
+    window->ext.text_input = maru_zwp_text_input_manager_v3_get_text_input(
+        ctx, ctx->protocols.opt.zwp_text_input_manager_v3, seat);
+    if (!window->ext.text_input) {
+      return;
+    }
+    maru_zwp_text_input_v3_add_listener(ctx, window->ext.text_input,
+                                        &_maru_wayland_text_input_listener, window);
+  }
+
+  if (window->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
+    uint32_t hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_NONE;
+    uint32_t purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL;
+
+    switch (window->text_input_type) {
+      case MARU_TEXT_INPUT_TYPE_PASSWORD:
+        hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_HIDDEN_TEXT |
+               ZWP_TEXT_INPUT_V3_CONTENT_HINT_SENSITIVE_DATA;
+        purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_PASSWORD;
+        break;
+      case MARU_TEXT_INPUT_TYPE_EMAIL:
+        purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_EMAIL;
+        break;
+      case MARU_TEXT_INPUT_TYPE_NUMERIC:
+        purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NUMBER;
+        break;
+      default:
+        break;
+    }
+
+    maru_zwp_text_input_v3_enable(ctx, window->ext.text_input);
+    maru_zwp_text_input_v3_set_content_type(ctx, window->ext.text_input, hint, purpose);
+    maru_zwp_text_input_v3_set_cursor_rectangle(
+        ctx, window->ext.text_input, (int32_t)window->text_input_rect.origin.x,
+        (int32_t)window->text_input_rect.origin.y, (int32_t)window->text_input_rect.size.x,
+        (int32_t)window->text_input_rect.size.y);
+    
+    if (window->surrounding_text) {
+        maru_zwp_text_input_v3_set_surrounding_text(ctx, window->ext.text_input, 
+            window->surrounding_text, (int32_t)window->surrounding_cursor_offset, 
+            (int32_t)window->surrounding_anchor_offset);
+    }
+
+    maru_zwp_text_input_v3_commit(ctx, window->ext.text_input);
+  } else {
+    maru_zwp_text_input_v3_disable(ctx, window->ext.text_input);
+    maru_zwp_text_input_v3_commit(ctx, window->ext.text_input);
+  }
 }
 
 MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask,
@@ -667,14 +742,34 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 
   if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
       window->text_input_type = attributes->text_input_type;
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "Text input type hints are not implemented on Wayland");
   }
 
   if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_RECT) {
       window->text_input_rect = attributes->text_input_rect;
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "Text input rectangle hints are not implemented on Wayland");
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
+      if (window->surrounding_text) {
+          maru_context_free(&ctx->base, window->surrounding_text);
+          window->surrounding_text = NULL;
+      }
+      if (attributes->surrounding_text) {
+          size_t len = strlen(attributes->surrounding_text);
+          window->surrounding_text = maru_context_alloc(&ctx->base, len + 1);
+          if (window->surrounding_text) {
+              memcpy(window->surrounding_text, attributes->surrounding_text, len + 1);
+          }
+      }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET) {
+      window->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
+      window->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
+  }
+
+  if (field_mask & (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
+                    MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET)) {
+      _maru_wayland_update_text_input(window);
   }
 
   if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
@@ -783,6 +878,10 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
     maru_zwp_idle_inhibitor_v1_destroy(ctx, window->ext.idle_inhibitor);
     window->ext.idle_inhibitor = NULL;
   }
+  if (window->ext.text_input) {
+    maru_zwp_text_input_v3_destroy(ctx, window->ext.text_input);
+    window->ext.text_input = NULL;
+  }
   if (window->ext.content_type) {
     maru_wp_content_type_v1_destroy(ctx, window->ext.content_type);
     window->ext.content_type = NULL;
@@ -813,6 +912,7 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   }
 
   if (window->base.title) maru_context_free(&ctx->base, window->base.title);
+  if (window->surrounding_text) maru_context_free(&ctx->base, window->surrounding_text);
   maru_context_free(&ctx->base, window);
 
   return MARU_SUCCESS;

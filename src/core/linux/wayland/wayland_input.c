@@ -28,6 +28,8 @@
 #define WL_POINTER_AXIS_VERTICAL_SCROLL 0
 #define WL_POINTER_AXIS_HORIZONTAL_SCROLL 1
 
+static MARU_ModifierFlags _get_modifiers(MARU_Context_WL *ctx);
+
 static const char *_maru_cursor_shape_to_name(MARU_CursorShape shape) {
     switch (shape) {
         case MARU_CURSOR_SHAPE_DEFAULT: return "left_ptr";
@@ -156,6 +158,7 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer,
     evt.mouse_motion.delta.y = evt.mouse_motion.position.y - ctx->linux_common.pointer.y;
     evt.mouse_motion.raw_delta.x = 0.0;
     evt.mouse_motion.raw_delta.y = 0.0;
+    evt.mouse_motion.modifiers = _get_modifiers(ctx);
     
     ctx->linux_common.pointer.x = evt.mouse_motion.position.x;
     ctx->linux_common.pointer.y = evt.mouse_motion.position.y;
@@ -182,8 +185,8 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
     
     evt.mouse_button.state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ? 
                              MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+    evt.mouse_button.modifiers = _get_modifiers(ctx);
 
-    // TODO: Add modifiers
     _maru_dispatch_event(&ctx->base, MARU_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)window, &evt);
 }
 
@@ -209,6 +212,7 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *wl_pointer) {
             evt.mouse_scroll.delta = ctx->scroll.delta;
             evt.mouse_scroll.steps.x = ctx->scroll.steps.x;
             evt.mouse_scroll.steps.y = ctx->scroll.steps.y;
+            evt.mouse_scroll.modifiers = _get_modifiers(ctx);
             _maru_dispatch_event(&ctx->base, MARU_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
         }
         memset(&ctx->scroll, 0, sizeof(ctx->scroll));
@@ -224,6 +228,26 @@ static void _pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_poin
         ctx->scroll.steps.x -= discrete;
     }
     ctx->scroll.active = true;
+}
+
+static MARU_ModifierFlags _get_modifiers(MARU_Context_WL *ctx) {
+    MARU_ModifierFlags mods = 0;
+    if (!ctx->linux_common.xkb.state) return 0;
+
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.shift))
+        mods |= MARU_MODIFIER_SHIFT;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.ctrl))
+        mods |= MARU_MODIFIER_CONTROL;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.alt))
+        mods |= MARU_MODIFIER_ALT;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.meta))
+        mods |= MARU_MODIFIER_META;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.caps))
+        mods |= MARU_MODIFIER_CAPS_LOCK;
+    if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.num))
+        mods |= MARU_MODIFIER_NUM_LOCK;
+
+    return mods;
 }
 
 static void _relative_pointer_handle_relative_motion(void *data, struct zwp_relative_pointer_v1 *pointer,
@@ -242,6 +266,7 @@ static void _relative_pointer_handle_relative_motion(void *data, struct zwp_rela
     evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
     evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
     evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
+    evt.mouse_motion.modifiers = _get_modifiers(ctx);
 
     _maru_dispatch_event(&ctx->base, MARU_MOUSE_MOVED, (MARU_Window *)window, &evt);
 }
@@ -469,6 +494,11 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     uint32_t keycode = key + 8;
     MARU_Key maru_key = _linux_scancode_to_maru_key(key);
     MARU_ButtonState maru_state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+    const bool text_input_active =
+        (window->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
+        (window->ext.text_input != NULL) &&
+        (ctx->protocols.opt.zwp_text_input_manager_v3 != NULL) &&
+        window->ime_preedit_active;
 
     // Update keyboard cache
     if (maru_key != MARU_KEY_UNKNOWN) {
@@ -481,32 +511,27 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
         MARU_Event evt = {0};
         evt.key.raw_key = maru_key;
         evt.key.state = maru_state;
-        
-        evt.key.modifiers = 0;
-        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.shift))
-            evt.key.modifiers |= MARU_MODIFIER_SHIFT;
-        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.ctrl))
-            evt.key.modifiers |= MARU_MODIFIER_CONTROL;
-        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.alt))
-            evt.key.modifiers |= MARU_MODIFIER_ALT;
-        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.meta))
-            evt.key.modifiers |= MARU_MODIFIER_META;
-        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.caps))
-            evt.key.modifiers |= MARU_MODIFIER_CAPS_LOCK;
-        if (maru_xkb_state_mod_index_is_active(ctx, ctx->linux_common.xkb.state, ctx->linux_common.xkb.mod_indices.num))
-            evt.key.modifiers |= MARU_MODIFIER_NUM_LOCK;
+        evt.key.modifiers = _get_modifiers(ctx);
 
         _maru_dispatch_event(&ctx->base, MARU_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
     }
 
     if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+        if (text_input_active) {
+            // When text-input-v3 is active, committed text should come from the IME protocol path.
+            ctx->repeat.repeat_key = 0;
+            ctx->repeat.next_repeat_ns = 0;
+            ctx->repeat.interval_ns = 0;
+            return;
+        }
+
         char buf[32];
         int n = maru_xkb_state_key_get_utf8(ctx, ctx->linux_common.xkb.state, keycode, buf, sizeof(buf));
         if (n > 0) {
             MARU_Event text_evt = {0};
-            text_evt.text_input.text = buf;
-            text_evt.text_input.length = (uint32_t)n;
-            _maru_dispatch_event(&ctx->base, MARU_TEXT_INPUT_RECEIVED, (MARU_Window *)window, &text_evt);
+            text_evt.text_edit_commit.committed_utf8 = buf;
+            text_evt.text_edit_commit.committed_length = (uint32_t)n;
+            _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &text_evt);
 
             if (ctx->repeat.rate > 0 && ctx->repeat.delay >= 0) {
                 const uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
@@ -563,6 +588,101 @@ const struct wl_keyboard_listener _maru_wayland_keyboard_listener = {
     .key = _keyboard_handle_key,
     .modifiers = _keyboard_handle_modifiers,
     .repeat_info = _keyboard_handle_repeat_info,
+};
+
+static void _text_input_handle_enter(void *data, struct zwp_text_input_v3 *text_input, struct wl_surface *surface) {
+    MARU_Window_WL *window = (MARU_Window_WL *)data;
+    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+    (void)text_input;
+    (void)surface;
+
+    window->text_input_session_id++;
+    window->ime_preedit_active = false;
+    
+    MARU_Event evt = {0};
+    evt.text_edit_start.session_id = window->text_input_session_id;
+    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_START, (MARU_Window *)window, &evt);
+}
+
+static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_input, struct wl_surface *surface) {
+    MARU_Window_WL *window = (MARU_Window_WL *)data;
+    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+    (void)text_input;
+    (void)surface;
+    window->ime_preedit_active = false;
+
+    MARU_Event evt = {0};
+    evt.text_edit_end.session_id = window->text_input_session_id;
+    evt.text_edit_end.canceled = false;
+    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_END, (MARU_Window *)window, &evt);
+}
+
+static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_v3 *text_input,
+                                               const char *text, int32_t cursor_begin, int32_t cursor_end) {
+    MARU_Window_WL *window = (MARU_Window_WL *)data;
+    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+    (void)text_input;
+    window->ime_preedit_active = (text && text[0] != '\0');
+
+    MARU_Event evt = {0};
+    evt.text_edit_update.session_id = window->text_input_session_id;
+    evt.text_edit_update.preedit_utf8 = text ? text : "";
+    evt.text_edit_update.preedit_length = text ? (uint32_t)strlen(text) : 0;
+    
+    evt.text_edit_update.caret.start_byte = (uint32_t)cursor_begin;
+    evt.text_edit_update.caret.length_byte = 0;
+    
+    evt.text_edit_update.selection.start_byte = (uint32_t)cursor_begin;
+    evt.text_edit_update.selection.length_byte = (uint32_t)(cursor_end - cursor_begin);
+    
+    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_UPDATE, (MARU_Window *)window, &evt);
+}
+
+static void _text_input_handle_commit_string(void *data, struct zwp_text_input_v3 *text_input, const char *text) {
+    MARU_Window_WL *window = (MARU_Window_WL *)data;
+    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+    (void)text_input;
+    window->ime_preedit_active = false;
+
+    MARU_Event evt = {0};
+    evt.text_edit_commit.session_id = window->text_input_session_id;
+    evt.text_edit_commit.committed_utf8 = text ? text : "";
+    evt.text_edit_commit.committed_length = text ? (uint32_t)strlen(text) : 0;
+    
+    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
+}
+
+static void _text_input_handle_delete_surrounding_text(void *data, struct zwp_text_input_v3 *text_input,
+                                                       uint32_t before_length, uint32_t after_length) {
+    MARU_Window_WL *window = (MARU_Window_WL *)data;
+    MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+    (void)text_input;
+    window->ime_preedit_active = false;
+
+    MARU_Event evt = {0};
+    evt.text_edit_commit.session_id = window->text_input_session_id;
+    evt.text_edit_commit.delete_before_bytes = before_length;
+    evt.text_edit_commit.delete_after_bytes = after_length;
+    evt.text_edit_commit.committed_utf8 = "";
+    evt.text_edit_commit.committed_length = 0;
+    
+    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
+}
+
+static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_input, uint32_t serial) {
+    (void)data;
+    (void)text_input;
+    (void)serial;
+    // text-input-v3 'done' event is for synchronization of multiple state changes
+}
+
+const struct zwp_text_input_v3_listener _maru_wayland_text_input_listener = {
+    .enter = _text_input_handle_enter,
+    .leave = _text_input_handle_leave,
+    .preedit_string = _text_input_handle_preedit_string,
+    .commit_string = _text_input_handle_commit_string,
+    .delete_surrounding_text = _text_input_handle_delete_surrounding_text,
+    .done = _text_input_handle_done,
 };
 
 
