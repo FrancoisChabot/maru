@@ -20,6 +20,7 @@
   MARU_LIB_FN(display_get_error)          \
   MARU_LIB_FN(display_get_protocol_error) \
   MARU_LIB_FN(proxy_get_version)          \
+  MARU_LIB_FN(proxy_get_id)               \
   MARU_LIB_FN(proxy_marshal_flags)        \
   MARU_LIB_FN(proxy_add_listener)         \
   MARU_LIB_FN(proxy_destroy)              \
@@ -79,6 +80,7 @@ static inline void *_maru_wl_trap_p(void) {
 #define wl_display_get_error          maru_wl_poison_i
 #define wl_display_get_protocol_error maru_wl_poison_u
 #define wl_proxy_get_version          maru_wl_poison_u
+#define wl_proxy_get_id               maru_wl_poison_u
 #define wl_proxy_marshal_flags        maru_wl_poison_p
 #define wl_proxy_add_listener         maru_wl_poison_i
 #define wl_proxy_destroy              maru_wl_poison_v

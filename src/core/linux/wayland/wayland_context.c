@@ -177,6 +177,143 @@ static bool _maru_wl_registry_try_bind(
   return true;
 }
 
+static bool _wl_proxy_matches_registry_name(MARU_Context_WL *ctx, void *proxy,
+                                            uint32_t name) {
+  if (!proxy) {
+    return false;
+  }
+  return ctx->dlib.wl.proxy_get_id((struct wl_proxy *)proxy) == name;
+}
+
+static void _wl_clear_idle_notification_only(MARU_Context_WL *ctx) {
+  if (ctx->wl.idle_notification) {
+    maru_ext_idle_notification_v1_destroy(ctx, ctx->wl.idle_notification);
+    ctx->wl.idle_notification = NULL;
+  }
+}
+
+static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
+  ctx->wl.seat = NULL;
+
+  if (ctx->wl.cursor_shape_device) {
+    maru_wp_cursor_shape_device_v1_destroy(ctx, ctx->wl.cursor_shape_device);
+    ctx->wl.cursor_shape_device = NULL;
+  }
+
+  _wl_clear_locked_window_pointers(ctx);
+
+  if (ctx->wl.pointer) {
+    maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
+    ctx->wl.pointer = NULL;
+  }
+  if (ctx->wl.keyboard) {
+    maru_wl_keyboard_destroy(ctx, ctx->wl.keyboard);
+    ctx->wl.keyboard = NULL;
+  }
+
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_WL *window = (MARU_Window_WL *)it;
+    if (window->ext.text_input) {
+      maru_zwp_text_input_v3_destroy(ctx, window->ext.text_input);
+      window->ext.text_input = NULL;
+    }
+    window->ime_preedit_active = false;
+  }
+
+  ctx->linux_common.pointer.focused_window = NULL;
+  ctx->linux_common.pointer.x = 0.0;
+  ctx->linux_common.pointer.y = 0.0;
+  ctx->linux_common.pointer.enter_serial = 0;
+  ctx->linux_common.xkb.focused_window = NULL;
+
+  ctx->repeat.repeat_key = 0;
+  ctx->repeat.next_repeat_ns = 0;
+  ctx->repeat.interval_ns = 0;
+
+  _wl_clear_idle_notification_only(ctx);
+  _wl_update_cursor_shape_device(ctx);
+}
+
+static void _wl_handle_required_global_removed(MARU_Context_WL *ctx,
+                                               const char *iface_name) {
+  MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE,
+                         iface_name);
+  _maru_wayland_mark_lost(ctx, "Required Wayland global removed at runtime");
+}
+
+static void _wl_handle_optional_global_removed(MARU_Context_WL *ctx,
+                                               const char *iface_name) {
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_WL *window = (MARU_Window_WL *)it;
+
+    if (strcmp(iface_name, "zwp_text_input_manager_v3") == 0) {
+      if (window->ext.text_input) {
+        maru_zwp_text_input_v3_destroy(ctx, window->ext.text_input);
+        window->ext.text_input = NULL;
+      }
+      window->ime_preedit_active = false;
+    } else if (strcmp(iface_name, "zwp_pointer_constraints_v1") == 0) {
+      if (window->ext.locked_pointer) {
+        maru_zwp_locked_pointer_v1_destroy(ctx, window->ext.locked_pointer);
+        window->ext.locked_pointer = NULL;
+      }
+    } else if (strcmp(iface_name, "zwp_relative_pointer_manager_v1") == 0) {
+      if (window->ext.relative_pointer) {
+        maru_zwp_relative_pointer_v1_destroy(ctx, window->ext.relative_pointer);
+        window->ext.relative_pointer = NULL;
+      }
+    } else if (strcmp(iface_name, "wp_viewporter") == 0) {
+      if (window->ext.viewport) {
+        maru_wp_viewport_destroy(ctx, window->ext.viewport);
+        window->ext.viewport = NULL;
+      }
+    } else if (strcmp(iface_name, "wp_fractional_scale_manager_v1") == 0) {
+      if (window->ext.fractional_scale) {
+        maru_wp_fractional_scale_v1_destroy(ctx, window->ext.fractional_scale);
+        window->ext.fractional_scale = NULL;
+      }
+    } else if (strcmp(iface_name, "wp_content_type_manager_v1") == 0) {
+      if (window->ext.content_type) {
+        maru_wp_content_type_v1_destroy(ctx, window->ext.content_type);
+        window->ext.content_type = NULL;
+      }
+    } else if (strcmp(iface_name, "zxdg_decoration_manager_v1") == 0) {
+      if (window->xdg.decoration) {
+        maru_zxdg_toplevel_decoration_v1_destroy(ctx, window->xdg.decoration);
+        window->xdg.decoration = NULL;
+      }
+    } else if (strcmp(iface_name, "zwp_idle_inhibit_manager_v1") == 0) {
+      if (window->ext.idle_inhibitor) {
+        maru_zwp_idle_inhibitor_v1_destroy(ctx, window->ext.idle_inhibitor);
+        window->ext.idle_inhibitor = NULL;
+      }
+    }
+  }
+
+  if (strcmp(iface_name, "wl_seat") == 0) {
+    _wl_teardown_seat_state(ctx);
+  } else if (strcmp(iface_name, "wp_cursor_shape_manager_v1") == 0) {
+    if (ctx->wl.cursor_shape_device) {
+      maru_wp_cursor_shape_device_v1_destroy(ctx, ctx->wl.cursor_shape_device);
+      ctx->wl.cursor_shape_device = NULL;
+    }
+    _wl_update_cursor_shape_device(ctx);
+  } else if (strcmp(iface_name, "ext_idle_notifier_v1") == 0) {
+    _wl_clear_idle_notification_only(ctx);
+  } else if (strcmp(iface_name, "zxdg_output_manager_v1") == 0) {
+    for (uint32_t i = 0; i < ctx->base.monitor_cache_count; ++i) {
+      MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)ctx->base.monitor_cache[i];
+      if (monitor->xdg_output) {
+        maru_zxdg_output_v1_destroy(ctx, monitor->xdg_output);
+        monitor->xdg_output = NULL;
+      }
+    }
+  }
+
+  MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                         iface_name);
+}
+
 static void _idle_notification_handle_idled(void *data, struct ext_idle_notification_v1 *notification) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   MARU_Event evt = {0};
@@ -264,6 +401,26 @@ static void _registry_handle_global_remove(void *data,
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   (void)registry;
   _maru_wayland_remove_output(ctx, name);
+
+#define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)      \
+  if (_wl_proxy_matches_registry_name(ctx, ctx->protocols.iface_name, name)) {    \
+    maru_##iface_name##_destroy(ctx, ctx->protocols.iface_name);                  \
+    ctx->protocols.iface_name = NULL;                                              \
+    _wl_handle_required_global_removed(ctx, #iface_name);                          \
+    return;                                                                        \
+  }
+  MARU_WL_REGISTRY_REQUIRED_BINDINGS
+#undef MARU_WL_REGISTRY_BINDING_ENTRY
+
+#define MARU_WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)      \
+  if (_wl_proxy_matches_registry_name(ctx, ctx->protocols.opt.iface_name, name)) { \
+    maru_##iface_name##_destroy(ctx, ctx->protocols.opt.iface_name);              \
+    ctx->protocols.opt.iface_name = NULL;                                          \
+    _wl_handle_optional_global_removed(ctx, #iface_name);                          \
+    return;                                                                        \
+  }
+  MARU_WL_REGISTRY_OPTIONAL_BINDINGS
+#undef MARU_WL_REGISTRY_BINDING_ENTRY
 }
 
 static const struct wl_registry_listener _registry_listener = {
