@@ -36,6 +36,7 @@ extern const struct wl_seat_listener _maru_wayland_seat_listener;
 // Optional interfaces
 #define MARU_WL_REGISTRY_OPTIONAL_BINDINGS                                 \
   MARU_WL_REGISTRY_BINDING_ENTRY(wl_seat, 5, &_maru_wayland_seat_listener)  \
+  MARU_WL_REGISTRY_BINDING_ENTRY(wp_cursor_shape_manager_v1, 1, NULL)      \
   MARU_WL_REGISTRY_BINDING_ENTRY(zxdg_output_manager_v1, 3, NULL)          \
   MARU_WL_REGISTRY_BINDING_ENTRY(zxdg_decoration_manager_v1, 1, NULL)       \
   MARU_WL_REGISTRY_BINDING_ENTRY(xdg_activation_v1, 1, NULL)                \

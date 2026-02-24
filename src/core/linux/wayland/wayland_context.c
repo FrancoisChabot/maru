@@ -29,6 +29,20 @@ const struct xdg_wm_base_listener _maru_xdg_wm_base_listener = {
   .ping = _xdg_wm_base_ping,
 };
 
+static void _wl_update_cursor_shape_device(MARU_Context_WL *ctx) {
+  if (ctx->wl.cursor_shape_device &&
+      (!ctx->wl.pointer || !ctx->protocols.opt.wp_cursor_shape_manager_v1)) {
+    maru_wp_cursor_shape_device_v1_destroy(ctx, ctx->wl.cursor_shape_device);
+    ctx->wl.cursor_shape_device = NULL;
+  }
+
+  if (!ctx->wl.cursor_shape_device && ctx->wl.pointer &&
+      ctx->protocols.opt.wp_cursor_shape_manager_v1) {
+    ctx->wl.cursor_shape_device = maru_wp_cursor_shape_manager_v1_get_pointer(
+        ctx, ctx->protocols.opt.wp_cursor_shape_manager_v1, ctx->wl.pointer);
+  }
+}
+
 static void _wl_refresh_locked_window_pointers(MARU_Context_WL *ctx) {
   for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
     MARU_Window_WL *window = (MARU_Window_WL *)it;
@@ -60,11 +74,14 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
     ctx->wl.pointer = maru_wl_seat_get_pointer(ctx, wl_seat);
     ctx->dlib.wl.proxy_add_listener((struct wl_proxy *)ctx->wl.pointer,
                                     (void (**)(void))&_maru_wayland_pointer_listener, ctx);
+    _wl_update_cursor_shape_device(ctx);
     _wl_refresh_locked_window_pointers(ctx);
   } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && ctx->wl.pointer) {
     _wl_clear_locked_window_pointers(ctx);
+    _wl_update_cursor_shape_device(ctx);
     maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
     ctx->wl.pointer = NULL;
+    _wl_update_cursor_shape_device(ctx);
   }
 
   if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !ctx->wl.keyboard) {
@@ -398,6 +415,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   }
 
   _maru_wayland_update_idle_notification(ctx);
+  _wl_update_cursor_shape_device(ctx);
   ctx->base.attrs_dirty_mask = 0;
 
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
@@ -434,6 +452,10 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   }
 
   if (ctx->wl.pointer) {
+    if (ctx->wl.cursor_shape_device) {
+      maru_wp_cursor_shape_device_v1_destroy(ctx, ctx->wl.cursor_shape_device);
+      ctx->wl.cursor_shape_device = NULL;
+    }
     if (ctx->wl.pointer) maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
     ctx->wl.pointer = NULL;
   }

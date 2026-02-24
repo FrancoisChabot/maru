@@ -20,6 +20,7 @@ typedef struct MARU_Context_WL {
     struct wl_registry *registry;
     struct wl_seat *seat;
     struct wl_pointer *pointer;
+    struct wp_cursor_shape_device_v1 *cursor_shape_device;
     struct wl_keyboard *keyboard;
     struct zwp_text_input_manager_v3 *text_input_manager;
     struct ext_idle_notification_v1 *idle_notification;

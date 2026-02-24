@@ -48,6 +48,49 @@ static const char *_maru_cursor_shape_to_name(MARU_CursorShape shape) {
     }
 }
 
+static bool _maru_cursor_shape_to_protocol_shape(MARU_CursorShape shape, uint32_t *out_shape) {
+    switch (shape) {
+        case MARU_CURSOR_SHAPE_DEFAULT:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
+            return true;
+        case MARU_CURSOR_SHAPE_HELP:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_HELP;
+            return true;
+        case MARU_CURSOR_SHAPE_HAND:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_POINTER;
+            return true;
+        case MARU_CURSOR_SHAPE_WAIT:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_WAIT;
+            return true;
+        case MARU_CURSOR_SHAPE_CROSSHAIR:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_CROSSHAIR;
+            return true;
+        case MARU_CURSOR_SHAPE_TEXT:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_TEXT;
+            return true;
+        case MARU_CURSOR_SHAPE_MOVE:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_MOVE;
+            return true;
+        case MARU_CURSOR_SHAPE_NOT_ALLOWED:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NOT_ALLOWED;
+            return true;
+        case MARU_CURSOR_SHAPE_EW_RESIZE:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_EW_RESIZE;
+            return true;
+        case MARU_CURSOR_SHAPE_NS_RESIZE:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NS_RESIZE;
+            return true;
+        case MARU_CURSOR_SHAPE_NESW_RESIZE:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NESW_RESIZE;
+            return true;
+        case MARU_CURSOR_SHAPE_NWSE_RESIZE:
+            *out_shape = WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NWSE_RESIZE;
+            return true;
+        default:
+            return false;
+    }
+}
+
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial) {
     if (!ctx->wl.pointer) return;
 
@@ -65,10 +108,14 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
     int32_t hotspot_y = 0;
     int32_t width = 0;
     int32_t height = 0;
+    MARU_CursorShape system_shape = MARU_CURSOR_SHAPE_DEFAULT;
+    bool system_cursor = (cursor_handle == NULL);
 
     if (cursor_handle) {
         MARU_Cursor_WL *cursor = (MARU_Cursor_WL *)cursor_handle;
         wl_cursor = cursor->wl_cursor;
+        system_cursor = (cursor->base.pub.flags & MARU_CURSOR_FLAG_SYSTEM) != 0;
+        system_shape = cursor->cursor_shape;
 
         if (cursor->buffer) {
             buffer = cursor->buffer;
@@ -77,7 +124,17 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
             width = (int32_t)cursor->width;
             height = (int32_t)cursor->height;
         }
-    } else {
+    }
+
+    if (!buffer && ctx->wl.cursor_shape_device && system_cursor) {
+        uint32_t shape = 0;
+        if (_maru_cursor_shape_to_protocol_shape(system_shape, &shape)) {
+            maru_wp_cursor_shape_device_v1_set_shape(ctx, ctx->wl.cursor_shape_device, serial, shape);
+            return;
+        }
+    }
+
+    if (!buffer) {
         if (!ctx->wl.cursor_theme) {
              if (ctx->protocols.wl_shm) {
                  const char *size_env = getenv("XCURSOR_SIZE");
@@ -87,10 +144,8 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
                  ctx->wl.cursor_theme = maru_wl_cursor_theme_load(ctx, NULL, size, ctx->protocols.wl_shm);
              }
         }
-        if (ctx->wl.cursor_theme) {
-            const char* shape_name = "left_ptr";
-            // If the user hasn't set a cursor handle, we use default.
-            // But we could support more logic here.
+        if (ctx->wl.cursor_theme && !wl_cursor) {
+            const char* shape_name = _maru_cursor_shape_to_name(system_shape);
             wl_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, shape_name);
         }
     }
@@ -706,25 +761,30 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
     if (create_info->system_shape <= 0 || create_info->system_shape >= 16) {
       return MARU_FAILURE;
     }
-    if (!ctx->wl.cursor_theme) {
-      if (!ctx->protocols.wl_shm) return MARU_FAILURE;
-
-      const char *size_env = getenv("XCURSOR_SIZE");
-      int size = 24;
-      if (size_env) size = atoi(size_env);
-      if (size == 0) size = 24;
-
-      ctx->wl.cursor_theme = maru_wl_cursor_theme_load(ctx, NULL, size, ctx->protocols.wl_shm);
-      if (!ctx->wl.cursor_theme) return MARU_FAILURE;
-    }
-
-    struct wl_cursor *wl_cursor =
-        maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(create_info->system_shape));
-    if (!wl_cursor) return MARU_FAILURE;
 
     MARU_Cursor_WL *cursor = maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_WL));
     if (!cursor) return MARU_FAILURE;
     memset(cursor, 0, sizeof(MARU_Cursor_WL));
+
+    const bool has_shape_protocol = ctx->protocols.opt.wp_cursor_shape_manager_v1 != NULL;
+
+    if (!ctx->wl.cursor_theme && ctx->protocols.wl_shm) {
+      const char *size_env = getenv("XCURSOR_SIZE");
+      int size = 24;
+      if (size_env) size = atoi(size_env);
+      if (size == 0) size = 24;
+      ctx->wl.cursor_theme = maru_wl_cursor_theme_load(ctx, NULL, size, ctx->protocols.wl_shm);
+    }
+
+    if (ctx->wl.cursor_theme) {
+      cursor->wl_cursor =
+          maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(create_info->system_shape));
+    }
+
+    if (!has_shape_protocol && !cursor->wl_cursor) {
+      maru_context_free(&ctx->base, cursor);
+      return MARU_FAILURE;
+    }
 
     cursor->base.ctx_base = &ctx->base;
 #ifdef MARU_INDIRECT_BACKEND
@@ -734,7 +794,6 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
     cursor->base.pub.metrics = &cursor->base.metrics;
     cursor->base.pub.userdata = create_info->userdata;
     cursor->base.pub.flags = MARU_CURSOR_FLAG_SYSTEM;
-    cursor->wl_cursor = wl_cursor;
     cursor->cursor_shape = create_info->system_shape;
     cursor->shm_fd = -1;
 
