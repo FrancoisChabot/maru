@@ -8,12 +8,12 @@
 extern void *maru_getContextNativeHandle_WL(MARU_Context *context);
 extern void *maru_getWindowNativeHandle_WL(MARU_Window *window);
 
+#ifdef MARU_INDIRECT_BACKEND
 static void maru_resetMonitorMetrics_WL(MARU_Monitor *monitor) {
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
 }
 
-#ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_WL = {
   .destroyContext = maru_destroyContext_WL,
   .updateContext = maru_updateContext_WL,
@@ -28,6 +28,8 @@ const MARU_Backend maru_backend_WL = {
   .destroyCursor = maru_destroyCursor_WL,
   .wakeContext = maru_wakeContext_WL,
   .getMonitors = maru_getMonitors_WL,
+  .retainMonitor = maru_retainMonitor_WL,
+  .releaseMonitor = maru_releaseMonitor_WL,
   .getMonitorModes = maru_getMonitorModes_WL,
   .setMonitorMode = maru_setMonitorMode_WL,
   .resetMonitorMetrics = maru_resetMonitorMetrics_WL,
@@ -127,19 +129,12 @@ MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *
 
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(retainMonitor, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  mon_base->ref_count++;
+  maru_retainMonitor_WL(monitor);
 }
 
 MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(releaseMonitor, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  if (mon_base->ref_count > 0) {
-    mon_base->ref_count--;
-    if (mon_base->ref_count == 0 && !mon_base->is_active) {
-      maru_destroyMonitor_WL(monitor);
-    }
-  }
+  maru_releaseMonitor_WL(monitor);
 }
 
 MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {

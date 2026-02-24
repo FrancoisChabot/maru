@@ -45,10 +45,12 @@ void EventModule::render(MARU_Context* ctx, MARU_Window* window) {
         event_checkbox("MONITOR_CONNECTION_CHANGED", MARU_MONITOR_CONNECTION_CHANGED);
         event_checkbox("MONITOR_MODE_CHANGED", MARU_MONITOR_MODE_CHANGED);
         event_checkbox("WINDOW_FRAME", MARU_WINDOW_FRAME);
-        event_checkbox("TEXT_INPUT_RECEIVED", MARU_TEXT_INPUT_RECEIVED);
+        event_checkbox("TEXT_EDIT_START", MARU_TEXT_EDIT_START);
+        event_checkbox("TEXT_EDIT_UPDATE", MARU_TEXT_EDIT_UPDATE);
+        event_checkbox("TEXT_EDIT_COMMIT", MARU_TEXT_EDIT_COMMIT);
+        event_checkbox("TEXT_EDIT_END", MARU_TEXT_EDIT_END);
         event_checkbox("FOCUS_CHANGED", MARU_FOCUS_CHANGED);
         event_checkbox("WINDOW_MAXIMIZED", MARU_WINDOW_MAXIMIZED);
-        event_checkbox("TEXT_COMPOSITION_UPDATED", MARU_TEXT_COMPOSITION_UPDATED);
 
         ImGui::Separator();
         static int idle_timeout = 0;

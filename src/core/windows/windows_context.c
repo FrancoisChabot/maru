@@ -6,6 +6,7 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -337,7 +338,7 @@ static BOOL CALLBACK _maru_win32_monitor_enum_proc(HMONITOR hmonitor, HDC hdc, L
   mon->base.pub.context = (MARU_Context *)ctx;
   mon->base.pub.metrics = &mon->base.metrics;
   mon->base.is_active = true;
-  mon->base.ref_count = 1; // 1 for being in the cache
+  atomic_init(&mon->base.ref_count, 1u); // 1 for being in the cache
 #ifdef MARU_INDIRECT_BACKEND
   mon->base.backend = ctx->base.backend;
 #endif

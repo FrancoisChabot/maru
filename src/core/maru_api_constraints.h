@@ -16,6 +16,24 @@ extern void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag
 #endif
 extern MARU_ThreadId _maru_getCurrentThreadId(void);
 
+static inline bool _maru_validate_non_negative_vec2(MARU_Vec2Dip v) {
+    return v.x >= 0 && v.y >= 0;
+}
+
+static inline bool _maru_validate_non_negative_rect(MARU_RectDip r) {
+    return r.size.x >= 0 && r.size.y >= 0;
+}
+
+static inline bool _maru_validate_aspect_ratio(MARU_Fraction f) {
+    if (f.num < 0 || f.denom < 0) {
+        return false;
+    }
+    if (f.num == 0 || f.denom == 0) {
+        return (f.num == 0 && f.denom == 0);
+    }
+    return true;
+}
+
 static inline void _maru_validate_createContext(const MARU_ContextCreateInfo *create_info,
                                                        MARU_Context **out_context) {
     MARU_CONSTRAINT_CHECK(create_info != NULL);
@@ -67,6 +85,82 @@ static inline void _maru_validate_updateWindow(MARU_Window *window, uint64_t fie
                                          const MARU_WindowAttributes *attributes) {
     MARU_CONSTRAINT_CHECK(window != NULL);
     MARU_CONSTRAINT_CHECK(attributes != NULL);
+
+    const uint64_t known_fields =
+        MARU_WINDOW_ATTR_TITLE |
+        MARU_WINDOW_ATTR_LOGICAL_SIZE |
+        MARU_WINDOW_ATTR_FULLSCREEN |
+        MARU_WINDOW_ATTR_CURSOR_MODE |
+        MARU_WINDOW_ATTR_CURSOR |
+        MARU_WINDOW_ATTR_MONITOR |
+        MARU_WINDOW_ATTR_MAXIMIZED |
+        MARU_WINDOW_ATTR_MIN_SIZE |
+        MARU_WINDOW_ATTR_MAX_SIZE |
+        MARU_WINDOW_ATTR_POSITION |
+        MARU_WINDOW_ATTR_ASPECT_RATIO |
+        MARU_WINDOW_ATTR_RESIZABLE |
+        MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH |
+        MARU_WINDOW_ATTR_TEXT_INPUT_TYPE |
+        MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
+        MARU_WINDOW_ATTR_EVENT_MASK |
+        MARU_WINDOW_ATTR_VIEWPORT_SIZE |
+        MARU_WINDOW_ATTR_SURROUNDING_TEXT |
+        MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET;
+
+    MARU_CONSTRAINT_CHECK((field_mask & ~known_fields) == 0);
+
+    if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
+        MARU_CONSTRAINT_CHECK(attributes->cursor_mode >= MARU_CURSOR_NORMAL &&
+                              attributes->cursor_mode <= MARU_CURSOR_LOCKED);
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
+        MARU_CONSTRAINT_CHECK(attributes->text_input_type >= MARU_TEXT_INPUT_TYPE_NONE &&
+                              attributes->text_input_type <= MARU_TEXT_INPUT_TYPE_NUMERIC);
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
+        MARU_CONSTRAINT_CHECK(_maru_validate_aspect_ratio(attributes->aspect_ratio));
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
+        MARU_CONSTRAINT_CHECK(_maru_validate_non_negative_vec2(attributes->logical_size));
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
+        MARU_CONSTRAINT_CHECK(_maru_validate_non_negative_vec2(attributes->min_size));
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
+        MARU_CONSTRAINT_CHECK(_maru_validate_non_negative_vec2(attributes->max_size));
+    }
+
+    if ((field_mask & (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE)) ==
+        (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE)) {
+        const bool max_unbounded_x = attributes->max_size.x == 0;
+        const bool max_unbounded_y = attributes->max_size.y == 0;
+        if (!max_unbounded_x) {
+            MARU_CONSTRAINT_CHECK(attributes->max_size.x >= attributes->min_size.x);
+        }
+        if (!max_unbounded_y) {
+            MARU_CONSTRAINT_CHECK(attributes->max_size.y >= attributes->min_size.y);
+        }
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_RECT) {
+        MARU_CONSTRAINT_CHECK(_maru_validate_non_negative_rect(attributes->text_input_rect));
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
+        MARU_CONSTRAINT_CHECK(_maru_validate_non_negative_vec2(attributes->viewport_size));
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
+        if (attributes->monitor != NULL) {
+            MARU_CONSTRAINT_CHECK(maru_getMonitorContext(attributes->monitor) ==
+                                  maru_getWindowContext(window));
+        }
+    }
 }
 
 static inline void _maru_validate_requestWindowFocus(MARU_Window *window) {

@@ -343,13 +343,13 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
       int len = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)&wparam, 1, utf8, 4, NULL, NULL);
       if (len > 0) {
         utf8[len] = '\0';
-        MARU_Event evt = {
-          .text_input = {
-            .text = utf8,
-            .length = (uint32_t)len
-          }
-        };
-        _maru_dispatch_event(ctx, MARU_TEXT_INPUT_RECEIVED, (MARU_Window *)window, &evt);
+        MARU_Event evt = {0};
+        evt.text_edit_commit.committed_utf8 = utf8;
+        evt.text_edit_commit.committed_length = (uint32_t)len;
+        evt.text_edit_commit.delete_before_bytes = 0;
+        evt.text_edit_commit.delete_after_bytes = 0;
+        evt.text_edit_commit.session_id = 0;
+        _maru_dispatch_event(ctx, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
       }
       return 0;
     }

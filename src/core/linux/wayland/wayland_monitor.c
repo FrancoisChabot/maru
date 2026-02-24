@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdatomic.h>
 
 static void _maru_wayland_set_monitor_name(MARU_Monitor_WL *monitor,
                                            const char *name) {
@@ -72,8 +73,13 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output,
   };
 
   if ((flags & WL_OUTPUT_MODE_CURRENT) != 0U) {
+    const MARU_VideoMode prev_mode = monitor->base.pub.current_mode;
     monitor->base.pub.current_mode = mode;
     monitor->current_mode = mode;
+    if (prev_mode.size.x != mode.size.x || prev_mode.size.y != mode.size.y ||
+        prev_mode.refresh_rate_mhz != mode.refresh_rate_mhz) {
+      monitor->mode_changed_pending = true;
+    }
   }
 
   for (uint32_t i = 0; i < monitor->mode_count; ++i) {
@@ -121,12 +127,17 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
   MARU_Event evt = {0};
   if (!monitor->announced) {
     monitor->announced = true;
+    monitor->mode_changed_pending = false;
     evt.monitor_connection.monitor = (MARU_Monitor *)monitor;
     evt.monitor_connection.connected = true;
     _maru_dispatch_event(&ctx->base, MARU_MONITOR_CONNECTION_CHANGED, NULL, &evt);
     return;
   }
 
+  if (!monitor->mode_changed_pending) {
+    return;
+  }
+  monitor->mode_changed_pending = false;
   evt.monitor_mode.monitor = (MARU_Monitor *)monitor;
   _maru_dispatch_event(&ctx->base, MARU_MONITOR_MODE_CHANGED, NULL, &evt);
 }
@@ -261,7 +272,7 @@ void _maru_wayland_bind_output(MARU_Context_WL *ctx, uint32_t name, uint32_t ver
   monitor->base.ctx_base = &ctx->base;
   monitor->base.pub.context = (MARU_Context *)ctx;
   monitor->base.pub.metrics = &monitor->base.metrics;
-  monitor->base.ref_count = 1;
+  atomic_init(&monitor->base.ref_count, 1u);
   monitor->base.is_active = true;
 #ifdef MARU_INDIRECT_BACKEND
   monitor->base.backend = ctx->base.backend;
@@ -298,6 +309,11 @@ void _maru_wayland_remove_output(MARU_Context_WL *ctx, uint32_t name) {
     MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)ctx->base.monitor_cache[i];
     if (monitor->name != name) {
       continue;
+    }
+
+    for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+      MARU_Window_WL *window = (MARU_Window_WL *)it;
+      _maru_wayland_window_drop_monitor(window, (MARU_Monitor *)monitor);
     }
 
     monitor->base.pub.flags |= MARU_MONITOR_STATE_LOST;
@@ -338,6 +354,26 @@ MARU_Monitor *const *maru_getMonitors_WL(MARU_Context *context, uint32_t *out_co
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   *out_count = ctx->base.monitor_cache_count;
   return ctx->base.monitor_cache;
+}
+
+void maru_retainMonitor_WL(MARU_Monitor *monitor) {
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  atomic_fetch_add_explicit(&mon_base->ref_count, 1u, memory_order_relaxed);
+}
+
+void maru_releaseMonitor_WL(MARU_Monitor *monitor) {
+  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
+  uint32_t current = atomic_load_explicit(&mon_base->ref_count, memory_order_acquire);
+  while (current > 0) {
+    if (atomic_compare_exchange_weak_explicit(&mon_base->ref_count, &current,
+                                              current - 1u, memory_order_acq_rel,
+                                              memory_order_acquire)) {
+      if (current == 1u && !mon_base->is_active) {
+        maru_destroyMonitor_WL(monitor);
+      }
+      return;
+    }
+  }
 }
 
 MARU_Status maru_updateMonitors_WL(MARU_Context *context) {

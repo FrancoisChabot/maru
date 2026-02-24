@@ -979,6 +979,21 @@ MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor) {
   MARU_Cursor_WL *cursor_wl = (MARU_Cursor_WL *)cursor;
   MARU_Context_WL *ctx = (MARU_Context_WL *)cursor_wl->base.ctx_base;
 
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+      MARU_Window_WL *window = (MARU_Window_WL *)it;
+      if (window->base.pub.current_cursor != cursor) {
+          continue;
+      }
+
+      window->base.pub.current_cursor = NULL;
+      window->base.attrs_requested.cursor = NULL;
+      window->base.attrs_effective.cursor = NULL;
+
+      if (ctx->linux_common.pointer.focused_window == (MARU_Window *)window) {
+          _maru_wayland_update_cursor(ctx, window, ctx->linux_common.pointer.enter_serial);
+      }
+  }
+
   if (cursor_wl->buffer) {
       maru_wl_buffer_destroy(ctx, cursor_wl->buffer);
   }

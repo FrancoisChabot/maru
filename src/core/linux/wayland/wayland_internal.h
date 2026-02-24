@@ -116,6 +116,7 @@ typedef struct MARU_Window_WL {
   bool primary_selection;
   bool ime_preedit_active;
   bool is_transparent;
+  MARU_BufferTransform preferred_buffer_transform;
 } MARU_Window_WL;
 
 typedef struct MARU_Monitor_WL {
@@ -130,6 +131,7 @@ typedef struct MARU_Monitor_WL {
   uint32_t mode_capacity;
   MARU_Scalar scale;
   bool announced;
+  bool mode_changed_pending;
 } MARU_Monitor_WL;
 
 typedef struct MARU_Cursor_WL {
@@ -316,6 +318,8 @@ MARU_Status maru_requestWindowFrame_WL(MARU_Window *window);
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 
 MARU_Monitor *const *maru_getMonitors_WL(MARU_Context *context, uint32_t *out_count);
+void maru_retainMonitor_WL(MARU_Monitor *monitor);
+void maru_releaseMonitor_WL(MARU_Monitor *monitor);
 MARU_Status maru_updateMonitors_WL(MARU_Context *context);
 const MARU_VideoMode *maru_getMonitorModes_WL(const MARU_Monitor *monitor, uint32_t *out_count);
 MARU_Status maru_setMonitorMode_WL(const MARU_Monitor *monitor, MARU_VideoMode mode);
@@ -330,6 +334,7 @@ MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor);
 
 void _maru_wayland_bind_output(MARU_Context_WL *ctx, uint32_t name, uint32_t version);
 void _maru_wayland_remove_output(MARU_Context_WL *ctx, uint32_t name);
+void _maru_wayland_window_drop_monitor(MARU_Window_WL *window, MARU_Monitor *monitor);
 
 bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
                                              const MARU_WindowCreateInfo *create_info);
@@ -359,7 +364,6 @@ bool _maru_wayland_create_libdecor_frame(MARU_Window_WL *window,
                                           const MARU_WindowCreateInfo *create_info);
 void _maru_wayland_destroy_libdecor_frame(MARU_Window_WL *window);
 void _maru_wayland_libdecor_set_title(MARU_Window_WL *window, const char *title);
-void _maru_wayland_libdecor_set_capabilities(MARU_Window_WL *window);
 
 /* libdecor helpers */
 

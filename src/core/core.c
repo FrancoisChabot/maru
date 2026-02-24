@@ -2,6 +2,7 @@
 #include "maru_mem_internal.h"
 #include "maru/c/details/contexts.h"
 #include <string.h>
+#include <stdatomic.h>
 
 #include <stdlib.h>
 
@@ -302,13 +303,28 @@ MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(retainMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  mon_base->ref_count++;
+  if (mon_base->backend->retainMonitor) {
+    mon_base->backend->retainMonitor(monitor);
+    return;
+  }
+  atomic_fetch_add_explicit(&mon_base->ref_count, 1u, memory_order_relaxed);
 }
 
 MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(releaseMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  mon_base->ref_count--;
+  if (mon_base->backend->releaseMonitor) {
+    mon_base->backend->releaseMonitor(monitor);
+    return;
+  }
+  uint32_t current = atomic_load_explicit(&mon_base->ref_count, memory_order_acquire);
+  while (current > 0) {
+    if (atomic_compare_exchange_weak_explicit(&mon_base->ref_count, &current,
+                                              current - 1u, memory_order_acq_rel,
+                                              memory_order_acquire)) {
+      break;
+    }
+  }
 }
 
 MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {

@@ -50,12 +50,25 @@ typedef struct MARU_RectDip {
   MARU_Vec2Dip size;
 } MARU_RectDip;
 
+/** @brief Orientation/flip transform for a window buffer. */
+typedef enum MARU_BufferTransform {
+  MARU_BUFFER_TRANSFORM_NORMAL = 0,
+  MARU_BUFFER_TRANSFORM_90 = 1,
+  MARU_BUFFER_TRANSFORM_180 = 2,
+  MARU_BUFFER_TRANSFORM_270 = 3,
+  MARU_BUFFER_TRANSFORM_FLIPPED = 4,
+  MARU_BUFFER_TRANSFORM_FLIPPED_90 = 5,
+  MARU_BUFFER_TRANSFORM_FLIPPED_180 = 6,
+  MARU_BUFFER_TRANSFORM_FLIPPED_270 = 7,
+} MARU_BufferTransform;
+
 /** @brief Snapshot of window dimensions and position. */
 typedef struct MARU_WindowGeometry {
   MARU_Vec2Dip origin;
   MARU_Vec2Dip logical_size;
   MARU_Vec2Px pixel_size;
   MARU_Scalar scale;
+  MARU_BufferTransform buffer_transform;
 } MARU_WindowGeometry;
 
 #ifdef __cplusplus

@@ -1,5 +1,6 @@
 #include "windows_internal.h"
 #include "maru_api_constraints.h"
+#include <stdatomic.h>
 
 extern void *_maru_getContextNativeHandle_Windows(MARU_Context *context);
 extern void *_maru_getWindowNativeHandle_Windows(MARU_Window *window);
@@ -114,16 +115,21 @@ MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(retainMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  mon_base->ref_count++;
+  atomic_fetch_add_explicit(&mon_base->ref_count, 1u, memory_order_relaxed);
 }
 
 MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(releaseMonitor, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  if (mon_base->ref_count > 0) {
-    mon_base->ref_count--;
-    if (mon_base->ref_count == 0 && !mon_base->is_active) {
-      _maru_monitor_free(mon_base);
+  uint32_t current = atomic_load_explicit(&mon_base->ref_count, memory_order_acquire);
+  while (current > 0) {
+    if (atomic_compare_exchange_weak_explicit(&mon_base->ref_count, &current,
+                                              current - 1u, memory_order_acq_rel,
+                                              memory_order_acquire)) {
+      if (current == 1u && !mon_base->is_active) {
+        _maru_monitor_free(mon_base);
+      }
+      return;
     }
   }
 }

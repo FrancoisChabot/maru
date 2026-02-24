@@ -296,12 +296,8 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventType type, const MARU_Event* event) {
             io.AddKeyEvent(ImGuiMod_Alt, (event->key.modifiers & MARU_MODIFIER_ALT) != 0);
             io.AddKeyEvent(ImGuiMod_Super, (event->key.modifiers & MARU_MODIFIER_META) != 0);
         }
-    } else if (type == MARU_TEXT_INPUT_RECEIVED || type == MARU_TEXT_EDIT_COMMIT) {
-        if (type == MARU_TEXT_INPUT_RECEIVED) {
-            io.AddInputCharactersUTF8(event->text_input.text);
-        } else {
-            io.AddInputCharactersUTF8(event->text_edit_commit.committed_utf8);
-        }
+    } else if (type == MARU_TEXT_EDIT_COMMIT) {
+        io.AddInputCharactersUTF8(event->text_edit_commit.committed_utf8);
     } else if (type == MARU_FOCUS_CHANGED) {
         io.AddFocusEvent(event->focus.focused);
     }

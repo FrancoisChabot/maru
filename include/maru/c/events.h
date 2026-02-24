@@ -37,7 +37,7 @@ typedef struct MARU_Monitor MARU_Monitor;
 
 /** @brief Event fired when a window close request is received. */
 static const MARU_EventMask MARU_CLOSE_REQUESTED = ((MARU_EventMask)1 << 0);
-/** @brief Event fired when a window has been resized. */
+/** @brief Event fired when window geometry changes (size/scale/transform). */
 static const MARU_EventMask MARU_WINDOW_RESIZED = ((MARU_EventMask)1 << 1);
 /** @brief Event fired when a keyboard key state changes. */
 static const MARU_EventMask MARU_KEY_STATE_CHANGED = ((MARU_EventMask)1 << 2);
@@ -57,18 +57,10 @@ static const MARU_EventMask MARU_MONITOR_CONNECTION_CHANGED = ((MARU_EventMask)1
 static const MARU_EventMask MARU_MONITOR_MODE_CHANGED = ((MARU_EventMask)1 << 9);
 /** @brief Event fired when the window should render its next frame. */
 static const MARU_EventMask MARU_WINDOW_FRAME = ((MARU_EventMask)1 << 10);
-/** @brief Event fired when Unicode text input is received. 
- *  @deprecated Use MARU_TEXT_EDIT_COMMIT instead.
- */
-static const MARU_EventMask MARU_TEXT_INPUT_RECEIVED = ((MARU_EventMask)1 << 11);
 /** @brief Event fired when a window gains or loses focus. */
 static const MARU_EventMask MARU_FOCUS_CHANGED = ((MARU_EventMask)1 << 12);
 /** @brief Event fired when a window is maximized or restored. */
 static const MARU_EventMask MARU_WINDOW_MAXIMIZED = ((MARU_EventMask)1 << 13);
-/** @brief Event fired when IME text composition state changes. 
- *  @deprecated Use MARU_TEXT_EDIT_UPDATE instead.
- */
-static const MARU_EventMask MARU_TEXT_COMPOSITION_UPDATED = ((MARU_EventMask)1 << 18);
 
 /** @brief Event fired when an IME composition session starts. */
 static const MARU_EventMask MARU_TEXT_EDIT_START = ((MARU_EventMask)1 << 19);
@@ -132,7 +124,7 @@ typedef struct MARU_WindowMaximizationEvent {
 // N.B. This represents raw keyboard data.
 // - It does not get fired on keyrepeats
 // - the key will likely not match the current keyboard layout
-// - If you are using this for text, use MARU_TextInputEvent instead
+// - If you are using this for text, use MARU_TEXT_EDIT_COMMIT instead
 typedef struct MARU_KeyboardEvent {
   MARU_Key raw_key;
   MARU_ButtonState state;
@@ -178,20 +170,6 @@ typedef struct MARU_MonitorConnectionEvent {
 typedef struct MARU_MonitorModeEvent {
   MARU_Monitor *monitor;
 } MARU_MonitorModeEvent;
-
-/** @brief Payload for MARU_TEXT_INPUT_RECEIVED. */
-typedef struct MARU_TextInputEvent {
-  const char *text;
-  uint32_t length;
-} MARU_TextInputEvent;
-
-/** @brief Payload for MARU_TEXT_COMPOSITION_UPDATED. */
-typedef struct MARU_TextCompositionEvent {
-  const char *text;
-  uint32_t length;
-  uint32_t cursor_index;
-  uint32_t selection_length;
-} MARU_TextCompositionEvent;
 
 /** @brief Payload for MARU_FOCUS_CHANGED. */
 typedef struct MARU_FocusEvent {
@@ -256,8 +234,6 @@ typedef struct MARU_Event {
     MARU_MonitorConnectionEvent monitor_connection;
     MARU_MonitorModeEvent monitor_mode;
     MARU_WindowFrameEvent frame;
-    MARU_TextInputEvent text_input;
-    MARU_TextCompositionEvent text_composition;
     MARU_FocusEvent focus;
     MARU_TextEditStartEvent text_edit_start;
     MARU_TextEditUpdateEvent text_edit_update;

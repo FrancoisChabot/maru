@@ -50,10 +50,6 @@ void EventLogModule::onEvent(MARU_EventType type, MARU_Window* win, const MARU_E
         ss << "Delta: (" << e.mouse_scroll.delta.x << "," << e.mouse_scroll.delta.y << ")" << "Steps: (" << e.mouse_scroll.steps.x << "," << e.mouse_scroll.steps.y << ")";
     } else if (type == MARU_IDLE_STATE_CHANGED) {
         ss << "Idle: " << (e.idle.is_idle ? "YES" : "NO") << " Timeout: " << e.idle.timeout_ms << "ms";
-    } else if (type == MARU_TEXT_INPUT_RECEIVED) {
-        ss << "Text: '" << (e.text_input.text ? e.text_input.text : "") << "' Len: " << e.text_input.length;
-    } else if (type == MARU_TEXT_COMPOSITION_UPDATED) {
-        ss << "Preedit: '" << (e.text_composition.text ? e.text_composition.text : "") << "' Cursor: " << e.text_composition.cursor_index;
     } else if (type == MARU_TEXT_EDIT_START) {
         ss << "IME Start: Session=" << e.text_edit_start.session_id;
     } else if (type == MARU_TEXT_EDIT_UPDATE) {
@@ -186,10 +182,8 @@ const char* EventLogModule::typeToString(MARU_EventType type) {
     if (type == MARU_MONITOR_CONNECTION_CHANGED) return "MONITOR_CONNECTION_CHANGED";
     if (type == MARU_MONITOR_MODE_CHANGED) return "MONITOR_MODE_CHANGED";
     if (type == MARU_WINDOW_FRAME) return "WINDOW_FRAME";
-    if (type == MARU_TEXT_INPUT_RECEIVED) return "TEXT_INPUT_RECEIVED";
     if (type == MARU_FOCUS_CHANGED) return "FOCUS_CHANGED";
     if (type == MARU_WINDOW_MAXIMIZED) return "WINDOW_MAXIMIZED";
-    if (type == MARU_TEXT_COMPOSITION_UPDATED) return "TEXT_COMPOSITION_UPDATED";
     if (type == MARU_TEXT_EDIT_START) return "TEXT_EDIT_START";
     if (type == MARU_TEXT_EDIT_UPDATE) return "TEXT_EDIT_UPDATE";
     if (type == MARU_TEXT_EDIT_COMMIT) return "TEXT_EDIT_COMMIT";

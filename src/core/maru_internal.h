@@ -2,6 +2,7 @@
 #define MARU_INTERNAL_H_INCLUDED
 
 #include <stdint.h>
+#include <stdatomic.h>
 #include "maru/maru.h"
 #include "maru_backend.h"
 #include "core_event_queue.h"
@@ -129,7 +130,7 @@ typedef struct MARU_Monitor_Base {
   MARU_Context_Base *ctx_base;
   MARU_MonitorMetrics metrics;
   
-  uint32_t ref_count;
+  _Atomic uint32_t ref_count;
   bool is_active; // If false, the monitor was disconnected but is still retained.
 } MARU_Monitor_Base;
 
