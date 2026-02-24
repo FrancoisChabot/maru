@@ -116,6 +116,16 @@ static void _maru_wayland_disconnect_display(MARU_Context_WL *ctx) {
   }
 }
 
+static void _maru_wayland_mark_lost(MARU_Context_WL *ctx, const char *message) {
+  ctx->base.pub.flags |= MARU_CONTEXT_STATE_LOST;
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    it->pub.flags |= MARU_WINDOW_STATE_LOST;
+  }
+  if (message) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE, message);
+  }
+}
+
 static bool _maru_wayland_connect_display(MARU_Context_WL *ctx) {
   ctx->wl.display = maru_wl_display_connect(ctx, NULL);
   if (!ctx->wl.display) {
@@ -497,6 +507,7 @@ MARU_Status maru_wakeContext_WL(MARU_Context *context) {
 MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
                                MARU_EventCallback callback, void *userdata) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
+  MARU_Status status = MARU_SUCCESS;
 
   MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
@@ -514,10 +525,18 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   fds[1].revents = 0;
 
   while (maru_wl_display_prepare_read(ctx, ctx->wl.display) != 0) {
-    maru_wl_display_dispatch_pending(ctx, ctx->wl.display);
+    if (maru_wl_display_dispatch_pending(ctx, ctx->wl.display) < 0) {
+      _maru_wayland_mark_lost(ctx, "wl_display_dispatch_pending() failure during prepare_read");
+      status = MARU_FAILURE;
+      goto pump_exit;
+    }
   }
 
-  maru_wl_display_flush(ctx, ctx->wl.display);
+  if (maru_wl_display_flush(ctx, ctx->wl.display) < 0 && errno != EAGAIN) {
+    _maru_wayland_mark_lost(ctx, "wl_display_flush() failure");
+    status = MARU_FAILURE;
+    goto pump_exit;
+  }
 
   int timeout = (timeout_ms == MARU_NEVER) ? -1 : (int)timeout_ms;
   if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 && ctx->repeat.next_repeat_ns != 0) {
@@ -537,9 +556,21 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
 
   int poll_result = poll(fds, nfds, timeout);
   if (poll_result > 0) {
-    bool display_ready = (fds[0].revents & (POLLIN | POLLERR | POLLHUP)) != 0;
+    const short display_revents = fds[0].revents;
+    if ((display_revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+      maru_wl_display_cancel_read(ctx, ctx->wl.display);
+      _maru_wayland_mark_lost(ctx, "Wayland display fd reported POLLERR/POLLHUP/POLLNVAL");
+      status = MARU_FAILURE;
+      goto pump_exit;
+    }
+
+    bool display_ready = (display_revents & POLLIN) != 0;
     if (display_ready) {
-      maru_wl_display_read_events(ctx, ctx->wl.display);
+      if (maru_wl_display_read_events(ctx, ctx->wl.display) < 0) {
+        _maru_wayland_mark_lost(ctx, "wl_display_read_events() failure");
+        status = MARU_FAILURE;
+        goto pump_exit;
+      }
     } else {
       maru_wl_display_cancel_read(ctx, ctx->wl.display);
     }
@@ -547,11 +578,28 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     if ((fds[1].revents & POLLIN) != 0) {
       _maru_wayland_drain_wake_fd(ctx);
     }
+  } else if (poll_result == 0) {
+    maru_wl_display_cancel_read(ctx, ctx->wl.display);
   } else {
     maru_wl_display_cancel_read(ctx, ctx->wl.display);
+    if (errno != EINTR) {
+      _maru_wayland_mark_lost(ctx, "poll() failure on Wayland display fd");
+      status = MARU_FAILURE;
+      goto pump_exit;
+    }
   }
 
-  maru_wl_display_dispatch_pending(ctx, ctx->wl.display);
+  if (maru_wl_display_dispatch_pending(ctx, ctx->wl.display) < 0) {
+    _maru_wayland_mark_lost(ctx, "wl_display_dispatch_pending() failure");
+    status = MARU_FAILURE;
+    goto pump_exit;
+  }
+
+  if (maru_wl_display_get_error(ctx, ctx->wl.display) != 0) {
+    _maru_wayland_mark_lost(ctx, "Wayland display reported a fatal protocol/connection error");
+    status = MARU_FAILURE;
+    goto pump_exit;
+  }
 
   if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 && ctx->repeat.next_repeat_ns != 0 &&
       ctx->linux_common.xkb.state && ctx->linux_common.xkb.focused_window) {
@@ -607,8 +655,9 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     }
   }
 
+pump_exit:
   ctx->base.pump_ctx = NULL;
-  return MARU_SUCCESS;
+  return status;
 }
 
 void *maru_getContextNativeHandle_WL(MARU_Context *context) {
