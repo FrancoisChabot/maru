@@ -10,6 +10,7 @@
 #include "maru/c/core.h"
 #include "maru/c/contexts.h"
 #include "maru/c/geometry.h"
+#include "maru/c/images.h"
 #include "maru/c/metrics.h"
 
 /**
@@ -76,12 +77,18 @@ static inline bool maru_isCursorSystem(const MARU_Cursor *cursor);
 static inline const MARU_CursorMetrics *maru_getCursorMetrics(const MARU_Cursor *cursor);
 
 /** @brief Parameters for creating a custom cursor from pixels. */
+typedef struct MARU_CursorFrame {
+  const MARU_Image *image;
+  MARU_Vec2Px hot_spot;
+  uint32_t delay_ms;
+} MARU_CursorFrame;
+
+/** @brief Parameters for creating a hardware cursor. */
 typedef struct MARU_CursorCreateInfo {
   MARU_CursorSource source;
   MARU_CursorShape system_shape;
-  MARU_Vec2Px size;
-  MARU_Vec2Px hot_spot;
-  const uint32_t *pixels;
+  const MARU_CursorFrame *frames;
+  uint32_t frame_count;
   void *userdata;
 } MARU_CursorCreateInfo;
 

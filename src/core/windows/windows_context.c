@@ -214,11 +214,25 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
     is_system = true;
   } else {
     // Win32 cursors are BGRA; create a mask and color bitmap.
-    int width = create_info->size.x;
-    int height = create_info->size.y;
-    if (!create_info->pixels || width <= 0 || height <= 0) {
+    if (!create_info->frames || create_info->frame_count == 0) {
       return MARU_FAILURE;
     }
+    if (create_info->frame_count > 1 && !ctx->cursor_animation_fallback_reported) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Animated cursors are not supported on this backend yet; using frame 0.");
+      ctx->cursor_animation_fallback_reported = true;
+    }
+
+    const MARU_CursorFrame *frame = &create_info->frames[0];
+    if (!frame->image) {
+      return MARU_FAILURE;
+    }
+    const MARU_Image_Base *image = (const MARU_Image_Base *)frame->image;
+    if (image->ctx_base != &ctx->base || !image->pixels || image->width == 0 || image->height == 0) {
+      return MARU_FAILURE;
+    }
+    int width = (int)image->width;
+    int height = (int)image->height;
 
     BITMAPV5HEADER bi;
     memset(&bi, 0, sizeof(bi));
@@ -240,7 +254,7 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
 
     if (!hcolor) return MARU_FAILURE;
 
-    memcpy(bits, create_info->pixels, (size_t)width * (size_t)height * 4);
+    memcpy(bits, image->pixels, (size_t)width * (size_t)height * 4);
 
     HBITMAP hmask = CreateBitmap(width, height, 1, 1, NULL);
     if (!hmask) {
@@ -251,8 +265,8 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
     ICONINFO ii;
     memset(&ii, 0, sizeof(ii));
     ii.fIcon = FALSE; // It's a cursor
-    ii.xHotspot = (DWORD)create_info->hot_spot.x;
-    ii.yHotspot = (DWORD)create_info->hot_spot.y;
+    ii.xHotspot = (DWORD)frame->hot_spot.x;
+    ii.yHotspot = (DWORD)frame->hot_spot.y;
     ii.hbmMask = hmask;
     ii.hbmColor = hcolor;
 
@@ -306,6 +320,67 @@ MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor_handle) {
     ctx->base.metrics.cursor_alive_current--;
   }
   maru_context_free(cursor->base.ctx_base, cursor);
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_createImage_Windows(MARU_Context *context,
+                                     const MARU_ImageCreateInfo *create_info,
+                                     MARU_Image **out_image) {
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+  if (!create_info->pixels || create_info->size.x <= 0 || create_info->size.y <= 0) {
+    return MARU_FAILURE;
+  }
+
+  const uint32_t width = (uint32_t)create_info->size.x;
+  const uint32_t height = (uint32_t)create_info->size.y;
+  const uint32_t min_stride = width * 4u;
+  const uint32_t stride = (create_info->stride_bytes == 0) ? min_stride : create_info->stride_bytes;
+  if (stride < min_stride) {
+    return MARU_FAILURE;
+  }
+
+  MARU_Image_Base *image = (MARU_Image_Base *)maru_context_alloc(&ctx->base, sizeof(MARU_Image_Base));
+  if (!image) {
+    return MARU_FAILURE;
+  }
+  memset(image, 0, sizeof(MARU_Image_Base));
+
+  const size_t packed_stride = (size_t)min_stride;
+  const size_t dst_size = packed_stride * (size_t)height;
+  image->pixels = (uint8_t *)maru_context_alloc(&ctx->base, dst_size);
+  if (!image->pixels) {
+    maru_context_free(&ctx->base, image);
+    return MARU_FAILURE;
+  }
+
+  const uint8_t *src = (const uint8_t *)create_info->pixels;
+  for (uint32_t y = 0; y < height; ++y) {
+    memcpy(image->pixels + (size_t)y * packed_stride,
+           src + (size_t)y * (size_t)stride,
+           packed_stride);
+  }
+
+  image->ctx_base = &ctx->base;
+#ifdef MARU_INDIRECT_BACKEND
+  image->backend = ctx->base.backend;
+#endif
+  image->pub.userdata = create_info->userdata;
+  image->width = width;
+  image->height = height;
+  image->stride_bytes = min_stride;
+
+  *out_image = (MARU_Image *)image;
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_destroyImage_Windows(MARU_Image *image_handle) {
+  MARU_Image_Base *image = (MARU_Image_Base *)image_handle;
+  MARU_Context_Base *ctx_base = image->ctx_base;
+  if (image->pixels) {
+    maru_context_free(ctx_base, image->pixels);
+    image->pixels = NULL;
+  }
+  maru_context_free(ctx_base, image);
   return MARU_SUCCESS;
 }
 

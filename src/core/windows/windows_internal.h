@@ -13,6 +13,7 @@ typedef struct MARU_Context_Windows {
 
   HMODULE user32_module;
   bool event_loop_started;
+  bool cursor_animation_fallback_reported;
   DWORD owner_thread_id;
 } MARU_Context_Windows;
 
@@ -71,6 +72,10 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
                                        const MARU_CursorCreateInfo *create_info,
                                        MARU_Cursor **out_cursor);
 MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor);
+MARU_Status maru_createImage_Windows(MARU_Context *context,
+                                     const MARU_ImageCreateInfo *create_info,
+                                     MARU_Image **out_image);
+MARU_Status maru_destroyImage_Windows(MARU_Image *image);
 MARU_Status maru_wakeContext_Windows(MARU_Context *context);
 
 MARU_Status maru_updateMonitors_Windows(MARU_Context *context);

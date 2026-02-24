@@ -26,6 +26,8 @@ const MARU_Backend maru_backend_WL = {
   .requestWindowFrame = maru_requestWindowFrame_WL,
   .createCursor = maru_createCursor_WL,
   .destroyCursor = maru_destroyCursor_WL,
+  .createImage = maru_createImage_WL,
+  .destroyImage = maru_destroyImage_WL,
   .wakeContext = maru_wakeContext_WL,
   .getMonitors = maru_getMonitors_WL,
   .retainMonitor = maru_retainMonitor_WL,
@@ -94,6 +96,18 @@ MARU_API MARU_Status maru_createCursor(MARU_Context *context,
 MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   MARU_API_VALIDATE(destroyCursor, cursor);
   return maru_destroyCursor_WL(cursor);
+}
+
+MARU_API MARU_Status maru_createImage(MARU_Context *context,
+                                      const MARU_ImageCreateInfo *create_info,
+                                      MARU_Image **out_image) {
+  MARU_API_VALIDATE(createImage, context, create_info, out_image);
+  return maru_createImage_WL(context, create_info, out_image);
+}
+
+MARU_API MARU_Status maru_destroyImage(MARU_Image *image) {
+  MARU_API_VALIDATE(destroyImage, image);
+  return maru_destroyImage_WL(image);
 }
 
 MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {

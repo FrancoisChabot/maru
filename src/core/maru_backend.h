@@ -3,6 +3,7 @@
 
 #include "maru/c/contexts.h"
 #include "maru/c/windows.h"
+#include "maru/c/images.h"
 #include "maru/c/events.h"
 #include "maru/c/ext/vulkan.h"
 
@@ -25,6 +26,8 @@ typedef struct MARU_Backend {
 
   __typeof__(maru_createCursor) *createCursor;
   __typeof__(maru_destroyCursor) *destroyCursor;
+  __typeof__(maru_createImage) *createImage;
+  __typeof__(maru_destroyImage) *destroyImage;
   
   __typeof__(maru_getMonitors) *getMonitors;
   __typeof__(maru_retainMonitor) *retainMonitor;

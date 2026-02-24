@@ -36,6 +36,7 @@
 #include "maru/c/events.h"
 #include "maru/c/ext/core.h"
 #include "maru/c/geometry.h"
+#include "maru/c/images.h"
 #include "maru/c/inputs.h"
 #include "maru/c/instrumentation.h"
 #include "maru/c/metrics.h"

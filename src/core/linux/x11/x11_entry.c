@@ -81,6 +81,20 @@ MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
 }
 
 #ifdef MARU_INDIRECT_BACKEND
+static MARU_Status maru_createImage_X11(MARU_Context *context,
+                                        const MARU_ImageCreateInfo *create_info,
+                                        MARU_Image **out_image) {
+  (void)context;
+  (void)create_info;
+  (void)out_image;
+  return MARU_FAILURE;
+}
+
+static MARU_Status maru_destroyImage_X11(MARU_Image *image) {
+  (void)image;
+  return MARU_FAILURE;
+}
+
 const MARU_Backend maru_backend_X11 = {
   .destroyContext = maru_destroyContext_X11,
   .pumpEvents = maru_pumpEvents_X11,
@@ -91,6 +105,8 @@ const MARU_Backend maru_backend_X11 = {
   .requestWindowFocus = NULL,
   .createCursor = NULL,
   .destroyCursor = NULL,
+  .createImage = maru_createImage_X11,
+  .destroyImage = maru_destroyImage_X11,
   .wakeContext = NULL,
   .getMonitorModes = NULL,
   .setMonitorMode = NULL,
@@ -147,6 +163,22 @@ MARU_API MARU_Status maru_createCursor(MARU_Context *context,
 
 MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   MARU_API_VALIDATE(destroyCursor, cursor);
+  return MARU_FAILURE; // Not implemented in X11 yet
+}
+
+MARU_API MARU_Status maru_createImage(MARU_Context *context,
+                                      const MARU_ImageCreateInfo *create_info,
+                                      MARU_Image **out_image) {
+  MARU_API_VALIDATE(createImage, context, create_info, out_image);
+  (void)context;
+  (void)create_info;
+  (void)out_image;
+  return MARU_FAILURE; // Not implemented in X11 yet
+}
+
+MARU_API MARU_Status maru_destroyImage(MARU_Image *image) {
+  MARU_API_VALIDATE(destroyImage, image);
+  (void)image;
   return MARU_FAILURE; // Not implemented in X11 yet
 }
 

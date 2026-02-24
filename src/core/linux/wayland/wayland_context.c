@@ -133,6 +133,7 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
     _wl_update_cursor_shape_device(ctx);
     maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
     ctx->wl.pointer = NULL;
+    ctx->cursor_animation.active = false;
     _wl_update_cursor_shape_device(ctx);
   }
 
@@ -301,6 +302,7 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
   ctx->repeat.repeat_key = 0;
   ctx->repeat.next_repeat_ns = 0;
   ctx->repeat.interval_ns = 0;
+  ctx->cursor_animation.active = false;
 
   _wl_clear_idle_notification_only(ctx);
   _wl_update_cursor_shape_device(ctx);
@@ -849,6 +851,23 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
       }
     }
   }
+  {
+    const uint64_t cursor_next_ns = _maru_wayland_cursor_next_frame_ns(ctx);
+    if (cursor_next_ns != 0) {
+      const uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
+      if (now_ns != 0) {
+        if (cursor_next_ns <= now_ns) {
+          timeout = 0;
+        } else {
+          const uint64_t wait_ns = cursor_next_ns - now_ns;
+          const int cursor_timeout_ms = (int)((wait_ns + 999999ull) / 1000000ull);
+          if (timeout < 0 || cursor_timeout_ms < timeout) {
+            timeout = cursor_timeout_ms;
+          }
+        }
+      }
+    }
+  }
 
   int poll_result = poll(fds, nfds, timeout);
   if (poll_result > 0) {
@@ -963,6 +982,8 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
       }
     }
   }
+
+  _maru_wayland_advance_cursor_animation(ctx);
 
   for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
     MARU_Window_WL *window = (MARU_Window_WL *)it;

@@ -11,6 +11,7 @@
 #include "maru/c/details/contexts.h"
 #include "maru/c/details/windows.h"
 #include "maru/c/details/cursors.h"
+#include "maru/c/details/images.h"
 #include "maru/c/details/monitors.h"
 
 /**
@@ -120,6 +121,19 @@ typedef struct MARU_Cursor_Base {
   MARU_Context_Base *ctx_base;
   MARU_CursorMetrics metrics;
 } MARU_Cursor_Base;
+
+typedef struct MARU_Image_Base {
+  MARU_ImageExposed pub;
+#ifdef MARU_INDIRECT_BACKEND
+  const struct MARU_Backend *backend;
+#endif
+
+  MARU_Context_Base *ctx_base;
+  uint32_t width;
+  uint32_t height;
+  uint32_t stride_bytes;
+  uint8_t *pixels;
+} MARU_Image_Base;
 
 typedef struct MARU_Monitor_Base {
   MARU_MonitorExposed pub;

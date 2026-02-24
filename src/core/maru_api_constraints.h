@@ -199,6 +199,18 @@ static inline void _maru_validate_resetCursorMetrics(MARU_Cursor *cursor) {
     MARU_CONSTRAINT_CHECK(cursor != NULL);
 }
 
+static inline void _maru_validate_createImage(MARU_Context *context,
+                                              const MARU_ImageCreateInfo *create_info,
+                                              MARU_Image **out_image) {
+    MARU_CONSTRAINT_CHECK(context != NULL);
+    MARU_CONSTRAINT_CHECK(create_info != NULL);
+    MARU_CONSTRAINT_CHECK(out_image != NULL);
+}
+
+static inline void _maru_validate_destroyImage(MARU_Image *image) {
+    MARU_CONSTRAINT_CHECK(image != NULL);
+}
+
 static inline void _maru_validate_wakeContext(MARU_Context *context) {
     MARU_CONSTRAINT_CHECK(context != NULL);
 }

@@ -279,6 +279,20 @@ MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
   return MARU_SUCCESS;
 }
 
+MARU_API MARU_Status maru_createImage(MARU_Context *context,
+                                      const MARU_ImageCreateInfo *create_info,
+                                      MARU_Image **out_image) {
+  MARU_API_VALIDATE(createImage, context, create_info, out_image);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  return ctx_base->backend->createImage(context, create_info, out_image);
+}
+
+MARU_API MARU_Status maru_destroyImage(MARU_Image *image) {
+  MARU_API_VALIDATE(destroyImage, image);
+  MARU_Image_Base *image_base = (MARU_Image_Base *)image;
+  return image_base->backend->destroyImage(image);
+}
+
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;

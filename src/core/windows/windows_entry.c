@@ -17,6 +17,8 @@ const MARU_Backend maru_backend_Windows = {
   .requestWindowFocus = maru_requestWindowFocus_Windows,
   .createCursor = maru_createCursor_Windows,
   .destroyCursor = maru_destroyCursor_Windows,
+  .createImage = maru_createImage_Windows,
+  .destroyImage = maru_destroyImage_Windows,
   .wakeContext = maru_wakeContext_Windows,
   .updateMonitors = maru_updateMonitors_Windows,
   .getMonitorModes = maru_getMonitorModes_Windows,
@@ -86,6 +88,18 @@ MARU_API MARU_Status maru_createCursor(MARU_Context *context,
 MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   MARU_API_VALIDATE(destroyCursor, cursor);
   return maru_destroyCursor_Windows(cursor);
+}
+
+MARU_API MARU_Status maru_createImage(MARU_Context *context,
+                                      const MARU_ImageCreateInfo *create_info,
+                                      MARU_Image **out_image) {
+  MARU_API_VALIDATE(createImage, context, create_info, out_image);
+  return maru_createImage_Windows(context, create_info, out_image);
+}
+
+MARU_API MARU_Status maru_destroyImage(MARU_Image *image) {
+  MARU_API_VALIDATE(destroyImage, image);
+  return maru_destroyImage_Windows(image);
 }
 
 MARU_API void maru_resetCursorMetrics(MARU_Cursor *cursor) {
