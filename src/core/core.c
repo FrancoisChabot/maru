@@ -57,6 +57,7 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type,
 
 void _maru_init_context_base(MARU_Context_Base *ctx_base) {
   memset(ctx_base->pub.extensions, 0, sizeof(ctx_base->pub.extensions));
+  memset(ctx_base->extension_cleanup, 0, sizeof(ctx_base->extension_cleanup));
 
   uint32_t capacity = ctx_base->tuning.user_event_queue_size;
   if (capacity == 0) capacity = 256;
@@ -115,6 +116,18 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
 }
 
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
+  for (uint32_t i = 0; i < MARU_EXT_COUNT; i++) {
+    void *state = ctx_base->pub.extensions[i];
+    MARU_ExtensionCleanupCallback cleanup = ctx_base->extension_cleanup[i];
+    if (!state || !cleanup) {
+      continue;
+    }
+
+    ctx_base->pub.extensions[i] = NULL;
+    ctx_base->extension_cleanup[i] = NULL;
+    cleanup((MARU_Context *)ctx_base, state);
+  }
+
   for (uint32_t i = 0; i < ctx_base->monitor_cache_count; i++) {
     MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)ctx_base->monitor_cache[i];
     mon_base->is_active = false;
@@ -365,7 +378,7 @@ MARU_API MARU_Status maru_registerExtension(MARU_Context *context, MARU_Extensio
     return MARU_FAILURE;
   }
   ctx_exp->extensions[id] = state;
-  (void)cleanup;
+  ((MARU_Context_Base *)context)->extension_cleanup[id] = cleanup;
   return MARU_SUCCESS;
 }
 

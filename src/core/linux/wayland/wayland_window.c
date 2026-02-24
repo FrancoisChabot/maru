@@ -781,16 +781,21 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
       requested->monitor = attributes->monitor;
       effective->monitor = attributes->monitor;
-      if ((field_mask & MARU_WINDOW_ATTR_FULLSCREEN) && requested->fullscreen && window->xdg.toplevel) {
+      if (requested->fullscreen || (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0) {
           struct wl_output *output = NULL;
           if (requested->monitor && maru_getMonitorContext(requested->monitor) == window->base.pub.context) {
               MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)requested->monitor;
               output = monitor->output;
           }
-          maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
+
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+              maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, output);
+          } else if (window->xdg.toplevel) {
+              maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
+          }
       } else {
           MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                 "Monitor targeting is only honored for fullscreen on Wayland");
+                                 "Monitor targeting requires fullscreen on Wayland");
       }
   }
 
