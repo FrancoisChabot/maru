@@ -155,7 +155,7 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const
 #define MARU_REPORT_DIAGNOSTIC(ctx, diag, msg) (void)0
 #endif
 
-void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type, MARU_Window *window, const MARU_Event *event);
+void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type, MARU_Window *window, const MARU_Event *event);
 void _maru_init_context_base(MARU_Context_Base *ctx_base);
 void _maru_drain_user_events(MARU_Context_Base *ctx_base);
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);

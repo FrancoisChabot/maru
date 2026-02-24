@@ -10,118 +10,118 @@
 extern "C" {
 #endif
 
-static inline void maru_setContextInhibitsSystemIdle(MARU_Context *context, bool enabled) {
+static inline MARU_Status maru_setContextInhibitsSystemIdle(MARU_Context *context, bool enabled) {
   MARU_ContextAttributes attrs;
   attrs.inhibit_idle = enabled;
-  maru_updateContext(context, MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE, &attrs);
+  return maru_updateContext(context, MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE, &attrs);
 }
 
-static inline void maru_setWindowTitle(MARU_Window *window, const char *title) {
+static inline MARU_Status maru_setWindowTitle(MARU_Window *window, const char *title) {
   MARU_WindowAttributes attrs;
   attrs.title = title;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE, &attrs);
 }
 
-static inline void maru_setWindowSize(MARU_Window *window, MARU_Vec2Dip size) {
+static inline MARU_Status maru_setWindowSize(MARU_Window *window, MARU_Vec2Dip size) {
   MARU_WindowAttributes attrs;
   attrs.logical_size = size;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_LOGICAL_SIZE, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_LOGICAL_SIZE, &attrs);
 }
 
-static inline void maru_setWindowFullscreen(MARU_Window *window, bool enabled) {
+static inline MARU_Status maru_setWindowFullscreen(MARU_Window *window, bool enabled) {
   MARU_WindowAttributes attrs;
   attrs.fullscreen = enabled;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
 }
 
-static inline void maru_setWindowMaximized(MARU_Window *window, bool enabled) {
+static inline MARU_Status maru_setWindowMaximized(MARU_Window *window, bool enabled) {
   MARU_WindowAttributes attrs;
   attrs.maximized = enabled;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_MAXIMIZED, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MAXIMIZED, &attrs);
 }
 
-static inline void maru_setWindowCursorMode(MARU_Window *window, MARU_CursorMode mode) {
+static inline MARU_Status maru_setWindowCursorMode(MARU_Window *window, MARU_CursorMode mode) {
   MARU_WindowAttributes attrs;
   attrs.cursor_mode = mode;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR_MODE, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR_MODE, &attrs);
 }
 
-static inline void maru_setWindowCursor(MARU_Window *window, MARU_Cursor *cursor) {
+static inline MARU_Status maru_setWindowCursor(MARU_Window *window, MARU_Cursor *cursor) {
   MARU_WindowAttributes attrs;
   attrs.cursor = cursor;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR, &attrs);
 }
 
-static inline void maru_setWindowMonitor(MARU_Window *window, MARU_Monitor *monitor) {
+static inline MARU_Status maru_setWindowMonitor(MARU_Window *window, MARU_Monitor *monitor) {
   MARU_WindowAttributes attrs;
   attrs.monitor = monitor;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_MONITOR, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MONITOR, &attrs);
 }
 
-static inline void maru_setWindowMinSize(MARU_Window *window, MARU_Vec2Dip min_size) {
+static inline MARU_Status maru_setWindowMinSize(MARU_Window *window, MARU_Vec2Dip min_size) {
   MARU_WindowAttributes attrs;
   attrs.min_size = min_size;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_MIN_SIZE, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MIN_SIZE, &attrs);
 }
 
-static inline void maru_setWindowMaxSize(MARU_Window *window, MARU_Vec2Dip max_size) {
+static inline MARU_Status maru_setWindowMaxSize(MARU_Window *window, MARU_Vec2Dip max_size) {
   MARU_WindowAttributes attrs;
   attrs.max_size = max_size;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_MAX_SIZE, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MAX_SIZE, &attrs);
 }
 
-static inline void maru_setWindowAspectRatio(MARU_Window *window, MARU_Fraction aspect_ratio) {
+static inline MARU_Status maru_setWindowAspectRatio(MARU_Window *window, MARU_Fraction aspect_ratio) {
   MARU_WindowAttributes attrs;
   attrs.aspect_ratio = aspect_ratio;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
 }
 
-static inline void maru_setWindowResizable(MARU_Window *window, bool enabled) {
+static inline MARU_Status maru_setWindowResizable(MARU_Window *window, bool enabled) {
   MARU_WindowAttributes attrs;
   attrs.resizable = enabled;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_RESIZABLE, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_RESIZABLE, &attrs);
 }
 
-static inline void maru_setWindowMousePassthrough(MARU_Window *window, bool enabled) {
+static inline MARU_Status maru_setWindowMousePassthrough(MARU_Window *window, bool enabled) {
   MARU_WindowAttributes attrs;
   attrs.mouse_passthrough = enabled;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH, &attrs);
 }
 
-static inline void maru_setWindowTextInputType(MARU_Window *window, MARU_TextInputType type) {
+static inline MARU_Status maru_setWindowTextInputType(MARU_Window *window, MARU_TextInputType type) {
   MARU_WindowAttributes attrs;
   attrs.text_input_type = type;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &attrs);
 }
 
-static inline void maru_setWindowTextInputRect(MARU_Window *window, MARU_RectDip rect) {
+static inline MARU_Status maru_setWindowTextInputRect(MARU_Window *window, MARU_RectDip rect) {
   MARU_WindowAttributes attrs;
   attrs.text_input_rect = rect;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_RECT, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_RECT, &attrs);
 }
 
-static inline void maru_setWindowEventMask(MARU_Window *window, MARU_EventMask mask) {
+static inline MARU_Status maru_setWindowEventMask(MARU_Window *window, MARU_EventMask mask) {
   MARU_WindowAttributes attrs;
   attrs.event_mask = mask;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
 }
 
-static inline void maru_setWindowVisible(MARU_Window *window, bool visible) {
+static inline MARU_Status maru_setWindowVisible(MARU_Window *window, bool visible) {
   MARU_WindowAttributes attrs;
   attrs.visible = visible;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_VISIBLE, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_VISIBLE, &attrs);
 }
 
-static inline void maru_setWindowMinimized(MARU_Window *window, bool minimized) {
+static inline MARU_Status maru_setWindowMinimized(MARU_Window *window, bool minimized) {
   MARU_WindowAttributes attrs;
   attrs.minimized = minimized;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_MINIMIZED, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MINIMIZED, &attrs);
 }
 
-static inline void maru_setWindowIcon(MARU_Window *window, MARU_Image *icon) {
+static inline MARU_Status maru_setWindowIcon(MARU_Window *window, MARU_Image *icon) {
   MARU_WindowAttributes attrs;
   attrs.icon = icon;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_ICON, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_ICON, &attrs);
 }
 
 static inline const MARU_UserEventMetrics *maru_getContextEventMetrics(const MARU_Context *context) {

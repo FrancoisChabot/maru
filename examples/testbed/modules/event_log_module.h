@@ -13,7 +13,7 @@ public:
     EventLogModule();
     void update(MARU_Context* ctx, MARU_Window* window) override;
     void render(MARU_Context* ctx, MARU_Window* window) override;
-    void onEvent(MARU_EventType type, MARU_Window* win, const MARU_Event& e) override;
+    void onEvent(MARU_EventId type, MARU_Window* win, const MARU_Event& e) override;
 
     const char* getName() const override { return "Event Log"; }
     bool& getEnabled() override { return enabled_; }
@@ -22,7 +22,7 @@ private:
     struct LogEntry {
         double timestamp;
         uint32_t frame_id;
-        MARU_EventType type;
+        MARU_EventId type;
         std::string details;
         std::string window_title;
         MARU_Window* window_handle;
@@ -42,5 +42,5 @@ private:
     bool log_frame_events_ = false;
     bool hide_mouse_motion_ = false;
 
-    const char* typeToString(MARU_EventType type);
+    const char* typeToString(MARU_EventId type);
 };

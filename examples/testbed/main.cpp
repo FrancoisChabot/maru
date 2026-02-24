@@ -102,7 +102,7 @@ static void handle_maru_diagnostic(const MARU_DiagnosticInfo* info, void* userda
     if (g_App) g_App->onDiagnostic(info);
 }
 
-static void handle_maru_event(MARU_EventType type, MARU_Window* window, const MARU_Event* event, void* userdata)
+static void handle_maru_event(MARU_EventId type, MARU_Window* window, const MARU_Event* event, void* userdata)
 {
     (void)userdata;
     if (!window || window == g_PrimaryWindow) {
@@ -112,11 +112,11 @@ static void handle_maru_event(MARU_EventType type, MARU_Window* window, const MA
     if (g_App)
         g_App->onEvent(type, window, *event);
 
-    if (type == MARU_CLOSE_REQUESTED && window == g_PrimaryWindow)
+    if (type == MARU_EVENT_CLOSE_REQUESTED && window == g_PrimaryWindow)
         g_KeepRunning = false;
-    else if (type == MARU_WINDOW_READY && window == g_PrimaryWindow)
+    else if (type == MARU_EVENT_WINDOW_READY && window == g_PrimaryWindow)
         g_WindowReady = true;
-    else if (type == MARU_WINDOW_RESIZED && window == g_PrimaryWindow) {
+    else if (type == MARU_EVENT_WINDOW_RESIZED && window == g_PrimaryWindow) {
         g_PendingResize = true;
         g_LastResizeAtMs = now_ms();
         g_PendingViewportSize = event->resized.geometry.logical_size;

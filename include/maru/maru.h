@@ -27,7 +27,7 @@
  *    can be called from any thread at any time:
  *    - maru_postEvent()
  *    - maru_wakeContext()
- *    - maru_retainMonitor() / maru_releaseMonitor()
+ *    - maru_retain*() / maru_release*()
  */
 
 #include "maru/c/contexts.h"

@@ -1,9 +1,20 @@
 #include "macos_internal.h"
 #include "maru_api_constraints.h"
+#include "maru/c/native/cocoa.h"
 
 static MARU_Status maru_requestWindowAttention_Cocoa(MARU_Window *window) {
   (void)window;
   return MARU_FAILURE;
+}
+
+static void *maru_getContextNativeHandle_Cocoa(MARU_Context *context) {
+  MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
+  return ctx->ns_app;
+}
+
+static void *maru_getWindowNativeHandle_Cocoa(MARU_Window *window) {
+  MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
+  return win->ns_window;
 }
 
 #ifdef MARU_INDIRECT_BACKEND
@@ -14,6 +25,8 @@ const MARU_Backend maru_backend_Cocoa = {
   .destroyWindow = maru_destroyWindow_Cocoa,
   .getWindowGeometry = maru_getWindowGeometry_Cocoa,
   .requestWindowAttention = maru_requestWindowAttention_Cocoa,
+  .getContextNativeHandle = maru_getContextNativeHandle_Cocoa,
+  .getWindowNativeHandle = maru_getWindowNativeHandle_Cocoa,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
@@ -53,5 +66,19 @@ MARU_API void maru_getWindowGeometry(MARU_Window *window,
 MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowAttention, window);
   return maru_requestWindowAttention_Cocoa(window);
+}
+
+MARU_API MARU_Status maru_getCocoaContextHandle(
+    MARU_Context *context, MARU_CocoaContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  out_handle->ns_application = maru_getContextNativeHandle_Cocoa(context);
+  return out_handle->ns_application ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getCocoaWindowHandle(
+    MARU_Window *window, MARU_CocoaWindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  out_handle->ns_window = maru_getWindowNativeHandle_Cocoa(window);
+  return out_handle->ns_window ? MARU_SUCCESS : MARU_FAILURE;
 }
 #endif

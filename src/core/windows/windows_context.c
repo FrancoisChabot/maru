@@ -561,5 +561,5 @@ MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor, MARU_VideoM
 
 void *_maru_getContextNativeHandle_Windows(MARU_Context *context) {
   (void)context;
-  return NULL;
+  return GetModuleHandleA(NULL);
 }

@@ -423,7 +423,7 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer,
     ctx->linux_common.pointer.x = evt.mouse_motion.position.x;
     ctx->linux_common.pointer.y = evt.mouse_motion.position.y;
     
-    _maru_dispatch_event(&ctx->base, MARU_MOUSE_MOVED, (MARU_Window *)window, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)window, &evt);
 }
 
 static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
@@ -456,7 +456,7 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
     evt.mouse_button.button_id = channel;
     evt.mouse_button.state = btn_state;
     evt.mouse_button.modifiers = _get_modifiers(ctx);
-    _maru_dispatch_event(&ctx->base, MARU_MOUSE_BUTTON_STATE_CHANGED,
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED,
                          (MARU_Window *)window, &evt);
 }
 
@@ -483,7 +483,7 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *wl_pointer) {
             evt.mouse_scroll.steps.x = ctx->scroll.steps.x;
             evt.mouse_scroll.steps.y = ctx->scroll.steps.y;
             evt.mouse_scroll.modifiers = _get_modifiers(ctx);
-            _maru_dispatch_event(&ctx->base, MARU_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
+            _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
         }
         memset(&ctx->scroll, 0, sizeof(ctx->scroll));
     }
@@ -538,7 +538,7 @@ static void _relative_pointer_handle_relative_motion(void *data, struct zwp_rela
     evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
     evt.mouse_motion.modifiers = _get_modifiers(ctx);
 
-    _maru_dispatch_event(&ctx->base, MARU_MOUSE_MOVED, (MARU_Window *)window, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)window, &evt);
 }
 
 const struct zwp_relative_pointer_v1_listener _maru_wayland_relative_pointer_listener = {
@@ -793,7 +793,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
         evt.key.state = maru_state;
         evt.key.modifiers = _get_modifiers(ctx);
 
-        _maru_dispatch_event(&ctx->base, MARU_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
     }
 
     if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
@@ -811,7 +811,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
             MARU_Event text_evt = {0};
             text_evt.text_edit_commit.committed_utf8 = buf;
             text_evt.text_edit_commit.committed_length = (uint32_t)n;
-            _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &text_evt);
+            _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)window, &text_evt);
 
             if (ctx->repeat.rate > 0 && ctx->repeat.delay >= 0) {
                 const uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
@@ -882,7 +882,7 @@ static void _text_input_handle_enter(void *data, struct zwp_text_input_v3 *text_
     
     MARU_Event evt = {0};
     evt.text_edit_start.session_id = window->text_input_session_id;
-    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_START, (MARU_Window *)window, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_START, (MARU_Window *)window, &evt);
 }
 
 static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_input, struct wl_surface *surface) {
@@ -896,7 +896,7 @@ static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_
     MARU_Event evt = {0};
     evt.text_edit_end.session_id = window->text_input_session_id;
     evt.text_edit_end.canceled = false;
-    _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_END, (MARU_Window *)window, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_END, (MARU_Window *)window, &evt);
 }
 
 static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_v3 *text_input,
@@ -952,7 +952,7 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
         evt.text_edit_update.caret.length_byte = 0;
         evt.text_edit_update.selection.start_byte = safe_begin;
         evt.text_edit_update.selection.length_byte = safe_end - safe_begin;
-        _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_UPDATE, (MARU_Window *)window, &evt);
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_UPDATE, (MARU_Window *)window, &evt);
 
         window->ime_preedit_active = (preedit_length != 0);
     }
@@ -969,7 +969,7 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
                                                       : 0u;
         evt.text_edit_commit.committed_utf8 = commit;
         evt.text_edit_commit.committed_length = (uint32_t)strlen(commit);
-        _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
 
         window->ime_preedit_active = false;
     }

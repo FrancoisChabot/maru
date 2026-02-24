@@ -274,20 +274,20 @@ void ImGui_ImplMaru_NewFrame() {
     ImGui_ImplMaru_UpdateMouseCursor();
 }
 
-void ImGui_ImplMaru_HandleEvent(MARU_EventType type, const MARU_Event* event) {
+void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
     ImGuiIO& io = ImGui::GetIO();
-    if (type == MARU_MOUSE_MOVED) {
+    if (type == MARU_EVENT_MOUSE_MOVED) {
         io.AddMousePosEvent((float)event->mouse_motion.position.x, (float)event->mouse_motion.position.y);
-    } else if (type == MARU_MOUSE_BUTTON_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED) {
         int mouse_button = -1;
         if (event->mouse_button.button_id == 0) mouse_button = 0;
         if (event->mouse_button.button_id == 1) mouse_button = 1;
         if (event->mouse_button.button_id == 2) mouse_button = 2;
         if (mouse_button != -1)
             io.AddMouseButtonEvent(mouse_button, event->mouse_button.state == MARU_BUTTON_STATE_PRESSED);
-    } else if (type == MARU_MOUSE_SCROLLED) {
+    } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
         io.AddMouseWheelEvent((float)event->mouse_scroll.delta.x, (float)event->mouse_scroll.delta.y);
-    } else if (type == MARU_KEY_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_KEY_STATE_CHANGED) {
         ImGuiKey key = ImGui_ImplMaru_KeyToImGuiKey(event->key.raw_key);
         if (key != ImGuiKey_None) {
             io.AddKeyEvent(key, event->key.state == MARU_BUTTON_STATE_PRESSED);
@@ -296,9 +296,9 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventType type, const MARU_Event* event) {
             io.AddKeyEvent(ImGuiMod_Alt, (event->key.modifiers & MARU_MODIFIER_ALT) != 0);
             io.AddKeyEvent(ImGuiMod_Super, (event->key.modifiers & MARU_MODIFIER_META) != 0);
         }
-    } else if (type == MARU_TEXT_EDIT_COMMIT) {
+    } else if (type == MARU_EVENT_TEXT_EDIT_COMMIT) {
         io.AddInputCharactersUTF8(event->text_edit_commit.committed_utf8);
-    } else if (type == MARU_WINDOW_PRESENTATION_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED) {
         if ((event->presentation.changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED) != 0u) {
             io.AddFocusEvent(event->presentation.focused);
         }

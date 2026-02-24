@@ -104,9 +104,6 @@ typedef uint64_t MARU_Flags;
 /** @brief Bitmask for filtering events during polling or waiting. */
 typedef uint64_t MARU_EventMask;
 
-/** @brief Represents a single event type */
-typedef uint64_t MARU_EventType;
-
 
 #ifdef __cplusplus
 }

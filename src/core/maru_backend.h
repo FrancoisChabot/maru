@@ -37,8 +37,8 @@ typedef struct MARU_Backend {
   __typeof__(maru_setMonitorMode) *setMonitorMode;
   __typeof__(maru_resetMonitorMetrics) *resetMonitorMetrics;
 
-  __typeof__(maru_getContextNativeHandle) *getContextNativeHandle;
-  __typeof__(maru_getWindowNativeHandle) *getWindowNativeHandle;
+  void *(*getContextNativeHandle)(MARU_Context *context);
+  void *(*getWindowNativeHandle)(MARU_Window *window);
 
   // More to be added directly here
 } MARU_Backend;

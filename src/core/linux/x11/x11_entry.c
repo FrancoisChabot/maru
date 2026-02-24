@@ -3,6 +3,7 @@
 #include "maru_mem_internal.h"
 #include "maru/c/cursors.h"
 #include "maru/c/monitors.h"
+#include "maru/c/native/linux.h"
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,6 +86,16 @@ MARU_Status maru_requestWindowAttention_X11(MARU_Window *window) {
   return MARU_FAILURE;
 }
 
+static void *maru_getContextNativeHandle_X11(MARU_Context *context) {
+  (void)context;
+  return NULL;
+}
+
+static void *maru_getWindowNativeHandle_X11(MARU_Window *window) {
+  (void)window;
+  return NULL;
+}
+
 #ifdef MARU_INDIRECT_BACKEND
 static MARU_Status maru_createImage_X11(MARU_Context *context,
                                         const MARU_ImageCreateInfo *create_info,
@@ -117,6 +128,8 @@ const MARU_Backend maru_backend_X11 = {
   .getMonitorModes = NULL,
   .setMonitorMode = NULL,
   .resetMonitorMetrics = NULL,
+  .getContextNativeHandle = maru_getContextNativeHandle_X11,
+  .getWindowNativeHandle = maru_getWindowNativeHandle_X11,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
@@ -250,5 +263,52 @@ MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(resetMonitorMetrics, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
+}
+
+MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
+                                              MARU_X11ContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  out_handle->display = (Display *)maru_getContextNativeHandle_X11(context);
+  return out_handle->display ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
+                                             MARU_X11WindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  MARU_Context *context = maru_getWindowContext(window);
+  out_handle->display = (Display *)maru_getContextNativeHandle_X11(context);
+  out_handle->window = (Window)(uintptr_t)maru_getWindowNativeHandle_X11(window);
+  return out_handle->display ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getWaylandContextHandle(
+    MARU_Context *context, MARU_WaylandContextHandle *out_handle) {
+  (void)context;
+  if (!out_handle) return MARU_FAILURE;
+  out_handle->display = NULL;
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getWaylandWindowHandle(
+    MARU_Window *window, MARU_WaylandWindowHandle *out_handle) {
+  (void)window;
+  if (!out_handle) return MARU_FAILURE;
+  out_handle->display = NULL;
+  out_handle->surface = NULL;
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getLinuxContextHandle(
+    MARU_Context *context, MARU_LinuxContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  out_handle->backend = MARU_BACKEND_X11;
+  return maru_getX11ContextHandle(context, &out_handle->x11);
+}
+
+MARU_API MARU_Status maru_getLinuxWindowHandle(
+    MARU_Window *window, MARU_LinuxWindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  out_handle->backend = MARU_BACKEND_X11;
+  return maru_getX11WindowHandle(window, &out_handle->x11);
 }
 #endif

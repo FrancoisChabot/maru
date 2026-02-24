@@ -7,14 +7,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef MARU_ENABLE_BACKEND_X11
-#include <X11/Xlib.h>
-#endif
-
-#ifdef MARU_ENABLE_BACKEND_WINDOWS
-#include <windows.h>
-#endif
-
 #include "maru/c/core.h"
 #include "maru/c/contexts.h"
 #include "maru/c/geometry.h"
@@ -191,22 +183,6 @@ typedef struct MARU_WindowCreateInfo {
   bool transparent;
   void *userdata;
 } MARU_WindowCreateInfo;
-
-/** @brief Container for backend-specific window or surface handles. */
-typedef union MARU_BackendHandle {
-#ifdef MARU_ENABLE_BACKEND_WAYLAND
-  void *wayland_surface;
-#endif
-#ifdef MARU_ENABLE_BACKEND_X11
-  Window x11_window;      // x11 include conditional
-#endif
-#ifdef MARU_ENABLE_BACKEND_WINDOWS
-  HWND win32_hwnd;        // windows include conditional
-#endif
-#ifdef MARU_ENABLE_BACKEND_COCOA
-  void *cocoa_window;
-#endif
-} MARU_BackendHandle;
 
 /** @brief Default initialization macro for MARU_WindowCreateInfo. */
 #define MARU_WINDOW_CREATE_INFO_DEFAULT                         \

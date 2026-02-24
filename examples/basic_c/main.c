@@ -11,19 +11,19 @@ static bool keep_running = true;
 static bool window_ready = false;
 static VulkanRenderer renderer;
 
-static void handle_event(MARU_EventType type, MARU_Window *window,
+static void handle_event(MARU_EventId type, MARU_Window *window,
                          const MARU_Event *event, void *userdata) {
   (void)window;
   (void)userdata;
-  if (type == MARU_CLOSE_REQUESTED) {
+  if (type == MARU_EVENT_CLOSE_REQUESTED) {
     keep_running = false;
-  } else if (type == MARU_WINDOW_RESIZED) {
+  } else if (type == MARU_EVENT_WINDOW_RESIZED) {
     vulkan_renderer_on_resized(&renderer,
                                (uint32_t)event->resized.geometry.pixel_size.x,
                                (uint32_t)event->resized.geometry.pixel_size.y);
-  } else if (type == MARU_WINDOW_READY) {
+  } else if (type == MARU_EVENT_WINDOW_READY) {
     window_ready = true;
-  } else if (type == MARU_KEY_STATE_CHANGED) {
+  } else if (type == MARU_EVENT_KEY_STATE_CHANGED) {
     if (event->key.raw_key == MARU_KEY_F && event->key.state == MARU_BUTTON_STATE_PRESSED) {
       maru_setWindowFullscreen(window, !maru_isWindowFullscreen(window));
     }

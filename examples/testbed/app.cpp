@@ -34,8 +34,8 @@ App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_dev
 App::~App() {
 }
 
-void App::onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) {
-    if (type == MARU_CLOSE_REQUESTED && window == primary_window_handle_) {
+void App::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
+    if (type == MARU_EVENT_CLOSE_REQUESTED && window == primary_window_handle_) {
         exit_requested_ = true;
     }
 

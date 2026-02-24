@@ -37,12 +37,6 @@ MARU_API void *maru_contextAlloc(MARU_Context *context, size_t size);
 /** @brief Frees memory using the context's configured allocator. */
 MARU_API void maru_contextFree(MARU_Context *context, void *ptr);
 
-/** @brief Retrieves the native display handle for the context (e.g., wl_display*, Display*, HINSTANCE). */
-MARU_API void *maru_getContextNativeHandle(MARU_Context *context);
-
-/** @brief Retrieves the native window handle (e.g., wl_surface*, Window, HWND). */
-MARU_API void *maru_getWindowNativeHandle(MARU_Window *window);
-
 #ifdef __cplusplus
 }
 #endif

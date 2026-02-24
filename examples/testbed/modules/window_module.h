@@ -17,7 +17,7 @@ public:
 
     void update(MARU_Context* ctx, MARU_Window* window) override;
     void render(MARU_Context* ctx, MARU_Window* window) override;
-    void onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) override;
+    void onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) override;
     void onContextRecreated(MARU_Context* ctx, MARU_Window* window) override;
 
     const char* getName() const override { return "Windowing"; }

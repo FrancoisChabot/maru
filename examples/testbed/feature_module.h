@@ -16,7 +16,7 @@ public:
     virtual void render(MARU_Context* ctx, MARU_Window* window) = 0;
 
     // Handle events
-    virtual void onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) {
+    virtual void onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
         (void)type; (void)window; (void)event;
     }
 

@@ -9,7 +9,7 @@ class InputModule : public FeatureModule {
 public:
     void update(MARU_Context* ctx, MARU_Window* window) override;
     void render(MARU_Context* ctx, MARU_Window* window) override;
-    void onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) override;
+    void onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) override;
 
     const char* getName() const override { return "Input"; }
     bool& getEnabled() override { return enabled_; }

@@ -393,7 +393,7 @@ static void _idle_notification_handle_idled(void *data, struct ext_idle_notifica
   MARU_Event evt = {0};
   evt.idle.is_idle = true;
   evt.idle.timeout_ms = ctx->base.tuning.idle_timeout_ms;
-  _maru_dispatch_event(&ctx->base, MARU_IDLE_STATE_CHANGED, NULL, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_STATE_CHANGED, NULL, &evt);
 }
 
 static void _idle_notification_handle_resumed(void *data, struct ext_idle_notification_v1 *notification) {
@@ -401,7 +401,7 @@ static void _idle_notification_handle_resumed(void *data, struct ext_idle_notifi
   MARU_Event evt = {0};
   evt.idle.is_idle = false;
   evt.idle.timeout_ms = ctx->base.tuning.idle_timeout_ms;
-  _maru_dispatch_event(&ctx->base, MARU_IDLE_STATE_CHANGED, NULL, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_STATE_CHANGED, NULL, &evt);
 }
 
 static const struct ext_idle_notification_v1_listener _idle_notification_listener = {
@@ -975,7 +975,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
           MARU_Event text_evt = {0};
           text_evt.text_edit_commit.committed_utf8 = buf;
           text_evt.text_edit_commit.committed_length = (uint32_t)n;
-          _maru_dispatch_event(&ctx->base, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &text_evt);
+          _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)window, &text_evt);
         }
 
         ctx->repeat.next_repeat_ns += interval_ns;

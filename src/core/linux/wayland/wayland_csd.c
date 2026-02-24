@@ -115,7 +115,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   if (!maru_isWindowReady((MARU_Window *)window)) {
     window->base.pub.flags |= MARU_WINDOW_STATE_READY;
     MARU_Event evt = {0};
-    _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window *)window, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)window, &evt);
   }
 
   if (size_changed) {
@@ -131,7 +131,7 @@ static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *use
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
   MARU_Event evt = {0};
-  _maru_dispatch_event(&ctx->base, MARU_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
 }
 
 static void _libdecor_frame_handle_commit(struct libdecor_frame *frame, void *user_data) {

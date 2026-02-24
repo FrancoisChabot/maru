@@ -8,6 +8,11 @@
 
 #include "maru/c/events.h"
 #include "maru/c/instrumentation.h"
+#include "maru/c/native/cocoa.h"
+#include "maru/c/native/linux.h"
+#include "maru/c/native/wayland.h"
+#include "maru/c/native/win32.h"
+#include "maru/c/native/x11.h"
 #include "core_event_queue.h"
 
 #ifdef MARU_VALIDATE_API_CALLS
@@ -47,11 +52,12 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
 #endif
 #endif
 
-void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type,
+void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
                           MARU_Window *window, const MARU_Event *event) {
+  const MARU_EventMask event_bit = MARU_EVENT_MASK(type);
   if (!ctx->pump_ctx) return;
-  if ((ctx->event_mask & type) == 0) return;
-  if (window && (maru_getWindowEventMask(window) & type) == 0) return;
+  if ((ctx->event_mask & event_bit) == 0) return;
+  if (window && (maru_getWindowEventMask(window) & event_bit) == 0) return;
 
   ctx->pump_ctx->callback(type, window, event, ctx->pump_ctx->userdata);
 }
@@ -77,7 +83,7 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
 }
 
 void _maru_drain_user_events(MARU_Context_Base *ctx_base) {
-  MARU_EventType type;
+  MARU_EventId type;
   MARU_Window *window;
   MARU_UserDefinedEvent user_evt;
   MARU_Event evt;
@@ -368,22 +374,137 @@ MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   mon_base->backend->resetMonitorMetrics(monitor);
 }
 
-MARU_API void *maru_getContextNativeHandle(MARU_Context *context) {
-  MARU_API_VALIDATE(getContextNativeHandle, context);
+static void *_maru_getContextNativeHandleRaw(MARU_Context *context) {
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   return ctx_base->backend->getContextNativeHandle(context);
 }
 
-MARU_API void *maru_getWindowNativeHandle(MARU_Window *window) {
-  MARU_API_VALIDATE(getWindowNativeHandle, window);
+static void *_maru_getWindowNativeHandleRaw(MARU_Window *window) {
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   return win_base->backend->getWindowNativeHandle(window);
+}
+
+MARU_API MARU_Status maru_getWaylandContextHandle(
+    MARU_Context *context, MARU_WaylandContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_WAYLAND) return MARU_FAILURE;
+  out_handle->display = (wl_display *)_maru_getContextNativeHandleRaw(context);
+  return out_handle->display ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getWaylandWindowHandle(
+    MARU_Window *window, MARU_WaylandWindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  MARU_Context *context = maru_getWindowContext(window);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_WAYLAND) return MARU_FAILURE;
+
+  out_handle->display = (wl_display *)_maru_getContextNativeHandleRaw(context);
+  out_handle->surface = (wl_surface *)_maru_getWindowNativeHandleRaw(window);
+  return (out_handle->display && out_handle->surface) ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
+                                              MARU_X11ContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_X11) return MARU_FAILURE;
+  out_handle->display = (Display *)_maru_getContextNativeHandleRaw(context);
+  return out_handle->display ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
+                                             MARU_X11WindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  MARU_Context *context = maru_getWindowContext(window);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_X11) return MARU_FAILURE;
+
+  out_handle->display = (Display *)_maru_getContextNativeHandleRaw(context);
+  out_handle->window = (Window)(uintptr_t)_maru_getWindowNativeHandleRaw(window);
+  return out_handle->display ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+#ifdef MARU_ENABLE_BACKEND_WINDOWS
+MARU_API MARU_Status maru_getWin32ContextHandle(
+    MARU_Context *context, MARU_Win32ContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_WINDOWS) return MARU_FAILURE;
+  out_handle->instance = (HINSTANCE)_maru_getContextNativeHandleRaw(context);
+  return out_handle->instance ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getWin32WindowHandle(
+    MARU_Window *window, MARU_Win32WindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  MARU_Context *context = maru_getWindowContext(window);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_WINDOWS) return MARU_FAILURE;
+
+  out_handle->instance = (HINSTANCE)_maru_getContextNativeHandleRaw(context);
+  out_handle->hwnd = (HWND)_maru_getWindowNativeHandleRaw(window);
+  return (out_handle->instance && out_handle->hwnd) ? MARU_SUCCESS : MARU_FAILURE;
+}
+#endif
+
+#ifdef MARU_ENABLE_BACKEND_COCOA
+MARU_API MARU_Status maru_getCocoaContextHandle(
+    MARU_Context *context, MARU_CocoaContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_COCOA) return MARU_FAILURE;
+  out_handle->ns_application = _maru_getContextNativeHandleRaw(context);
+  return out_handle->ns_application ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getCocoaWindowHandle(
+    MARU_Window *window, MARU_CocoaWindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  MARU_Context *context = maru_getWindowContext(window);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_COCOA) return MARU_FAILURE;
+  out_handle->ns_window = _maru_getWindowNativeHandleRaw(window);
+  return out_handle->ns_window ? MARU_SUCCESS : MARU_FAILURE;
+}
+#endif
+
+MARU_API MARU_Status maru_getLinuxContextHandle(
+    MARU_Context *context, MARU_LinuxContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  out_handle->backend = ctx_base->pub.backend_type;
+  switch (ctx_base->pub.backend_type) {
+    case MARU_BACKEND_WAYLAND:
+      return maru_getWaylandContextHandle(context, &out_handle->wayland);
+    case MARU_BACKEND_X11:
+      return maru_getX11ContextHandle(context, &out_handle->x11);
+    default:
+      return MARU_FAILURE;
+  }
+}
+
+MARU_API MARU_Status maru_getLinuxWindowHandle(
+    MARU_Window *window, MARU_LinuxWindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  MARU_Context *context = maru_getWindowContext(window);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  out_handle->backend = ctx_base->pub.backend_type;
+  switch (ctx_base->pub.backend_type) {
+    case MARU_BACKEND_WAYLAND:
+      return maru_getWaylandWindowHandle(window, &out_handle->wayland);
+    case MARU_BACKEND_X11:
+      return maru_getX11WindowHandle(window, &out_handle->x11);
+    default:
+      return MARU_FAILURE;
+  }
 }
 
 #endif
 
 
-MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventType type,
+MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
                                       MARU_Window *window, MARU_UserDefinedEvent evt) {
   MARU_API_VALIDATE(postEvent, context, type, window, evt);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;

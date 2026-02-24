@@ -7,7 +7,7 @@
 
 class MonitorModule : public FeatureModule {
 public:
-    void onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) override;
+    void onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) override;
     void update(MARU_Context* ctx, MARU_Window* window) override;
     void render(MARU_Context* ctx, MARU_Window* window) override;
 

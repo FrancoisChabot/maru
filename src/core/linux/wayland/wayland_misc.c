@@ -22,7 +22,7 @@ void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t 
   evt.presentation.maximized = (flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
   evt.presentation.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
   evt.presentation.icon_effective = icon_effective;
-  _maru_dispatch_event(&ctx->base, MARU_WINDOW_PRESENTATION_STATE_CHANGED,
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
 }
 

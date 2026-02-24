@@ -2,6 +2,7 @@
 #include "maru_api_constraints.h"
 #include "maru/c/cursors.h"
 #include "maru/c/monitors.h"
+#include "maru/c/native/linux.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -173,11 +174,50 @@ MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
 }
 
-void *maru_getContextNativeHandle(MARU_Context *context) {
-    return maru_getContextNativeHandle_WL(context);
+MARU_API MARU_Status maru_getWaylandContextHandle(
+    MARU_Context *context, MARU_WaylandContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  out_handle->display = (wl_display *)maru_getContextNativeHandle_WL(context);
+  return out_handle->display ? MARU_SUCCESS : MARU_FAILURE;
 }
 
-void *maru_getWindowNativeHandle(MARU_Window *window) {
-    return maru_getWindowNativeHandle_WL(window);
+MARU_API MARU_Status maru_getWaylandWindowHandle(
+    MARU_Window *window, MARU_WaylandWindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  MARU_Context *context = maru_getWindowContext(window);
+  out_handle->display = (wl_display *)maru_getContextNativeHandle_WL(context);
+  out_handle->surface = (wl_surface *)maru_getWindowNativeHandle_WL(window);
+  return (out_handle->display && out_handle->surface) ? MARU_SUCCESS : MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
+                                              MARU_X11ContextHandle *out_handle) {
+  (void)context;
+  if (!out_handle) return MARU_FAILURE;
+  out_handle->display = NULL;
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
+                                             MARU_X11WindowHandle *out_handle) {
+  (void)window;
+  if (!out_handle) return MARU_FAILURE;
+  out_handle->display = NULL;
+  out_handle->window = 0;
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_getLinuxContextHandle(
+    MARU_Context *context, MARU_LinuxContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  out_handle->backend = MARU_BACKEND_WAYLAND;
+  return maru_getWaylandContextHandle(context, &out_handle->wayland);
+}
+
+MARU_API MARU_Status maru_getLinuxWindowHandle(
+    MARU_Window *window, MARU_LinuxWindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  out_handle->backend = MARU_BACKEND_WAYLAND;
+  return maru_getWaylandWindowHandle(window, &out_handle->wayland);
 }
 #endif

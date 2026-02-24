@@ -34,22 +34,22 @@ void EventModule::render(MARU_Context* ctx, MARU_Window* window) {
             }
         };
 
-        event_checkbox("CLOSE_REQUESTED", MARU_CLOSE_REQUESTED);
-        event_checkbox("WINDOW_RESIZED", MARU_WINDOW_RESIZED);
-        event_checkbox("KEY_STATE_CHANGED", MARU_KEY_STATE_CHANGED);
-        event_checkbox("WINDOW_READY", MARU_WINDOW_READY);
-        event_checkbox("MOUSE_MOVED", MARU_MOUSE_MOVED);
-        event_checkbox("MOUSE_BUTTON_STATE_CHANGED", MARU_MOUSE_BUTTON_STATE_CHANGED);
-        event_checkbox("MOUSE_SCROLLED", MARU_MOUSE_SCROLLED);
-        event_checkbox("IDLE_STATE_CHANGED", MARU_IDLE_STATE_CHANGED);
-        event_checkbox("MONITOR_CONNECTION_CHANGED", MARU_MONITOR_CONNECTION_CHANGED);
-        event_checkbox("MONITOR_MODE_CHANGED", MARU_MONITOR_MODE_CHANGED);
-        event_checkbox("WINDOW_FRAME", MARU_WINDOW_FRAME);
-        event_checkbox("WINDOW_PRESENTATION_STATE_CHANGED", MARU_WINDOW_PRESENTATION_STATE_CHANGED);
-        event_checkbox("TEXT_EDIT_START", MARU_TEXT_EDIT_START);
-        event_checkbox("TEXT_EDIT_UPDATE", MARU_TEXT_EDIT_UPDATE);
-        event_checkbox("TEXT_EDIT_COMMIT", MARU_TEXT_EDIT_COMMIT);
-        event_checkbox("TEXT_EDIT_END", MARU_TEXT_EDIT_END);
+        event_checkbox("CLOSE_REQUESTED", MARU_MASK_CLOSE_REQUESTED);
+        event_checkbox("WINDOW_RESIZED", MARU_MASK_WINDOW_RESIZED);
+        event_checkbox("KEY_STATE_CHANGED", MARU_MASK_KEY_STATE_CHANGED);
+        event_checkbox("WINDOW_READY", MARU_MASK_WINDOW_READY);
+        event_checkbox("MOUSE_MOVED", MARU_MASK_MOUSE_MOVED);
+        event_checkbox("MOUSE_BUTTON_STATE_CHANGED", MARU_MASK_MOUSE_BUTTON_STATE_CHANGED);
+        event_checkbox("MOUSE_SCROLLED", MARU_MASK_MOUSE_SCROLLED);
+        event_checkbox("IDLE_STATE_CHANGED", MARU_MASK_IDLE_STATE_CHANGED);
+        event_checkbox("MONITOR_CONNECTION_CHANGED", MARU_MASK_MONITOR_CONNECTION_CHANGED);
+        event_checkbox("MONITOR_MODE_CHANGED", MARU_MASK_MONITOR_MODE_CHANGED);
+        event_checkbox("WINDOW_FRAME", MARU_MASK_WINDOW_FRAME);
+        event_checkbox("WINDOW_PRESENTATION_STATE_CHANGED", MARU_MASK_WINDOW_PRESENTATION_STATE_CHANGED);
+        event_checkbox("TEXT_EDIT_START", MARU_MASK_TEXT_EDIT_START);
+        event_checkbox("TEXT_EDIT_UPDATE", MARU_MASK_TEXT_EDIT_UPDATE);
+        event_checkbox("TEXT_EDIT_COMMIT", MARU_MASK_TEXT_EDIT_COMMIT);
+        event_checkbox("TEXT_EDIT_END", MARU_MASK_TEXT_EDIT_END);
 
         ImGui::Separator();
         static int idle_timeout = 0;

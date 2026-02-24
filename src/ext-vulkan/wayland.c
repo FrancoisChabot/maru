@@ -1,6 +1,6 @@
 #include "maru/c/core.h"
 #include "maru/c/ext/vulkan.h"
-#include "maru/c/ext/core.h"
+#include "maru/c/native/wayland.h"
 #include "maru_internal.h"
 #include "maru_api_constraints.h"
 #include "ext_vulkan_internal.h"
@@ -74,12 +74,19 @@ static MARU_Status _createVkSurface_WL(MARU_Window *window,
     return MARU_FAILURE;
   }
 
+  MARU_WaylandWindowHandle wl_handle;
+  if (maru_getWaylandWindowHandle(window, &wl_handle) != MARU_SUCCESS) {
+    MARU_REPORT_DIAGNOSTIC(ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
+                                "Failed to retrieve Wayland window handles");
+    return MARU_FAILURE;
+  }
+
   VkWaylandSurfaceCreateInfoKHR cinfo = {
       .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
       .pNext = NULL,
       .flags = 0,
-      .display = (struct wl_display *)maru_getContextNativeHandle(ctx),
-      .surface = (struct wl_surface *)maru_getWindowNativeHandle(window),
+      .display = wl_handle.display,
+      .surface = wl_handle.surface,
   };
 
   VkResult vk_res = create_surface_fn(instance, &cinfo, NULL, out_surface);

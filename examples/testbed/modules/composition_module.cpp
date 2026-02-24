@@ -9,21 +9,21 @@ void CompositionModule::update(MARU_Context* ctx, MARU_Window* window) {
     (void)ctx; (void)window;
 }
 
-void CompositionModule::onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) {
+void CompositionModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
     (void)window;
     
-    if (type == MARU_TEXT_EDIT_START) {
+    if (type == MARU_EVENT_TEXT_EDIT_START) {
         current_session_.id = event.text_edit_start.session_id;
         current_session_.active = true;
         current_session_.preedit = "";
-    } else if (type == MARU_TEXT_EDIT_UPDATE) {
+    } else if (type == MARU_EVENT_TEXT_EDIT_UPDATE) {
         if (current_session_.active && current_session_.id == event.text_edit_update.session_id) {
             current_session_.preedit = event.text_edit_update.preedit_utf8 ? event.text_edit_update.preedit_utf8 : "";
             current_session_.caret = event.text_edit_update.caret.start_byte;
             current_session_.sel_start = event.text_edit_update.selection.start_byte;
             current_session_.sel_len = event.text_edit_update.selection.length_byte;
         }
-    } else if (type == MARU_TEXT_EDIT_COMMIT) {
+    } else if (type == MARU_EVENT_TEXT_EDIT_COMMIT) {
         if (event.text_edit_commit.committed_length > 0) {
             commit_history_.push_back(event.text_edit_commit.committed_utf8);
             if (commit_history_.size() > 20) commit_history_.erase(commit_history_.begin());
@@ -33,7 +33,7 @@ void CompositionModule::onEvent(MARU_EventType type, MARU_Window* window, const 
         if (current_session_.active && current_session_.id == event.text_edit_commit.session_id) {
              current_session_.preedit = "";
         }
-    } else if (type == MARU_TEXT_EDIT_END) {
+    } else if (type == MARU_EVENT_TEXT_EDIT_END) {
         if (current_session_.active && current_session_.id == event.text_edit_end.session_id) {
             current_session_.active = false;
         }

@@ -146,7 +146,7 @@ void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
   window->pending_resized_event = false;
   MARU_Event evt = {0};
   maru_getWindowGeometry_WL((MARU_Window *)window, &evt.resized.geometry);
-  _maru_dispatch_event(&ctx->base, MARU_WINDOW_RESIZED, (MARU_Window *)window, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)window, &evt);
 }
 
 static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
@@ -525,7 +525,7 @@ static void _xdg_toplevel_handle_close(void *data, struct xdg_toplevel *xdg_topl
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
   MARU_Event evt = {0};
-  _maru_dispatch_event(&ctx->base, MARU_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
 }
 
 static const struct xdg_toplevel_listener _xdg_toplevel_listener = {
@@ -543,7 +543,7 @@ static void _xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_su
   if (!maru_isWindowReady((MARU_Window *)window)) {
     window->base.pub.flags |= MARU_WINDOW_STATE_READY;
     MARU_Event evt = {0};
-    _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window *)window, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)window, &evt);
   }
 
   // Maru does not stage/own window content buffers; applications/renderers do.
@@ -568,7 +568,7 @@ static void _wl_frame_callback_done(void *data, struct wl_callback *callback,
 
   MARU_Event evt = {0};
   evt.frame.timestamp_ms = callback_data;
-  _maru_dispatch_event(&ctx->base, MARU_WINDOW_FRAME, (MARU_Window *)window, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME, (MARU_Window *)window, &evt);
 }
 
 static const struct wl_callback_listener _maru_wayland_frame_listener = {

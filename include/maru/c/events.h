@@ -27,6 +27,43 @@ typedef struct MARU_Window MARU_Window;
 /** @brief Opaque handle representing a physical monitor. */
 typedef struct MARU_Monitor MARU_Monitor;
 
+/** @brief Identifies one specific event kind delivered to callbacks. */
+typedef enum MARU_EventId {
+  MARU_EVENT_CLOSE_REQUESTED = 0,
+  MARU_EVENT_WINDOW_RESIZED = 1,
+  MARU_EVENT_KEY_STATE_CHANGED = 2,
+  MARU_EVENT_WINDOW_READY = 3,
+  MARU_EVENT_MOUSE_MOVED = 4,
+  MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED = 5,
+  MARU_EVENT_MOUSE_SCROLLED = 6,
+  MARU_EVENT_IDLE_STATE_CHANGED = 7,
+  MARU_EVENT_MONITOR_CONNECTION_CHANGED = 8,
+  MARU_EVENT_MONITOR_MODE_CHANGED = 9,
+  MARU_EVENT_WINDOW_FRAME = 10,
+  MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED = 12,
+  MARU_EVENT_TEXT_EDIT_START = 19,
+  MARU_EVENT_TEXT_EDIT_UPDATE = 20,
+  MARU_EVENT_TEXT_EDIT_COMMIT = 21,
+  MARU_EVENT_TEXT_EDIT_END = 22,
+  MARU_EVENT_USER_0 = 48,
+  MARU_EVENT_USER_1 = 49,
+  MARU_EVENT_USER_2 = 50,
+  MARU_EVENT_USER_3 = 51,
+  MARU_EVENT_USER_4 = 52,
+  MARU_EVENT_USER_5 = 53,
+  MARU_EVENT_USER_6 = 54,
+  MARU_EVENT_USER_7 = 55,
+  MARU_EVENT_USER_8 = 56,
+  MARU_EVENT_USER_9 = 57,
+  MARU_EVENT_USER_10 = 58,
+  MARU_EVENT_USER_11 = 59,
+  MARU_EVENT_USER_12 = 60,
+  MARU_EVENT_USER_13 = 61,
+  MARU_EVENT_USER_14 = 62,
+  MARU_EVENT_USER_15 = 63,
+} MARU_EventId;
+
+#define MARU_EVENT_MASK(id) ((MARU_EventMask)1ULL << (uint32_t)(id))
 
 // N.B. static const MARU_EventMask is the best way to represent 
 // this in a stable manner, but it can trigger noisy warnings.
@@ -36,59 +73,105 @@ typedef struct MARU_Monitor MARU_Monitor;
 #endif
 
 /** @brief Event fired when a window close request is received. */
-static const MARU_EventMask MARU_CLOSE_REQUESTED = ((MARU_EventMask)1 << 0);
+static const MARU_EventMask MARU_MASK_CLOSE_REQUESTED = MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED);
 /** @brief Event fired when window geometry changes (size/scale/transform). */
-static const MARU_EventMask MARU_WINDOW_RESIZED = ((MARU_EventMask)1 << 1);
+static const MARU_EventMask MARU_MASK_WINDOW_RESIZED = MARU_EVENT_MASK(MARU_EVENT_WINDOW_RESIZED);
 /** @brief Event fired when a keyboard key state changes. */
-static const MARU_EventMask MARU_KEY_STATE_CHANGED = ((MARU_EventMask)1 << 2);
+static const MARU_EventMask MARU_MASK_KEY_STATE_CHANGED = MARU_EVENT_MASK(MARU_EVENT_KEY_STATE_CHANGED);
 /** @brief Event fired when a window is fully created and ready for interaction. */
-static const MARU_EventMask MARU_WINDOW_READY = ((MARU_EventMask)1 << 3);
+static const MARU_EventMask MARU_MASK_WINDOW_READY = MARU_EVENT_MASK(MARU_EVENT_WINDOW_READY);
 /** @brief Event fired when the mouse cursor moves. */
-static const MARU_EventMask MARU_MOUSE_MOVED = ((MARU_EventMask)1 << 4);
+static const MARU_EventMask MARU_MASK_MOUSE_MOVED = MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED);
 /** @brief Event fired when a mouse button state changes. */
-static const MARU_EventMask MARU_MOUSE_BUTTON_STATE_CHANGED = ((MARU_EventMask)1 << 5);
+static const MARU_EventMask MARU_MASK_MOUSE_BUTTON_STATE_CHANGED = MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED);
 /** @brief Event fired when a mouse scroll wheel is moved. */
-static const MARU_EventMask MARU_MOUSE_SCROLLED = ((MARU_EventMask)1 << 6);
+static const MARU_EventMask MARU_MASK_MOUSE_SCROLLED = MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED);
 /** @brief Event fired when the system idle state changes. */
-static const MARU_EventMask MARU_IDLE_STATE_CHANGED = ((MARU_EventMask)1 << 7);
+static const MARU_EventMask MARU_MASK_IDLE_STATE_CHANGED = MARU_EVENT_MASK(MARU_EVENT_IDLE_STATE_CHANGED);
 /** @brief Event fired when a monitor is connected or disconnected. */
-static const MARU_EventMask MARU_MONITOR_CONNECTION_CHANGED = ((MARU_EventMask)1 << 8);
+static const MARU_EventMask MARU_MASK_MONITOR_CONNECTION_CHANGED = MARU_EVENT_MASK(MARU_EVENT_MONITOR_CONNECTION_CHANGED);
 /** @brief Event fired when a monitor's display mode changes. */
-static const MARU_EventMask MARU_MONITOR_MODE_CHANGED = ((MARU_EventMask)1 << 9);
+static const MARU_EventMask MARU_MASK_MONITOR_MODE_CHANGED = MARU_EVENT_MASK(MARU_EVENT_MONITOR_MODE_CHANGED);
 /** @brief Event fired when the window should render its next frame. */
-static const MARU_EventMask MARU_WINDOW_FRAME = ((MARU_EventMask)1 << 10);
+static const MARU_EventMask MARU_MASK_WINDOW_FRAME = MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME);
 /** @brief Event fired when a window presentation state changes. */
-static const MARU_EventMask MARU_WINDOW_PRESENTATION_STATE_CHANGED = ((MARU_EventMask)1 << 12);
+static const MARU_EventMask MARU_MASK_WINDOW_PRESENTATION_STATE_CHANGED =
+    MARU_EVENT_MASK(MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED);
 
 /** @brief Event fired when an IME composition session starts. */
-static const MARU_EventMask MARU_TEXT_EDIT_START = ((MARU_EventMask)1 << 19);
+static const MARU_EventMask MARU_MASK_TEXT_EDIT_START = MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_START);
 /** @brief Event fired when the current preedit text in an IME session is updated. */
-static const MARU_EventMask MARU_TEXT_EDIT_UPDATE = ((MARU_EventMask)1 << 20);
+static const MARU_EventMask MARU_MASK_TEXT_EDIT_UPDATE = MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_UPDATE);
 /** @brief Event fired when text is committed to the application, potentially replacing surrounding text. */
-static const MARU_EventMask MARU_TEXT_EDIT_COMMIT = ((MARU_EventMask)1 << 21);
+static const MARU_EventMask MARU_MASK_TEXT_EDIT_COMMIT = MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_COMMIT);
 /** @brief Event fired when an IME composition session ends. */
-static const MARU_EventMask MARU_TEXT_EDIT_END = ((MARU_EventMask)1 << 22);
+static const MARU_EventMask MARU_MASK_TEXT_EDIT_END = MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_END);
 
   // N.B. These bits are reserved for user-defined events
-static const MARU_EventMask MARU_USER_EVENT_0 = ((MARU_EventMask)1 << 48);
-static const MARU_EventMask MARU_USER_EVENT_1 = ((MARU_EventMask)1 << 49);
-static const MARU_EventMask MARU_USER_EVENT_2 = ((MARU_EventMask)1 << 50);
-static const MARU_EventMask MARU_USER_EVENT_3 = ((MARU_EventMask)1 << 51);
-static const MARU_EventMask MARU_USER_EVENT_4 = ((MARU_EventMask)1 << 52);
-static const MARU_EventMask MARU_USER_EVENT_5 = ((MARU_EventMask)1 << 53);
-static const MARU_EventMask MARU_USER_EVENT_6 = ((MARU_EventMask)1 << 54);
-static const MARU_EventMask MARU_USER_EVENT_7 = ((MARU_EventMask)1 << 55);
-static const MARU_EventMask MARU_USER_EVENT_8 = ((MARU_EventMask)1 << 56);
-static const MARU_EventMask MARU_USER_EVENT_9 = ((MARU_EventMask)1 << 57);
-static const MARU_EventMask MARU_USER_EVENT_10 = ((MARU_EventMask)1 << 58);
-static const MARU_EventMask MARU_USER_EVENT_11 = ((MARU_EventMask)1 << 59);
-static const MARU_EventMask MARU_USER_EVENT_12 = ((MARU_EventMask)1 << 60);
-static const MARU_EventMask MARU_USER_EVENT_13 = ((MARU_EventMask)1 << 61);
-static const MARU_EventMask MARU_USER_EVENT_14 = ((MARU_EventMask)1 << 62);
-static const MARU_EventMask MARU_USER_EVENT_15 = ((MARU_EventMask)1 << 63);
+static const MARU_EventMask MARU_MASK_USER_0 = MARU_EVENT_MASK(MARU_EVENT_USER_0);
+static const MARU_EventMask MARU_MASK_USER_1 = MARU_EVENT_MASK(MARU_EVENT_USER_1);
+static const MARU_EventMask MARU_MASK_USER_2 = MARU_EVENT_MASK(MARU_EVENT_USER_2);
+static const MARU_EventMask MARU_MASK_USER_3 = MARU_EVENT_MASK(MARU_EVENT_USER_3);
+static const MARU_EventMask MARU_MASK_USER_4 = MARU_EVENT_MASK(MARU_EVENT_USER_4);
+static const MARU_EventMask MARU_MASK_USER_5 = MARU_EVENT_MASK(MARU_EVENT_USER_5);
+static const MARU_EventMask MARU_MASK_USER_6 = MARU_EVENT_MASK(MARU_EVENT_USER_6);
+static const MARU_EventMask MARU_MASK_USER_7 = MARU_EVENT_MASK(MARU_EVENT_USER_7);
+static const MARU_EventMask MARU_MASK_USER_8 = MARU_EVENT_MASK(MARU_EVENT_USER_8);
+static const MARU_EventMask MARU_MASK_USER_9 = MARU_EVENT_MASK(MARU_EVENT_USER_9);
+static const MARU_EventMask MARU_MASK_USER_10 = MARU_EVENT_MASK(MARU_EVENT_USER_10);
+static const MARU_EventMask MARU_MASK_USER_11 = MARU_EVENT_MASK(MARU_EVENT_USER_11);
+static const MARU_EventMask MARU_MASK_USER_12 = MARU_EVENT_MASK(MARU_EVENT_USER_12);
+static const MARU_EventMask MARU_MASK_USER_13 = MARU_EVENT_MASK(MARU_EVENT_USER_13);
+static const MARU_EventMask MARU_MASK_USER_14 = MARU_EVENT_MASK(MARU_EVENT_USER_14);
+static const MARU_EventMask MARU_MASK_USER_15 = MARU_EVENT_MASK(MARU_EVENT_USER_15);
 
 /** @brief Bitmask representing all possible event types. */
 static const MARU_EventMask MARU_ALL_EVENTS = ~((MARU_EventMask)0);
+
+/** @brief Returns true if the provided event id is in the user-reserved range. */
+static inline bool maru_isUserEventId(MARU_EventId id) {
+  return id >= MARU_EVENT_USER_0 && id <= MARU_EVENT_USER_15;
+}
+
+/** @brief Returns true if the provided event id is recognized by MARU. */
+static inline bool maru_isKnownEventId(MARU_EventId id) {
+  switch (id) {
+    case MARU_EVENT_CLOSE_REQUESTED:
+    case MARU_EVENT_WINDOW_RESIZED:
+    case MARU_EVENT_KEY_STATE_CHANGED:
+    case MARU_EVENT_WINDOW_READY:
+    case MARU_EVENT_MOUSE_MOVED:
+    case MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED:
+    case MARU_EVENT_MOUSE_SCROLLED:
+    case MARU_EVENT_IDLE_STATE_CHANGED:
+    case MARU_EVENT_MONITOR_CONNECTION_CHANGED:
+    case MARU_EVENT_MONITOR_MODE_CHANGED:
+    case MARU_EVENT_WINDOW_FRAME:
+    case MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED:
+    case MARU_EVENT_TEXT_EDIT_START:
+    case MARU_EVENT_TEXT_EDIT_UPDATE:
+    case MARU_EVENT_TEXT_EDIT_COMMIT:
+    case MARU_EVENT_TEXT_EDIT_END:
+      return true;
+    default:
+      return maru_isUserEventId(id);
+  }
+}
+
+/** @brief Returns true when the given event id bit is enabled in a mask. */
+static inline bool maru_eventMaskHas(MARU_EventMask mask, MARU_EventId id) {
+  return (mask & MARU_EVENT_MASK(id)) != 0;
+}
+
+/** @brief Returns a new mask with the given event id bit enabled. */
+static inline MARU_EventMask maru_eventMaskAdd(MARU_EventMask mask, MARU_EventId id) {
+  return mask | MARU_EVENT_MASK(id);
+}
+
+/** @brief Returns a new mask with the given event id bit disabled. */
+static inline MARU_EventMask maru_eventMaskRemove(MARU_EventMask mask, MARU_EventId id) {
+  return mask & ~MARU_EVENT_MASK(id);
+}
 
 #if defined(__clang__) || defined(__GNUC__)
 #pragma GCC diagnostic pop
@@ -99,16 +182,16 @@ static const MARU_EventMask MARU_ALL_EVENTS = ~((MARU_EventMask)0);
  as only valid for the duration of the callback.
 */
 
-/** @brief Payload for MARU_WINDOW_READY. */
+/** @brief Payload for MARU_EVENT_WINDOW_READY. */
 typedef struct MARU_WindowReadyEvent { char _unused; } MARU_WindowReadyEvent;
-/** @brief Payload for MARU_CLOSE_REQUESTED. */
+/** @brief Payload for MARU_EVENT_CLOSE_REQUESTED. */
 typedef struct MARU_WindowCloseEvent { char _unused; } MARU_WindowCloseEvent;
-/** @brief Payload for MARU_WINDOW_FRAME. */
+/** @brief Payload for MARU_EVENT_WINDOW_FRAME. */
 typedef struct MARU_WindowFrameEvent { 
   uint32_t timestamp_ms; 
 } MARU_WindowFrameEvent;
 
-/** @brief Payload for MARU_WINDOW_RESIZED. */
+/** @brief Payload for MARU_EVENT_WINDOW_RESIZED. */
 typedef struct MARU_WindowResizedEvent {
   MARU_WindowGeometry geometry;
 } MARU_WindowResizedEvent;
@@ -122,7 +205,7 @@ typedef enum MARU_WindowPresentationChangedBits {
   MARU_WINDOW_PRESENTATION_CHANGED_ICON = 1u << 4,
 } MARU_WindowPresentationChangedBits;
 
-/** @brief Payload for MARU_WINDOW_PRESENTATION_STATE_CHANGED. */
+/** @brief Payload for MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED. */
 typedef struct MARU_WindowPresentationStateEvent {
   uint32_t changed_fields;
   bool visible;
@@ -132,18 +215,18 @@ typedef struct MARU_WindowPresentationStateEvent {
   bool icon_effective;
 } MARU_WindowPresentationStateEvent;
 
-/** @brief Payload for MARU_KEY_STATE_CHANGED. */
+/** @brief Payload for MARU_EVENT_KEY_STATE_CHANGED. */
 // N.B. This represents raw keyboard data.
 // - It does not get fired on keyrepeats
 // - the key will likely not match the current keyboard layout
-// - If you are using this for text, use MARU_TEXT_EDIT_COMMIT instead
+// - If you are using this for text, use MARU_EVENT_TEXT_EDIT_COMMIT instead
 typedef struct MARU_KeyboardEvent {
   MARU_Key raw_key;
   MARU_ButtonState state;
   MARU_ModifierFlags modifiers;
 } MARU_KeyboardEvent;
 
-/** @brief Payload for MARU_MOUSE_MOVED. */
+/** @brief Payload for MARU_EVENT_MOUSE_MOVED. */
 typedef struct MARU_MouseMotionEvent {
   MARU_Vec2Dip position;
   MARU_Vec2Dip delta;
@@ -151,7 +234,7 @@ typedef struct MARU_MouseMotionEvent {
   MARU_ModifierFlags modifiers;
 } MARU_MouseMotionEvent;
 
-/** @brief Payload for MARU_MOUSE_BUTTON_STATE_CHANGED. */
+/** @brief Payload for MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED. */
 typedef struct MARU_MouseButtonEvent {
   /** Index into maru_getMouseButtonStates()/maru_getMouseButtonChannelInfo(). */
   uint32_t button_id;
@@ -159,26 +242,26 @@ typedef struct MARU_MouseButtonEvent {
   MARU_ModifierFlags modifiers;
 } MARU_MouseButtonEvent;
 
-/** @brief Payload for MARU_MOUSE_SCROLLED. */
+/** @brief Payload for MARU_EVENT_MOUSE_SCROLLED. */
 typedef struct MARU_MouseScrollEvent {
   MARU_Vec2Dip delta;
   struct { int32_t x; int32_t y; } steps;
   MARU_ModifierFlags modifiers;
 } MARU_MouseScrollEvent;
 
-/** @brief Payload for MARU_IDLE_STATE_CHANGED. */
+/** @brief Payload for MARU_EVENT_IDLE_STATE_CHANGED. */
 typedef struct MARU_IdleEvent {
   uint32_t timeout_ms;
   bool is_idle;
 } MARU_IdleEvent;
 
-/** @brief Payload for MARU_MONITOR_CONNECTION_CHANGED. */
+/** @brief Payload for MARU_EVENT_MONITOR_CONNECTION_CHANGED. */
 typedef struct MARU_MonitorConnectionEvent {
   MARU_Monitor *monitor;
   bool connected;
 } MARU_MonitorConnectionEvent;
 
-/** @brief Payload for MARU_MONITOR_MODE_CHANGED. */
+/** @brief Payload for MARU_EVENT_MONITOR_MODE_CHANGED. */
 typedef struct MARU_MonitorModeEvent {
   MARU_Monitor *monitor;
 } MARU_MonitorModeEvent;
@@ -189,12 +272,12 @@ typedef struct MARU_TextRangeUtf8 {
   uint32_t length_byte;
 } MARU_TextRangeUtf8;
 
-/** @brief Payload for MARU_TEXT_EDIT_START. */
+/** @brief Payload for MARU_EVENT_TEXT_EDIT_START. */
 typedef struct MARU_TextEditStartEvent {
   uint64_t session_id;
 } MARU_TextEditStartEvent;
 
-/** @brief Payload for MARU_TEXT_EDIT_UPDATE. */
+/** @brief Payload for MARU_EVENT_TEXT_EDIT_UPDATE. */
 typedef struct MARU_TextEditUpdateEvent {
   uint64_t session_id;
   const char *preedit_utf8;
@@ -203,7 +286,7 @@ typedef struct MARU_TextEditUpdateEvent {
   MARU_TextRangeUtf8 selection;
 } MARU_TextEditUpdateEvent;
 
-/** @brief Payload for MARU_TEXT_EDIT_COMMIT. */
+/** @brief Payload for MARU_EVENT_TEXT_EDIT_COMMIT. */
 typedef struct MARU_TextEditCommitEvent {
   uint64_t session_id;
   uint32_t delete_before_bytes;
@@ -212,7 +295,7 @@ typedef struct MARU_TextEditCommitEvent {
   uint32_t committed_length;
 } MARU_TextEditCommitEvent;
 
-/** @brief Payload for MARU_TEXT_EDIT_END. */
+/** @brief Payload for MARU_EVENT_TEXT_EDIT_END. */
 typedef struct MARU_TextEditEndEvent {
   uint64_t session_id;
   bool canceled;
@@ -251,7 +334,7 @@ typedef struct MARU_Event {
 } MARU_Event;
 
 /** @brief Callback signature for event dispatching. */
-typedef void (*MARU_EventCallback)(MARU_EventType type, MARU_Window *window, const struct MARU_Event *evt, void *userdata);
+typedef void (*MARU_EventCallback)(MARU_EventId type, MARU_Window *window, const struct MARU_Event *evt, void *userdata);
 
 /** @brief Synchronizes the event queue with the OS and dispatches events to the provided callback. */
 MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
@@ -261,7 +344,7 @@ MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_Eve
  *  This is a GLOBALLY THREAD-SAFE function and can be called from any thread 
  *  without external synchronization. The passed event will be COPIED.
  */
-MARU_Status maru_postEvent(MARU_Context *context, MARU_EventType type,
+MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
                                      MARU_Window *window, MARU_UserDefinedEvent evt);
 
 /** @brief Wakes a context up without dispatching an event. 

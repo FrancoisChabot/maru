@@ -144,7 +144,7 @@ static void _maru_windows_dispatch_presentation_state(MARU_Window_Windows *windo
   evt.presentation.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
   evt.presentation.icon_effective = icon_effective;
 
-  _maru_dispatch_event(ctx, MARU_WINDOW_PRESENTATION_STATE_CHANGED,
+  _maru_dispatch_event(ctx, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
 }
 
@@ -229,7 +229,7 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
     switch (msg) {
     case WM_CLOSE: {
       MARU_Event evt = { {0} };
-      _maru_dispatch_event(ctx, MARU_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
+      _maru_dispatch_event(ctx, MARU_EVENT_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
       return 0;
     }
 
@@ -280,7 +280,7 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
           }
         }
       };
-      _maru_dispatch_event(ctx, MARU_WINDOW_RESIZED, (MARU_Window *)window, &evt);
+      _maru_dispatch_event(ctx, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)window, &evt);
 
       if (changed_fields != 0) {
         _maru_windows_dispatch_presentation_state(window, changed_fields, true);
@@ -309,7 +309,7 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
           .position = { (MARU_Scalar)GET_X_LPARAM(lparam), (MARU_Scalar)GET_Y_LPARAM(lparam) }
         }
       };
-      _maru_dispatch_event(ctx, MARU_MOUSE_MOVED, (MARU_Window *)window, &evt);
+      _maru_dispatch_event(ctx, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)window, &evt);
       return 0;
     }
 
@@ -341,7 +341,7 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
           .modifiers = _maru_win32_get_modifiers()
         }
       };
-      _maru_dispatch_event(ctx, MARU_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)window, &evt);
+      _maru_dispatch_event(ctx, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)window, &evt);
       return 0;
     }
 
@@ -352,7 +352,7 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
           .steps = { 0, GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA }
         }
       };
-      _maru_dispatch_event(ctx, MARU_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
+      _maru_dispatch_event(ctx, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
       return 0;
     }
 
@@ -363,7 +363,7 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
           .steps = { GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA, 0 }
         }
       };
-      _maru_dispatch_event(ctx, MARU_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
+      _maru_dispatch_event(ctx, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
       return 0;
     }
 
@@ -385,7 +385,7 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
           .modifiers = _maru_win32_get_modifiers()
         }
       };
-      _maru_dispatch_event(ctx, MARU_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
+      _maru_dispatch_event(ctx, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
       return 0;
     }
 
@@ -473,7 +473,7 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
         evt.text_edit_commit.delete_before_bytes = 0;
         evt.text_edit_commit.delete_after_bytes = 0;
         evt.text_edit_commit.session_id = 0;
-        _maru_dispatch_event(ctx, MARU_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
+        _maru_dispatch_event(ctx, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
       }
       return 0;
     }
@@ -624,7 +624,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   _maru_register_window(&ctx->base, (MARU_Window *)window);
 
   MARU_Event evt = { {0} };
-  _maru_dispatch_event(&ctx->base, MARU_WINDOW_READY, (MARU_Window *)window, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)window, &evt);
 
   *out_window = (MARU_Window *)window;
   return MARU_SUCCESS;

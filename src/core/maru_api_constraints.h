@@ -186,14 +186,6 @@ static inline void _maru_validate_requestWindowAttention(MARU_Window *window) {
     MARU_CONSTRAINT_CHECK(window != NULL);
 }
 
-static inline void _maru_validate_getWindowBackendHandle(MARU_Window *window,
-                                               MARU_BackendType *out_type,
-                                               MARU_BackendHandle *out_handle) {
-    MARU_CONSTRAINT_CHECK(window != NULL);
-    MARU_CONSTRAINT_CHECK(out_type != NULL);
-    MARU_CONSTRAINT_CHECK(out_handle != NULL);
-}
-
 static inline void _maru_validate_resetContextMetrics(MARU_Context *context) {
     MARU_CONSTRAINT_CHECK(context != NULL);
 }
@@ -234,17 +226,10 @@ static inline void _maru_validate_wakeContext(MARU_Context *context) {
     MARU_CONSTRAINT_CHECK(context != NULL);
 }
 
-static inline void _maru_validate_getContextNativeHandle(MARU_Context *context) {
-    MARU_CONSTRAINT_CHECK(context != NULL);
-}
-
-static inline void _maru_validate_getWindowNativeHandle(MARU_Window *window) {
-    MARU_CONSTRAINT_CHECK(window != NULL);
-}
-
-static inline void _maru_validate_postEvent(MARU_Context *context, MARU_EventType type,
+static inline void _maru_validate_postEvent(MARU_Context *context, MARU_EventId type,
                                             MARU_Window *window, MARU_UserDefinedEvent evt) {
     MARU_CONSTRAINT_CHECK(context != NULL);
+    MARU_CONSTRAINT_CHECK(maru_isUserEventId(type));
     if (window != NULL) {
         MARU_CONSTRAINT_CHECK(maru_getWindowContext(window) == context);
     }

@@ -1,5 +1,6 @@
 #include "windows_internal.h"
 #include "maru_api_constraints.h"
+#include "maru/c/native/win32.h"
 #include <stdatomic.h>
 
 extern void *_maru_getContextNativeHandle_Windows(MARU_Context *context);
@@ -170,11 +171,19 @@ MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
 }
 
-void *_maru_getContextNativeHandle(MARU_Context *context) {
-    return _maru_getContextNativeHandle_Windows(context);
+MARU_API MARU_Status maru_getWin32ContextHandle(
+    MARU_Context *context, MARU_Win32ContextHandle *out_handle) {
+  if (!context || !out_handle) return MARU_FAILURE;
+  out_handle->instance = (HINSTANCE)_maru_getContextNativeHandle_Windows(context);
+  return out_handle->instance ? MARU_SUCCESS : MARU_FAILURE;
 }
 
-void *_maru_getWindowNativeHandle(MARU_Window *window) {
-    return _maru_getWindowNativeHandle_Windows(window);
+MARU_API MARU_Status maru_getWin32WindowHandle(
+    MARU_Window *window, MARU_Win32WindowHandle *out_handle) {
+  if (!window || !out_handle) return MARU_FAILURE;
+  MARU_Context *context = maru_getWindowContext(window);
+  out_handle->instance = (HINSTANCE)_maru_getContextNativeHandle_Windows(context);
+  out_handle->hwnd = (HWND)_maru_getWindowNativeHandle_Windows(window);
+  return (out_handle->instance && out_handle->hwnd) ? MARU_SUCCESS : MARU_FAILURE;
 }
 #endif

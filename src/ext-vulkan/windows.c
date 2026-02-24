@@ -1,6 +1,6 @@
 #include "maru/c/core.h"
 #include "maru/c/ext/vulkan.h"
-#include "maru/c/ext/core.h"
+#include "maru/c/native/win32.h"
 #include "maru_internal.h"
 #include "maru_api_constraints.h"
 #include "ext_vulkan_internal.h"
@@ -85,13 +85,19 @@ static MARU_Status _createVkSurface_Windows(MARU_Window* window,
   }
 
   HINSTANCE hinstance = GetModuleHandleA(NULL);
+  MARU_Win32WindowHandle win_handle;
+  if (maru_getWin32WindowHandle(window, &win_handle) != MARU_SUCCESS) {
+    MARU_REPORT_DIAGNOSTIC(ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
+                           "Failed to retrieve Win32 window handles");
+    return MARU_FAILURE;
+  }
 
   VkWin32SurfaceCreateInfoKHR cinfo = {
       .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
       .pNext = NULL,
       .flags = 0,
-      .hinstance = hinstance,
-      .hwnd = (HWND)maru_windowGetNativeHandle(window),
+      .hinstance = hinstance ? hinstance : win_handle.instance,
+      .hwnd = win_handle.hwnd,
   };
 
   VkResult vk_res = create_surface_fn(instance, &cinfo, NULL, out_surface);

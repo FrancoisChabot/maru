@@ -21,7 +21,7 @@ public:
     App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, VkQueue queue, VkDescriptorPool descriptor_pool);
     ~App();
 
-    void onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event);
+    void onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event);
     void onDiagnostic(const MARU_DiagnosticInfo* info);
     AppStatus update(MARU_Context* ctx, MARU_Window* window);
     void renderUi(MARU_Context* ctx, MARU_Window* window);

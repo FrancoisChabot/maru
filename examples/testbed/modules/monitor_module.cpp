@@ -5,13 +5,13 @@
 #include "imgui.h"
 #include <cstdio>
 
-void MonitorModule::onEvent(MARU_EventType type, MARU_Window* window, const MARU_Event& event) {
+void MonitorModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
     (void)window;
     (void)event;
     if (!auto_refresh_on_events_) {
         return;
     }
-    if (type == MARU_MONITOR_CONNECTION_CHANGED || type == MARU_MONITOR_MODE_CHANGED) {
+    if (type == MARU_EVENT_MONITOR_CONNECTION_CHANGED || type == MARU_EVENT_MONITOR_MODE_CHANGED) {
         refresh_requested_ = true;
     }
 }
