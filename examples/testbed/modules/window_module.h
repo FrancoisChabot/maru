@@ -58,6 +58,20 @@ private:
     MARU_Fraction primary_aspect_ratio_ = {0, 0};
     char primary_title_buf_[256] = "MARU Testbed";
     int primary_size_[2] = {1280, 800};
+    int secondary_counter_ = 0;
+
+    struct SecondaryCreateConfig {
+        char title[256] = "";
+        char app_id[128] = "maru.app";
+        int logical_size[2] = {640, 480};
+        bool decorated = true;
+        bool transparent = false;
+        bool fullscreen = false;
+        bool maximized = false;
+        bool resizable = true;
+        bool mouse_passthrough = false;
+        int content_type = 0;
+    } secondary_create_;
 
     void createSecondaryWindow(MARU_Context* ctx);
     void renderSecondaryWindow(SecondaryWindow& sw);

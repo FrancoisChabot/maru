@@ -176,13 +176,25 @@ void WindowModule::update(MARU_Context* ctx, MARU_Window* window) {
 }
 
 void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
-    static int win_count = 0;
-    std::string title = "Secondary Window " + std::to_string(++win_count);
+    const int id = ++secondary_counter_;
+    std::string title = secondary_create_.title[0] != '\0'
+        ? secondary_create_.title
+        : ("Secondary Window " + std::to_string(id));
 
     MARU_WindowCreateInfo win_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
     win_info.attributes.title = title.c_str();
-    win_info.attributes.logical_size = {640, 480};
-    win_info.decorated = true;
+    win_info.attributes.logical_size = {
+        (MARU_Scalar)secondary_create_.logical_size[0],
+        (MARU_Scalar)secondary_create_.logical_size[1]
+    };
+    win_info.attributes.fullscreen = secondary_create_.fullscreen;
+    win_info.attributes.maximized = secondary_create_.maximized;
+    win_info.attributes.resizable = secondary_create_.resizable;
+    win_info.attributes.mouse_passthrough = secondary_create_.mouse_passthrough;
+    win_info.app_id = secondary_create_.app_id[0] != '\0' ? secondary_create_.app_id : nullptr;
+    win_info.content_type = (MARU_ContentType)secondary_create_.content_type;
+    win_info.decorated = secondary_create_.decorated;
+    win_info.transparent = secondary_create_.transparent;
 
     MARU_Window* created_window = nullptr;
     if (maru_createWindow(ctx, &win_info, &created_window) != MARU_SUCCESS) {
@@ -193,8 +205,8 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
     auto sw = std::make_unique<SecondaryWindow>();
     sw->window = created_window;
     sw->title = std::move(title);
-    sw->is_resizable = true;
-    sw->mouse_passthrough = false;
+    sw->is_resizable = secondary_create_.resizable;
+    sw->mouse_passthrough = secondary_create_.mouse_passthrough;
     sw->primary_selection = true;
     secondary_windows_.push_back(std::move(sw));
 }
@@ -334,6 +346,29 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
     if (!ImGui::Begin("Windowing", &enabled_)) {
         ImGui::End();
         return;
+    }
+
+    if (ImGui::CollapsingHeader("Secondary Create Info", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::InputText("Create Title", secondary_create_.title, sizeof(secondary_create_.title));
+        ImGui::InputText("Create App ID", secondary_create_.app_id, sizeof(secondary_create_.app_id));
+        ImGui::InputInt2("Create Logical Size", secondary_create_.logical_size);
+        ImGui::Checkbox("Create Decorated", &secondary_create_.decorated);
+        ImGui::SameLine();
+        ImGui::Checkbox("Create Transparent", &secondary_create_.transparent);
+        ImGui::Checkbox("Create Maximized", &secondary_create_.maximized);
+        ImGui::SameLine();
+        ImGui::Checkbox("Create Fullscreen", &secondary_create_.fullscreen);
+        ImGui::Checkbox("Create Resizable", &secondary_create_.resizable);
+        ImGui::SameLine();
+        ImGui::Checkbox("Create Mouse Passthrough", &secondary_create_.mouse_passthrough);
+
+        const char* content_items[] = {"None", "Photo", "Video", "Game"};
+        ImGui::Combo("Create Content Type", &secondary_create_.content_type, content_items, IM_ARRAYSIZE(content_items));
+
+        if (secondary_create_.content_type < 0) secondary_create_.content_type = 0;
+        if (secondary_create_.content_type > 3) secondary_create_.content_type = 3;
+        if (secondary_create_.logical_size[0] < 1) secondary_create_.logical_size[0] = 1;
+        if (secondary_create_.logical_size[1] < 1) secondary_create_.logical_size[1] = 1;
     }
 
     if (ImGui::Button("Create Secondary Window")) {

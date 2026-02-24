@@ -111,6 +111,7 @@ static struct libdecor_frame_interface _libdecor_frame_interface = {
 bool _maru_wayland_create_libdecor_frame(MARU_Window_WL *window,
                                           const MARU_WindowCreateInfo *create_info) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  const MARU_WindowAttributes *attrs = &window->base.attrs_effective;
 
   if (!ctx->libdecor_context) {
     return false;
@@ -130,6 +131,20 @@ bool _maru_wayland_create_libdecor_frame(MARU_Window_WL *window,
 
   if (create_info->app_id) {
     maru_libdecor_frame_set_app_id(ctx, window->libdecor.frame, create_info->app_id);
+  }
+
+  if (attrs->fullscreen) {
+    struct wl_output *output = NULL;
+    if (attrs->monitor &&
+        maru_getMonitorContext(attrs->monitor) == window->base.pub.context) {
+      MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)attrs->monitor;
+      output = monitor->output;
+    }
+    maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, output);
+  }
+
+  if (attrs->maximized) {
+    maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
   }
 
   maru_libdecor_frame_map(ctx, window->libdecor.frame);

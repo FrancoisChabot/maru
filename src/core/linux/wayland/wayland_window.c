@@ -395,6 +395,7 @@ void _maru_wayland_request_frame(MARU_Window_WL *window) {
 bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
                                              const MARU_WindowCreateInfo *create_info) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
+  const MARU_WindowAttributes *attrs = &window->base.attrs_effective;
 
   window->xdg.surface = maru_xdg_wm_base_get_xdg_surface(ctx, ctx->protocols.xdg_wm_base, window->wl.surface);
   if (!window->xdg.surface) {
@@ -416,6 +417,20 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
 
   if (create_info->app_id) {
     maru_xdg_toplevel_set_app_id(ctx, window->xdg.toplevel, create_info->app_id);
+  }
+
+  if (attrs->fullscreen) {
+    struct wl_output *output = NULL;
+    if (attrs->monitor &&
+        maru_getMonitorContext(attrs->monitor) == window->base.pub.context) {
+      MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)attrs->monitor;
+      output = monitor->output;
+    }
+    maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
+  }
+
+  if (attrs->maximized) {
+    maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
   }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_SSD) {
