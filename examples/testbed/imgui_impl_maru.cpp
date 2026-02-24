@@ -280,9 +280,9 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventType type, const MARU_Event* event) {
         io.AddMousePosEvent((float)event->mouse_motion.position.x, (float)event->mouse_motion.position.y);
     } else if (type == MARU_MOUSE_BUTTON_STATE_CHANGED) {
         int mouse_button = -1;
-        if (event->mouse_button.button == MARU_MOUSE_BUTTON_LEFT) mouse_button = 0;
-        if (event->mouse_button.button == MARU_MOUSE_BUTTON_RIGHT) mouse_button = 1;
-        if (event->mouse_button.button == MARU_MOUSE_BUTTON_MIDDLE) mouse_button = 2;
+        if (event->mouse_button.button_id == 0) mouse_button = 0;
+        if (event->mouse_button.button_id == 1) mouse_button = 1;
+        if (event->mouse_button.button_id == 2) mouse_button = 2;
         if (mouse_button != -1)
             io.AddMouseButtonEvent(mouse_button, event->mouse_button.state == MARU_BUTTON_STATE_PRESSED);
     } else if (type == MARU_MOUSE_SCROLLED) {

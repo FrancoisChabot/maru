@@ -6,6 +6,7 @@
 #include "wayland_internal.h"
 
 #include <errno.h>
+#include <linux/input-event-codes.h>
 #include <linux/memfd.h>
 #include <poll.h>
 #include <stdlib.h>
@@ -23,6 +24,57 @@
 static void _xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   maru_xdg_wm_base_pong(ctx, xdg_wm_base, serial);
+}
+
+static bool _maru_wayland_init_context_mouse_channels(MARU_Context_WL *ctx) {
+  static const struct {
+    const char *name;
+    uint32_t native_code;
+  } channel_defs[] = {
+      {"left", BTN_LEFT},       {"right", BTN_RIGHT},     {"middle", BTN_MIDDLE},
+      {"side", BTN_SIDE},       {"extra", BTN_EXTRA},     {"forward", BTN_FORWARD},
+      {"back", BTN_BACK},       {"task", BTN_TASK},
+  };
+  const uint32_t channel_count = (uint32_t)(sizeof(channel_defs) / sizeof(channel_defs[0]));
+
+  ctx->base.mouse_button_channels =
+      (MARU_MouseButtonChannelInfo *)maru_context_alloc(&ctx->base,
+                                                        sizeof(MARU_MouseButtonChannelInfo) * channel_count);
+  if (!ctx->base.mouse_button_channels) {
+    return false;
+  }
+
+  ctx->base.mouse_button_states =
+      (MARU_ButtonState8 *)maru_context_alloc(&ctx->base, sizeof(MARU_ButtonState8) * channel_count);
+  if (!ctx->base.mouse_button_states) {
+    maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
+    ctx->base.mouse_button_channels = NULL;
+    return false;
+  }
+
+  memset(ctx->base.mouse_button_states, 0, sizeof(MARU_ButtonState8) * channel_count);
+  for (uint32_t i = 0; i < channel_count; ++i) {
+    ctx->base.mouse_button_channels[i].name = channel_defs[i].name;
+    ctx->base.mouse_button_channels[i].native_code = channel_defs[i].native_code;
+    ctx->base.mouse_button_channels[i].is_default = false;
+  }
+
+  ctx->base.pub.mouse_button_count = channel_count;
+  ctx->base.pub.mouse_button_channels = ctx->base.mouse_button_channels;
+  ctx->base.pub.mouse_button_state = ctx->base.mouse_button_states;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_LEFT] = 0;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_RIGHT] = 1;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_MIDDLE] = 2;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_BACK] = 6;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_FORWARD] = 5;
+
+  ctx->base.mouse_button_channels[0].is_default = true;
+  ctx->base.mouse_button_channels[1].is_default = true;
+  ctx->base.mouse_button_channels[2].is_default = true;
+  ctx->base.mouse_button_channels[5].is_default = true;
+  ctx->base.mouse_button_channels[6].is_default = true;
+
+  return true;
 }
 
 const struct xdg_wm_base_listener _maru_xdg_wm_base_listener = {
@@ -226,6 +278,10 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
   ctx->linux_common.pointer.y = 0.0;
   ctx->linux_common.pointer.enter_serial = 0;
   ctx->linux_common.xkb.focused_window = NULL;
+  if (ctx->base.mouse_button_states && ctx->base.pub.mouse_button_count > 0) {
+    memset(ctx->base.mouse_button_states, 0,
+           sizeof(MARU_ButtonState8) * ctx->base.pub.mouse_button_count);
+  }
 
   ctx->repeat.repeat_key = 0;
   ctx->repeat.next_repeat_ns = 0;
@@ -473,6 +529,10 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   }
 
   _maru_init_context_base(&ctx->base);
+  if (!_maru_wayland_init_context_mouse_channels(ctx)) {
+    maru_context_free(&ctx->base, ctx);
+    return MARU_FAILURE;
+  }
 
   ctx->base.attrs_requested = create_info->attributes;
   ctx->base.attrs_effective = create_info->attributes;
@@ -590,6 +650,14 @@ cleanup_symbols:
   if (ctx->wake_fd >= 0) {
     close(ctx->wake_fd);
     ctx->wake_fd = -1;
+  }
+  if (ctx->base.mouse_button_states) {
+    maru_context_free(&ctx->base, ctx->base.mouse_button_states);
+    ctx->base.mouse_button_states = NULL;
+  }
+  if (ctx->base.mouse_button_channels) {
+    maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
+    ctx->base.mouse_button_channels = NULL;
   }
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);

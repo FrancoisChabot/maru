@@ -193,19 +193,22 @@ static LRESULT CALLBACK _maru_win32_wndproc(HWND hwnd, UINT msg, WPARAM wparam, 
     case WM_MBUTTONUP:
     case WM_XBUTTONDOWN:
     case WM_XBUTTONUP: {
-      MARU_MouseButton button;
-      if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONUP) button = MARU_MOUSE_BUTTON_LEFT;
-      else if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONUP) button = MARU_MOUSE_BUTTON_RIGHT;
-      else if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONUP) button = MARU_MOUSE_BUTTON_MIDDLE;
-      else if (GET_XBUTTON_WPARAM(wparam) == XBUTTON1) button = MARU_MOUSE_BUTTON_4;
-      else button = MARU_MOUSE_BUTTON_5;
+      uint32_t button_id;
+      if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONUP) button_id = 0;
+      else if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONUP) button_id = 1;
+      else if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONUP) button_id = 2;
+      else if (GET_XBUTTON_WPARAM(wparam) == XBUTTON1) button_id = 3;
+      else button_id = 4;
 
       MARU_ButtonState state = (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN || msg == WM_XBUTTONDOWN) 
         ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+      if (ctx->mouse_button_states && button_id < ctx->pub.mouse_button_count) {
+        ctx->mouse_button_states[button_id] = (MARU_ButtonState8)state;
+      }
 
       MARU_Event evt = {
         .mouse_button = {
-          .button = button,
+          .button_id = button_id,
           .state = state,
           .modifiers = _maru_win32_get_modifiers()
         }

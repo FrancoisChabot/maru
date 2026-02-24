@@ -61,6 +61,21 @@ static inline bool maru_isContextReady(const MARU_Context *context);
 /** @brief Retrieves the runtime performance metrics for a context. */
 static inline const MARU_ContextMetrics *maru_getContextMetrics(const MARU_Context *context);
 
+/** @brief Retrieves the number of mouse button channels supported by this context. */
+static inline uint32_t maru_getContextMouseButtonCount(const MARU_Context *context);
+
+/** @brief Retrieves the current context-level mouse button states table. */
+static inline const MARU_ButtonState8 *maru_getContextMouseButtonStates(const MARU_Context *context);
+
+/** @brief Retrieves metadata for context-level mouse button channels. */
+static inline const MARU_MouseButtonChannelInfo *maru_getContextMouseButtonChannelInfo(const MARU_Context *context);
+
+/** @brief Retrieves the channel index for a default mouse role on this context. */
+static inline int32_t maru_getContextMouseDefaultButtonChannel(const MARU_Context *context, MARU_MouseDefaultButton which);
+
+/** @brief Checks whether a context-level mouse button channel is currently pressed. */
+static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context, uint32_t button_id);
+
 /* ----- Context Management ----- */
 
 /** @brief Special value for timeouts to indicate it should never trigger. */

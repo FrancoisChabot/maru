@@ -27,6 +27,10 @@ typedef struct MARU_WindowExposed {
 
   const MARU_ButtonState8 *keyboard_state;
   uint32_t keyboard_key_count;
+  const MARU_ButtonState8 *mouse_button_state;
+  const MARU_MouseButtonChannelInfo *mouse_button_channels;
+  uint32_t mouse_button_count;
+  int32_t mouse_default_button_channels[MARU_MOUSE_DEFAULT_COUNT];
   MARU_EventMask event_mask;
   MARU_CursorMode cursor_mode;
   const MARU_Cursor *current_cursor;

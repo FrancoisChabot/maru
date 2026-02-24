@@ -48,6 +48,11 @@ typedef struct MARU_Context_WL {
   } scroll;
 
   struct {
+    uint32_t codes[16];
+    uint32_t count;
+  } unknown_mouse_buttons;
+
+  struct {
     MARU_Lib_WaylandClient wl;
     MARU_Lib_WaylandCursor wlc;
     struct {

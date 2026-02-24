@@ -8,6 +8,7 @@
 #include <string.h>
 #include <poll.h>
 #include <errno.h>
+#include <stdio.h>
 #include <sys/mman.h>
 #include <linux/memfd.h>
 #include <unistd.h>
@@ -29,6 +30,40 @@
 #define WL_POINTER_AXIS_HORIZONTAL_SCROLL 1
 
 static MARU_ModifierFlags _get_modifiers(MARU_Context_WL *ctx);
+
+static bool _maru_wayland_map_native_mouse_button(uint32_t native_code,
+                                                  uint32_t *out_channel) {
+    switch (native_code) {
+        case BTN_LEFT: *out_channel = 0; return true;
+        case BTN_RIGHT: *out_channel = 1; return true;
+        case BTN_MIDDLE: *out_channel = 2; return true;
+        case BTN_SIDE: *out_channel = 3; return true;
+        case BTN_EXTRA: *out_channel = 4; return true;
+        case BTN_FORWARD: *out_channel = 5; return true;
+        case BTN_BACK: *out_channel = 6; return true;
+        case BTN_TASK: *out_channel = 7; return true;
+        default: return false;
+    }
+}
+
+static void _maru_wayland_report_unknown_mouse_button_once(MARU_Context_WL *ctx,
+                                                           uint32_t native_code) {
+    for (uint32_t i = 0; i < ctx->unknown_mouse_buttons.count; ++i) {
+        if (ctx->unknown_mouse_buttons.codes[i] == native_code) {
+            return;
+        }
+    }
+
+    if (ctx->unknown_mouse_buttons.count < (uint32_t)(sizeof(ctx->unknown_mouse_buttons.codes) /
+                                                      sizeof(ctx->unknown_mouse_buttons.codes[0]))) {
+        ctx->unknown_mouse_buttons.codes[ctx->unknown_mouse_buttons.count++] = native_code;
+    }
+
+    char msg[128];
+    snprintf(msg, sizeof(msg), "Unknown Wayland mouse button code dropped: %u",
+             native_code);
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED, msg);
+}
 
 static void _maru_wayland_replace_pending_utf8(MARU_Window_WL *window, char **slot,
                                                const char *value) {
@@ -258,21 +293,31 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
     MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
 
     if (!window) return;
+    uint32_t channel = 0;
+    if (!_maru_wayland_map_native_mouse_button(button, &channel)) {
+        _maru_wayland_report_unknown_mouse_button_once(ctx, button);
+        return;
+    }
+
+    if (channel >= window->base.pub.mouse_button_count ||
+        !window->base.mouse_button_states) {
+        _maru_wayland_report_unknown_mouse_button_once(ctx, button);
+        return;
+    }
+
+    MARU_ButtonState btn_state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ?
+                                 MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+    window->base.mouse_button_states[channel] = (MARU_ButtonState8)btn_state;
+    if (ctx->base.mouse_button_states && channel < ctx->base.pub.mouse_button_count) {
+        ctx->base.mouse_button_states[channel] = (MARU_ButtonState8)btn_state;
+    }
 
     MARU_Event evt = {0};
-    
-    if (button == BTN_LEFT) evt.mouse_button.button = MARU_MOUSE_BUTTON_LEFT;
-    else if (button == BTN_RIGHT) evt.mouse_button.button = MARU_MOUSE_BUTTON_RIGHT;
-    else if (button == BTN_MIDDLE) evt.mouse_button.button = MARU_MOUSE_BUTTON_MIDDLE;
-    else if (button == BTN_SIDE) evt.mouse_button.button = MARU_MOUSE_BUTTON_4;
-    else if (button == BTN_EXTRA) evt.mouse_button.button = MARU_MOUSE_BUTTON_5;
-    else evt.mouse_button.button = MARU_MOUSE_BUTTON_8; // Fallback
-    
-    evt.mouse_button.state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ? 
-                             MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+    evt.mouse_button.button_id = channel;
+    evt.mouse_button.state = btn_state;
     evt.mouse_button.modifiers = _get_modifiers(ctx);
-
-    _maru_dispatch_event(&ctx->base, MARU_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)window, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_MOUSE_BUTTON_STATE_CHANGED,
+                         (MARU_Window *)window, &evt);
 }
 
 static void _pointer_handle_axis(void *data, struct wl_pointer *pointer,

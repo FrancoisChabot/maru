@@ -43,9 +43,6 @@ typedef struct MARU_ContextTuning {
 
   struct {
     MARU_WaylandDecorationMode decoration_mode;
-    uint32_t dnd_post_drop_timeout_ms;
-    uint32_t cursor_size;
-    bool enforce_client_side_constraints;
   } wayland;
 
   struct {
@@ -59,10 +56,7 @@ typedef struct MARU_ContextTuning {
     .user_event_queue_size = 256, \
     .idle_timeout_ms = 0, \
     .wayland = { \
-      .decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO, \
-      .dnd_post_drop_timeout_ms = 1000, \
-      .cursor_size = 24, \
-      .enforce_client_side_constraints = true \
+      .decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO \
     }, \
     .x11 = { \
       .idle_poll_interval_ms = 250 \

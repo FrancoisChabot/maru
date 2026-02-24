@@ -149,7 +149,8 @@ typedef struct MARU_MouseMotionEvent {
 
 /** @brief Payload for MARU_MOUSE_BUTTON_STATE_CHANGED. */
 typedef struct MARU_MouseButtonEvent {
-  MARU_MouseButton button;
+  /** Index into maru_getMouseButtonStates()/maru_getMouseButtonChannelInfo(). */
+  uint32_t button_id;
   MARU_ButtonState state;
   MARU_ModifierFlags modifiers;
 } MARU_MouseButtonEvent;

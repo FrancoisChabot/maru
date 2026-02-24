@@ -58,6 +58,14 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventType type,
 void _maru_init_context_base(MARU_Context_Base *ctx_base) {
   memset(ctx_base->pub.extensions, 0, sizeof(ctx_base->pub.extensions));
   memset(ctx_base->extension_cleanup, 0, sizeof(ctx_base->extension_cleanup));
+  ctx_base->mouse_button_states = NULL;
+  ctx_base->mouse_button_channels = NULL;
+  ctx_base->pub.mouse_button_state = NULL;
+  ctx_base->pub.mouse_button_channels = NULL;
+  ctx_base->pub.mouse_button_count = 0;
+  for (uint32_t i = 0; i < MARU_MOUSE_DEFAULT_COUNT; ++i) {
+    ctx_base->pub.mouse_default_button_channels[i] = -1;
+  }
 
   uint32_t capacity = ctx_base->tuning.user_event_queue_size;
   if (capacity == 0) capacity = 256;
@@ -135,6 +143,14 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
   }
   if (ctx_base->monitor_cache) {
     maru_context_free(ctx_base, ctx_base->monitor_cache);
+  }
+  if (ctx_base->mouse_button_states) {
+    maru_context_free(ctx_base, ctx_base->mouse_button_states);
+    ctx_base->mouse_button_states = NULL;
+  }
+  if (ctx_base->mouse_button_channels) {
+    maru_context_free(ctx_base, ctx_base->mouse_button_channels);
+    ctx_base->mouse_button_channels = NULL;
   }
   _maru_event_queue_cleanup(&ctx_base->user_event_queue, ctx_base);
 }

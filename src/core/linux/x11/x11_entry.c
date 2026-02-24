@@ -24,6 +24,8 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     ctx->allocator.free_cb = _maru_default_free;
     ctx->allocator.userdata = NULL;
   }
+  ctx->tuning = create_info->tuning;
+  _maru_init_context_base(ctx);
   
   ctx->pub.flags = MARU_CONTEXT_STATE_READY;
   ctx->attrs_requested = create_info->attributes;
@@ -50,6 +52,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
 
 MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  _maru_cleanup_context_base(ctx_base);
   maru_context_free(ctx_base, context);
   return MARU_SUCCESS;
 }

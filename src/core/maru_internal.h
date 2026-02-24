@@ -77,6 +77,8 @@ typedef struct MARU_Context_Base {
   uint32_t window_count;
 
   MARU_EventQueue user_event_queue;
+  MARU_ButtonState8 *mouse_button_states;
+  MARU_MouseButtonChannelInfo *mouse_button_channels;
 
 #ifdef MARU_VALIDATE_API_CALLS
   MARU_ThreadId creator_thread;
@@ -101,6 +103,8 @@ typedef struct MARU_Window_Base {
   uint64_t attrs_dirty_mask;
 
   MARU_ButtonState8 keyboard_state[MARU_KEY_COUNT];
+  MARU_ButtonState8 *mouse_button_states;
+  MARU_MouseButtonChannelInfo *mouse_button_channels;
   
   char *title_storage;
   char *surrounding_text_storage;

@@ -150,17 +150,22 @@ typedef enum MARU_ModifierFlagBits {
   MARU_MODIFIER_NUM_LOCK = 1ULL << 5,
 } MARU_ModifierFlagBits;
 
-/** @brief Identifiers for mouse buttons. */
-typedef enum MARU_MouseButton {
-  MARU_MOUSE_BUTTON_LEFT = 0,
-  MARU_MOUSE_BUTTON_RIGHT = 1,
-  MARU_MOUSE_BUTTON_MIDDLE = 2,
-  MARU_MOUSE_BUTTON_4 = 3,
-  MARU_MOUSE_BUTTON_5 = 4,
-  MARU_MOUSE_BUTTON_6 = 5,
-  MARU_MOUSE_BUTTON_7 = 6,
-  MARU_MOUSE_BUTTON_8 = 7,
-} MARU_MouseButton;
+/** @brief Named default mouse button roles. */
+typedef enum MARU_MouseDefaultButton {
+  MARU_MOUSE_DEFAULT_LEFT = 0,
+  MARU_MOUSE_DEFAULT_RIGHT = 1,
+  MARU_MOUSE_DEFAULT_MIDDLE = 2,
+  MARU_MOUSE_DEFAULT_BACK = 3,
+  MARU_MOUSE_DEFAULT_FORWARD = 4,
+  MARU_MOUSE_DEFAULT_COUNT = 5,
+} MARU_MouseDefaultButton;
+
+/** @brief Metadata for a mouse button channel. */
+typedef struct MARU_MouseButtonChannelInfo {
+  const char *name;
+  uint32_t native_code;
+  bool is_default;
+} MARU_MouseButtonChannelInfo;
 
 /** @brief State for a single continuous input axis. */
 typedef struct MARU_AnalogInputState {
@@ -186,6 +191,21 @@ static inline const MARU_ButtonState8 *maru_getKeyboardButtonStates(const MARU_W
 
 /** @brief Checks if a specific keyboard key is currently pressed for a window. */
 static inline bool maru_isKeyPressed(const MARU_Window *window, MARU_Key key);
+
+/** @brief Retrieves the number of mouse buttons/channels for a window. */
+static inline uint32_t maru_getMouseButtonCount(const MARU_Window *window);
+
+/** @brief Retrieves the current state of all mouse buttons/channels for a window. */
+static inline const MARU_ButtonState8 *maru_getMouseButtonStates(const MARU_Window *window);
+
+/** @brief Retrieves metadata for all mouse buttons/channels for a window. */
+static inline const MARU_MouseButtonChannelInfo *maru_getMouseButtonChannelInfo(const MARU_Window *window);
+
+/** @brief Retrieves the channel index for a named default mouse button role. */
+static inline int32_t maru_getMouseDefaultButtonChannel(const MARU_Window *window, MARU_MouseDefaultButton which);
+
+/** @brief Checks if a specific mouse button/channel is currently pressed for a window. */
+static inline bool maru_isMouseButtonPressed(const MARU_Window *window, uint32_t button_id);
 
 #ifdef __cplusplus
 }

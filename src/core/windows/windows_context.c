@@ -13,6 +13,55 @@ static HMODULE _maru_win32_get_user32(void) {
   return GetModuleHandleA("user32.dll");
 }
 
+static bool _maru_windows_init_context_mouse_channels(MARU_Context_Windows *ctx) {
+  static const struct {
+    const char *name;
+    uint32_t native_code;
+  } channel_defs[] = {
+      {"left", VK_LBUTTON}, {"right", VK_RBUTTON}, {"middle", VK_MBUTTON},
+      {"x1", 1}, {"x2", 2},
+  };
+  const uint32_t channel_count = (uint32_t)(sizeof(channel_defs) / sizeof(channel_defs[0]));
+
+  ctx->base.mouse_button_channels =
+      (MARU_MouseButtonChannelInfo *)maru_context_alloc(&ctx->base,
+                                                        sizeof(MARU_MouseButtonChannelInfo) * channel_count);
+  if (!ctx->base.mouse_button_channels) {
+    return false;
+  }
+
+  ctx->base.mouse_button_states =
+      (MARU_ButtonState8 *)maru_context_alloc(&ctx->base, sizeof(MARU_ButtonState8) * channel_count);
+  if (!ctx->base.mouse_button_states) {
+    maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
+    ctx->base.mouse_button_channels = NULL;
+    return false;
+  }
+
+  memset(ctx->base.mouse_button_states, 0, sizeof(MARU_ButtonState8) * channel_count);
+  for (uint32_t i = 0; i < channel_count; ++i) {
+    ctx->base.mouse_button_channels[i].name = channel_defs[i].name;
+    ctx->base.mouse_button_channels[i].native_code = channel_defs[i].native_code;
+    ctx->base.mouse_button_channels[i].is_default = false;
+  }
+
+  ctx->base.pub.mouse_button_count = channel_count;
+  ctx->base.pub.mouse_button_channels = ctx->base.mouse_button_channels;
+  ctx->base.pub.mouse_button_state = ctx->base.mouse_button_states;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_LEFT] = 0;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_RIGHT] = 1;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_MIDDLE] = 2;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_BACK] = 3;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_FORWARD] = 4;
+
+  ctx->base.mouse_button_channels[0].is_default = true;
+  ctx->base.mouse_button_channels[1].is_default = true;
+  ctx->base.mouse_button_channels[2].is_default = true;
+  ctx->base.mouse_button_channels[3].is_default = true;
+  ctx->base.mouse_button_channels[4].is_default = true;
+  return true;
+}
+
 MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info,
                                         MARU_Context **out_context) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)maru_context_alloc_bootstrap(
@@ -33,6 +82,8 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
     ctx->base.allocator.free_cb = _maru_default_free;
     ctx->base.allocator.userdata = NULL;
   }
+  ctx->base.tuning = create_info->tuning;
+  _maru_init_context_base(&ctx->base);
 
   ctx->base.pub.userdata = create_info->userdata;
   ctx->base.attrs_requested = create_info->attributes;
@@ -43,18 +94,12 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.event_mask = ctx->base.attrs_effective.event_mask;
   ctx->base.inhibit_idle = ctx->base.attrs_effective.inhibit_idle;
 
-  ctx->base.metrics.user_events = &ctx->base.user_event_metrics;
-  ctx->base.pub.metrics = &ctx->base.metrics;
-
-  ctx->base.monitor_cache = NULL;
-  ctx->base.monitor_cache_count = 0;
-  ctx->base.monitor_cache_capacity = 0;
-
-  ctx->base.window_list_head = NULL;
-  ctx->base.window_count = 0;
-
-  ctx->base.tuning = create_info->tuning;
   ctx->base.tuning.idle_timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
+  if (!_maru_windows_init_context_mouse_channels(ctx)) {
+    _maru_cleanup_context_base(&ctx->base);
+    maru_context_free(&ctx->base, ctx);
+    return MARU_FAILURE;
+  }
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_Windows;

@@ -44,7 +44,7 @@ void EventLogModule::onEvent(MARU_EventType type, MARU_Window* win, const MARU_E
            << " Delta: (" << e.mouse_motion.delta.x << "," << e.mouse_motion.delta.y << ")"
            << " Raw: (" << e.mouse_motion.raw_delta.x << "," << e.mouse_motion.raw_delta.y << ")";
     } else if (type == MARU_MOUSE_BUTTON_STATE_CHANGED) {
-        ss << "Button: " << (int)e.mouse_button.button << " State: " << (e.mouse_button.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
+        ss << "Button: " << (int)e.mouse_button.button_id << " State: " << (e.mouse_button.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
            << " Mods: " << formatModifiers(e.mouse_button.modifiers);
     } else if (type == MARU_MOUSE_SCROLLED) {
         ss << "Delta: (" << e.mouse_scroll.delta.x << "," << e.mouse_scroll.delta.y << ")" << "Steps: (" << e.mouse_scroll.steps.x << "," << e.mouse_scroll.steps.y << ")";
