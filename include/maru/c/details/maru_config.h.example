@@ -10,9 +10,7 @@
 // WARNING! If you use MARU_USE_FLOAT, make certain that you are linking against maru_f. 
 // #define MARU_USE_FLOAT
 
-// Extensions
-#define MARU_ENABLE_CONTROLLERS
-#define MARU_ENABLE_VULKAN
+// Core features (always enabled)
 
 // Backends
 // N.B. Multiple backends is permissible

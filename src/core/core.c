@@ -58,11 +58,18 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
   if (!ctx->pump_ctx) return;
   if ((ctx->event_mask & event_bit) == 0) return;
   if (window && (maru_getWindowEventMask(window) & event_bit) == 0) return;
+  if (window &&
+      (type == MARU_EVENT_DROP_ENTERED || type == MARU_EVENT_DROP_HOVERED ||
+       type == MARU_EVENT_DROP_EXITED || type == MARU_EVENT_DROP_DROPPED)) {
+    const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+    if (!win_base->attrs_effective.accept_drop) return;
+  }
 
   ctx->pump_ctx->callback(type, window, event, ctx->pump_ctx->userdata);
 }
 
 void _maru_init_context_base(MARU_Context_Base *ctx_base) {
+  ctx_base->pub.userdata = NULL;
   ctx_base->mouse_button_states = NULL;
   ctx_base->mouse_button_channels = NULL;
   ctx_base->pub.mouse_button_state = NULL;

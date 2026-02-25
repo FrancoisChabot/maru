@@ -1148,6 +1148,16 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       _maru_wayland_apply_viewport_size(window);
   }
 
+  if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
+      requested->accept_drop = attributes->accept_drop;
+      effective->accept_drop = attributes->accept_drop;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
+      requested->primary_selection = attributes->primary_selection;
+      effective->primary_selection = attributes->primary_selection;
+  }
+
   if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
       requested->event_mask = attributes->event_mask;
       effective->event_mask = attributes->event_mask;

@@ -30,8 +30,9 @@
  *    - maru_retain*() / maru_release*()
  */
 
-#include "maru/c/contexts.h"
 #include "maru/c/core.h"
+#include "maru/c/contexts.h"
+#include "maru/c/controllers.h"
 #include "maru/c/cursors.h"
 #include "maru/c/data_exchange.h"
 #include "maru/c/events.h"

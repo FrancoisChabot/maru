@@ -6,9 +6,6 @@
 #define MARU_VERSION_MINOR @Maru_VERSION_MINOR@
 #define MARU_VERSION_PATCH @Maru_VERSION_PATCH@
 
-// Extensions
-#cmakedefine MARU_ENABLE_CONTROLLERS
-
 // Backends
 #cmakedefine MARU_ENABLE_BACKEND_WAYLAND
 #cmakedefine MARU_ENABLE_BACKEND_X11

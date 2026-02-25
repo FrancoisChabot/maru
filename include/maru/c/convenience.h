@@ -8,6 +8,7 @@
 #include "maru/c/windows.h"
 #include "maru/c/monitors.h"
 #include "maru/c/cursors.h"
+#include "maru/c/data_exchange.h"
 #include "maru/c/instrumentation.h"
 
 /**
@@ -39,10 +40,15 @@ static inline MARU_Status maru_setWindowResizable(MARU_Window *window, bool enab
 static inline MARU_Status maru_setWindowMousePassthrough(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowTextInputType(MARU_Window *window, MARU_TextInputType type);
 static inline MARU_Status maru_setWindowTextInputRect(MARU_Window *window, MARU_RectDip rect);
+static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowEventMask(MARU_Window *window, MARU_EventMask mask);
 static inline MARU_Status maru_setWindowVisible(MARU_Window *window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window *window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window *window, MARU_Image *icon);
+
+static inline MARU_Status maru_requestText(MARU_Window *window,
+                                           MARU_DataExchangeTarget target,
+                                           void *user_tag);
 
 /**
  * @brief Configures a window for simple text input consumption.

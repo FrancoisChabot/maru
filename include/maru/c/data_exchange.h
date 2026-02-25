@@ -23,6 +23,8 @@ extern "C" {
 
 /** @brief Opaque handle representing an OS-level window. */
 typedef struct MARU_Window MARU_Window;
+/** @brief Opaque event payload wrapper type. */
+typedef struct MARU_Event MARU_Event;
 
 /** @brief Supported Drag and Drop actions for OS feedback. */
 typedef enum MARU_DropAction {

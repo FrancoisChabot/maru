@@ -4,13 +4,11 @@
 #ifndef MARU_DETAILS_CONTROLLERS_H_INCLUDED
 #define MARU_DETAILS_CONTROLLERS_H_INCLUDED
 
-#include "maru/c/ext/controllers.h"
+#include "maru/c/controllers.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#ifdef MARU_ENABLE_CONTROLLERS
 
 /** @brief Internal representation of MARU_Controller. 
     CHANGING THIS REQUIRES A MAJOR VERSION BUMP
@@ -92,8 +90,6 @@ static inline uint32_t maru_getControllerHapticCount(const MARU_Controller *cont
 static inline const MARU_HapticChannelInfo *maru_getControllerHapticChannelInfo(const MARU_Controller *controller) {
   return ((const MARU_ControllerExposed *)controller)->haptic_channels;
 }
-
-#endif // MARU_ENABLE_CONTROLLERS
 
 #ifdef __cplusplus
 }

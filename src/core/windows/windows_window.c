@@ -607,6 +607,12 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   if (create_info->attributes.maximized) {
     init_mask |= MARU_WINDOW_ATTR_MAXIMIZED;
   }
+  if (create_info->attributes.accept_drop) {
+    init_mask |= MARU_WINDOW_ATTR_ACCEPT_DROP;
+  }
+  if (!create_info->attributes.primary_selection) {
+    init_mask |= MARU_WINDOW_ATTR_PRIMARY_SELECTION;
+  }
   if (!create_info->attributes.visible) {
     init_mask |= MARU_WINDOW_ATTR_VISIBLE;
   }
@@ -724,6 +730,18 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window_handle, uint64_t field
 
   if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
     window->base.pub.event_mask = attributes->event_mask;
+    window->base.attrs_requested.event_mask = attributes->event_mask;
+    window->base.attrs_effective.event_mask = attributes->event_mask;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
+    window->base.attrs_requested.accept_drop = attributes->accept_drop;
+    window->base.attrs_effective.accept_drop = attributes->accept_drop;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
+    window->base.attrs_requested.primary_selection = attributes->primary_selection;
+    window->base.attrs_effective.primary_selection = attributes->primary_selection;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_CURSOR) {

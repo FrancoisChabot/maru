@@ -86,7 +86,6 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.tuning = create_info->tuning;
   _maru_init_context_base(&ctx->base);
 
-  ctx->base.pub.userdata = create_info->userdata;
   ctx->base.attrs_requested = create_info->attributes;
   ctx->base.attrs_effective = create_info->attributes;
   ctx->base.attrs_dirty_mask = 0;

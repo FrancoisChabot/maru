@@ -50,7 +50,6 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     ctx->base.allocator.userdata = NULL;
   }
 
-  ctx->base.pub.userdata = create_info->userdata;
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx->base.event_mask = create_info->attributes.event_mask;

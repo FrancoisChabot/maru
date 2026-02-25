@@ -134,8 +134,10 @@ typedef uint32_t MARU_WindowAttributesField;
 #define MARU_WINDOW_ATTR_ASPECT_RATIO (1u << 10)
 #define MARU_WINDOW_ATTR_RESIZABLE (1u << 11)
 #define MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH (1u << 12)
+#define MARU_WINDOW_ATTR_ACCEPT_DROP (1u << 13)
 #define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE (1u << 14)
 #define MARU_WINDOW_ATTR_TEXT_INPUT_RECT (1u << 15)
+#define MARU_WINDOW_ATTR_PRIMARY_SELECTION (1u << 16)
 #define MARU_WINDOW_ATTR_EVENT_MASK (1u << 17)
 #define MARU_WINDOW_ATTR_VIEWPORT_SIZE (1u << 18)
 #define MARU_WINDOW_ATTR_SURROUNDING_TEXT (1u << 19)
@@ -161,8 +163,10 @@ typedef struct MARU_WindowAttributes {
   MARU_Fraction aspect_ratio;
   bool resizable;
   bool mouse_passthrough;
+  bool accept_drop;
   MARU_TextInputType text_input_type;
   MARU_RectDip text_input_rect;
+  bool primary_selection;
   MARU_EventMask event_mask;
   MARU_Vec2Dip viewport_size;
   const char *surrounding_text;
@@ -198,8 +202,10 @@ typedef struct MARU_WindowCreateInfo {
                   .aspect_ratio = {0, 0},                                      \
                   .resizable = true,                                           \
                   .mouse_passthrough = false,                                  \
+                  .accept_drop = false,                                        \
                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE,                \
                   .text_input_rect = {{0, 0}, {0, 0}},                         \
+                  .primary_selection = true,                                   \
                   .event_mask = MARU_ALL_EVENTS,                               \
                   .viewport_size = {0, 0},                                     \
                   .surrounding_text = NULL,                                    \

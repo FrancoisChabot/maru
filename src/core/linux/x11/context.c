@@ -10,7 +10,6 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   if (!ctx)
     return MARU_FAILURE;
 
-  ctx->pub.userdata = create_info->userdata;
   ctx->pub.flags = MARU_CONTEXT_STATE_READY;
 #ifdef MARU_INDIRECT_BACKEND
   ctx->backend = &x11_backend;

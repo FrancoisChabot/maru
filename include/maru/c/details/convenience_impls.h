@@ -101,6 +101,12 @@ static inline MARU_Status maru_setWindowTextInputRect(MARU_Window *window, MARU_
   return maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_RECT, &attrs);
 }
 
+static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window *window, bool enabled) {
+  MARU_WindowAttributes attrs;
+  attrs.accept_drop = enabled;
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_ACCEPT_DROP, &attrs);
+}
+
 static inline MARU_Status maru_setWindowEventMask(MARU_Window *window, MARU_EventMask mask) {
   MARU_WindowAttributes attrs;
   attrs.event_mask = mask;
@@ -123,6 +129,12 @@ static inline MARU_Status maru_setWindowIcon(MARU_Window *window, MARU_Image *ic
   MARU_WindowAttributes attrs;
   attrs.icon = icon;
   return maru_updateWindow(window, MARU_WINDOW_ATTR_ICON, &attrs);
+}
+
+static inline MARU_Status maru_requestText(MARU_Window *window,
+                                           MARU_DataExchangeTarget target,
+                                           void *user_tag) {
+  return maru_requestData(window, target, "text/plain; charset=utf-8", user_tag);
 }
 
 static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window *window, MARU_TextInputType type) {
