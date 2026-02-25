@@ -9,6 +9,9 @@
 #include "dlib/udev.h"
 #include "maru_internal.h"
 
+#define MARU_CONTROLLER_PENDING_ADD_CAPACITY 16u
+#define MARU_CONTROLLER_PENDING_PATH_MAX 512u
+
 typedef struct MARU_ControllerContext_Linux {
   struct MARU_Controller_Linux *list_head;
   MARU_Controller **snapshot;
@@ -19,7 +22,10 @@ typedef struct MARU_ControllerContext_Linux {
   uint32_t connected_count;
   int inotify_fd;
   int inotify_wd;
-  bool scan_pending;
+  char pending_add_paths[MARU_CONTROLLER_PENDING_ADD_CAPACITY]
+                        [MARU_CONTROLLER_PENDING_PATH_MAX];
+  uint32_t pending_add_head;
+  uint32_t pending_add_count;
 
   MARU_Lib_Udev udev_lib;
   struct udev *udev;

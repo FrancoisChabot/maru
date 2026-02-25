@@ -38,6 +38,9 @@ typedef struct MARU_ContextMetrics {
   uint64_t cursor_create_count_custom;
   uint64_t cursor_alive_current;
   uint64_t cursor_alive_peak;
+  uint64_t pump_call_count_total;
+  uint64_t pump_duration_avg_ns;
+  uint64_t pump_duration_peak_ns;
 } MARU_ContextMetrics;
 
 /**

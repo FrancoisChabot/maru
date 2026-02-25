@@ -661,6 +661,9 @@ MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
   ctx_base->metrics.cursor_create_count_system = 0;
   ctx_base->metrics.cursor_create_count_custom = 0;
   ctx_base->metrics.cursor_alive_peak = ctx_base->metrics.cursor_alive_current;
+  ctx_base->metrics.pump_call_count_total = 0;
+  ctx_base->metrics.pump_duration_avg_ns = 0;
+  ctx_base->metrics.pump_duration_peak_ns = 0;
   return MARU_SUCCESS;
 }
 

@@ -25,6 +25,16 @@ void MetricsModule::render(MARU_Context* ctx, MARU_Window* window) {
                     ImGui::Text("User event metrics not available.");
                 }
             }
+
+            if (ImGui::CollapsingHeader("Pump Timing", ImGuiTreeNodeFlags_DefaultOpen)) {
+                const double avg_ms = (double)metrics->pump_duration_avg_ns / 1000000.0;
+                const double peak_ms = (double)metrics->pump_duration_peak_ns / 1000000.0;
+                ImGui::Text("Call Count: %llu", (unsigned long long)metrics->pump_call_count_total);
+                ImGui::Text("Average: %.3f ms (%llu ns)", avg_ms,
+                            (unsigned long long)metrics->pump_duration_avg_ns);
+                ImGui::Text("Peak: %.3f ms (%llu ns)", peak_ms,
+                            (unsigned long long)metrics->pump_duration_peak_ns);
+            }
         } else {
             ImGui::Text("Context metrics not available.");
         }

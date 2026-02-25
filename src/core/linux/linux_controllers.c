@@ -210,32 +210,33 @@ static bool _wl_device_is_controller(int fd) {
 }
 
 static bool _wl_probe_rumble_capable(int fd) {
-  unsigned long ff_bits[(FF_MAX / (8 * sizeof(unsigned long))) + 1u];
-  memset(ff_bits, 0, sizeof(ff_bits));
-  if (ioctl(fd, EVIOCGBIT(EV_FF, sizeof(ff_bits)), ff_bits) == 0) {
-    const bool has_rumble =
-        (ff_bits[FF_RUMBLE / (8 * sizeof(unsigned long))] &
-         (1ul << (FF_RUMBLE % (8 * sizeof(unsigned long))))) != 0ul;
-    if (has_rumble) {
-      return true;
-    }
-  }
+  return false;
+  // unsigned long ff_bits[(FF_MAX / (8 * sizeof(unsigned long))) + 1u];
+  // memset(ff_bits, 0, sizeof(ff_bits));
+  // if (ioctl(fd, EVIOCGBIT(EV_FF, sizeof(ff_bits)), ff_bits) == 0) {
+  //   const bool has_rumble =
+  //       (ff_bits[FF_RUMBLE / (8 * sizeof(unsigned long))] &
+  //        (1ul << (FF_RUMBLE % (8 * sizeof(unsigned long))))) != 0ul;
+  //   if (has_rumble) {
+  //     return true;
+  //   }
+  // }
 
-  struct ff_effect probe;
-  memset(&probe, 0, sizeof(probe));
-  probe.type = FF_RUMBLE;
-  probe.id = -1;
-  probe.u.rumble.strong_magnitude = 0u;
-  probe.u.rumble.weak_magnitude = 0u;
-  probe.replay.length = 0u;
-  probe.replay.delay = 0u;
-  if (ioctl(fd, EVIOCSFF, &probe) < 0) {
-    return false;
-  }
-  if (probe.id >= 0) {
-    (void)ioctl(fd, EVIOCRMFF, probe.id);
-  }
-  return true;
+  // struct ff_effect probe;
+  // memset(&probe, 0, sizeof(probe));
+  // probe.type = FF_RUMBLE;
+  // probe.id = -1;
+  // probe.u.rumble.strong_magnitude = 0u;
+  // probe.u.rumble.weak_magnitude = 0u;
+  // probe.replay.length = 0u;
+  // probe.replay.delay = 0u;
+  // if (ioctl(fd, EVIOCSFF, &probe) < 0) {
+  //   return false;
+  // }
+  // if (probe.id >= 0) {
+  //   (void)ioctl(fd, EVIOCRMFF, probe.id);
+  // }
+  // return true;
 }
 
 static uint16_t _wl_pick_button_code(const unsigned long *key_bits,
@@ -540,6 +541,8 @@ static bool _wl_init_controller_sources(MARU_Context_Base *ctx_base, MARU_Contro
 
 static MARU_Controller_Linux *_wl_create_controller(MARU_Context_Base *ctx_base, MARU_ControllerContext_Linux *ctrl_ctx, int fd,
                                                  const char *path) {
+  return NULL;
+  
   MARU_Controller_Linux *ctrl =
       (MARU_Controller_Linux *)maru_context_alloc(ctx_base, sizeof(*ctrl));
   if (!ctrl) {
@@ -754,17 +757,14 @@ static void _wl_poll_controller_events(MARU_Context_Base *ctx_base, MARU_Control
   }
 }
 
+static bool _wl_is_retryable_open_errno(int err) {
+  return err == ENOENT || err == ENODEV || err == EBUSY || err == EAGAIN;
+}
+
 static int _wl_try_open_device_fd(const char *path) {
-  int fd = -1;
-  for (int attempt = 0; attempt < 5; ++attempt) {
-    fd = open(path, O_RDWR | O_NONBLOCK | O_CLOEXEC);
-    if (fd < 0) {
-      fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-    }
-    if (fd >= 0) {
-      break;
-    }
-    usleep(10000);
+  int fd = open(path, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+  if (fd < 0) {
+    fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
   }
   return fd;
 }
@@ -776,13 +776,76 @@ static bool _wl_is_evdev_path(const char *path) {
   return strncmp(path, "/dev/input/event", 16) == 0;
 }
 
-static void _wl_try_add_controller_path(MARU_Context_Base *ctx_base, MARU_ControllerContext_Linux *ctrl_ctx, const char *path) {
-  if (!path || _wl_find_controller_by_path(ctx_base, ctrl_ctx, path)) {
+static bool _wl_pending_add_queue_contains(
+    const MARU_ControllerContext_Linux *ctrl_ctx, const char *path) {
+  for (uint32_t i = 0; i < ctrl_ctx->pending_add_count; ++i) {
+    const uint32_t idx =
+        (ctrl_ctx->pending_add_head + i) % MARU_CONTROLLER_PENDING_ADD_CAPACITY;
+    if (strncmp(ctrl_ctx->pending_add_paths[idx], path,
+                MARU_CONTROLLER_PENDING_PATH_MAX) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static void _wl_enqueue_controller_add_path(MARU_ControllerContext_Linux *ctrl_ctx,
+                                            const char *path) {
+  if (!path || !_wl_is_evdev_path(path)) {
+    return;
+  }
+  if (_wl_pending_add_queue_contains(ctrl_ctx, path)) {
     return;
   }
 
+  const uint32_t tail =
+      (ctrl_ctx->pending_add_head + ctrl_ctx->pending_add_count) %
+      MARU_CONTROLLER_PENDING_ADD_CAPACITY;
+  const int nw = snprintf(ctrl_ctx->pending_add_paths[tail],
+                          MARU_CONTROLLER_PENDING_PATH_MAX, "%s", path);
+  if (nw <= 0 || (size_t)nw >= MARU_CONTROLLER_PENDING_PATH_MAX) {
+    return;
+  }
+
+  if (ctrl_ctx->pending_add_count < MARU_CONTROLLER_PENDING_ADD_CAPACITY) {
+    ctrl_ctx->pending_add_count++;
+    return;
+  }
+
+  // Queue full: drop oldest and keep latest path so progress continues.
+  ctrl_ctx->pending_add_head =
+      (ctrl_ctx->pending_add_head + 1u) % MARU_CONTROLLER_PENDING_ADD_CAPACITY;
+}
+
+static bool _wl_dequeue_controller_add_path(MARU_ControllerContext_Linux *ctrl_ctx,
+                                            char *out_path,
+                                            size_t out_path_size) {
+  if (ctrl_ctx->pending_add_count == 0u || !out_path || out_path_size == 0u) {
+    return false;
+  }
+
+  const uint32_t idx = ctrl_ctx->pending_add_head;
+  const int nw = snprintf(out_path, out_path_size, "%s",
+                          ctrl_ctx->pending_add_paths[idx]);
+  ctrl_ctx->pending_add_head =
+      (ctrl_ctx->pending_add_head + 1u) % MARU_CONTROLLER_PENDING_ADD_CAPACITY;
+  ctrl_ctx->pending_add_count--;
+  return nw > 0 && (size_t)nw < out_path_size;
+}
+
+static void _wl_try_add_controller_path(MARU_Context_Base *ctx_base, MARU_ControllerContext_Linux *ctrl_ctx, const char *path) {
+
+  if (!path || _wl_find_controller_by_path(ctx_base, ctrl_ctx, path)) {
+    return;
+  }
   const int fd = _wl_try_open_device_fd(path);
-  if (fd < 0) return;
+
+  if (fd < 0) {
+    if (_wl_is_retryable_open_errno(errno)) {
+      _wl_enqueue_controller_add_path(ctrl_ctx, path);
+    }
+    return;
+  }
   if (!_wl_device_is_controller(fd)) {
     close(fd);
     return;
@@ -791,6 +854,15 @@ static void _wl_try_add_controller_path(MARU_Context_Base *ctx_base, MARU_Contro
     close(fd);
     return;
   }
+}
+
+static void _wl_process_one_pending_add(MARU_Context_Base *ctx_base,
+                                        MARU_ControllerContext_Linux *ctrl_ctx) {
+  char path[MARU_CONTROLLER_PENDING_PATH_MAX];
+  if (!_wl_dequeue_controller_add_path(ctrl_ctx, path, sizeof(path))) {
+    return;
+  }
+  _wl_try_add_controller_path(ctx_base, ctrl_ctx, path);
 }
 
 static void _wl_remove_controller_path(MARU_Context_Base *ctx_base, MARU_ControllerContext_Linux *ctrl_ctx, const char *path) {
@@ -888,9 +960,6 @@ static void _wl_drain_udev_hotplug_events(MARU_Context_Base *ctx_base,
     struct udev_device *device =
         ctrl_ctx->udev_lib.udev_monitor_receive_device(ctrl_ctx->udev_monitor);
     if (!device) {
-      if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-        ctrl_ctx->scan_pending = true;
-      }
       break;
     }
 
@@ -900,7 +969,7 @@ static void _wl_drain_udev_hotplug_events(MARU_Context_Base *ctx_base,
       if (action && strcmp(action, "remove") == 0) {
         _wl_remove_controller_path(ctx_base, ctrl_ctx, devnode);
       } else {
-        _wl_try_add_controller_path(ctx_base, ctrl_ctx, devnode);
+        _wl_enqueue_controller_add_path(ctrl_ctx, devnode);
       }
     }
     (void)ctrl_ctx->udev_lib.udev_device_unref(device);
@@ -955,7 +1024,6 @@ static void _wl_init_hotplug_watch(MARU_Context_Base *ctx_base, MARU_ControllerC
 
   ctrl_ctx->inotify_fd = fd;
   ctrl_ctx->inotify_wd = wd;
-  ctrl_ctx->scan_pending = true;
 }
 
 static bool _wl_event_targets_evdev(const struct inotify_event *ev) {
@@ -972,9 +1040,6 @@ static void _wl_drain_hotplug_events(MARU_Context_Base *ctx_base, MARU_Controlle
   for (;;) {
     const ssize_t n = read(ctrl_ctx->inotify_fd, buffer, sizeof(buffer));
     if (n <= 0) {
-      if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-        ctrl_ctx->scan_pending = true;
-      }
       break;
     }
 
@@ -983,7 +1048,6 @@ static void _wl_drain_hotplug_events(MARU_Context_Base *ctx_base, MARU_Controlle
       const struct inotify_event *ev =
           (const struct inotify_event *)(buffer + offset);
       if ((ev->mask & (IN_DELETE_SELF | IN_MOVE_SELF | IN_IGNORED)) != 0u) {
-        ctrl_ctx->scan_pending = true;
         if ((ev->mask & IN_IGNORED) != 0u) {
           ctrl_ctx->inotify_wd = -1;
         }
@@ -992,7 +1056,7 @@ static void _wl_drain_hotplug_events(MARU_Context_Base *ctx_base, MARU_Controlle
         const int nw = snprintf(path, sizeof(path), "/dev/input/%s", ev->name);
         if (nw > 0 && (size_t)nw < sizeof(path)) {
           if ((ev->mask & (IN_CREATE | IN_MOVED_TO | IN_ATTRIB)) != 0u) {
-            _wl_try_add_controller_path(ctx_base, ctrl_ctx, path);
+            _wl_enqueue_controller_add_path(ctrl_ctx, path);
           }
           if ((ev->mask & (IN_DELETE | IN_MOVED_FROM)) != 0u) {
             _wl_remove_controller_path(ctx_base, ctrl_ctx, path);
@@ -1043,10 +1107,7 @@ void _maru_linux_controllers_poll(MARU_Context_Base *ctx_base, MARU_ControllerCo
     } else {
       _wl_drain_hotplug_events(ctx_base, ctrl_ctx);
     }
-    if (ctrl_ctx->scan_pending) {
-      _wl_scan_controllers_startup(ctx_base, ctrl_ctx);
-      ctrl_ctx->scan_pending = false;
-    }
+    _wl_process_one_pending_add(ctx_base, ctrl_ctx);
   }
 
   for (MARU_Controller_Linux *it = ctrl_ctx->list_head; it; it = it->next) {
@@ -1143,7 +1204,8 @@ void _maru_linux_controllers_cleanup(MARU_Context_Base *ctx_base, MARU_Controlle
   ctrl_ctx->inotify_fd = -1;
   ctrl_ctx->inotify_wd = -1;
   _wl_unload_udev_lib(ctrl_ctx);
-  ctrl_ctx->scan_pending = true;
+  ctrl_ctx->pending_add_head = 0;
+  ctrl_ctx->pending_add_count = 0;
 }
 
 void _maru_linux_controllers_init(MARU_Context_Base *ctx_base,
@@ -1161,12 +1223,16 @@ void _maru_linux_controllers_init(MARU_Context_Base *ctx_base,
   ctrl_ctx->connected_count = 0;
   ctrl_ctx->inotify_fd = -1;
   ctrl_ctx->inotify_wd = -1;
-  ctrl_ctx->scan_pending = true;
+  ctrl_ctx->pending_add_head = 0;
+  ctrl_ctx->pending_add_count = 0;
   memset(&ctrl_ctx->udev_lib, 0, sizeof(ctrl_ctx->udev_lib));
   ctrl_ctx->udev = NULL;
   ctrl_ctx->udev_monitor = NULL;
   ctrl_ctx->udev_fd = -1;
   ctrl_ctx->use_udev = false;
+
+  // Full /dev/input scan is startup-only. Runtime discovery is hotplug-driven.
+  _wl_scan_controllers_startup(ctx_base, ctrl_ctx);
 }
 
 MARU_Status _maru_linux_getControllers(MARU_Context_Base *ctx_base,
