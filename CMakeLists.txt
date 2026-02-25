@@ -42,7 +42,6 @@ add_subdirectory(src)
 # Define library aliases
 if (WIN32)
   add_library(maru::maru ALIAS maru_windows${MARU_LIB_SUFFIX})
-  add_library(maru::vulkan ALIAS maru_vulkan_windows${MARU_LIB_SUFFIX})
 elseif (APPLE)
   add_library(maru::maru ALIAS maru_macos${MARU_LIB_SUFFIX})
 else()
@@ -51,11 +50,6 @@ else()
   # Backend aliases
   add_library(maru::wayland ALIAS maru_wayland${MARU_LIB_SUFFIX})
   add_library(maru::x11 ALIAS maru_x11${MARU_LIB_SUFFIX})
-
-  # Vulkan aliases
-  add_library(maru::vulkan ALIAS maru_vulkan_linux${MARU_LIB_SUFFIX})
-  add_library(maru::vulkan_wayland ALIAS maru_vulkan_wayland${MARU_LIB_SUFFIX})
-  add_library(maru::vulkan_x11 ALIAS maru_vulkan_x11${MARU_LIB_SUFFIX})
 endif()
 
 if(MARU_BUILD_EXAMPLES)

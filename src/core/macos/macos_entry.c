@@ -27,6 +27,8 @@ const MARU_Backend maru_backend_Cocoa = {
   .requestWindowAttention = maru_requestWindowAttention_Cocoa,
   .getContextNativeHandle = maru_getContextNativeHandle_Cocoa,
   .getWindowNativeHandle = maru_getWindowNativeHandle_Cocoa,
+  .getVkExtensions = NULL,
+  .createVkSurface = NULL,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,

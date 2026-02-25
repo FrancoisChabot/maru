@@ -12,7 +12,7 @@
 #include <vulkan/vulkan.h>
 #include "maru/c/tuning.h"
 #include "maru/maru.h"
-#include "maru/c/ext/vulkan.h"
+#include "maru/c/vulkan.h"
 #include "app.h"
 
 // Volk headers
@@ -397,10 +397,6 @@ int main(int, char**)
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
     create_info.attributes.diagnostic_cb = handle_maru_diagnostic;
     create_info.tuning.wayland.decoration_mode = MARU_WAYLAND_DECORATION_MODE_CSD;
-    
-    const void *init_funcs[] = { (void *)maru_vulkan_init };
-    create_info.extensions = init_funcs;
-    create_info.extension_count = 1;
 
     MARU_Context *context = NULL;
     if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {

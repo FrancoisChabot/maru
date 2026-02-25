@@ -1,6 +1,6 @@
 #include "../shared_renderer/vulkan_renderer.h"
 #include "maru/c/events.h"
-#include "maru/c/ext/vulkan.h"
+#include "maru/c/vulkan.h"
 #include "maru/c/windows.h"
 #include "maru/maru.h"
 #include <stdio.h>
@@ -52,10 +52,6 @@ int main() {
 
   create_info.attributes.diagnostic_cb = handle_diagnostic;
   create_info.attributes.event_mask = MARU_ALL_EVENTS;
-  
-  const void *extensions[] = { (void *)maru_vulkan_init };
-  create_info.extensions = extensions;
-  create_info.extension_count = 1;
 
   MARU_Context *context = NULL;
   if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {

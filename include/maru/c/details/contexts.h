@@ -22,7 +22,6 @@ typedef struct MARU_ContextExposed {
   const MARU_MouseButtonChannelInfo *mouse_button_channels;
   uint32_t mouse_button_count;
   int32_t mouse_default_button_channels[MARU_MOUSE_DEFAULT_COUNT];
-  void *extensions[MARU_EXT_COUNT];
 } MARU_ContextExposed;
 
 static inline MARU_BackendType maru_getContextBackend(const MARU_Context *context) {

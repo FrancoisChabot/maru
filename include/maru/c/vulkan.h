@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#ifndef MARU_EXT_VULKAN_H_INCLUDED
-#define MARU_EXT_VULKAN_H_INCLUDED
+#ifndef MARU_VULKAN_H_INCLUDED
+#define MARU_VULKAN_H_INCLUDED
 
 #include <stdint.h>
 #include "maru/c/core.h"
@@ -30,9 +30,6 @@ typedef struct VkSurfaceKHR_T *VkSurfaceKHR;
 /** @brief Opaque handle to a Vulkan instance. */
 typedef struct VkInstance_T *VkInstance;
 
-/** @brief Extension initialization function for MARU_ContextCreateInfo. */
-MARU_Status maru_vulkan_init(MARU_Context *context);
-
 /** @brief Retrieves the list of Vulkan instance extensions required by MARU. 
 
 The returned list is valid until the next call to maru_pumpEvents().
@@ -50,4 +47,4 @@ MARU_Status maru_vulkan_createVkSurface(MARU_Window *window,
 }
 #endif
 
-#endif  // MARU_EXT_VULKAN_H_INCLUDED
+#endif  // MARU_VULKAN_H_INCLUDED

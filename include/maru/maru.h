@@ -33,8 +33,8 @@
 #include "maru/c/contexts.h"
 #include "maru/c/core.h"
 #include "maru/c/cursors.h"
+#include "maru/c/data_exchange.h"
 #include "maru/c/events.h"
-#include "maru/c/ext/core.h"
 #include "maru/c/geometry.h"
 #include "maru/c/images.h"
 #include "maru/c/inputs.h"
@@ -43,6 +43,7 @@
 #include "maru/c/monitors.h"
 #include "maru/c/convenience.h"
 #include "maru/c/tuning.h"
+#include "maru/c/vulkan.h"
 #include "maru/c/windows.h"
 
 #endif

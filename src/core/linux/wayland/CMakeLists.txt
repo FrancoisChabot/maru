@@ -10,6 +10,7 @@ set(MARU_WAYLAND_SOURCES
     wayland_utils.c
     dlib/loader.c
     protocols/maru_protocols.c
+    wayland_vulkan.c
 )
 
 add_library(maru_wayland_internal_iface INTERFACE)

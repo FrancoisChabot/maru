@@ -5,7 +5,7 @@
 #include "maru/c/windows.h"
 #include "maru/c/images.h"
 #include "maru/c/events.h"
-#include "maru/c/ext/vulkan.h"
+#include "maru/c/vulkan.h"
 
 #ifdef MARU_INDIRECT_BACKEND
 typedef struct MARU_Backend {
@@ -39,6 +39,9 @@ typedef struct MARU_Backend {
 
   void *(*getContextNativeHandle)(MARU_Context *context);
   void *(*getWindowNativeHandle)(MARU_Window *window);
+
+  __typeof__(maru_vulkan_getVkExtensions) *getVkExtensions;
+  __typeof__(maru_vulkan_createVkSurface) *createVkSurface;
 
   // More to be added directly here
 } MARU_Backend;

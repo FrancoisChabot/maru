@@ -3,14 +3,13 @@
 
 #include "maru_api_constraints.h"
 #include "maru/c/core.h"
-#include "maru/c/ext/vulkan.h"
+#include "maru/c/vulkan.h"
 
 #ifdef MARU_VALIDATE_API_CALLS
 
-static inline void _maru_validate_vulkan_getVkExtensions(MARU_Context *context, uint32_t *out_count) {
+static inline void _maru_validate_vulkan_getVkExtensions(const MARU_Context *context, uint32_t *out_count) {
     MARU_CONSTRAINT_CHECK(context != NULL);
     MARU_CONSTRAINT_CHECK(out_count != NULL);
-    MARU_CONSTRAINT_CHECK(maru_getExtension(context, MARU_EXT_VULKAN) != NULL);
 }
 
 static inline void _maru_validate_vulkan_createVkSurface(MARU_Window *window, 
@@ -20,7 +19,6 @@ static inline void _maru_validate_vulkan_createVkSurface(MARU_Window *window,
     MARU_CONSTRAINT_CHECK(window != NULL);
     MARU_CONSTRAINT_CHECK(instance != NULL);
     MARU_CONSTRAINT_CHECK(out_surface != NULL);
-    MARU_CONSTRAINT_CHECK(maru_getExtension(maru_getWindowContext(window), MARU_EXT_VULKAN) != NULL);
     (void)vk_loader;
 }
 

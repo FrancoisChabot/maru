@@ -644,15 +644,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   _maru_wayland_update_idle_notification(ctx);
   _wl_update_cursor_shape_device(ctx);
   ctx->base.attrs_dirty_mask = 0;
-
-  for (uint32_t i = 0; i < create_info->extension_count; ++i) {
-    if (create_info->extensions[i]) {
-      MARU_ExtensionInitFunc init_fn;
-      *(const void **)(&init_fn) = create_info->extensions[i];
-      (void)init_fn((MARU_Context *)ctx);
-    }
-  }
-
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
 

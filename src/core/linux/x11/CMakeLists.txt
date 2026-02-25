@@ -1,4 +1,7 @@
-set(MARU_X11_SOURCES x11_entry.c)
+set(MARU_X11_SOURCES
+    x11_entry.c
+    x11_vulkan.c
+)
 
 set(iface_direct "maru_iface${MARU_LIB_SUFFIX}_direct")
 

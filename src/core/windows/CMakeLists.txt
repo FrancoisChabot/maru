@@ -2,6 +2,7 @@ add_library(maru_windows${MARU_LIB_SUFFIX} ${MARU_LIB_TYPE}
     windows_entry.c 
     windows_context.c 
     windows_window.c 
+    windows_vulkan.c
     $<TARGET_OBJECTS:maru_base_obj> 
 )
 target_link_libraries(maru_windows${MARU_LIB_SUFFIX} PRIVATE ${MARU_ACTIVE_CORE_IFACE})

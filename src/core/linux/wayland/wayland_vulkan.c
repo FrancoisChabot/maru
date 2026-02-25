@@ -1,11 +1,7 @@
 #include "maru/c/native/wayland.h"
-#include "ext_vulkan_internal.h"
-#include "maru/c/core.h"
-#include "maru/c/ext/vulkan.h"
-#include "maru_api_constraints.h"
+#include "maru/c/vulkan.h"
 #include "maru_internal.h"
 #include "vulkan_api_constraints.h"
-#include <string.h>
 
 // Vulkan types and function pointers needed for the implementation.
 // We define them locally to avoid a hard dependency on Vulkan headers.
@@ -15,7 +11,6 @@ typedef enum VkResult {
 } VkResult;
 
 #define VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR 1000006000
-#define VK_NULL_HANDLE 0
 
 typedef struct VkWaylandSurfaceCreateInfoKHR {
   int sType;
@@ -32,16 +27,8 @@ typedef VkResult (*PFN_vkCreateWaylandSurfaceKHR)(
 extern __attribute__((weak)) MARU_VulkanVoidFunction
 vkGetInstanceProcAddr(VkInstance instance, const char *pName);
 
-typedef struct MARU_VulkanExtContextState_WL {
-#ifdef MARU_INDIRECT_BACKEND
-  const MARU_ExtVulkanVTable *vtable; // MUST BE THE FIRST MEMBER!
-#else
-  char _unused;
-#endif
-} MARU_VulkanExtContextState_WL;
-
-static const char **_getVkExtensions_WL(const MARU_Context *context,
-                                        uint32_t *out_count) {
+const char **maru_getVkExtensions_WL(const MARU_Context *context,
+                                     uint32_t *out_count) {
   (void)context;
   static const char *extensions[] = {
       "VK_KHR_surface",
@@ -52,18 +39,23 @@ static const char **_getVkExtensions_WL(const MARU_Context *context,
   return extensions;
 }
 
-static MARU_Status _createVkSurface_WL(MARU_Window *window, VkInstance instance,
-                                       MARU_VkGetInstanceProcAddrFunc vk_loader,
-                                       VkSurfaceKHR *out_surface) {
+MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
+                                    MARU_VkGetInstanceProcAddrFunc vk_loader,
+                                    VkSurfaceKHR *out_surface) {
   MARU_Context *ctx = maru_getWindowContext(window);
-
-  if (!vk_loader)
-    vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)ctx;
 
   if (!vk_loader) {
-    MARU_REPORT_DIAGNOSTIC(ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
-                           "No Vulkan loader available. Provide vk_loader in "
-                           "maru_vulkan_createVkSurface.");
+    vk_loader = ctx_base->tuning.vulkan.vk_loader;
+  }
+  if (!vk_loader) {
+    vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
+  }
+
+  if (!vk_loader) {
+    MARU_REPORT_DIAGNOSTIC(
+        ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
+        "No Vulkan loader available. Configure tuning.vulkan.vk_loader or pass vk_loader.");
     return MARU_FAILURE;
   }
 
@@ -102,41 +94,11 @@ static MARU_Status _createVkSurface_WL(MARU_Window *window, VkInstance instance,
   return MARU_SUCCESS;
 }
 
-#ifdef MARU_INDIRECT_BACKEND
-static const MARU_ExtVulkanVTable maru_ext_vk_backend_WL = {
-    .getVkExtensions = _getVkExtensions_WL,
-    .createVkSurface = _createVkSurface_WL,
-};
-#endif
-
-static void _maru_vulkan_cleanup_WL(MARU_Context *context, void *state) {
-  maru_contextFree(context, state);
-}
-
-MARU_Status maru_vulkan_init_wayland(MARU_Context *context) {
-  MARU_VulkanExtContextState_WL *state = (MARU_VulkanExtContextState_WL *)maru_getExtension(context, MARU_EXT_VULKAN);
-  if (!state) {
-    state = (MARU_VulkanExtContextState_WL *)maru_contextAlloc(
-        context, sizeof(MARU_VulkanExtContextState_WL));
-    if (!state)
-      return MARU_FAILURE;
-    memset(state, 0, sizeof(MARU_VulkanExtContextState_WL));
-
-#ifdef MARU_INDIRECT_BACKEND
-    state->vtable = &maru_ext_vk_backend_WL;
-#endif
-    maru_registerExtension(context, MARU_EXT_VULKAN, state,
-                           _maru_vulkan_cleanup_WL);
-  }
-
-  return MARU_SUCCESS;
-}
-
 #ifndef MARU_INDIRECT_BACKEND
 MARU_API const char **maru_vulkan_getVkExtensions(const MARU_Context *context,
                                                   uint32_t *out_count) {
   MARU_VULKAN_API_VALIDATE(getVkExtensions, context, out_count);
-  return _getVkExtensions_WL(context, out_count);
+  return maru_getVkExtensions_WL(context, out_count);
 }
 
 MARU_API MARU_Status maru_vulkan_createVkSurface(
@@ -144,6 +106,6 @@ MARU_API MARU_Status maru_vulkan_createVkSurface(
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
   MARU_VULKAN_API_VALIDATE(createVkSurface, window, instance, vk_loader,
                            out_surface);
-  return _createVkSurface_WL(window, instance, vk_loader, out_surface);
+  return maru_createVkSurface_WL(window, instance, vk_loader, out_surface);
 }
 #endif

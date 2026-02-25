@@ -69,8 +69,6 @@ typedef struct MARU_Context_Base {
   MARU_ContextMetrics metrics;
   MARU_UserEventMetrics user_event_metrics;
 
-  MARU_ExtensionCleanupCallback extension_cleanup[MARU_EXT_COUNT];
-
   MARU_Monitor **monitor_cache;
   uint32_t monitor_cache_count;
   uint32_t monitor_cache_capacity;

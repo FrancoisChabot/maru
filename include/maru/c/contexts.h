@@ -107,8 +107,6 @@ typedef struct MARU_ContextCreateInfo {
   MARU_BackendType backend;           ///< Requested backend, if set to MARU_BACKEND_UNKNOWN, a sensible default will be picked if possible.
   MARU_ContextAttributes attributes;  ///< Initial runtime attributes.
   MARU_ContextTuning tuning;          ///< Low-level tuning.
-  const void *const *extensions;      ///< Array of initialization functions for core extensions.
-  uint32_t extension_count;           ///< Number of extensions in the array.
 } MARU_ContextCreateInfo;
 
 /** @brief Default initialization macro for MARU_ContextCreateInfo. */
@@ -130,8 +128,6 @@ typedef struct MARU_ContextCreateInfo {
               .idle_timeout_ms = 0,             \
           },                                    \
       .tuning = MARU_CONTEXT_TUNING_DEFAULT,    \
-      .extensions = NULL,                       \
-      .extension_count = 0,                     \
   }
 
 /** @brief Creates a new context. 

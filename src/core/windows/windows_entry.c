@@ -5,6 +5,11 @@
 
 extern void *_maru_getContextNativeHandle_Windows(MARU_Context *context);
 extern void *_maru_getWindowNativeHandle_Windows(MARU_Window *window);
+extern const char **maru_getVkExtensions_Windows(const MARU_Context *context,
+                                                 uint32_t *out_count);
+extern MARU_Status maru_createVkSurface_Windows(
+    MARU_Window *window, VkInstance instance,
+    MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 #ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_Windows = {
@@ -27,6 +32,8 @@ const MARU_Backend maru_backend_Windows = {
   .setMonitorMode = maru_setMonitorMode_Windows,
   .getContextNativeHandle = _maru_getContextNativeHandle_Windows,
   .getWindowNativeHandle = _maru_getWindowNativeHandle_Windows,
+  .getVkExtensions = maru_getVkExtensions_Windows,
+  .createVkSurface = maru_createVkSurface_Windows,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,

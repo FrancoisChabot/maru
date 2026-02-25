@@ -91,6 +91,12 @@ static void *maru_getContextNativeHandle_X11(MARU_Context *context) {
   return NULL;
 }
 
+extern const char **maru_getVkExtensions_X11(const MARU_Context *context,
+                                             uint32_t *out_count);
+extern MARU_Status maru_createVkSurface_X11(
+    MARU_Window *window, VkInstance instance,
+    MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
+
 static void *maru_getWindowNativeHandle_X11(MARU_Window *window) {
   (void)window;
   return NULL;
@@ -130,6 +136,8 @@ const MARU_Backend maru_backend_X11 = {
   .resetMonitorMetrics = NULL,
   .getContextNativeHandle = maru_getContextNativeHandle_X11,
   .getWindowNativeHandle = maru_getWindowNativeHandle_X11,
+  .getVkExtensions = maru_getVkExtensions_X11,
+  .createVkSurface = maru_createVkSurface_X11,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,

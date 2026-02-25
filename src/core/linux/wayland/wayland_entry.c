@@ -8,6 +8,11 @@
 
 extern void *maru_getContextNativeHandle_WL(MARU_Context *context);
 extern void *maru_getWindowNativeHandle_WL(MARU_Window *window);
+extern const char **maru_getVkExtensions_WL(const MARU_Context *context,
+                                            uint32_t *out_count);
+extern MARU_Status maru_createVkSurface_WL(
+    MARU_Window *window, VkInstance instance,
+    MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 #ifdef MARU_INDIRECT_BACKEND
 static void maru_resetMonitorMetrics_WL(MARU_Monitor *monitor) {
@@ -39,6 +44,8 @@ const MARU_Backend maru_backend_WL = {
   .resetMonitorMetrics = maru_resetMonitorMetrics_WL,
   .getContextNativeHandle = maru_getContextNativeHandle_WL,
   .getWindowNativeHandle = maru_getWindowNativeHandle_WL,
+  .getVkExtensions = maru_getVkExtensions_WL,
+  .createVkSurface = maru_createVkSurface_WL,
 };
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,

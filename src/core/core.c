@@ -63,8 +63,6 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
 }
 
 void _maru_init_context_base(MARU_Context_Base *ctx_base) {
-  memset(ctx_base->pub.extensions, 0, sizeof(ctx_base->pub.extensions));
-  memset(ctx_base->extension_cleanup, 0, sizeof(ctx_base->extension_cleanup));
   ctx_base->mouse_button_states = NULL;
   ctx_base->mouse_button_channels = NULL;
   ctx_base->pub.mouse_button_state = NULL;
@@ -131,18 +129,6 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
 }
 
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
-  for (uint32_t i = 0; i < MARU_EXT_COUNT; i++) {
-    void *state = ctx_base->pub.extensions[i];
-    MARU_ExtensionCleanupCallback cleanup = ctx_base->extension_cleanup[i];
-    if (!state || !cleanup) {
-      continue;
-    }
-
-    ctx_base->pub.extensions[i] = NULL;
-    ctx_base->extension_cleanup[i] = NULL;
-    cleanup((MARU_Context *)ctx_base, state);
-  }
-
   for (uint32_t i = 0; i < ctx_base->monitor_cache_count; i++) {
     MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)ctx_base->monitor_cache[i];
     mon_base->is_active = false;
@@ -241,6 +227,33 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->wakeContext(context);
+}
+
+MARU_API const char **maru_vulkan_getVkExtensions(const MARU_Context *context,
+                                                  uint32_t *out_count) {
+  if (!context || !out_count) {
+    return NULL;
+  }
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  if (!ctx_base->backend->getVkExtensions) {
+    *out_count = 0;
+    return NULL;
+  }
+  return ctx_base->backend->getVkExtensions(context, out_count);
+}
+
+MARU_API MARU_Status maru_vulkan_createVkSurface(
+    MARU_Window *window, VkInstance instance,
+    MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
+  if (!window || !instance || !out_surface) {
+    return MARU_FAILURE;
+  }
+  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+  if (!win_base->backend->createVkSurface) {
+    return MARU_FAILURE;
+  }
+  return win_base->backend->createVkSurface(window, instance, vk_loader,
+                                            out_surface);
 }
 
 
@@ -539,36 +552,4 @@ MARU_API MARU_Version maru_getVersion(void) {
   return (MARU_Version){.major = MARU_VERSION_MAJOR,
                         .minor = MARU_VERSION_MINOR,
                         .patch = MARU_VERSION_PATCH};
-}
-
-
-MARU_API void *maru_contextAlloc(MARU_Context *context, size_t size) {
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  return maru_context_alloc(ctx_base, size);
-}
-
-MARU_API void maru_contextFree(MARU_Context *context, void *ptr) {
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  maru_context_free(ctx_base, ptr);
-}
-
-MARU_API MARU_Status maru_registerExtension(MARU_Context *context, MARU_ExtensionID id, void *state, MARU_ExtensionCleanupCallback cleanup) {
-  if (!context || id >= MARU_EXT_COUNT || !state || !cleanup) {
-    return MARU_FAILURE;
-  }
-  MARU_ContextExposed *ctx_exp = (MARU_ContextExposed *)context;
-  if (ctx_exp->extensions[id] != NULL) {
-    return MARU_FAILURE;
-  }
-  ctx_exp->extensions[id] = state;
-  ((MARU_Context_Base *)context)->extension_cleanup[id] = cleanup;
-  return MARU_SUCCESS;
-}
-
-MARU_API void *maru_getExtension(const MARU_Context *context, MARU_ExtensionID id) {
-  if (!context || id >= MARU_EXT_COUNT) {
-    return NULL;
-  }
-  const MARU_ContextExposed *ctx_exp = (const MARU_ContextExposed *)context;
-  return ctx_exp->extensions[id];
 }

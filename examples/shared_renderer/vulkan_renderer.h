@@ -5,7 +5,7 @@
 #define VULKAN_RENDERER_H_INCLUDED
 
 #include <maru/maru.h>
-#include "maru/c/ext/vulkan.h"
+#include "maru/c/vulkan.h"
 #include <stdbool.h>
 #include <vulkan/vulkan.h>
 

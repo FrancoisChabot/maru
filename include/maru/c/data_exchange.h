@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#ifndef MARU_EXT_DATA_EXCHANGE_H_INCLUDED
-#define MARU_EXT_DATA_EXCHANGE_H_INCLUDED
+#ifndef MARU_DATA_EXCHANGE_H_INCLUDED
+#define MARU_DATA_EXCHANGE_H_INCLUDED
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -180,9 +180,6 @@ static inline const MARU_DragFinishedEvent* maru_asDragFinished(const MARU_Event
 
 /* ----- Functions ----- */
 
-/** @brief Extension initialization function for MARU_ContextCreateInfo. */
-MARU_Status maru_dataexchange_init(MARU_Context *context);
-
 /** @brief Announces available data formats to the OS.
  *  This initiates a "lazy" offer. When the OS or another app requests
  *  the data, the library will fire an `MARU_DATA_REQUESTED` event.
@@ -221,4 +218,4 @@ MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
 }
 #endif
 
-#endif // MARU_EXT_DATA_EXCHANGE_H_INCLUDED
+#endif // MARU_DATA_EXCHANGE_H_INCLUDED
