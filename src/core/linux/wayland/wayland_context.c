@@ -5,6 +5,7 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "wayland_internal.h"
+#include "linux_controllers.h"
 
 #include <errno.h>
 #include <linux/input-event-codes.h>
@@ -523,9 +524,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   memset(((uint8_t *)ctx) + sizeof(MARU_Context_Base), 0,
          sizeof(MARU_Context_WL) - sizeof(MARU_Context_Base));
   ctx->wake_fd = -1;
-  ctx->controllers.inotify_fd = -1;
-  ctx->controllers.inotify_wd = -1;
-  ctx->controllers.scan_pending = true;
+  _maru_linux_controllers_init(&ctx->base, &ctx->linux_common.controller);
 
   ctx->base.pub.backend_type = MARU_BACKEND_WAYLAND;
   ctx->base.tuning = create_info->tuning;
@@ -683,7 +682,7 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   }
 
   _maru_wayland_cancel_activation(ctx);
-  _maru_wayland_cleanup_controllers(ctx);
+  _maru_linux_controllers_cleanup(&ctx->base, &ctx->linux_common.controller);
   if (ctx->pump_pollfds.fds) {
     maru_context_free(&ctx->base, ctx->pump_pollfds.fds);
     ctx->pump_pollfds.fds = NULL;
@@ -806,7 +805,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   ctx->base.pump_ctx = &pump_ctx;
 
   _maru_drain_user_events(&ctx->base);
-  _maru_wayland_poll_controllers(ctx, true);
+  _maru_linux_controllers_poll(&ctx->base, &ctx->linux_common.controller, true);
 
   int display_fd = maru_wl_display_get_fd(ctx, ctx->wl.display);
   int libdecor_fd = -1;
@@ -822,7 +821,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
 
   const struct pollfd *controller_fds = NULL;
   uint32_t controller_fd_count = 0;
-  _maru_wayland_get_controller_pollfds(ctx, &controller_fds, &controller_fd_count);
+  _maru_linux_controllers_get_pollfds(&ctx->base, &ctx->linux_common.controller, &controller_fds, &controller_fd_count);
 
   nfds_t nfds = 2;
   const bool separate_libdecor_fd = have_libdecor_fd && (libdecor_fd != display_fd);
@@ -977,7 +976,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     goto pump_exit;
   }
 
-  _maru_wayland_poll_controllers(ctx, true);
+  _maru_linux_controllers_poll(&ctx->base, &ctx->linux_common.controller, true);
   _maru_wayland_check_activation(ctx);
 
   if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 && ctx->repeat.next_repeat_ns != 0 &&

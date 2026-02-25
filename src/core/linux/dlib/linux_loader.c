@@ -74,7 +74,37 @@ bool maru_linux_xkb_load(struct MARU_Context_Base *ctx, MARU_Lib_Xkb *out_lib) {
   return out_lib->base.available;
 }
 
+bool maru_linux_udev_load(struct MARU_Context_Base *ctx, MARU_Lib_Udev *out_lib) {
+  if (out_lib->base.available) return true;
+
+  if (!_lib_load_base(ctx, "libudev.so.1", &out_lib->base) &&
+      !_lib_load_base(ctx, "libudev.so.0", &out_lib->base)) {
+    return false;
+  }
+
+  bool functions_ok = true;
+#define MARU_LIB_FN(ret, name, args)                                  \
+  out_lib->name = dlsym(out_lib->base.handle, #name);                 \
+  if (!out_lib->name) {                                               \
+    _set_diagnostic(ctx, "dlsym(" #name ") failed");                  \
+    functions_ok = false;                                             \
+  }
+  MARU_UDEV_FUNCTIONS_TABLE
+#undef MARU_LIB_FN
+
+  if (!functions_ok) {
+    _lib_unload_base(&out_lib->base);
+    return false;
+  }
+
+  return out_lib->base.available;
+}
+
 void maru_linux_xkb_unload(MARU_Lib_Xkb *lib) {
+  _lib_unload_base(&lib->base);
+}
+
+void maru_linux_udev_unload(MARU_Lib_Udev *lib) {
   _lib_unload_base(&lib->base);
 }
 

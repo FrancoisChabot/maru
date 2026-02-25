@@ -6,10 +6,13 @@
 
 #include <stdbool.h>
 #include "xkbcommon.h"
+#include "udev.h"
 
 struct MARU_Context_Base;
 
 bool maru_linux_xkb_load(struct MARU_Context_Base *ctx, MARU_Lib_Xkb *out_lib);
 void maru_linux_xkb_unload(MARU_Lib_Xkb *lib);
+bool maru_linux_udev_load(struct MARU_Context_Base *ctx, MARU_Lib_Udev *out_lib);
+void maru_linux_udev_unload(MARU_Lib_Udev *lib);
 
 #endif
