@@ -63,6 +63,7 @@ add_executable(maru_testbed
     testbed/modules/cursor_module.cpp
     testbed/modules/window_module.cpp
     testbed/modules/input_module.cpp
+    testbed/modules/controller_module.cpp
     testbed/modules/instrumentation_module.cpp
     testbed/modules/composition_module.cpp
 )

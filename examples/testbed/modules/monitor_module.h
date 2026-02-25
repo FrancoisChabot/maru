@@ -15,7 +15,7 @@ public:
     bool& getEnabled() override { return enabled_; }
 
 private:
-    bool enabled_ = true;
+    bool enabled_ = false;
     bool refresh_requested_ = true;
     bool auto_refresh_on_events_ = true;
     bool has_mode_set_result_ = false;

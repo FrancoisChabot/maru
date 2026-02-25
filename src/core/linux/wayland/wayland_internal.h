@@ -12,6 +12,7 @@
 
 typedef struct MARU_Window_WL MARU_Window_WL;
 typedef struct MARU_Cursor_WL MARU_Cursor_WL;
+typedef struct MARU_Controller_WL MARU_Controller_WL;
 
 typedef struct MARU_WaylandCursorFrame {
   struct wl_buffer *buffer;
@@ -97,6 +98,24 @@ typedef struct MARU_Context_WL {
     uint64_t next_frame_ns;
     bool active;
   } cursor_animation;
+
+  struct {
+    MARU_Controller_WL *list_head;
+    MARU_Controller **snapshot;
+    struct pollfd *pollfds;
+    uint32_t snapshot_count;
+    uint32_t snapshot_capacity;
+    uint32_t pollfds_capacity;
+    uint32_t connected_count;
+    int inotify_fd;
+    int inotify_wd;
+    bool scan_pending;
+  } controllers;
+
+  struct {
+    struct pollfd *fds;
+    uint32_t capacity;
+  } pump_pollfds;
 } MARU_Context_WL;
 
 typedef struct MARU_Window_WL {
@@ -366,6 +385,22 @@ MARU_Status maru_createImage_WL(MARU_Context *context,
                                 const MARU_ImageCreateInfo *create_info,
                                 MARU_Image **out_image);
 MARU_Status maru_destroyImage_WL(MARU_Image *image);
+MARU_Status maru_getControllers_WL(MARU_Context *context,
+                                   MARU_ControllerList *out_list);
+MARU_Status maru_retainController_WL(MARU_Controller *controller);
+MARU_Status maru_releaseController_WL(MARU_Controller *controller);
+MARU_Status maru_resetControllerMetrics_WL(MARU_Controller *controller);
+MARU_Status maru_getControllerInfo_WL(MARU_Controller *controller,
+                                      MARU_ControllerInfo *out_info);
+MARU_Status maru_setControllerHapticLevels_WL(MARU_Controller *controller,
+                                              uint32_t first_haptic,
+                                              uint32_t count,
+                                              const MARU_Scalar *intensities);
+void _maru_wayland_poll_controllers(MARU_Context_WL *ctx, bool allow_scan);
+void _maru_wayland_get_controller_pollfds(MARU_Context_WL *ctx,
+                                          const struct pollfd **out_fds,
+                                          uint32_t *out_count);
+void _maru_wayland_cleanup_controllers(MARU_Context_WL *ctx);
 
 void _maru_wayland_bind_output(MARU_Context_WL *ctx, uint32_t name, uint32_t version);
 void _maru_wayland_remove_output(MARU_Context_WL *ctx, uint32_t name);

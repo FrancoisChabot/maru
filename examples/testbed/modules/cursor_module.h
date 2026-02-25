@@ -17,7 +17,7 @@ public:
     MARU_CursorMode getRequestedMode() const { return requested_mode_; }
 
 private:
-    bool enabled_ = true;
+    bool enabled_ = false;
     MARU_CursorMode requested_mode_ = MARU_CURSOR_NORMAL;
     MARU_Cursor* custom_cursor_ = nullptr;
     MARU_Cursor* standard_cursor_ = nullptr;

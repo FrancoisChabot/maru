@@ -8,6 +8,7 @@ set(MARU_WAYLAND_SOURCES
     wayland_csd.c
     wayland_misc.c
     wayland_utils.c
+    wayland_controllers.c
     dlib/loader.c
     protocols/maru_protocols.c
     wayland_vulkan.c

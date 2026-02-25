@@ -17,7 +17,7 @@ public:
     bool& getEnabled() override { return enabled_; }
 
 private:
-    bool enabled_ = true;
+    bool enabled_ = false;
     
     char multiline_buffer_[4096] = "Type here to test IME composition...";
     

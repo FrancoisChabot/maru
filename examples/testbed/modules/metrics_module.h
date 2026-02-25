@@ -14,5 +14,5 @@ public:
     bool& getEnabled() override { return enabled_; }
 
 private:
-    bool enabled_ = true;
+    bool enabled_ = false;
 };

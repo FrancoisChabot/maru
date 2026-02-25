@@ -27,7 +27,7 @@ private:
     };
 
     std::vector<LogEntry> logs_;
-    bool enabled_ = true;
+    bool enabled_ = false;
     bool auto_scroll_ = true;
 
     const char* diagnosticToString(MARU_Diagnostic d);

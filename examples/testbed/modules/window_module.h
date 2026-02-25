@@ -41,7 +41,7 @@ private:
         ImVec4 clear_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
     };
 
-    bool enabled_ = true;
+    bool enabled_ = false;
     MARU_Window* primary_window_ = nullptr;
     VkInstance instance_ = VK_NULL_HANDLE;
     VkPhysicalDevice physical_device_ = VK_NULL_HANDLE;

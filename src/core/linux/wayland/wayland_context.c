@@ -523,6 +523,9 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   memset(((uint8_t *)ctx) + sizeof(MARU_Context_Base), 0,
          sizeof(MARU_Context_WL) - sizeof(MARU_Context_Base));
   ctx->wake_fd = -1;
+  ctx->controllers.inotify_fd = -1;
+  ctx->controllers.inotify_wd = -1;
+  ctx->controllers.scan_pending = true;
 
   ctx->base.pub.backend_type = MARU_BACKEND_WAYLAND;
   ctx->base.tuning = create_info->tuning;
@@ -680,6 +683,12 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   }
 
   _maru_wayland_cancel_activation(ctx);
+  _maru_wayland_cleanup_controllers(ctx);
+  if (ctx->pump_pollfds.fds) {
+    maru_context_free(&ctx->base, ctx->pump_pollfds.fds);
+    ctx->pump_pollfds.fds = NULL;
+    ctx->pump_pollfds.capacity = 0;
+  }
 
   _maru_cleanup_context_base(&ctx->base);
 
@@ -797,6 +806,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   ctx->base.pump_ctx = &pump_ctx;
 
   _maru_drain_user_events(&ctx->base);
+  _maru_wayland_poll_controllers(ctx, true);
 
   int display_fd = maru_wl_display_get_fd(ctx, ctx->wl.display);
   int libdecor_fd = -1;
@@ -810,22 +820,50 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     }
   }
 
-  struct pollfd fds[3];
+  const struct pollfd *controller_fds = NULL;
+  uint32_t controller_fd_count = 0;
+  _maru_wayland_get_controller_pollfds(ctx, &controller_fds, &controller_fd_count);
+
   nfds_t nfds = 2;
+  const bool separate_libdecor_fd = have_libdecor_fd && (libdecor_fd != display_fd);
+  int libdecor_index = -1;
+  if (separate_libdecor_fd) {
+    nfds++;
+  }
+  nfds += (nfds_t)controller_fd_count;
+
+  if ((uint32_t)nfds > ctx->pump_pollfds.capacity) {
+    const size_t old_size = (size_t)ctx->pump_pollfds.capacity * sizeof(struct pollfd);
+    const size_t new_size = (size_t)nfds * sizeof(struct pollfd);
+    struct pollfd *new_fds = (struct pollfd *)maru_context_realloc(
+        &ctx->base, ctx->pump_pollfds.fds, old_size, new_size);
+    if (!new_fds) {
+      status = MARU_FAILURE;
+      goto pump_exit;
+    }
+    ctx->pump_pollfds.fds = new_fds;
+    ctx->pump_pollfds.capacity = (uint32_t)nfds;
+  }
+
+  struct pollfd *fds = ctx->pump_pollfds.fds;
   fds[0].fd = display_fd;
   fds[0].events = POLLIN;
   fds[0].revents = 0;
   fds[1].fd = ctx->wake_fd;
   fds[1].events = POLLIN;
   fds[1].revents = 0;
-  const bool separate_libdecor_fd = have_libdecor_fd && (libdecor_fd != display_fd);
-  int libdecor_index = -1;
+  nfds_t write_index = 2;
   if (separate_libdecor_fd) {
-    libdecor_index = (int)nfds;
-    fds[nfds].fd = libdecor_fd;
-    fds[nfds].events = POLLIN;
-    fds[nfds].revents = 0;
-    nfds++;
+    libdecor_index = (int)write_index;
+    fds[write_index].fd = libdecor_fd;
+    fds[write_index].events = POLLIN;
+    fds[write_index].revents = 0;
+    write_index++;
+  }
+  if (controller_fd_count > 0 && controller_fds) {
+    memcpy(&fds[write_index], controller_fds,
+           sizeof(struct pollfd) * (size_t)controller_fd_count);
+    write_index += (nfds_t)controller_fd_count;
   }
 
   while (maru_wl_display_prepare_read(ctx, ctx->wl.display) != 0) {
@@ -874,7 +912,6 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
       }
     }
   }
-
   int poll_result = poll(fds, nfds, timeout);
   if (poll_result > 0) {
     const short display_revents = fds[0].revents;
@@ -940,6 +977,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     goto pump_exit;
   }
 
+  _maru_wayland_poll_controllers(ctx, true);
   _maru_wayland_check_activation(ctx);
 
   if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 && ctx->repeat.next_repeat_ns != 0 &&

@@ -14,47 +14,6 @@ extern MARU_Status maru_createVkSurface_WL(
     MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
-static MARU_Status maru_getControllers_WL(MARU_Context *context,
-                                          MARU_ControllerList *out_list) {
-  (void)context;
-  out_list->controllers = NULL;
-  out_list->count = 0;
-  return MARU_FAILURE;
-}
-
-static MARU_Status maru_retainController_WL(MARU_Controller *controller) {
-  (void)controller;
-  return MARU_FAILURE;
-}
-
-static MARU_Status maru_releaseController_WL(MARU_Controller *controller) {
-  (void)controller;
-  return MARU_FAILURE;
-}
-
-static MARU_Status maru_resetControllerMetrics_WL(MARU_Controller *controller) {
-  (void)controller;
-  return MARU_FAILURE;
-}
-
-static MARU_Status maru_getControllerInfo_WL(MARU_Controller *controller,
-                                             MARU_ControllerInfo *out_info) {
-  (void)controller;
-  memset(out_info, 0, sizeof(*out_info));
-  return MARU_FAILURE;
-}
-
-static MARU_Status
-maru_setControllerHapticLevels_WL(MARU_Controller *controller,
-                                  uint32_t first_haptic, uint32_t count,
-                                  const MARU_Scalar *intensities) {
-  (void)controller;
-  (void)first_haptic;
-  (void)count;
-  (void)intensities;
-  return MARU_FAILURE;
-}
-
 static MARU_Status maru_announceData_WL(MARU_Window *window,
                                         MARU_DataExchangeTarget target,
                                         const char **mime_types, uint32_t count,

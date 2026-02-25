@@ -15,6 +15,6 @@ public:
     bool& getEnabled() override { return enabled_; }
 
 private:
-    bool enabled_ = true;
+    bool enabled_ = false;
     MARU_EventMask context_mask_ = MARU_ALL_EVENTS;
 };

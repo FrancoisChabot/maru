@@ -15,7 +15,7 @@ public:
     bool& getEnabled() override { return enabled_; }
 
 private:
-    bool enabled_ = true;
+    bool enabled_ = false;
     MARU_Vec2Dip mouse_pos_ = {0, 0};
     MARU_Vec2Dip mouse_delta_ = {0, 0};
     MARU_Vec2Dip mouse_raw_delta_ = {0, 0};
