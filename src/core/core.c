@@ -339,13 +339,6 @@ MARU_API MARU_Status maru_requestData(MARU_Window *window,
   return win_base->backend->requestData(window, target, mime_type, user_tag);
 }
 
-MARU_API MARU_Status maru_dataexchange_enable(MARU_Context *context) {
-  MARU_API_VALIDATE(dataexchange_enable, context);
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  if (!ctx_base->backend->dataexchangeEnable) return MARU_FAILURE;
-  return ctx_base->backend->dataexchangeEnable(context);
-}
-
 MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
                                                 MARU_DataExchangeTarget target,
                                                 MARU_MIMETypeList *out_list) {

@@ -62,8 +62,6 @@ MARU_Status maru_requestData(MARU_Window *window,
                              MARU_DataExchangeTarget target,
                              const char *mime_type, void *user_tag);
 
-MARU_Status maru_dataexchange_enable(MARU_Context *context);
-
 /** @brief Retrieves MIME types currently available in the system buffer.
 
 The returned list is valid until the next call to maru_pumpEvents().

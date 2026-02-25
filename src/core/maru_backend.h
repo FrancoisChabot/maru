@@ -42,7 +42,6 @@ typedef struct MARU_Backend {
   __typeof__(maru_announceData) *announceData;
   __typeof__(maru_provideData) *provideData;
   __typeof__(maru_requestData) *requestData;
-  __typeof__(maru_dataexchange_enable) *dataexchangeEnable;
   __typeof__(maru_getAvailableMIMETypes) *getAvailableMIMETypes;
   
   __typeof__(maru_getMonitors) *getMonitors;

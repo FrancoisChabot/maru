@@ -44,7 +44,6 @@ const MARU_Backend maru_backend_WL = {
   .announceData = maru_announceData_WL,
   .provideData = maru_provideData_WL,
   .requestData = maru_requestData_WL,
-  .dataexchangeEnable = maru_dataexchange_enable_WL,
   .getAvailableMIMETypes = maru_getAvailableMIMETypes_WL,
   .wakeContext = maru_wakeContext_WL,
   .getMonitors = maru_getMonitors_WL,
@@ -189,11 +188,6 @@ MARU_API MARU_Status maru_requestData(MARU_Window *window,
                                       const char *mime_type, void *user_tag) {
   MARU_API_VALIDATE(requestData, window, target, mime_type, user_tag);
   return maru_requestData_WL(window, target, mime_type, user_tag);
-}
-
-MARU_API MARU_Status maru_dataexchange_enable(MARU_Context *context) {
-  MARU_API_VALIDATE(dataexchange_enable, context);
-  return maru_dataexchange_enable_WL(context);
 }
 
 MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,

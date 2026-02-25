@@ -170,11 +170,6 @@ static MARU_Status maru_requestData_X11(MARU_Window *window,
   return MARU_FAILURE;
 }
 
-static MARU_Status maru_dataexchange_enable_X11(MARU_Context *context) {
-  (void)context;
-  return MARU_FAILURE;
-}
-
 static MARU_Status maru_getAvailableMIMETypes_X11(
     MARU_Window *window, MARU_DataExchangeTarget target,
     MARU_MIMETypeList *out_list) {
@@ -227,7 +222,6 @@ const MARU_Backend maru_backend_X11 = {
   .announceData = maru_announceData_X11,
   .provideData = maru_provideData_X11,
   .requestData = maru_requestData_X11,
-  .dataexchangeEnable = maru_dataexchange_enable_X11,
   .getAvailableMIMETypes = maru_getAvailableMIMETypes_X11,
   .wakeContext = NULL,
   .getMonitorModes = NULL,
@@ -367,11 +361,6 @@ MARU_API MARU_Status maru_requestData(MARU_Window *window,
                                       const char *mime_type, void *user_tag) {
   MARU_API_VALIDATE(requestData, window, target, mime_type, user_tag);
   return maru_requestData_X11(window, target, mime_type, user_tag);
-}
-
-MARU_API MARU_Status maru_dataexchange_enable(MARU_Context *context) {
-  MARU_API_VALIDATE(dataexchange_enable, context);
-  return maru_dataexchange_enable_X11(context);
 }
 
 MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,

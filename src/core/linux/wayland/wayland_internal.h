@@ -37,6 +37,15 @@ typedef struct MARU_WaylandDataOfferMeta {
   struct MARU_WaylandDataOfferMeta *next;
 } MARU_WaylandDataOfferMeta;
 
+typedef struct MARU_WaylandPrimaryOfferMeta {
+  struct zwp_primary_selection_offer_v1 *offer;
+  struct MARU_Context_WL *ctx;
+  const char **mime_types;
+  uint32_t mime_count;
+  uint32_t mime_capacity;
+  struct MARU_WaylandPrimaryOfferMeta *next;
+} MARU_WaylandPrimaryOfferMeta;
+
 typedef struct MARU_WaylandClipboardState {
   struct wl_data_device *device;
   struct wl_data_offer *offer;
@@ -56,6 +65,26 @@ typedef struct MARU_WaylandClipboardState {
 
   MARU_WaylandDataOfferMeta *offer_metas;
 } MARU_WaylandClipboardState;
+
+typedef struct MARU_WaylandPrimarySelectionState {
+  struct zwp_primary_selection_device_v1 *device;
+  struct zwp_primary_selection_offer_v1 *offer;
+  struct zwp_primary_selection_source_v1 *source;
+  uint32_t serial;
+
+  const char **announced_mime_types;
+  uint32_t announced_mime_count;
+  uint32_t announced_mime_capacity;
+
+  uint8_t *read_cache;
+  size_t read_cache_size;
+  size_t read_cache_capacity;
+
+  const char **mime_query_ptr;
+  uint32_t mime_query_count;
+
+  MARU_WaylandPrimaryOfferMeta *offer_metas;
+} MARU_WaylandPrimarySelectionState;
 
 typedef struct MARU_Context_WL {
   MARU_Context_Base base;
@@ -135,6 +164,7 @@ typedef struct MARU_Context_WL {
   } pump_pollfds;
 
   MARU_WaylandClipboardState clipboard;
+  MARU_WaylandPrimarySelectionState primary_selection;
   MARU_LinuxDataTransfer *data_transfers;
 } MARU_Context_WL;
 
@@ -424,7 +454,6 @@ MARU_Status maru_provideData_WL(const MARU_DataRequestEvent *request_event,
                                 MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
                                 const char *mime_type, void *user_tag);
-MARU_Status maru_dataexchange_enable_WL(MARU_Context *context);
 MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
                                           MARU_DataExchangeTarget target,
                                           MARU_MIMETypeList *out_list);

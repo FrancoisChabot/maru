@@ -293,10 +293,6 @@ static inline void _maru_validate_requestData(MARU_Window *window,
     (void)user_tag;
 }
 
-static inline void _maru_validate_dataexchange_enable(MARU_Context *context) {
-    MARU_CONSTRAINT_CHECK(context != NULL);
-}
-
 static inline void _maru_validate_getAvailableMIMETypes(
     MARU_Window *window, MARU_DataExchangeTarget target,
     MARU_MIMETypeList *out_list) {

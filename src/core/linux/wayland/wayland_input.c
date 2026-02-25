@@ -476,6 +476,7 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
                                  MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
     if (btn_state == MARU_BUTTON_STATE_PRESSED) {
         ctx->clipboard.serial = serial;
+        ctx->primary_selection.serial = serial;
     }
     window->base.mouse_button_states[channel] = (MARU_ButtonState8)btn_state;
     if (ctx->base.mouse_button_states && channel < ctx->base.pub.mouse_button_count) {
@@ -810,6 +811,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     MARU_ButtonState maru_state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
     if (maru_state == MARU_BUTTON_STATE_PRESSED) {
         ctx->clipboard.serial = serial;
+        ctx->primary_selection.serial = serial;
     }
     const bool text_input_active =
         (window->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
