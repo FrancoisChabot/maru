@@ -141,14 +141,12 @@ typedef enum MARU_Key {
 } MARU_Key;
 
 /** @brief Bitmask for active modifiers. */
-typedef enum MARU_ModifierFlagBits {
-  MARU_MODIFIER_SHIFT = 1ULL << 0,
-  MARU_MODIFIER_CONTROL = 1ULL << 1,
-  MARU_MODIFIER_ALT = 1ULL << 2,
-  MARU_MODIFIER_META = 1ULL << 3,
-  MARU_MODIFIER_CAPS_LOCK = 1ULL << 4,
-  MARU_MODIFIER_NUM_LOCK = 1ULL << 5,
-} MARU_ModifierFlagBits;
+#define MARU_MODIFIER_SHIFT ((MARU_ModifierFlags)1 << 0)
+#define MARU_MODIFIER_CONTROL ((MARU_ModifierFlags)1 << 1)
+#define MARU_MODIFIER_ALT ((MARU_ModifierFlags)1 << 2)
+#define MARU_MODIFIER_META ((MARU_ModifierFlags)1 << 3)
+#define MARU_MODIFIER_CAPS_LOCK ((MARU_ModifierFlags)1 << 4)
+#define MARU_MODIFIER_NUM_LOCK ((MARU_ModifierFlags)1 << 5)
 
 /** @brief Named default mouse button roles. */
 typedef enum MARU_MouseDefaultButton {

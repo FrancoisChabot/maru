@@ -397,13 +397,16 @@ int main(int, char**)
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
     create_info.attributes.diagnostic_cb = handle_maru_diagnostic;
     create_info.tuning.wayland.decoration_mode = MARU_WAYLAND_DECORATION_MODE_CSD;
+    
+    const void *init_funcs[] = { (void *)maru_vulkan_init };
+    create_info.extensions = init_funcs;
+    create_info.extension_count = 1;
+
     MARU_Context *context = NULL;
     if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {
         fprintf(stderr, "Failed to create context.\n");
         return 1;
     }
-
-    maru_vulkan_enable(context, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr);
 
     uint32_t extensions_count = 0;
     const char **maru_extensions = maru_vulkan_getVkExtensions(context, &extensions_count);
@@ -445,7 +448,7 @@ int main(int, char**)
     g_PrimaryWindow = window;
 
     VkSurfaceKHR surface;
-    if (maru_vulkan_createVkSurface(window, g_Instance, &surface) != MARU_SUCCESS) {
+    if (maru_vulkan_createVkSurface(window, g_Instance, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr, &surface) != MARU_SUCCESS) {
         fprintf(stderr, "Failed to create Vulkan surface.\n");
         maru_destroyWindow(window);
         if (window_icon) {

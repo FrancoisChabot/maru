@@ -94,8 +94,6 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     height = (int)effective->logical_size.y;
   }
 
-  window->libdecor.last_configuration = configuration;
-
   uint32_t content_width = width > 0 ? (uint32_t)width : (uint32_t)effective->logical_size.x;
   uint32_t content_height = height > 0 ? (uint32_t)height : (uint32_t)effective->logical_size.y;
 
@@ -109,6 +107,9 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   effective->logical_size.y = (MARU_Scalar)content_height;
 
   struct libdecor_state *state = maru_libdecor_state_new(ctx, (int)content_width, (int)content_height);
+  if (!state) {
+    return;
+  }
   maru_libdecor_frame_commit(ctx, frame, state, configuration);
   maru_libdecor_state_free(ctx, state);
 

@@ -1,4 +1,6 @@
+#define _GNU_SOURCE
 #include "maru_internal.h"
+#include <dlfcn.h>
 
 MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
                                    MARU_Context **out_context) {
@@ -15,6 +17,15 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
 #endif
 
   *out_context = (MARU_Context *)ctx;
+
+  for (uint32_t i = 0; i < create_info->extension_count; ++i) {
+    if (create_info->extensions[i]) {
+      MARU_ExtensionInitFunc init_fn;
+      *(const void **)(&init_fn) = create_info->extensions[i];
+      (void)init_fn(*out_context);
+    }
+  }
+
   return MARU_SUCCESS;
 }
 

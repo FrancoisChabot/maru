@@ -83,9 +83,14 @@ typedef uint32_t MARU_ExtensionID;
 #define MARU_EXT_INVALID ((MARU_ExtensionID)-1)
 
 #define MARU_EXT_VULKAN 0
-#define MARU_EXT_COUNT 1
+#define MARU_EXT_DATA_EXCHANGE 1
+#define MARU_EXT_COUNT 2
 
 typedef struct MARU_Context MARU_Context;
+
+/** @brief Function signature for core-adjacent extension initialization. */
+typedef MARU_Status (*MARU_ExtensionInitFunc)(MARU_Context *context);
+
 typedef struct MARU_Window MARU_Window;
 
 /** @brief Supported windowing backends. */

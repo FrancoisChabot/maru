@@ -28,9 +28,7 @@ typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Cursor MARU_Cursor;
 
 /** @brief Runtime state flags for a cursor. */
-typedef enum MARU_CursorStateFlagBits {
-  MARU_CURSOR_FLAG_SYSTEM = 1ULL << 0,
-} MARU_CursorStateFlagBits;
+#define MARU_CURSOR_FLAG_SYSTEM ((MARU_Flags)1 << 0)
 
 /** @brief Source used to create a cursor handle. */
 typedef enum MARU_CursorSource {

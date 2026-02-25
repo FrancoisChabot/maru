@@ -7,12 +7,6 @@
 
 #ifdef MARU_VALIDATE_API_CALLS
 
-static inline void _maru_validate_vulkan_enable(MARU_Context *context, MARU_VkGetInstanceProcAddrFunc vk_loader) {
-    MARU_CONSTRAINT_CHECK(context != NULL);
-    MARU_CONSTRAINT_CHECK(maru_getExtension(context, MARU_EXT_VULKAN) == NULL);
-    (void)vk_loader;
-}
-
 static inline void _maru_validate_vulkan_getVkExtensions(MARU_Context *context, uint32_t *out_count) {
     MARU_CONSTRAINT_CHECK(context != NULL);
     MARU_CONSTRAINT_CHECK(out_count != NULL);
@@ -21,11 +15,13 @@ static inline void _maru_validate_vulkan_getVkExtensions(MARU_Context *context, 
 
 static inline void _maru_validate_vulkan_createVkSurface(MARU_Window *window, 
                                  VkInstance instance,
+                                 MARU_VkGetInstanceProcAddrFunc vk_loader,
                                  VkSurfaceKHR *out_surface) {
     MARU_CONSTRAINT_CHECK(window != NULL);
     MARU_CONSTRAINT_CHECK(instance != NULL);
     MARU_CONSTRAINT_CHECK(out_surface != NULL);
     MARU_CONSTRAINT_CHECK(maru_getExtension(maru_getWindowContext(window), MARU_EXT_VULKAN) != NULL);
+    (void)vk_loader;
 }
 
 #define MARU_VULKAN_API_VALIDATE(fn, ...) \

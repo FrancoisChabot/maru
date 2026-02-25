@@ -30,22 +30,20 @@ typedef struct VkSurfaceKHR_T *VkSurfaceKHR;
 /** @brief Opaque handle to a Vulkan instance. */
 typedef struct VkInstance_T *VkInstance;
 
-/** @brief Enables Vulkan support for the specified context. 
-
-If this function is not called, all other maru_vulkan_ functions will abort in debug.
-*/
-MARU_Status maru_vulkan_enable(MARU_Context *context, MARU_VkGetInstanceProcAddrFunc vk_loader);
+/** @brief Extension initialization function for MARU_ContextCreateInfo. */
+MARU_Status maru_vulkan_init(MARU_Context *context);
 
 /** @brief Retrieves the list of Vulkan instance extensions required by MARU. 
 
 The returned list is valid until the next call to maru_pumpEvents().
 */
-const char **maru_vulkan_getVkExtensions(MARU_Context *context, uint32_t *out_count);
+const char **maru_vulkan_getVkExtensions(const MARU_Context *context, uint32_t *out_count);
 
 /** @brief Creates a Vulkan surface for the specified window. 
 */
 MARU_Status maru_vulkan_createVkSurface(MARU_Window *window, 
                                         VkInstance instance,
+                                        MARU_VkGetInstanceProcAddrFunc vk_loader,
                                         VkSurfaceKHR *out_surface);
 
 #ifdef __cplusplus

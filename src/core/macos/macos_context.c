@@ -5,6 +5,7 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 
+#include <dlfcn.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -80,6 +81,15 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
+
+  for (uint32_t i = 0; i < create_info->extension_count; ++i) {
+    if (create_info->extensions[i]) {
+      MARU_ExtensionInitFunc init_fn;
+      *(const void **)(&init_fn) = create_info->extensions[i];
+      (void)init_fn(*out_context);
+    }
+  }
+
   return MARU_SUCCESS;
 }
 

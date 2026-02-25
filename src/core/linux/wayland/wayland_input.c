@@ -31,6 +31,21 @@
 
 static MARU_ModifierFlags _get_modifiers(MARU_Context_WL *ctx);
 
+static MARU_Window_WL *_maru_wayland_resolve_registered_window(
+    MARU_Context_WL *ctx, const MARU_Window *candidate) {
+    if (!ctx || !candidate) {
+        return NULL;
+    }
+
+    for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+        if ((const MARU_Window *)it == candidate) {
+            return (MARU_Window_WL *)it;
+        }
+    }
+
+    return NULL;
+}
+
 static bool _maru_wayland_map_native_mouse_button(uint32_t native_code,
                                                   uint32_t *out_channel) {
     switch (native_code) {
@@ -385,7 +400,9 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer,
     MARU_Context_WL *ctx = (MARU_Context_WL *)data;
     if (!surface) return;
 
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->dlib.wl.proxy_get_user_data((struct wl_proxy *)surface);
+    MARU_Window_WL *window =
+        (MARU_Window_WL *)ctx->dlib.wl.proxy_get_user_data((struct wl_proxy *)surface);
+    window = _maru_wayland_resolve_registered_window(ctx, (MARU_Window *)window);
 
     if (window) {
         ctx->linux_common.pointer.focused_window = (MARU_Window *)window;
@@ -393,6 +410,8 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer,
         ctx->linux_common.pointer.y = wl_fixed_to_double(sy);
         ctx->linux_common.pointer.enter_serial = serial;
         _maru_wayland_update_cursor(ctx, window, serial);
+    } else {
+        ctx->linux_common.pointer.focused_window = NULL;
     }
 }
 
@@ -406,9 +425,13 @@ static void _pointer_handle_leave(void *data, struct wl_pointer *pointer,
 static void _pointer_handle_motion(void *data, struct wl_pointer *pointer,
                                    uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {
     MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+    MARU_Window_WL *window = _maru_wayland_resolve_registered_window(
+        ctx, ctx->linux_common.pointer.focused_window);
 
-    if (!window) return;
+    if (!window) {
+        ctx->linux_common.pointer.focused_window = NULL;
+        return;
+    }
 
     MARU_Event evt = {0};
     evt.mouse_motion.position.x = wl_fixed_to_double(sx);
@@ -430,9 +453,13 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
                                    uint32_t serial, uint32_t time, uint32_t button,
                                    uint32_t state) {
     MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+    MARU_Window_WL *window = _maru_wayland_resolve_registered_window(
+        ctx, ctx->linux_common.pointer.focused_window);
 
-    if (!window) return;
+    if (!window) {
+        ctx->linux_common.pointer.focused_window = NULL;
+        return;
+    }
     uint32_t channel = 0;
     if (!_maru_wayland_map_native_mouse_button(button, &channel)) {
         _maru_wayland_report_unknown_mouse_button_once(ctx, button);
@@ -474,7 +501,11 @@ static void _pointer_handle_axis(void *data, struct wl_pointer *pointer,
 
 static void _pointer_handle_frame(void *data, struct wl_pointer *wl_pointer) {
     MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-    MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+    MARU_Window_WL *window = _maru_wayland_resolve_registered_window(
+        ctx, ctx->linux_common.pointer.focused_window);
+    if (!window) {
+        ctx->linux_common.pointer.focused_window = NULL;
+    }
 
     if (ctx->scroll.active) {
         if (window) {

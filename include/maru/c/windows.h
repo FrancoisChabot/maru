@@ -7,8 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "maru/c/core.h"
 #include "maru/c/contexts.h"
+#include "maru/c/core.h"
 #include "maru/c/geometry.h"
 #include "maru/c/metrics.h"
 
@@ -21,7 +21,8 @@
 extern "C" {
 #endif
 
-/** @brief Opaque handle representing the library state and display server connection. */
+/** @brief Opaque handle representing the library state and display server
+ * connection. */
 typedef struct MARU_Context MARU_Context;
 /** @brief Opaque handle representing an OS-level window. */
 typedef struct MARU_Window MARU_Window;
@@ -33,18 +34,16 @@ typedef struct MARU_Image MARU_Image;
 typedef struct MARU_Monitor MARU_Monitor;
 
 /** @brief Runtime state flags for a window. */
-typedef enum MARU_WindowStateFlagBits {
-  MARU_WINDOW_STATE_LOST = 1ULL << 0,
-  MARU_WINDOW_STATE_READY = 1ULL << 1,
-  MARU_WINDOW_STATE_FOCUSED = 1ULL << 2,
-  MARU_WINDOW_STATE_MAXIMIZED = 1ULL << 3,
-  MARU_WINDOW_STATE_FULLSCREEN = 1ULL << 4,
-  MARU_WINDOW_STATE_MOUSE_PASSTHROUGH = 1ULL << 5,
-  MARU_WINDOW_STATE_RESIZABLE = 1ULL << 6,
-  MARU_WINDOW_STATE_DECORATED = 1ULL << 7,
-  MARU_WINDOW_STATE_VISIBLE = 1ULL << 8,
-  MARU_WINDOW_STATE_MINIMIZED = 1ULL << 9,
-} MARU_WindowStateFlagBits;
+#define MARU_WINDOW_STATE_LOST ((MARU_Flags)1 << 0)
+#define MARU_WINDOW_STATE_READY ((MARU_Flags)1 << 1)
+#define MARU_WINDOW_STATE_FOCUSED ((MARU_Flags)1 << 2)
+#define MARU_WINDOW_STATE_MAXIMIZED ((MARU_Flags)1 << 3)
+#define MARU_WINDOW_STATE_FULLSCREEN ((MARU_Flags)1 << 4)
+#define MARU_WINDOW_STATE_MOUSE_PASSTHROUGH ((MARU_Flags)1 << 5)
+#define MARU_WINDOW_STATE_RESIZABLE ((MARU_Flags)1 << 6)
+#define MARU_WINDOW_STATE_DECORATED ((MARU_Flags)1 << 7)
+#define MARU_WINDOW_STATE_VISIBLE ((MARU_Flags)1 << 8)
+#define MARU_WINDOW_STATE_MINIMIZED ((MARU_Flags)1 << 9)
 
 /** @brief Cursor visibility and constraint modes. */
 typedef enum MARU_CursorMode {
@@ -53,11 +52,11 @@ typedef enum MARU_CursorMode {
   MARU_CURSOR_LOCKED = 2,
 } MARU_CursorMode;
 
-/* ----- Passive Accessors (External Synchronization Required) ----- 
+/* ----- Passive Accessors (External Synchronization Required) -----
  *
- * These functions are essentially zero-cost member accesses. They are safe to 
- * call from any thread, provided the access is synchronized with mutating 
- * operations (like maru_pumpEvents or maru_updateWindow) on the same window 
+ * These functions are essentially zero-cost member accesses. They are safe to
+ * call from any thread, provided the access is synchronized with mutating
+ * operations (like maru_pumpEvents or maru_updateWindow) on the same window
  * to ensure memory visibility.
  */
 
@@ -99,7 +98,8 @@ static inline bool maru_isWindowMinimized(const MARU_Window *window);
 static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window);
 
 /** @brief Retrieves the runtime performance metrics for a window. */
-static inline const MARU_WindowMetrics *maru_getWindowMetrics(const MARU_Window *window);
+static inline const MARU_WindowMetrics *
+maru_getWindowMetrics(const MARU_Window *window);
 
 /** @brief Semantic hints for compositor optimization. */
 typedef enum MARU_ContentType {
@@ -120,32 +120,31 @@ typedef enum MARU_TextInputType {
 
 /** @brief Bitmask for selecting which attributes to update in
  * maru_updateWindow(). */
-typedef enum MARU_WindowAttributesField {
-  MARU_WINDOW_ATTR_TITLE = 1ULL << 0,
-  MARU_WINDOW_ATTR_LOGICAL_SIZE = 1ULL << 1,
-  MARU_WINDOW_ATTR_FULLSCREEN = 1ULL << 2,
-  MARU_WINDOW_ATTR_CURSOR_MODE = 1ULL << 3,
-  MARU_WINDOW_ATTR_CURSOR = 1ULL << 4,
-  MARU_WINDOW_ATTR_MONITOR = 1ULL << 5,
-  MARU_WINDOW_ATTR_MAXIMIZED = 1ULL << 6,
-  MARU_WINDOW_ATTR_MIN_SIZE = 1ULL << 7,
-  MARU_WINDOW_ATTR_MAX_SIZE = 1ULL << 8,
-  MARU_WINDOW_ATTR_POSITION = 1ULL << 9,
-  MARU_WINDOW_ATTR_ASPECT_RATIO = 1ULL << 10,
-  MARU_WINDOW_ATTR_RESIZABLE = 1ULL << 11,
-  MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH = 1ULL << 12,
-  MARU_WINDOW_ATTR_TEXT_INPUT_TYPE = 1ULL << 14,
-  MARU_WINDOW_ATTR_TEXT_INPUT_RECT = 1ULL << 15,
-  MARU_WINDOW_ATTR_EVENT_MASK = 1ULL << 17,
-  MARU_WINDOW_ATTR_VIEWPORT_SIZE = 1ULL << 18,
-  MARU_WINDOW_ATTR_SURROUNDING_TEXT = 1ULL << 19,
-  MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET = 1ULL << 20,
-  MARU_WINDOW_ATTR_VISIBLE = 1ULL << 21,
-  MARU_WINDOW_ATTR_MINIMIZED = 1ULL << 22,
-  MARU_WINDOW_ATTR_ICON = 1ULL << 23,
+typedef uint32_t MARU_WindowAttributesField;
+#define MARU_WINDOW_ATTR_TITLE (1u << 0)
+#define MARU_WINDOW_ATTR_LOGICAL_SIZE (1u << 1)
+#define MARU_WINDOW_ATTR_FULLSCREEN (1u << 2)
+#define MARU_WINDOW_ATTR_CURSOR_MODE (1u << 3)
+#define MARU_WINDOW_ATTR_CURSOR (1u << 4)
+#define MARU_WINDOW_ATTR_MONITOR (1u << 5)
+#define MARU_WINDOW_ATTR_MAXIMIZED (1u << 6)
+#define MARU_WINDOW_ATTR_MIN_SIZE (1u << 7)
+#define MARU_WINDOW_ATTR_MAX_SIZE (1u << 8)
+#define MARU_WINDOW_ATTR_POSITION (1u << 9)
+#define MARU_WINDOW_ATTR_ASPECT_RATIO (1u << 10)
+#define MARU_WINDOW_ATTR_RESIZABLE (1u << 11)
+#define MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH (1u << 12)
+#define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE (1u << 14)
+#define MARU_WINDOW_ATTR_TEXT_INPUT_RECT (1u << 15)
+#define MARU_WINDOW_ATTR_EVENT_MASK (1u << 17)
+#define MARU_WINDOW_ATTR_VIEWPORT_SIZE (1u << 18)
+#define MARU_WINDOW_ATTR_SURROUNDING_TEXT (1u << 19)
+#define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET (1u << 20)
+#define MARU_WINDOW_ATTR_VISIBLE (1u << 21)
+#define MARU_WINDOW_ATTR_MINIMIZED (1u << 22)
+#define MARU_WINDOW_ATTR_ICON (1u << 23)
 
-  MARU_WINDOW_ATTR_ALL = 0xFFFFFFFFFFFFFFFFULL,
-} MARU_WindowAttributesField;
+#define MARU_WINDOW_ATTR_ALL 0xFFFFFFFFu
 
 /** @brief Live-updatable window properties. */
 typedef struct MARU_WindowAttributes {
@@ -185,48 +184,47 @@ typedef struct MARU_WindowCreateInfo {
 } MARU_WindowCreateInfo;
 
 /** @brief Default initialization macro for MARU_WindowCreateInfo. */
-#define MARU_WINDOW_CREATE_INFO_DEFAULT                         \
-  {.attributes = {.title = "MARU Window",                       \
-                  .logical_size = {800, 600},                   \
-                  .fullscreen = false,                          \
-                  .maximized = false,                           \
-                  .cursor_mode = MARU_CURSOR_NORMAL,            \
-                  .cursor = NULL,                               \
-                  .monitor = NULL,                              \
-                  .min_size = {0, 0},                           \
-                  .max_size = {0, 0},                           \
-                  .position = {0, 0},                           \
-                  .aspect_ratio = {0, 0},                       \
-                  .resizable = true,                            \
-                  .mouse_passthrough = false,                   \
-                  .text_input_type = MARU_TEXT_INPUT_TYPE_NONE, \
-                  .text_input_rect = {{0, 0}, {0, 0}},          \
-                  .event_mask = MARU_ALL_EVENTS,                \
-                  .viewport_size = {0, 0},                      \
-                  .surrounding_text = NULL,                     \
-                  .surrounding_cursor_offset = 0,               \
-                  .surrounding_anchor_offset = 0,               \
-                  .visible = true,                              \
-                  .minimized = false,                           \
-                  .icon = NULL},                                \
-   .app_id = "maru.app",                                        \
-   .content_type = MARU_CONTENT_TYPE_NONE,                      \
-   .decorated = true,                                            \
-   .transparent = false,                                         \
-   .userdata = NULL                                             \
-  }
+#define MARU_WINDOW_CREATE_INFO_DEFAULT                                        \
+  {.attributes = {.title = "MARU Window",                                      \
+                  .logical_size = {800, 600},                                  \
+                  .fullscreen = false,                                         \
+                  .maximized = false,                                          \
+                  .cursor_mode = MARU_CURSOR_NORMAL,                           \
+                  .cursor = NULL,                                              \
+                  .monitor = NULL,                                             \
+                  .min_size = {0, 0},                                          \
+                  .max_size = {0, 0},                                          \
+                  .position = {0, 0},                                          \
+                  .aspect_ratio = {0, 0},                                      \
+                  .resizable = true,                                           \
+                  .mouse_passthrough = false,                                  \
+                  .text_input_type = MARU_TEXT_INPUT_TYPE_NONE,                \
+                  .text_input_rect = {{0, 0}, {0, 0}},                         \
+                  .event_mask = MARU_ALL_EVENTS,                               \
+                  .viewport_size = {0, 0},                                     \
+                  .surrounding_text = NULL,                                    \
+                  .surrounding_cursor_offset = 0,                              \
+                  .surrounding_anchor_offset = 0,                              \
+                  .visible = true,                                             \
+                  .minimized = false,                                          \
+                  .icon = NULL},                                               \
+   .app_id = "maru.app",                                                       \
+   .content_type = MARU_CONTENT_TYPE_NONE,                                     \
+   .decorated = true,                                                          \
+   .transparent = false,                                                       \
+   .userdata = NULL}
 
 /** @brief Creates a new window. */
 MARU_Status maru_createWindow(MARU_Context *context,
-                                         const MARU_WindowCreateInfo *create_info,
-                                         MARU_Window **out_window);
+                              const MARU_WindowCreateInfo *create_info,
+                              MARU_Window **out_window);
 
 /** @brief Destroys a window. */
 MARU_Status maru_destroyWindow(MARU_Window *window);
 
 /** @brief Updates window attributes. */
 MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
-                                         const MARU_WindowAttributes *attributes);
+                              const MARU_WindowAttributes *attributes);
 
 /** @brief Returns a snapshot of window geometry.
  *
@@ -234,7 +232,7 @@ MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
  * `{0, 0}` on platforms that do not expose global window position.
  */
 void maru_getWindowGeometry(MARU_Window *window,
-                                              MARU_WindowGeometry *out_geometry);
+                            MARU_WindowGeometry *out_geometry);
 
 /** @brief Requests input focus for a window. */
 MARU_Status maru_requestWindowFocus(MARU_Window *window);
@@ -253,4 +251,4 @@ MARU_Status maru_resetWindowMetrics(MARU_Window *window);
 }
 #endif
 
-#endif  // MARU_WINDOW_H_INCLUDED
+#endif // MARU_WINDOW_H_INCLUDED

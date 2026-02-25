@@ -1,5 +1,6 @@
-#include "maru/c/instrumentation.h"
 #define _GNU_SOURCE
+#include "maru/c/instrumentation.h"
+#include <dlfcn.h>
 #include "dlib/loader.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
@@ -644,6 +645,14 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   _wl_update_cursor_shape_device(ctx);
   ctx->base.attrs_dirty_mask = 0;
 
+  for (uint32_t i = 0; i < create_info->extension_count; ++i) {
+    if (create_info->extensions[i]) {
+      MARU_ExtensionInitFunc init_fn;
+      *(const void **)(&init_fn) = create_info->extensions[i];
+      (void)init_fn((MARU_Context *)ctx);
+    }
+  }
+
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   *out_context = (MARU_Context *)ctx;
 
@@ -818,8 +827,9 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   fds[1].fd = ctx->wake_fd;
   fds[1].events = POLLIN;
   fds[1].revents = 0;
+  const bool separate_libdecor_fd = have_libdecor_fd && (libdecor_fd != display_fd);
   int libdecor_index = -1;
-  if (have_libdecor_fd) {
+  if (separate_libdecor_fd) {
     libdecor_index = (int)nfds;
     fds[nfds].fd = libdecor_fd;
     fds[nfds].events = POLLIN;
@@ -907,14 +917,6 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
         status = MARU_ERROR_CONTEXT_LOST;
         goto pump_exit;
       }
-
-      if ((libdecor_revents & POLLIN) != 0) {
-        if (maru_libdecor_dispatch(ctx, ctx->libdecor_context, 0) < 0) {
-          _maru_wayland_mark_lost(ctx, "libdecor_dispatch() failure");
-          status = MARU_ERROR_CONTEXT_LOST;
-          goto pump_exit;
-        }
-      }
     }
   } else if (poll_result == 0) {
     maru_wl_display_cancel_read(ctx, ctx->wl.display);
@@ -931,6 +933,14 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     _maru_wayland_mark_lost(ctx, "wl_display_dispatch_pending() failure");
     status = MARU_ERROR_CONTEXT_LOST;
     goto pump_exit;
+  }
+
+  if (have_libdecor_fd) {
+    if (maru_libdecor_dispatch(ctx, ctx->libdecor_context, 0) < 0) {
+      _maru_wayland_mark_lost(ctx, "libdecor_dispatch() failure");
+      status = MARU_ERROR_CONTEXT_LOST;
+      goto pump_exit;
+    }
   }
 
   if (maru_wl_display_get_error(ctx, ctx->wl.display) != 0) {

@@ -26,10 +26,8 @@ typedef struct MARU_Context MARU_Context;
 
 
 /** @brief Runtime state flags for a context. */
-typedef enum MARU_ContextStateFlagBits {
-  MARU_CONTEXT_STATE_LOST = 1ULL << 0,
-  MARU_CONTEXT_STATE_READY = 1ULL << 1,
-} MARU_ContextStateFlagBits;
+#define MARU_CONTEXT_STATE_LOST ((MARU_Flags)1 << 0)
+#define MARU_CONTEXT_STATE_READY ((MARU_Flags)1 << 1)
 
 
 /** @brief Forward declaration of diagnostic info. */
@@ -82,14 +80,13 @@ static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context,
 #define MARU_NEVER (uint32_t)-1
 
 /** @brief Bitmask for selecting which attributes to update in maru_updateContext(). */
-typedef enum MARU_ContextAttributesField {
-  MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE = 1UL << 0,
-  MARU_CONTEXT_ATTR_DIAGNOSTICS = 1UL << 1,
-  MARU_CONTEXT_ATTR_EVENT_MASK = 1UL << 2,
-  MARU_CONTEXT_ATTR_IDLE_TIMEOUT = 1UL << 3,
+typedef uint32_t MARU_ContextAttributesField;
+#define MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE (1u << 0)
+#define MARU_CONTEXT_ATTR_DIAGNOSTICS (1u << 1)
+#define MARU_CONTEXT_ATTR_EVENT_MASK (1u << 2)
+#define MARU_CONTEXT_ATTR_IDLE_TIMEOUT (1u << 3)
 
-  MARU_CONTEXT_ATTR_ALL = 0xFFFFFFFFUL,
-} MARU_ContextAttributesField;
+#define MARU_CONTEXT_ATTR_ALL 0xFFFFFFFFu
 
 /** @brief Updatable parameters for an active context. */
 typedef struct MARU_ContextAttributes {
@@ -110,6 +107,8 @@ typedef struct MARU_ContextCreateInfo {
   MARU_BackendType backend;           ///< Requested backend, if set to MARU_BACKEND_UNKNOWN, a sensible default will be picked if possible.
   MARU_ContextAttributes attributes;  ///< Initial runtime attributes.
   MARU_ContextTuning tuning;          ///< Low-level tuning.
+  const void *const *extensions;      ///< Array of initialization functions for core extensions.
+  uint32_t extension_count;           ///< Number of extensions in the array.
 } MARU_ContextCreateInfo;
 
 /** @brief Default initialization macro for MARU_ContextCreateInfo. */
@@ -131,6 +130,8 @@ typedef struct MARU_ContextCreateInfo {
               .idle_timeout_ms = 0,             \
           },                                    \
       .tuning = MARU_CONTEXT_TUNING_DEFAULT,    \
+      .extensions = NULL,                       \
+      .extension_count = 0,                     \
   }
 
 /** @brief Creates a new context. 

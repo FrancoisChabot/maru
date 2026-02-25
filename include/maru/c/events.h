@@ -45,6 +45,17 @@ typedef enum MARU_EventId {
   MARU_EVENT_TEXT_EDIT_UPDATE = 20,
   MARU_EVENT_TEXT_EDIT_COMMIT = 21,
   MARU_EVENT_TEXT_EDIT_END = 22,
+
+  /* Data Exchange Extension (32-39) */
+  MARU_EVENT_DROP_ENTERED = 32,
+  MARU_EVENT_DROP_HOVERED = 33,
+  MARU_EVENT_DROP_EXITED = 34,
+  MARU_EVENT_DROP_DROPPED = 35,
+  MARU_EVENT_DATA_RECEIVED = 36,
+  MARU_EVENT_DATA_REQUESTED = 37,
+  MARU_EVENT_DATA_CONSUMED = 38,
+  MARU_EVENT_DRAG_FINISHED = 39,
+
   MARU_EVENT_USER_0 = 48,
   MARU_EVENT_USER_1 = 49,
   MARU_EVENT_USER_2 = 50,
@@ -152,6 +163,14 @@ static inline bool maru_isKnownEventId(MARU_EventId id) {
     case MARU_EVENT_TEXT_EDIT_UPDATE:
     case MARU_EVENT_TEXT_EDIT_COMMIT:
     case MARU_EVENT_TEXT_EDIT_END:
+    case MARU_EVENT_DROP_ENTERED:
+    case MARU_EVENT_DROP_HOVERED:
+    case MARU_EVENT_DROP_EXITED:
+    case MARU_EVENT_DROP_DROPPED:
+    case MARU_EVENT_DATA_RECEIVED:
+    case MARU_EVENT_DATA_REQUESTED:
+    case MARU_EVENT_DATA_CONSUMED:
+    case MARU_EVENT_DRAG_FINISHED:
       return true;
     default:
       return maru_isUserEventId(id);
@@ -335,6 +354,12 @@ typedef struct MARU_Event {
     MARU_TextEditUpdateEvent text_edit_update;
     MARU_TextEditCommitEvent text_edit_commit;
     MARU_TextEditEndEvent text_edit_end;
+
+    /** @brief Reserved for extension payloads. Use maru_as...() accessors. */
+    struct {
+      uint64_t _align;
+      uint8_t bytes[56];
+    } ext;
 
     MARU_UserDefinedEvent user;
   };

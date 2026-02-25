@@ -125,7 +125,6 @@ typedef struct MARU_Window_WL {
 
   struct {
     struct libdecor_frame *frame;
-    struct libdecor_configuration *last_configuration;
   } libdecor;
 
   uint64_t text_input_session_id;

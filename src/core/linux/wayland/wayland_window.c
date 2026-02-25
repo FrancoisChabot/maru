@@ -290,7 +290,7 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
     struct libdecor_state *state = maru_libdecor_state_new(
         ctx, (int)attrs->logical_size.x, (int)attrs->logical_size.y);
     if (state) {
-      maru_libdecor_frame_commit(ctx, window->libdecor.frame, state, window->libdecor.last_configuration);
+      maru_libdecor_frame_commit(ctx, window->libdecor.frame, state, NULL);
       maru_libdecor_state_free(ctx, state);
     }
   }
