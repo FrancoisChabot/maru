@@ -1,6 +1,7 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "maru/c/details/contexts.h"
+#include "maru/c/details/controllers.h"
 #include <string.h>
 #include <stdatomic.h>
 
@@ -200,7 +201,6 @@ void _maru_default_free(void *ptr, void *userdata) {
   free(ptr);
 }
 
-
 #ifdef MARU_INDIRECT_BACKEND
 MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
   MARU_API_VALIDATE(destroyContext, context);
@@ -234,6 +234,119 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->wakeContext(context);
+}
+
+MARU_API MARU_Status maru_getControllers(MARU_Context *context,
+                                         MARU_ControllerList *out_list) {
+  MARU_API_VALIDATE(getControllers, context, out_list);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  if (!ctx_base->backend->getControllers) {
+    out_list->controllers = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+  return ctx_base->backend->getControllers(context, out_list);
+}
+
+MARU_API MARU_Status maru_retainController(MARU_Controller *controller) {
+  MARU_API_VALIDATE(retainController, controller);
+  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
+  if (!ctx_base->backend->retainController) return MARU_FAILURE;
+  return ctx_base->backend->retainController(controller);
+}
+
+MARU_API MARU_Status maru_releaseController(MARU_Controller *controller) {
+  MARU_API_VALIDATE(releaseController, controller);
+  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
+  if (!ctx_base->backend->releaseController) return MARU_FAILURE;
+  return ctx_base->backend->releaseController(controller);
+}
+
+MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
+  MARU_API_VALIDATE(resetControllerMetrics, controller);
+  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
+  if (!ctx_base->backend->resetControllerMetrics) return MARU_FAILURE;
+  return ctx_base->backend->resetControllerMetrics(controller);
+}
+
+MARU_API MARU_Status maru_getControllerInfo(MARU_Controller *controller,
+                                            MARU_ControllerInfo *out_info) {
+  MARU_API_VALIDATE(getControllerInfo, controller, out_info);
+  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
+  if (!ctx_base->backend->getControllerInfo) {
+    memset(out_info, 0, sizeof(*out_info));
+    return MARU_FAILURE;
+  }
+  return ctx_base->backend->getControllerInfo(controller, out_info);
+}
+
+MARU_API MARU_Status
+maru_setControllerHapticLevels(MARU_Controller *controller, uint32_t first_haptic,
+                               uint32_t count,
+                               const MARU_Scalar *intensities) {
+  MARU_API_VALIDATE(setControllerHapticLevels, controller, first_haptic, count,
+                    intensities);
+  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
+  if (!ctx_base->backend->setControllerHapticLevels) return MARU_FAILURE;
+  return ctx_base->backend->setControllerHapticLevels(controller, first_haptic,
+                                                      count, intensities);
+}
+
+MARU_API MARU_Status maru_announceData(MARU_Window *window,
+                                       MARU_DataExchangeTarget target,
+                                       const char **mime_types, uint32_t count,
+                                       MARU_DropActionMask allowed_actions) {
+  MARU_API_VALIDATE(announceData, window, target, mime_types, count,
+                    allowed_actions);
+  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+  if (!win_base->backend->announceData) return MARU_FAILURE;
+  return win_base->backend->announceData(window, target, mime_types, count,
+                                         allowed_actions);
+}
+
+MARU_API MARU_Status maru_provideData(const MARU_DataRequestEvent *request_event,
+                                      const void *data, size_t size,
+                                      MARU_DataProvideFlags flags) {
+  MARU_API_VALIDATE(provideData, request_event, data, size, flags);
+  (void)request_event;
+  (void)data;
+  (void)size;
+  (void)flags;
+  return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_requestData(MARU_Window *window,
+                                      MARU_DataExchangeTarget target,
+                                      const char *mime_type, void *user_tag) {
+  MARU_API_VALIDATE(requestData, window, target, mime_type, user_tag);
+  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+  if (!win_base->backend->requestData) return MARU_FAILURE;
+  return win_base->backend->requestData(window, target, mime_type, user_tag);
+}
+
+MARU_API MARU_Status maru_dataexchange_enable(MARU_Context *context) {
+  MARU_API_VALIDATE(dataexchange_enable, context);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  if (!ctx_base->backend->dataexchangeEnable) return MARU_FAILURE;
+  return ctx_base->backend->dataexchangeEnable(context);
+}
+
+MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
+                                                MARU_DataExchangeTarget target,
+                                                MARU_MIMETypeList *out_list) {
+  MARU_API_VALIDATE(getAvailableMIMETypes, window, target, out_list);
+  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
+  if (!win_base->backend->getAvailableMIMETypes) {
+    out_list->mime_types = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+  return win_base->backend->getAvailableMIMETypes(window, target, out_list);
 }
 
 MARU_API const char **maru_vulkan_getVkExtensions(const MARU_Context *context,

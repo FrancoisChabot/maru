@@ -5,6 +5,8 @@
 #include "maru/c/windows.h"
 #include "maru/c/images.h"
 #include "maru/c/events.h"
+#include "maru/c/controllers.h"
+#include "maru/c/data_exchange.h"
 #include "maru/c/vulkan.h"
 
 #ifdef MARU_INDIRECT_BACKEND
@@ -29,6 +31,19 @@ typedef struct MARU_Backend {
   __typeof__(maru_destroyCursor) *destroyCursor;
   __typeof__(maru_createImage) *createImage;
   __typeof__(maru_destroyImage) *destroyImage;
+
+  __typeof__(maru_getControllers) *getControllers;
+  __typeof__(maru_retainController) *retainController;
+  __typeof__(maru_releaseController) *releaseController;
+  __typeof__(maru_resetControllerMetrics) *resetControllerMetrics;
+  __typeof__(maru_getControllerInfo) *getControllerInfo;
+  __typeof__(maru_setControllerHapticLevels) *setControllerHapticLevels;
+
+  __typeof__(maru_announceData) *announceData;
+  __typeof__(maru_provideData) *provideData;
+  __typeof__(maru_requestData) *requestData;
+  __typeof__(maru_dataexchange_enable) *dataexchangeEnable;
+  __typeof__(maru_getAvailableMIMETypes) *getAvailableMIMETypes;
   
   __typeof__(maru_getMonitors) *getMonitors;
   __typeof__(maru_retainMonitor) *retainMonitor;

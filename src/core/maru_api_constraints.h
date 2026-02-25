@@ -224,6 +224,88 @@ static inline void _maru_validate_destroyImage(MARU_Image *image) {
     MARU_CONSTRAINT_CHECK(image != NULL);
 }
 
+static inline void _maru_validate_getControllers(MARU_Context *context,
+                                                 MARU_ControllerList *out_list) {
+    MARU_CONSTRAINT_CHECK(context != NULL);
+    MARU_CONSTRAINT_CHECK(out_list != NULL);
+}
+
+static inline void _maru_validate_retainController(MARU_Controller *controller) {
+    MARU_CONSTRAINT_CHECK(controller != NULL);
+}
+
+static inline void _maru_validate_releaseController(MARU_Controller *controller) {
+    MARU_CONSTRAINT_CHECK(controller != NULL);
+}
+
+static inline void _maru_validate_resetControllerMetrics(MARU_Controller *controller) {
+    MARU_CONSTRAINT_CHECK(controller != NULL);
+}
+
+static inline void _maru_validate_getControllerInfo(MARU_Controller *controller,
+                                                    MARU_ControllerInfo *out_info) {
+    MARU_CONSTRAINT_CHECK(controller != NULL);
+    MARU_CONSTRAINT_CHECK(out_info != NULL);
+}
+
+static inline void _maru_validate_setControllerHapticLevels(
+    MARU_Controller *controller, uint32_t first_haptic, uint32_t count,
+    const MARU_Scalar *intensities) {
+    MARU_CONSTRAINT_CHECK(controller != NULL);
+    (void)first_haptic;
+    if (count > 0) {
+        MARU_CONSTRAINT_CHECK(intensities != NULL);
+    }
+}
+
+static inline void _maru_validate_announceData(MARU_Window *window,
+                                               MARU_DataExchangeTarget target,
+                                               const char **mime_types,
+                                               uint32_t count,
+                                               MARU_DropActionMask allowed_actions) {
+    MARU_CONSTRAINT_CHECK(window != NULL);
+    MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
+                          target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
+    if (count > 0) {
+        MARU_CONSTRAINT_CHECK(mime_types != NULL);
+    }
+    (void)allowed_actions;
+}
+
+static inline void _maru_validate_provideData(
+    const MARU_DataRequestEvent *request_event, const void *data, size_t size,
+    MARU_DataProvideFlags flags) {
+    MARU_CONSTRAINT_CHECK(request_event != NULL);
+    if (size > 0) {
+        MARU_CONSTRAINT_CHECK(data != NULL);
+    }
+    (void)flags;
+}
+
+static inline void _maru_validate_requestData(MARU_Window *window,
+                                              MARU_DataExchangeTarget target,
+                                              const char *mime_type,
+                                              void *user_tag) {
+    MARU_CONSTRAINT_CHECK(window != NULL);
+    MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
+                          target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
+    MARU_CONSTRAINT_CHECK(mime_type != NULL);
+    (void)user_tag;
+}
+
+static inline void _maru_validate_dataexchange_enable(MARU_Context *context) {
+    MARU_CONSTRAINT_CHECK(context != NULL);
+}
+
+static inline void _maru_validate_getAvailableMIMETypes(
+    MARU_Window *window, MARU_DataExchangeTarget target,
+    MARU_MIMETypeList *out_list) {
+    MARU_CONSTRAINT_CHECK(window != NULL);
+    MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
+                          target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
+    MARU_CONSTRAINT_CHECK(out_list != NULL);
+}
+
 static inline void _maru_validate_wakeContext(MARU_Context *context) {
     MARU_CONSTRAINT_CHECK(context != NULL);
 }
