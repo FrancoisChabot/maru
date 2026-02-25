@@ -5,7 +5,6 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "wayland_internal.h"
-#include "linux_controllers.h"
 
 #include <errno.h>
 #include <linux/input-event-codes.h>
@@ -554,8 +553,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   memset(((uint8_t *)ctx) + sizeof(MARU_Context_Base), 0,
          sizeof(MARU_Context_WL) - sizeof(MARU_Context_Base));
   ctx->wake_fd = -1;
-  _maru_linux_controllers_init(&ctx->base, &ctx->linux_common.controller);
-
+ 
   ctx->base.pub.backend_type = MARU_BACKEND_WAYLAND;
   ctx->base.tuning = create_info->tuning;
 
@@ -712,7 +710,6 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   }
 
   _maru_wayland_cancel_activation(ctx);
-  _maru_linux_controllers_cleanup(&ctx->base, &ctx->linux_common.controller);
   if (ctx->pump_pollfds.fds) {
     maru_context_free(&ctx->base, ctx->pump_pollfds.fds);
     ctx->pump_pollfds.fds = NULL;
@@ -830,8 +827,6 @@ typedef struct MARU_WLPumpStepState {
   bool have_libdecor_fd;
   bool separate_libdecor_fd;
   int libdecor_index;
-  const struct pollfd *controller_fds;
-  uint32_t controller_fd_count;
   int transfer_fd_count;
   int transfer_pfds_index;
   nfds_t nfds;
@@ -854,12 +849,6 @@ static bool _maru_wayland_pump_prepare_pollfds(MARU_Context_WL *ctx,
     }
   }
 
-  step->controller_fds = NULL;
-  step->controller_fd_count = 0;
-  _maru_linux_controllers_get_pollfds(
-      &ctx->base, &ctx->linux_common.controller, &step->controller_fds,
-      &step->controller_fd_count);
-
   step->transfer_fd_count = 0;
   for (MARU_LinuxDataTransfer *it = ctx->data_transfers; it; it = it->next) {
     ++step->transfer_fd_count;
@@ -872,7 +861,6 @@ static bool _maru_wayland_pump_prepare_pollfds(MARU_Context_WL *ctx,
   if (step->separate_libdecor_fd) {
     step->nfds++;
   }
-  step->nfds += (nfds_t)step->controller_fd_count;
   step->nfds += (nfds_t)step->transfer_fd_count;
 
   if ((uint32_t)step->nfds > ctx->pump_pollfds.capacity) {
@@ -905,11 +893,7 @@ static bool _maru_wayland_pump_prepare_pollfds(MARU_Context_WL *ctx,
     step->fds[write_index].revents = 0;
     write_index++;
   }
-  if (step->controller_fd_count > 0 && step->controller_fds) {
-    memcpy(&step->fds[write_index], step->controller_fds,
-           sizeof(struct pollfd) * (size_t)step->controller_fd_count);
-    write_index += (nfds_t)step->controller_fd_count;
-  }
+
   step->transfer_pfds_index = (int)write_index;
   if (step->transfer_fd_count > 0) {
     write_index += (nfds_t)maru_linux_dataexchange_fillPollFds(
@@ -1130,8 +1114,6 @@ static void _maru_wayland_pump_dispatch_deferred_resizes(MARU_Context_WL *ctx) {
 }
 
 static void _maru_wayland_pump_post_tick(MARU_Context_WL *ctx) {
-  // Second controller poll picks up fds that became ready during the wait.
-  _maru_linux_controllers_poll(&ctx->base, &ctx->linux_common.controller, false);
   _maru_wayland_check_activation(ctx);
   _maru_wayland_pump_dispatch_repeats(ctx);
   _maru_wayland_advance_cursor_animation(ctx);
@@ -1151,8 +1133,6 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   ctx->base.pump_ctx = &pump_ctx;
 
   _maru_drain_user_events(&ctx->base);
-  // First controller poll drains anything already pending before entering poll().
-  _maru_linux_controllers_poll(&ctx->base, &ctx->linux_common.controller, true);
   MARU_WLPumpStepState step = {0};
   if (!_maru_wayland_pump_prepare_pollfds(ctx, &step, &status)) {
     goto pump_exit;
