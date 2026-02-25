@@ -43,19 +43,6 @@ typedef struct MARU_ControllerInfo {
   bool is_standardized;
 } MARU_ControllerInfo;
 
-/** @brief Event payload for controller hotplug changes. */
-typedef struct MARU_ControllerConnectionEvent {
-  MARU_Controller *controller;
-  bool connected;
-} MARU_ControllerConnectionEvent;
-
-/** @brief Event payload for controller button state changes. */
-typedef struct MARU_ControllerButtonStateChangedEvent {
-  MARU_Controller *controller;
-  MARU_ButtonState state;
-  uint32_t button_id;
-} MARU_ControllerButtonStateChangedEvent;
-
 /** @brief Runtime state flags for a controller. */
 enum MARU_ControllerStateFlagBits {
   MARU_CONTROLLER_STATE_LOST = 1ULL << 0,
@@ -82,18 +69,6 @@ typedef struct MARU_HapticChannelInfo {
 /** @brief Event mask for controller button state changes. */
 #define MARU_MASK_CONTROLLER_BUTTON_STATE_CHANGED \
   MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED)
-
-/* ----- Accessors ----- */
-
-static inline const MARU_ControllerConnectionEvent *
-maru_asControllerConnection(const MARU_Event *ev) {
-  return (const MARU_ControllerConnectionEvent *)&ev->ext;
-}
-
-static inline const MARU_ControllerButtonStateChangedEvent *
-maru_asControllerButtonStateChanged(const MARU_Event *ev) {
-  return (const MARU_ControllerButtonStateChangedEvent *)&ev->ext;
-}
 
 /* ----- Passive Accessors (External Synchronization Required) ----- */
 

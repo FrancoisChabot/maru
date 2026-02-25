@@ -112,10 +112,8 @@ static void _wl_dispatch_controller_connection(MARU_Context_Base *ctx_base, MARU
                                                MARU_Controller_Linux *controller,
                                                bool connected) {
   MARU_Event evt = {0};
-  MARU_ControllerConnectionEvent *payload =
-      (MARU_ControllerConnectionEvent *)&evt.ext;
-  payload->controller = (MARU_Controller *)controller;
-  payload->connected = connected;
+  evt.controller_connection.controller = (MARU_Controller *)controller;
+  evt.controller_connection.connected = connected;
   _maru_dispatch_event(ctx_base, MARU_EVENT_CONTROLLER_CONNECTION_CHANGED,
                        NULL, &evt);
 }
@@ -125,11 +123,9 @@ static void _wl_dispatch_controller_button(MARU_Context_Base *ctx_base, MARU_Con
                                            uint32_t button_id,
                                            MARU_ButtonState state) {
   MARU_Event evt = {0};
-  MARU_ControllerButtonStateChangedEvent *payload =
-      (MARU_ControllerButtonStateChangedEvent *)&evt.ext;
-  payload->controller = (MARU_Controller *)controller;
-  payload->button_id = button_id;
-  payload->state = state;
+  evt.controller_button_state_changed.controller = (MARU_Controller *)controller;
+  evt.controller_button_state_changed.button_id = button_id;
+  evt.controller_button_state_changed.state = state;
   _maru_dispatch_event(ctx_base, MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED,
                        NULL, &evt);
 }

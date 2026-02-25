@@ -5,6 +5,7 @@
 #define MARU_EVENTS_H_INCLUDED
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "maru/c/core.h"
@@ -26,6 +27,8 @@ typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 /** @brief Opaque handle representing a physical monitor. */
 typedef struct MARU_Monitor MARU_Monitor;
+/** @brief Opaque handle representing a physical controller. */
+typedef struct MARU_Controller MARU_Controller;
 
 /** @brief Identifies one specific event kind delivered to callbacks. */
 typedef enum MARU_EventId {
@@ -291,6 +294,121 @@ typedef struct MARU_MonitorModeEvent {
   MARU_Monitor *monitor;
 } MARU_MonitorModeEvent;
 
+/** @brief Supported Drag and Drop actions for OS feedback. */
+typedef enum MARU_DropAction {
+  MARU_DROP_ACTION_NONE = 0,
+  MARU_DROP_ACTION_COPY = 1 << 0,
+  MARU_DROP_ACTION_MOVE = 1 << 1,
+  MARU_DROP_ACTION_LINK = 1 << 2,
+} MARU_DropAction;
+
+/** @brief Bitmask of allowed drop actions. */
+typedef uint32_t MARU_DropActionMask;
+
+/** @brief System-managed data exchange targets. */
+typedef enum MARU_DataExchangeTarget {
+  MARU_DATA_EXCHANGE_TARGET_CLIPBOARD = 0,
+  MARU_DATA_EXCHANGE_TARGET_PRIMARY = 1,
+  MARU_DATA_EXCHANGE_TARGET_DRAG_DROP = 2,
+} MARU_DataExchangeTarget;
+
+/** @brief A transient list of MIME type strings. */
+typedef struct MARU_MIMETypeList {
+  const char *const *mime_types;
+  uint32_t count;
+} MARU_MIMETypeList;
+
+/** @brief Flags that influence how data is provided for a request. */
+typedef enum MARU_DataProvideFlags {
+  MARU_DATA_PROVIDE_FLAG_NONE = 0,
+  MARU_DATA_PROVIDE_FLAG_ZERO_COPY = 1 << 0,
+} MARU_DataProvideFlags;
+
+/** @brief Controls application response to a drag-and-drop hover. */
+typedef struct MARU_DropFeedback {
+  MARU_DropAction *action;
+  void **session_userdata;
+} MARU_DropFeedback;
+
+/** @brief Payload for MARU_EVENT_DROP_ENTERED. */
+typedef struct MARU_DropEnterEvent {
+  MARU_Vec2Dip position;
+  MARU_DropFeedback *feedback;
+  const char **paths;
+  MARU_MIMETypeList available_types;
+  MARU_ModifierFlags modifiers;
+  uint16_t path_count;
+} MARU_DropEnterEvent;
+
+/** @brief Payload for MARU_EVENT_DROP_HOVERED. */
+typedef struct MARU_DropHoverEvent {
+  MARU_Vec2Dip position;
+  MARU_DropFeedback *feedback;
+  const char **paths;
+  MARU_MIMETypeList available_types;
+  MARU_ModifierFlags modifiers;
+  uint16_t path_count;
+} MARU_DropHoverEvent;
+
+/** @brief Payload for MARU_EVENT_DROP_EXITED. */
+typedef struct MARU_DropLeaveEvent {
+  void **session_userdata;
+} MARU_DropLeaveEvent;
+
+/** @brief Payload for MARU_EVENT_DROP_DROPPED. */
+typedef struct MARU_DropEvent {
+  MARU_Vec2Dip position;
+  void **session_userdata;
+  const char **paths;
+  MARU_MIMETypeList available_types;
+  MARU_ModifierFlags modifiers;
+  uint16_t path_count;
+} MARU_DropEvent;
+
+/** @brief Payload for MARU_EVENT_DATA_RECEIVED. */
+typedef struct MARU_DataReceivedEvent {
+  void *user_tag;
+  MARU_Status status;
+  MARU_DataExchangeTarget target;
+  const char *mime_type;
+  const void *data;
+  size_t size;
+} MARU_DataReceivedEvent;
+
+/** @brief Payload for MARU_EVENT_DATA_REQUESTED. */
+typedef struct MARU_DataRequestEvent {
+  MARU_DataExchangeTarget target;
+  const char *mime_type;
+  void *internal_handle;
+} MARU_DataRequestEvent;
+
+/** @brief Payload for MARU_EVENT_DATA_CONSUMED. */
+typedef struct MARU_DataConsumedEvent {
+  MARU_DataExchangeTarget target;
+  const char *mime_type;
+  const void *data;
+  size_t size;
+  MARU_DropAction action;
+} MARU_DataConsumedEvent;
+
+/** @brief Payload for MARU_EVENT_DRAG_FINISHED. */
+typedef struct MARU_DragFinishedEvent {
+  MARU_DropAction action;
+} MARU_DragFinishedEvent;
+
+/** @brief Event payload for controller hotplug changes. */
+typedef struct MARU_ControllerConnectionEvent {
+  MARU_Controller *controller;
+  bool connected;
+} MARU_ControllerConnectionEvent;
+
+/** @brief Event payload for controller button state changes. */
+typedef struct MARU_ControllerButtonStateChangedEvent {
+  MARU_Controller *controller;
+  MARU_ButtonState state;
+  uint32_t button_id;
+} MARU_ControllerButtonStateChangedEvent;
+
 /** @brief UTF-8 byte range. */
 typedef struct MARU_TextRangeUtf8 {
   uint32_t start_byte;
@@ -355,17 +473,21 @@ typedef struct MARU_Event {
     MARU_IdleEvent idle;
     MARU_MonitorConnectionEvent monitor_connection;
     MARU_MonitorModeEvent monitor_mode;
+    MARU_DropEnterEvent drop_enter;
+    MARU_DropHoverEvent drop_hover;
+    MARU_DropLeaveEvent drop_leave;
+    MARU_DropEvent drop;
+    MARU_DataReceivedEvent data_received;
+    MARU_DataRequestEvent data_requested;
+    MARU_DataConsumedEvent data_consumed;
+    MARU_DragFinishedEvent drag_finished;
+    MARU_ControllerConnectionEvent controller_connection;
+    MARU_ControllerButtonStateChangedEvent controller_button_state_changed;
     MARU_WindowFrameEvent frame;
     MARU_TextEditStartEvent text_edit_start;
     MARU_TextEditUpdateEvent text_edit_update;
     MARU_TextEditCommitEvent text_edit_commit;
     MARU_TextEditEndEvent text_edit_end;
-
-    /** @brief Reserved for extension payloads. Use maru_as...() accessors. */
-    struct {
-      uint64_t _align;
-      uint8_t bytes[56];
-    } ext;
 
     MARU_UserDefinedEvent user;
   };

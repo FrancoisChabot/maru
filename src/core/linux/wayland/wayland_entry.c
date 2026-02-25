@@ -14,53 +14,6 @@ extern MARU_Status maru_createVkSurface_WL(
     MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
-static MARU_Status maru_announceData_WL(MARU_Window *window,
-                                        MARU_DataExchangeTarget target,
-                                        const char **mime_types, uint32_t count,
-                                        MARU_DropActionMask allowed_actions) {
-  (void)window;
-  (void)target;
-  (void)mime_types;
-  (void)count;
-  (void)allowed_actions;
-  return MARU_FAILURE;
-}
-
-static MARU_Status
-maru_provideData_WL(const MARU_DataRequestEvent *request_event, const void *data,
-                    size_t size, MARU_DataProvideFlags flags) {
-  (void)request_event;
-  (void)data;
-  (void)size;
-  (void)flags;
-  return MARU_FAILURE;
-}
-
-static MARU_Status maru_requestData_WL(MARU_Window *window,
-                                       MARU_DataExchangeTarget target,
-                                       const char *mime_type, void *user_tag) {
-  (void)window;
-  (void)target;
-  (void)mime_type;
-  (void)user_tag;
-  return MARU_FAILURE;
-}
-
-static MARU_Status maru_dataexchange_enable_WL(MARU_Context *context) {
-  (void)context;
-  return MARU_FAILURE;
-}
-
-static MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
-                                                 MARU_DataExchangeTarget target,
-                                                 MARU_MIMETypeList *out_list) {
-  (void)window;
-  (void)target;
-  out_list->mime_types = NULL;
-  out_list->count = 0;
-  return MARU_FAILURE;
-}
-
 #ifdef MARU_INDIRECT_BACKEND
 static void maru_resetMonitorMetrics_WL(MARU_Monitor *monitor) {
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;

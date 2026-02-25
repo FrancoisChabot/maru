@@ -151,6 +151,8 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
     ctx->repeat.interval_ns = 0;
   }
 
+  _maru_wayland_dataexchange_onSeatCapabilities(ctx, wl_seat, caps);
+
   // Seat capabilities often arrive after windows are created; refresh text-input objects/state.
   for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
     MARU_Window_WL *window = (MARU_Window_WL *)it;
@@ -302,6 +304,7 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
   ctx->repeat.next_repeat_ns = 0;
   ctx->repeat.interval_ns = 0;
   ctx->cursor_animation.active = false;
+  _maru_wayland_dataexchange_onSeatRemoved(ctx);
 
   _wl_clear_idle_notification_only(ctx);
   _wl_update_cursor_shape_device(ctx);
@@ -384,6 +387,8 @@ static void _wl_handle_optional_global_removed(MARU_Context_WL *ctx,
         monitor->xdg_output = NULL;
       }
     }
+  } else if (strcmp(iface_name, "wl_data_device_manager") == 0) {
+    _maru_wayland_dataexchange_onSeatRemoved(ctx);
   }
 
   MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
@@ -690,6 +695,7 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   }
 
   _maru_cleanup_context_base(&ctx->base);
+  _maru_wayland_dataexchange_destroy(ctx);
 
   if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
     _maru_wayland_cleanup_libdecor(ctx);
@@ -823,6 +829,11 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   uint32_t controller_fd_count = 0;
   _maru_linux_controllers_get_pollfds(&ctx->base, &ctx->linux_common.controller, &controller_fds, &controller_fd_count);
 
+  int transfer_fd_count = 0;
+  for (MARU_LinuxDataTransfer *it = ctx->data_transfers; it; it = it->next) {
+    ++transfer_fd_count;
+  }
+
   nfds_t nfds = 2;
   const bool separate_libdecor_fd = have_libdecor_fd && (libdecor_fd != display_fd);
   int libdecor_index = -1;
@@ -830,6 +841,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     nfds++;
   }
   nfds += (nfds_t)controller_fd_count;
+  nfds += (nfds_t)transfer_fd_count;
 
   if ((uint32_t)nfds > ctx->pump_pollfds.capacity) {
     const size_t old_size = (size_t)ctx->pump_pollfds.capacity * sizeof(struct pollfd);
@@ -863,6 +875,11 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
     memcpy(&fds[write_index], controller_fds,
            sizeof(struct pollfd) * (size_t)controller_fd_count);
     write_index += (nfds_t)controller_fd_count;
+  }
+  const int transfer_pfds_index = (int)write_index;
+  if (transfer_fd_count > 0) {
+    write_index += (nfds_t)maru_linux_dataexchange_fillPollFds(
+        ctx->data_transfers, &fds[write_index], transfer_fd_count);
   }
 
   while (maru_wl_display_prepare_read(ctx, ctx->wl.display) != 0) {
@@ -944,6 +961,11 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
         status = MARU_ERROR_CONTEXT_LOST;
         goto pump_exit;
       }
+    }
+    if (transfer_fd_count > 0) {
+      maru_linux_dataexchange_processTransfers(
+          &ctx->base, &ctx->data_transfers, fds, transfer_pfds_index,
+          transfer_fd_count);
     }
   } else if (poll_result == 0) {
     maru_wl_display_cancel_read(ctx, ctx->wl.display);

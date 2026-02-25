@@ -40,7 +40,7 @@ void ControllerModule::retainController(MARU_Controller* controller) {
 void ControllerModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
     (void)window;
     if (type == MARU_EVENT_CONTROLLER_CONNECTION_CHANGED) {
-        const MARU_ControllerConnectionEvent* ev = maru_asControllerConnection(&event);
+        const MARU_ControllerConnectionEvent* ev = &event.controller_connection;
         if (!ev || !ev->controller) return;
         if (ev->connected) {
             retainController(ev->controller);

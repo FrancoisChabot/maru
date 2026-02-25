@@ -66,6 +66,7 @@ add_executable(maru_testbed
     testbed/modules/controller_module.cpp
     testbed/modules/instrumentation_module.cpp
     testbed/modules/composition_module.cpp
+    testbed/modules/dataexchange_module.cpp
 )
 target_link_libraries(maru_testbed PRIVATE maru::maru imgui)
 set_target_properties(maru_testbed PROPERTIES CXX_STANDARD 20)

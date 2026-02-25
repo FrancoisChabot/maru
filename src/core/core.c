@@ -313,11 +313,21 @@ MARU_API MARU_Status maru_provideData(const MARU_DataRequestEvent *request_event
                                       const void *data, size_t size,
                                       MARU_DataProvideFlags flags) {
   MARU_API_VALIDATE(provideData, request_event, data, size, flags);
+#ifdef MARU_INDIRECT_BACKEND
+  const MARU_DataRequestHandleBase *handle =
+      (const MARU_DataRequestHandleBase *)request_event->internal_handle;
+  if (!handle || !handle->ctx_base || !handle->ctx_base->backend ||
+      !handle->ctx_base->backend->provideData) {
+    return MARU_FAILURE;
+  }
+  return handle->ctx_base->backend->provideData(request_event, data, size, flags);
+#else
   (void)request_event;
   (void)data;
   (void)size;
   (void)flags;
   return MARU_FAILURE;
+#endif
 }
 
 MARU_API MARU_Status maru_requestData(MARU_Window *window,

@@ -44,6 +44,9 @@ typedef struct MARU_PumpContext {
 } MARU_PumpContext;
 
 typedef struct MARU_Window_Base MARU_Window_Base;
+typedef struct MARU_DataRequestHandleBase {
+  struct MARU_Context_Base *ctx_base;
+} MARU_DataRequestHandleBase;
 
 typedef struct MARU_Context_Base {
   MARU_ContextExposed pub;

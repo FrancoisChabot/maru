@@ -5,6 +5,7 @@
 #define MARU_WAYLAND_INTERNAL_H_INCLUDED
 
 #include "linux_internal.h"
+#include "linux_dataexchange.h"
 #include "dlib/wayland-client.h"
 #include "dlib/wayland-cursor.h"
 #include "dlib/libdecor.h"
@@ -12,6 +13,7 @@
 
 typedef struct MARU_Window_WL MARU_Window_WL;
 typedef struct MARU_Cursor_WL MARU_Cursor_WL;
+typedef struct MARU_Context_WL MARU_Context_WL;
 
 typedef struct MARU_WaylandCursorFrame {
   struct wl_buffer *buffer;
@@ -25,6 +27,35 @@ typedef struct MARU_WaylandCursorFrame {
   uint32_t delay_ms;
   bool owns_buffer;
 } MARU_WaylandCursorFrame;
+
+typedef struct MARU_WaylandDataOfferMeta {
+  struct wl_data_offer *offer;
+  struct MARU_Context_WL *ctx;
+  const char **mime_types;
+  uint32_t mime_count;
+  uint32_t mime_capacity;
+  struct MARU_WaylandDataOfferMeta *next;
+} MARU_WaylandDataOfferMeta;
+
+typedef struct MARU_WaylandClipboardState {
+  struct wl_data_device *device;
+  struct wl_data_offer *offer;
+  struct wl_data_source *source;
+  uint32_t serial;
+
+  const char **announced_mime_types;
+  uint32_t announced_mime_count;
+  uint32_t announced_mime_capacity;
+
+  uint8_t *read_cache;
+  size_t read_cache_size;
+  size_t read_cache_capacity;
+
+  const char **mime_query_ptr;
+  uint32_t mime_query_count;
+
+  MARU_WaylandDataOfferMeta *offer_metas;
+} MARU_WaylandClipboardState;
 
 typedef struct MARU_Context_WL {
   MARU_Context_Base base;
@@ -102,6 +133,9 @@ typedef struct MARU_Context_WL {
     struct pollfd *fds;
     uint32_t capacity;
   } pump_pollfds;
+
+  MARU_WaylandClipboardState clipboard;
+  MARU_LinuxDataTransfer *data_transfers;
 } MARU_Context_WL;
 
 typedef struct MARU_Window_WL {
@@ -382,6 +416,23 @@ MARU_Status maru_setControllerHapticLevels_WL(MARU_Controller *controller,
                                               uint32_t first_haptic,
                                               uint32_t count,
                                               const MARU_Scalar *intensities);
+MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
+                                 const char **mime_types, uint32_t count,
+                                 MARU_DropActionMask allowed_actions);
+MARU_Status maru_provideData_WL(const MARU_DataRequestEvent *request_event,
+                                const void *data, size_t size,
+                                MARU_DataProvideFlags flags);
+MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
+                                const char *mime_type, void *user_tag);
+MARU_Status maru_dataexchange_enable_WL(MARU_Context *context);
+MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
+                                          MARU_DataExchangeTarget target,
+                                          MARU_MIMETypeList *out_list);
+void _maru_wayland_dataexchange_onSeatCapabilities(MARU_Context_WL *ctx,
+                                                   struct wl_seat *seat,
+                                                   uint32_t caps);
+void _maru_wayland_dataexchange_onSeatRemoved(MARU_Context_WL *ctx);
+void _maru_wayland_dataexchange_destroy(MARU_Context_WL *ctx);
 
 void _maru_wayland_bind_output(MARU_Context_WL *ctx, uint32_t name, uint32_t version);
 void _maru_wayland_remove_output(MARU_Context_WL *ctx, uint32_t name);
