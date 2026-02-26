@@ -169,9 +169,12 @@ void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window) {
 }
 
 MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
+  if (!window_handle) {
+    return MARU_FAILURE;
+  }
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-  if (!window || !ctx || !window->wl.surface) {
+  if (!ctx || !window->wl.surface) {
     return MARU_FAILURE;
   }
 

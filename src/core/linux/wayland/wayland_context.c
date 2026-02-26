@@ -571,6 +571,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_WL));
 #endif
   if (!_maru_wayland_init_context_mouse_channels(ctx)) {
+    _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -600,6 +601,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   if (!maru_load_wayland_symbols(&ctx->base, &ctx->dlib.wl, &ctx->dlib.wlc,
                                  &ctx->linux_common.xkb_lib,
                                  &ctx->dlib.opt.decor)) {
+    _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -609,6 +611,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
                            MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                            "Failed to create wake eventfd");
+    _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -618,6 +621,8 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                            MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                            "Failed to initialize Linux common context");
     close(ctx->wake_fd);
+    ctx->wake_fd = -1;
+    _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -701,16 +706,9 @@ cleanup_symbols:
     close(ctx->wake_fd);
     ctx->wake_fd = -1;
   }
-  if (ctx->base.mouse_button_states) {
-    maru_context_free(&ctx->base, ctx->base.mouse_button_states);
-    ctx->base.mouse_button_states = NULL;
-  }
-  if (ctx->base.mouse_button_channels) {
-    maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
-    ctx->base.mouse_button_channels = NULL;
-  }
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_linux_common_cleanup(&ctx->linux_common);
+  _maru_cleanup_context_base(&ctx->base);
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
   maru_context_free(&ctx->base, ctx);
@@ -732,6 +730,7 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   }
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
+  _maru_linux_common_cleanup(&ctx->linux_common);
   _maru_cleanup_context_base(&ctx->base);
   _maru_wayland_dataexchange_destroy(ctx);
 
@@ -795,8 +794,6 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
 
-
-  _maru_linux_common_cleanup(&ctx->linux_common);
 
   close(ctx->wake_fd);
   ctx->wake_fd = -1;
@@ -1157,6 +1154,9 @@ static void _maru_wayland_pump_post_tick(MARU_Context_WL *ctx) {
 MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
                                MARU_EventCallback callback, void *userdata) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
+  if (!callback) {
+    return MARU_FAILURE;
+  }
   if (maru_isContextLost(context)) {
     return MARU_ERROR_CONTEXT_LOST;
   }
@@ -1166,6 +1166,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
 
+  _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_drain_queued_events(&ctx->base);
   MARU_WLPumpStepState step = {0};
   if (!_maru_wayland_pump_prepare_pollfds(ctx, &step, &status)) {
@@ -1181,6 +1182,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   if (!_maru_wayland_pump_dispatch_and_validate(ctx, &step, &status)) {
     goto pump_exit;
   }
+  _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_wayland_pump_post_tick(ctx);
 
 pump_exit:;

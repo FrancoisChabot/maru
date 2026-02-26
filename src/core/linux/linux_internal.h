@@ -48,11 +48,11 @@ typedef struct MARU_LinuxController {
 
   // Mapping from evdev code to the indices in the arrays above.
   // -1 indicates no mapping.
-  int evdev_to_button[KEY_MAX];
-  int evdev_to_analog[ABS_MAX];
+  int16_t evdev_to_button[KEY_CNT];
+  int16_t evdev_to_analog[ABS_CNT];
 
-  // Hardware info for normalization
-  struct input_absinfo abs_info[ABS_MAX];
+  // Hardware info for normalization, indexed by analog channel id.
+  struct input_absinfo *analog_abs_info;
 
   struct MARU_LinuxController *next;
 } MARU_LinuxController;
@@ -62,6 +62,22 @@ typedef struct MARU_LinuxDeviceDiscovery {
   char *syspath;
   char *devnode;
 } MARU_LinuxDeviceDiscovery;
+
+typedef enum MARU_LinuxHotplugOpType {
+  MARU_LINUX_HOTPLUG_OP_ADD = 0,
+  MARU_LINUX_HOTPLUG_OP_REMOVE = 1,
+} MARU_LinuxHotplugOpType;
+
+#define MARU_LINUX_HOTPLUG_QUEUE_CAPACITY 8u
+#define MARU_LINUX_MAX_SYSPATH_BYTES 512u
+#define MARU_LINUX_MAX_DEVNODE_BYTES 512u
+
+typedef struct MARU_LinuxHotplugOp {
+  MARU_LinuxHotplugOpType type;
+  int fd; // valid for ADD; -1 for REMOVE
+  char syspath[MARU_LINUX_MAX_SYSPATH_BYTES];
+  char devnode[MARU_LINUX_MAX_DEVNODE_BYTES];
+} MARU_LinuxHotplugOp;
 
 typedef struct MARU_Context_Linux_Common {
   MARU_Context_Base *ctx_base;
@@ -98,6 +114,12 @@ typedef struct MARU_Context_Linux_Common {
     struct udev *udev;
     struct udev_monitor *udev_monitor;
     int udev_fd;
+
+    MARU_LinuxHotplugOp hotplug_queue[MARU_LINUX_HOTPLUG_QUEUE_CAPACITY];
+    _Atomic uint32_t hotplug_head;
+    _Atomic uint32_t hotplug_tail;
+    _Atomic bool hotplug_overflowed;
+    _Atomic bool hotplug_resync_in_progress;
   } worker;
 
   MARU_LinuxController *controllers;

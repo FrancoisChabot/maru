@@ -89,7 +89,17 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
 
   uint32_t capacity = ctx_base->tuning.user_event_queue_size;
   if (capacity == 0) capacity = 256;
-  _maru_event_queue_init(&ctx_base->queued_events, ctx_base, capacity);
+  if ((capacity & (capacity - 1u)) != 0u) {
+    uint32_t rounded = 1u;
+    while (rounded < capacity && rounded < 0x80000000u) {
+      rounded <<= 1u;
+    }
+    capacity = rounded;
+  }
+  if (!_maru_event_queue_init(&ctx_base->queued_events, ctx_base, capacity)) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx_base, MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+                           "Failed to initialize internal event queue");
+  }
 
   ctx_base->metrics.user_events = &ctx_base->user_event_metrics;
   ctx_base->pub.metrics = &ctx_base->metrics;

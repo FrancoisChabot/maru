@@ -12,13 +12,14 @@
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #define TEST_BIT(bit, array) ((array[(size_t)(bit) / (8 * sizeof(unsigned long))] >> ((size_t)(bit) % (8 * sizeof(unsigned long)))) & 1)
 
 static bool _maru_linux_is_gamepad(int fd) {
   unsigned long ev_bits[EV_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
-  unsigned long key_bits[KEY_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
-  unsigned long abs_bits[ABS_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
+  unsigned long key_bits[KEY_CNT / (8 * sizeof(unsigned long)) + 1] = {0};
+  unsigned long abs_bits[ABS_CNT / (8 * sizeof(unsigned long)) + 1] = {0};
 
   if (ioctl(fd, EVIOCGBIT(0, sizeof(ev_bits)), ev_bits) < 0) return false;
 
@@ -36,6 +37,88 @@ static bool _maru_linux_is_gamepad(int fd) {
                   TEST_BIT(ABS_Y, abs_bits);
 
   return has_gamepad_button && has_axes;
+}
+
+static bool _maru_linux_hotplug_enqueue(MARU_Context_Linux_Common *common,
+                                        MARU_LinuxHotplugOpType type, int fd,
+                                        const char *syspath,
+                                        const char *devnode) {
+  if (!common || !syspath) {
+    if (fd >= 0) close(fd);
+    return false;
+  }
+
+  if (atomic_load_explicit(&common->worker.hotplug_resync_in_progress,
+                           memory_order_acquire)) {
+    if (fd >= 0) close(fd);
+    atomic_store_explicit(&common->worker.hotplug_overflowed, true,
+                          memory_order_release);
+    return false;
+  }
+
+  const size_t syspath_len = strlen(syspath);
+  const size_t devnode_len = devnode ? strlen(devnode) : 0u;
+  if (syspath_len >= MARU_LINUX_MAX_SYSPATH_BYTES ||
+      devnode_len >= MARU_LINUX_MAX_DEVNODE_BYTES) {
+    if (fd >= 0) close(fd);
+    atomic_store_explicit(&common->worker.hotplug_overflowed, true,
+                          memory_order_release);
+    return false;
+  }
+
+  const uint32_t capacity = MARU_LINUX_HOTPLUG_QUEUE_CAPACITY;
+  uint32_t head = atomic_load_explicit(&common->worker.hotplug_head,
+                                       memory_order_relaxed);
+  const uint32_t tail = atomic_load_explicit(&common->worker.hotplug_tail,
+                                             memory_order_acquire);
+
+  if ((head - tail) >= capacity) {
+    if (fd >= 0) close(fd);
+    atomic_store_explicit(&common->worker.hotplug_overflowed, true,
+                          memory_order_release);
+    return false;
+  }
+
+  MARU_LinuxHotplugOp *slot = &common->worker.hotplug_queue[head % capacity];
+  slot->type = type;
+  slot->fd = fd;
+  memcpy(slot->syspath, syspath, syspath_len + 1u);
+  if (devnode) {
+    memcpy(slot->devnode, devnode, devnode_len + 1u);
+  } else {
+    slot->devnode[0] = '\0';
+  }
+
+  head++;
+  atomic_store_explicit(&common->worker.hotplug_head, head, memory_order_release);
+  return true;
+}
+
+static bool _maru_linux_hotplug_try_dequeue(MARU_Context_Linux_Common *common,
+                                            MARU_LinuxHotplugOp *out_op) {
+  if (!common || !out_op) return false;
+
+  const uint32_t tail = atomic_load_explicit(&common->worker.hotplug_tail,
+                                             memory_order_relaxed);
+  const uint32_t head = atomic_load_explicit(&common->worker.hotplug_head,
+                                             memory_order_acquire);
+  if (tail == head) return false;
+
+  const uint32_t capacity = MARU_LINUX_HOTPLUG_QUEUE_CAPACITY;
+  *out_op = common->worker.hotplug_queue[tail % capacity];
+  atomic_store_explicit(&common->worker.hotplug_tail, tail + 1u,
+                        memory_order_release);
+  return true;
+}
+
+static void _maru_linux_hotplug_queue_cleanup(MARU_Context_Linux_Common *common) {
+  if (!common) return;
+  MARU_LinuxHotplugOp op;
+  while (_maru_linux_hotplug_try_dequeue(common, &op)) {
+    if (op.type == MARU_LINUX_HOTPLUG_OP_ADD && op.fd >= 0) {
+      close(op.fd);
+    }
+  }
 }
 
 static void _maru_linux_worker_process_device(MARU_Context_Linux_Common* common, struct udev_device* dev, const char* action) {
@@ -60,27 +143,13 @@ static void _maru_linux_worker_process_device(MARU_Context_Linux_Common* common,
       return;
     }
 
-    MARU_LinuxDeviceDiscovery* discovery = malloc(sizeof(MARU_LinuxDeviceDiscovery));
-    if (!discovery) {
-      close(fd);
-      return;
-    }
-    discovery->fd = fd;
-    discovery->syspath = strdup(syspath);
-    discovery->devnode = strdup(devnode);
-
-    MARU_Event evt = {0};
-    evt.user.userdata = discovery;
-    _maru_post_event_internal(common->ctx_base, (MARU_EventId)MARU_EVENT_INTERNAL_LINUX_DEVICE_ADD, NULL, &evt);
+    (void)_maru_linux_hotplug_enqueue(common, MARU_LINUX_HOTPLUG_OP_ADD, fd,
+                                      syspath, devnode);
     maru_wakeContext((MARU_Context*)common->ctx_base);
 
   } else if (action && strcmp(action, "remove") == 0) {
-    MARU_Event evt = {0};
-    // We need to pass the syspath to identify which one to remove.
-    // We'll use the raw_payload for the string if it fits, or allocate.
-    // syspath can be long, so let's allocate.
-    evt.user.userdata = strdup(syspath);
-    _maru_post_event_internal(common->ctx_base, (MARU_EventId)MARU_EVENT_INTERNAL_LINUX_DEVICE_REMOVE, NULL, &evt);
+    (void)_maru_linux_hotplug_enqueue(common, MARU_LINUX_HOTPLUG_OP_REMOVE, -1,
+                                      syspath, NULL);
     maru_wakeContext((MARU_Context*)common->ctx_base);
   }
 }
@@ -146,6 +215,12 @@ bool _maru_linux_common_init(MARU_Context_Linux_Common* common, MARU_Context_Bas
   common->worker.udev = NULL;
   common->worker.udev_monitor = NULL;
   common->worker.udev_fd = -1;
+  atomic_init(&common->worker.hotplug_head, 0u);
+  atomic_init(&common->worker.hotplug_tail, 0u);
+  atomic_init(&common->worker.hotplug_overflowed, false);
+  atomic_init(&common->worker.hotplug_resync_in_progress, false);
+  atomic_init(&common->worker.has_message, false);
+  common->worker.thread_started = false;
 
   if (maru_linux_udev_load(ctx_base, &common->worker.udev_lib)) {
     common->worker.udev = common->worker.udev_lib.udev_new();
@@ -178,9 +253,6 @@ bool _maru_linux_common_init(MARU_Context_Linux_Common* common, MARU_Context_Bas
       }
     }
   }
-
-  atomic_init(&common->worker.has_message, false);
-  common->worker.thread_started = false;
 
   if (pthread_create(&common->worker.thread, NULL, _maru_linux_worker_main, common) != 0) {
     _maru_linux_common_cleanup(common);
@@ -219,6 +291,11 @@ void _maru_linux_common_cleanup(MARU_Context_Linux_Common* common) {
   if (common->worker.udev_lib.base.available) {
     maru_linux_udev_unload(&common->worker.udev_lib);
   }
+  _maru_linux_hotplug_queue_cleanup(common);
+  atomic_store_explicit(&common->worker.hotplug_head, 0u, memory_order_relaxed);
+  atomic_store_explicit(&common->worker.hotplug_tail, 0u, memory_order_relaxed);
+  atomic_store_explicit(&common->worker.hotplug_overflowed, false, memory_order_relaxed);
+  atomic_store_explicit(&common->worker.hotplug_resync_in_progress, false, memory_order_relaxed);
 
   while (common->controllers) {
     MARU_LinuxController* ctrl = common->controllers;
@@ -242,6 +319,8 @@ void _maru_linux_common_cleanup(MARU_Context_Linux_Common* common) {
 }
 
 void _maru_linux_controller_destroy(MARU_Context_Base* ctx_base, MARU_LinuxController* ctrl) {
+  if (!ctx_base || !ctrl) return;
+
   if (ctrl->effect_id >= 0) {
     ioctl(ctrl->fd, (unsigned long)EVIOCRMFF, ctrl->effect_id);
   }
@@ -249,21 +328,38 @@ void _maru_linux_controller_destroy(MARU_Context_Base* ctx_base, MARU_LinuxContr
   if (ctrl->fd >= 0) {
     close(ctrl->fd);
   }
-  free(ctrl->syspath);
-  free(ctrl->devnode);
-  free(ctrl->name);
+  maru_context_free(ctx_base, ctrl->syspath);
+  maru_context_free(ctx_base, ctrl->devnode);
+  maru_context_free(ctx_base, ctrl->name);
   for (uint32_t i = 0; i < ctrl->allocated_name_count; ++i) {
-    free((void*)ctrl->allocated_names[i]);
+    maru_context_free(ctx_base, (void*)ctrl->allocated_names[i]);
   }
   maru_context_free(ctx_base, ctrl);
 }
 
-static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Common* common, MARU_LinuxDeviceDiscovery* discovery) {
-  int fd = discovery->fd;
+static char *_maru_linux_strdup_ctx(MARU_Context_Base *ctx_base, const char *src) {
+  if (!ctx_base || !src) return NULL;
+  const size_t len = strlen(src);
+  char *dst = (char *)maru_context_alloc(ctx_base, len + 1u);
+  if (!dst) return NULL;
+  memcpy(dst, src, len + 1u);
+  return dst;
+}
+
+static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Common* common,
+                                                           int fd,
+                                                           const char *syspath,
+                                                           const char *devnode) {
+  if (!common || fd < 0 || !syspath || !devnode) return NULL;
+
+  _Static_assert(MARU_CONTROLLER_BUTTON_STANDARD_COUNT <= INT16_MAX,
+                 "Controller button count must fit int16_t");
+  _Static_assert(MARU_CONTROLLER_ANALOG_STANDARD_COUNT <= INT16_MAX,
+                 "Controller analog count must fit int16_t");
   
   unsigned long ev_bits[EV_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
-  unsigned long key_bits[KEY_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
-  unsigned long abs_bits[ABS_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
+  unsigned long key_bits[KEY_CNT / (8 * sizeof(unsigned long)) + 1] = {0};
+  unsigned long abs_bits[ABS_CNT / (8 * sizeof(unsigned long)) + 1] = {0};
   unsigned long ff_bits[FF_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
 
   if (ioctl(fd, EVIOCGBIT(0, sizeof(ev_bits)), ev_bits) < 0) return NULL;
@@ -282,7 +378,7 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   uint32_t btn_count = MARU_CONTROLLER_BUTTON_STANDARD_COUNT;
 
   // 2. Identify Non-Standard Buttons
-  for (int i = BTN_MISC; i < KEY_MAX; ++i) {
+  for (int i = BTN_MISC; i < KEY_CNT; ++i) {
     if (TEST_BIT(i, key_bits)) {
       bool is_std = false;
       for (uint32_t j = 0; j < MARU_CONTROLLER_BUTTON_STANDARD_COUNT; ++j) {
@@ -301,7 +397,7 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   uint32_t abs_count = MARU_CONTROLLER_ANALOG_STANDARD_COUNT;
 
   // 4. Identify Non-Standard Axes
-  for (int i = 0; i < ABS_MAX; ++i) {
+  for (int i = 0; i < ABS_CNT; ++i) {
     if (TEST_BIT(i, abs_bits)) {
       bool is_std = false;
       for (uint32_t j = 0; j < MARU_CONTROLLER_ANALOG_STANDARD_COUNT; ++j) {
@@ -337,12 +433,23 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   
   size_t abs_states_offset = total_size;
   total_size += ALIGN_UP(abs_count * sizeof(MARU_AnalogInputState));
+
+  size_t abs_info_offset = total_size;
+  total_size += ALIGN_UP(abs_count * sizeof(struct input_absinfo));
   
   size_t haptic_channels_offset = total_size;
   total_size += ALIGN_UP(haptic_count * sizeof(MARU_HapticChannelInfo));
   
+  uint32_t dynamic_name_capacity = 0u;
+  if (btn_count > MARU_CONTROLLER_BUTTON_STANDARD_COUNT) {
+    dynamic_name_capacity += (btn_count - MARU_CONTROLLER_BUTTON_STANDARD_COUNT);
+  }
+  if (abs_count > MARU_CONTROLLER_ANALOG_STANDARD_COUNT) {
+    dynamic_name_capacity += (abs_count - MARU_CONTROLLER_ANALOG_STANDARD_COUNT);
+  }
+
   size_t allocated_names_offset = total_size;
-  total_size += ALIGN_UP((btn_count + abs_count + haptic_count) * sizeof(char*));
+  total_size += ALIGN_UP(dynamic_name_capacity * sizeof(char*));
 
   MARU_LinuxController* ctrl = maru_context_alloc(common->ctx_base, total_size);
   if (!ctrl) return NULL;
@@ -353,12 +460,17 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   ctrl->button_states = (MARU_ButtonState8*)(base_ptr + btn_states_offset);
   ctrl->analog_channels = (MARU_AnalogChannelInfo*)(base_ptr + abs_channels_offset);
   ctrl->analog_states = (MARU_AnalogInputState*)(base_ptr + abs_states_offset);
+  ctrl->analog_abs_info = (struct input_absinfo *)(base_ptr + abs_info_offset);
   ctrl->haptic_channels = (MARU_HapticChannelInfo*)(base_ptr + haptic_channels_offset);
   ctrl->allocated_names = (char**)(base_ptr + allocated_names_offset);
 
   ctrl->fd = fd;
-  ctrl->syspath = discovery->syspath;
-  ctrl->devnode = discovery->devnode;
+  ctrl->syspath = _maru_linux_strdup_ctx(common->ctx_base, syspath);
+  ctrl->devnode = _maru_linux_strdup_ctx(common->ctx_base, devnode);
+  if (!ctrl->syspath || !ctrl->devnode) {
+    _maru_linux_controller_destroy(common->ctx_base, ctrl);
+    return NULL;
+  }
   ctrl->base.context = (MARU_Context*)common->ctx_base;
   ctrl->effect_id = -1;
   atomic_init(&ctrl->ref_count, 1u);
@@ -377,25 +489,25 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   }
 
   // Initialize mappings
-  for (int i = 0; i < KEY_MAX; ++i) ctrl->evdev_to_button[i] = -1;
-  for (int i = 0; i < ABS_MAX; ++i) ctrl->evdev_to_analog[i] = -1;
+  for (int i = 0; i < KEY_CNT; ++i) ctrl->evdev_to_button[i] = -1;
+  for (int i = 0; i < ABS_CNT; ++i) ctrl->evdev_to_analog[i] = -1;
 
   uint32_t current_btn = 0;
   for (uint32_t i = 0; i < MARU_CONTROLLER_BUTTON_STANDARD_COUNT; ++i) {
     if (TEST_BIT(std_buttons[i], key_bits)) {
-      ctrl->evdev_to_button[std_buttons[i]] = (int)i;
+      ctrl->evdev_to_button[std_buttons[i]] = (int16_t)i;
     }
   }
   current_btn = MARU_CONTROLLER_BUTTON_STANDARD_COUNT;
 
-  for (int i = BTN_MISC; i < KEY_MAX; ++i) {
+  for (int i = BTN_MISC; i < KEY_CNT; ++i) {
     if (TEST_BIT(i, key_bits)) {
       bool is_std = false;
       for (uint32_t j = 0; j < MARU_CONTROLLER_BUTTON_STANDARD_COUNT; ++j) {
         if (std_buttons[j] == i) { is_std = true; break; }
       }
       if (!is_std) {
-        ctrl->evdev_to_button[i] = (int)current_btn++;
+        ctrl->evdev_to_button[i] = (int16_t)current_btn++;
       }
     }
   }
@@ -403,21 +515,24 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   uint32_t current_abs = 0;
   for (uint32_t i = 0; i < MARU_CONTROLLER_ANALOG_STANDARD_COUNT; ++i) {
     if (TEST_BIT(std_abs[i], abs_bits)) {
-      ctrl->evdev_to_analog[std_abs[i]] = (int)i;
-      ioctl(fd, (unsigned long)EVIOCGABS((unsigned int)std_abs[i]), &ctrl->abs_info[std_abs[i]]);
+      ctrl->evdev_to_analog[std_abs[i]] = (int16_t)i;
+      ioctl(fd, (unsigned long)EVIOCGABS((unsigned int)std_abs[i]),
+            &ctrl->analog_abs_info[i]);
     }
   }
   current_abs = MARU_CONTROLLER_ANALOG_STANDARD_COUNT;
 
-  for (int i = 0; i < ABS_MAX; ++i) {
+  for (int i = 0; i < ABS_CNT; ++i) {
     if (TEST_BIT(i, abs_bits)) {
       bool is_std = false;
       for (uint32_t j = 0; j < MARU_CONTROLLER_ANALOG_STANDARD_COUNT; ++j) {
         if (std_abs[j] == i) { is_std = true; break; }
       }
       if (!is_std) {
-        ctrl->evdev_to_analog[i] = (int)current_abs++;
-        ioctl(fd, (unsigned long)EVIOCGABS((unsigned int)i), &ctrl->abs_info[i]);
+        const uint32_t idx = current_abs++;
+        ctrl->evdev_to_analog[i] = (int16_t)idx;
+        ioctl(fd, (unsigned long)EVIOCGABS((unsigned int)i),
+              &ctrl->analog_abs_info[idx]);
       }
     }
   }
@@ -454,12 +569,16 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
     } else {
       // Find the evdev code for this non-standard button
       int code = -1;
-      for (int c = 0; c < KEY_MAX; ++c) {
+      for (int c = 0; c < KEY_CNT; ++c) {
         if (ctrl->evdev_to_button[c] == (int)i) { code = c; break; }
       }
       char buf[32];
       snprintf(buf, sizeof(buf), "Button %d", code);
-      char *n = strdup(buf);
+      char *n = _maru_linux_strdup_ctx(common->ctx_base, buf);
+      if (!n) {
+        _maru_linux_controller_destroy(common->ctx_base, ctrl);
+        return NULL;
+      }
       ctrl->button_channels[i].name = n;
       ctrl->allocated_names[ctrl->allocated_name_count++] = n;
     }
@@ -470,12 +589,16 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
       ctrl->analog_channels[i].name = std_analog_names[i];
     } else {
       int code = -1;
-      for (int c = 0; c < ABS_MAX; ++c) {
+      for (int c = 0; c < ABS_CNT; ++c) {
         if (ctrl->evdev_to_analog[c] == (int)i) { code = c; break; }
       }
       char buf[32];
       snprintf(buf, sizeof(buf), "Axis %d", code);
-      char *n = strdup(buf);
+      char *n = _maru_linux_strdup_ctx(common->ctx_base, buf);
+      if (!n) {
+        _maru_linux_controller_destroy(common->ctx_base, ctrl);
+        return NULL;
+      }
       ctrl->analog_channels[i].name = n;
       ctrl->allocated_names[ctrl->allocated_name_count++] = n;
     }
@@ -487,72 +610,291 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
 
   char name[256];
   if (ioctl(fd, (unsigned long)EVIOCGNAME((unsigned int)sizeof(name)), name) > 0) {
-    ctrl->name = strdup(name);
+    ctrl->name = _maru_linux_strdup_ctx(common->ctx_base, name);
   } else {
-    ctrl->name = strdup("Unknown Linux Controller");
+    ctrl->name = _maru_linux_strdup_ctx(common->ctx_base, "Unknown Linux Controller");
+  }
+
+  if (!ctrl->name) {
+    _maru_linux_controller_destroy(common->ctx_base, ctrl);
+    return NULL;
   }
 
   return ctrl;
 }
 
-void _maru_linux_common_handle_internal_event(MARU_Context_Linux_Common *common, MARU_InternalEventId type, MARU_Window *window, const MARU_Event *event) {
-  (void)window;
-  if (type == MARU_EVENT_INTERNAL_LINUX_DEVICE_ADD) {
-    MARU_LinuxDeviceDiscovery* discovery = (MARU_LinuxDeviceDiscovery*)event->user.userdata;
-    
-    MARU_LinuxController* ctrl = _maru_linux_controller_create(common, discovery);
-    if (!ctrl) {
-      close(discovery->fd);
-      free(discovery->syspath);
-      free(discovery->devnode);
-      free(discovery);
+static MARU_LinuxController *_maru_linux_find_controller_by_syspath(
+    MARU_Context_Linux_Common *common, const char *syspath) {
+  if (!common || !syspath) return NULL;
+  for (MARU_LinuxController *it = common->controllers; it; it = it->next) {
+    if (it->syspath && strcmp(it->syspath, syspath) == 0) return it;
+  }
+  return NULL;
+}
+
+static void _maru_linux_emit_controller_connection_event(
+    MARU_Context_Linux_Common *common, MARU_LinuxController *ctrl,
+    bool connected) {
+  if (!common || !ctrl) return;
+  MARU_Event pub_evt = {0};
+  pub_evt.controller_connection.controller = (MARU_Controller *)ctrl;
+  pub_evt.controller_connection.connected = connected;
+  _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_CONNECTION_CHANGED,
+                       NULL, &pub_evt);
+}
+
+static void _maru_linux_remove_controller_by_syspath(
+    MARU_Context_Linux_Common *common, const char *syspath) {
+  if (!common || !syspath) return;
+
+  MARU_LinuxController **curr = &common->controllers;
+  while (*curr) {
+    if ((*curr)->syspath && strcmp((*curr)->syspath, syspath) == 0) {
+      MARU_LinuxController *to_remove = *curr;
+      *curr = to_remove->next;
+      common->controller_count--;
+
+      _maru_linux_emit_controller_connection_event(common, to_remove, false);
+
+      to_remove->is_active = false;
+      to_remove->base.flags |= MARU_CONTROLLER_STATE_LOST;
+
+      uint32_t current =
+          atomic_load_explicit(&to_remove->ref_count, memory_order_acquire);
+      while (current > 0) {
+        if (atomic_compare_exchange_weak_explicit(
+                &to_remove->ref_count, &current, current - 1u,
+                memory_order_acq_rel, memory_order_acquire)) {
+          if (current == 1u) {
+            _maru_linux_controller_destroy(common->ctx_base, to_remove);
+          }
+          break;
+        }
+      }
       return;
     }
+    curr = &((*curr)->next);
+  }
+}
 
-    ctrl->next = common->controllers;
-    common->controllers = ctrl;
-    common->controller_count++;
+static void _maru_linux_handle_hotplug_add(MARU_Context_Linux_Common *common,
+                                           int fd, const char *syspath,
+                                           const char *devnode) {
+  if (!common || !syspath || !devnode) {
+    if (fd >= 0) close(fd);
+    return;
+  }
 
-    MARU_Event pub_evt = {0};
-    pub_evt.controller_connection.controller = (MARU_Controller*)ctrl;
-    pub_evt.controller_connection.connected = true;
-    _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_CONNECTION_CHANGED, NULL, &pub_evt);
+  if (_maru_linux_find_controller_by_syspath(common, syspath)) {
+    if (fd >= 0) close(fd);
+    return;
+  }
 
-    free(discovery);
+  MARU_LinuxController *ctrl =
+      _maru_linux_controller_create(common, fd, syspath, devnode);
+  if (!ctrl) {
+    if (fd >= 0) close(fd);
+    return;
+  }
 
-  } else if (type == MARU_EVENT_INTERNAL_LINUX_DEVICE_REMOVE) {
-    char* syspath = (char*)event->user.userdata;
-    MARU_LinuxController** curr = &common->controllers;
-    while (*curr) {
-      if (strcmp((*curr)->syspath, syspath) == 0) {
-        MARU_LinuxController* to_remove = *curr;
-        *curr = to_remove->next;
-        common->controller_count--;
+  ctrl->next = common->controllers;
+  common->controllers = ctrl;
+  common->controller_count++;
+  _maru_linux_emit_controller_connection_event(common, ctrl, true);
+}
 
-        MARU_Event pub_evt = {0};
-        pub_evt.controller_connection.controller = (MARU_Controller*)to_remove;
-        pub_evt.controller_connection.connected = false;
-        _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_CONNECTION_CHANGED, NULL, &pub_evt);
+static void _maru_linux_handle_hotplug_remove(MARU_Context_Linux_Common *common,
+                                              const char *syspath) {
+  _maru_linux_remove_controller_by_syspath(common, syspath);
+}
 
-        to_remove->is_active = false;
-        to_remove->base.flags |= MARU_CONTROLLER_STATE_LOST;
+typedef struct MARU_LinuxSnapshotDevice {
+  int fd;
+  char *syspath;
+  char *devnode;
+  struct MARU_LinuxSnapshotDevice *next;
+} MARU_LinuxSnapshotDevice;
 
-        uint32_t current = atomic_load_explicit(&to_remove->ref_count, memory_order_acquire);
-        while (current > 0) {
-          if (atomic_compare_exchange_weak_explicit(&to_remove->ref_count, &current,
-                                                    current - 1u, memory_order_acq_rel,
-                                                    memory_order_acquire)) {
-            if (current == 1u) {
-              _maru_linux_controller_destroy(common->ctx_base, to_remove);
-            }
-            break;
-          }
-        }
-        break;
-      }
-      curr = &((*curr)->next);
+static void _maru_linux_snapshot_destroy(MARU_Context_Linux_Common *common,
+                                         MARU_LinuxSnapshotDevice *head) {
+  if (!common) return;
+  while (head) {
+    MARU_LinuxSnapshotDevice *next = head->next;
+    if (head->fd >= 0) close(head->fd);
+    maru_context_free(common->ctx_base, head->syspath);
+    maru_context_free(common->ctx_base, head->devnode);
+    maru_context_free(common->ctx_base, head);
+    head = next;
+  }
+}
+
+static MARU_LinuxSnapshotDevice *_maru_linux_snapshot_find(
+    MARU_LinuxSnapshotDevice *head, const char *syspath) {
+  for (MARU_LinuxSnapshotDevice *it = head; it; it = it->next) {
+    if (it->syspath && syspath && strcmp(it->syspath, syspath) == 0) return it;
+  }
+  return NULL;
+}
+
+static bool _maru_linux_collect_snapshot(MARU_Context_Linux_Common *common,
+                                         MARU_LinuxSnapshotDevice **out_head) {
+  if (!common || !out_head) return false;
+  *out_head = NULL;
+
+  if (!common->worker.udev || !common->worker.udev_lib.base.available) {
+    return false;
+  }
+
+  struct udev_enumerate *enumerate =
+      common->worker.udev_lib.udev_enumerate_new(common->worker.udev);
+  if (!enumerate) return false;
+
+  common->worker.udev_lib.udev_enumerate_add_match_subsystem(enumerate, "input");
+  common->worker.udev_lib.udev_enumerate_scan_devices(enumerate);
+
+  struct udev_list_entry *devices =
+      common->worker.udev_lib.udev_enumerate_get_list_entry(enumerate);
+  for (struct udev_list_entry *entry = devices; entry != NULL;
+       entry = common->worker.udev_lib.udev_list_entry_get_next(entry)) {
+    const char *path = common->worker.udev_lib.udev_list_entry_get_name(entry);
+    struct udev_device *dev =
+        common->worker.udev_lib.udev_device_new_from_syspath(common->worker.udev,
+                                                              path);
+    if (!dev) continue;
+
+    const char *devnode =
+        common->worker.udev_lib.udev_device_get_devnode(dev);
+    const char *syspath =
+        common->worker.udev_lib.udev_device_get_syspath(dev);
+    const char *joystick =
+        common->worker.udev_lib.udev_device_get_property_value(dev,
+                                                                "ID_INPUT_JOYSTICK");
+
+    if (!devnode || !syspath || !joystick || strcmp(joystick, "1") != 0) {
+      common->worker.udev_lib.udev_device_unref(dev);
+      continue;
     }
-    free(syspath);
+
+    int fd = open(devnode, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0 && errno == EACCES) {
+      fd = open(devnode, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+    }
+    if (fd < 0 || !_maru_linux_is_gamepad(fd)) {
+      if (fd >= 0) close(fd);
+      common->worker.udev_lib.udev_device_unref(dev);
+      continue;
+    }
+
+    if (_maru_linux_snapshot_find(*out_head, syspath)) {
+      close(fd);
+      common->worker.udev_lib.udev_device_unref(dev);
+      continue;
+    }
+
+    MARU_LinuxSnapshotDevice *snap =
+        (MARU_LinuxSnapshotDevice *)maru_context_alloc(common->ctx_base,
+                                                       sizeof(*snap));
+    if (!snap) {
+      close(fd);
+      common->worker.udev_lib.udev_device_unref(dev);
+      common->worker.udev_lib.udev_enumerate_unref(enumerate);
+      _maru_linux_snapshot_destroy(common, *out_head);
+      *out_head = NULL;
+      return false;
+    }
+    memset(snap, 0, sizeof(*snap));
+
+    snap->syspath = _maru_linux_strdup_ctx(common->ctx_base, syspath);
+    snap->devnode = _maru_linux_strdup_ctx(common->ctx_base, devnode);
+    if (!snap->syspath || !snap->devnode) {
+      if (fd >= 0) close(fd);
+      maru_context_free(common->ctx_base, snap->syspath);
+      maru_context_free(common->ctx_base, snap->devnode);
+      maru_context_free(common->ctx_base, snap);
+      common->worker.udev_lib.udev_device_unref(dev);
+      common->worker.udev_lib.udev_enumerate_unref(enumerate);
+      _maru_linux_snapshot_destroy(common, *out_head);
+      *out_head = NULL;
+      return false;
+    }
+
+    snap->fd = fd;
+    snap->next = *out_head;
+    *out_head = snap;
+
+    common->worker.udev_lib.udev_device_unref(dev);
+  }
+
+  common->worker.udev_lib.udev_enumerate_unref(enumerate);
+  return true;
+}
+
+static void _maru_linux_common_resync_controllers(MARU_Context_Linux_Common *common) {
+  if (!common) return;
+
+  atomic_store_explicit(&common->worker.hotplug_resync_in_progress, true,
+                        memory_order_release);
+
+  MARU_LinuxSnapshotDevice *snapshot = NULL;
+  if (!_maru_linux_collect_snapshot(common, &snapshot)) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)common->ctx_base,
+                           MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                           "Controller hotplug resync failed; will retry");
+    atomic_store_explicit(&common->worker.hotplug_overflowed, true,
+                          memory_order_release);
+    atomic_store_explicit(&common->worker.hotplug_resync_in_progress, false,
+                          memory_order_release);
+    return;
+  }
+
+  for (MARU_LinuxSnapshotDevice *it = snapshot; it; it = it->next) {
+    if (_maru_linux_find_controller_by_syspath(common, it->syspath)) {
+      if (it->fd >= 0) {
+        close(it->fd);
+        it->fd = -1;
+      }
+      continue;
+    }
+    _maru_linux_handle_hotplug_add(common, it->fd, it->syspath, it->devnode);
+    it->fd = -1;
+  }
+
+  MARU_LinuxController *it = common->controllers;
+  while (it) {
+    MARU_LinuxController *next = it->next;
+    if (!_maru_linux_snapshot_find(snapshot, it->syspath)) {
+      _maru_linux_handle_hotplug_remove(common, it->syspath);
+    }
+    it = next;
+  }
+
+  _maru_linux_snapshot_destroy(common, snapshot);
+  atomic_store_explicit(&common->worker.hotplug_resync_in_progress, false,
+                        memory_order_release);
+}
+
+void _maru_linux_common_handle_internal_event(MARU_Context_Linux_Common *common,
+                                              MARU_InternalEventId type,
+                                              MARU_Window *window,
+                                              const MARU_Event *event) {
+  (void)window;
+  if (!common || !event) return;
+
+  // Legacy compatibility path: internal queued events are no longer produced by
+  // the worker thread, but we still accept them if present.
+  if (type == MARU_EVENT_INTERNAL_LINUX_DEVICE_ADD) {
+    const MARU_LinuxDeviceDiscovery *discovery =
+        (const MARU_LinuxDeviceDiscovery *)event->user.userdata;
+    if (!discovery) return;
+    _maru_linux_handle_hotplug_add(common, discovery->fd, discovery->syspath,
+                                   discovery->devnode);
+    free(discovery->syspath);
+    free(discovery->devnode);
+    free((void *)discovery);
+  } else if (type == MARU_EVENT_INTERNAL_LINUX_DEVICE_REMOVE) {
+    const char *syspath = (const char *)event->user.userdata;
+    _maru_linux_handle_hotplug_remove(common, syspath);
+    free((void *)syspath);
   }
 }
 
@@ -581,6 +923,9 @@ void _maru_linux_common_process_pollfds(MARU_Context_Linux_Common *common, const
       struct input_event ev;
       while (read(it->fd, &ev, sizeof(ev)) > 0) {
         if (ev.type == EV_KEY) {
+          if (ev.code >= KEY_CNT) {
+            continue;
+          }
           int idx = it->evdev_to_button[ev.code];
           if (idx >= 0) {
             MARU_ButtonState8 new_state = (MARU_ButtonState8)((ev.value != 0) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED);
@@ -595,9 +940,12 @@ void _maru_linux_common_process_pollfds(MARU_Context_Linux_Common *common, const
             }
           }
         } else if (ev.type == EV_ABS) {
+          if (ev.code >= ABS_CNT) {
+            continue;
+          }
           int idx = it->evdev_to_analog[ev.code];
           if (idx >= 0) {
-            struct input_absinfo *info = &it->abs_info[ev.code];
+            struct input_absinfo *info = &it->analog_abs_info[idx];
             MARU_Scalar value = (MARU_Scalar)0.0;
             if (info->maximum != info->minimum) {
               value = (MARU_Scalar)(ev.value - info->minimum) / (MARU_Scalar)(info->maximum - info->minimum);
@@ -675,6 +1023,37 @@ void _maru_linux_common_process_pollfds(MARU_Context_Linux_Common *common, const
 }
 
 void _maru_linux_common_drain_internal_events(MARU_Context_Linux_Common *common) {
+  if (!common || !common->ctx_base) return;
+
+  MARU_LinuxHotplugOp op;
+  while (_maru_linux_hotplug_try_dequeue(common, &op)) {
+    if (op.type == MARU_LINUX_HOTPLUG_OP_ADD) {
+      _maru_linux_handle_hotplug_add(common, op.fd, op.syspath, op.devnode);
+    } else {
+      _maru_linux_handle_hotplug_remove(common, op.syspath);
+    }
+  }
+
+  bool overflowed = atomic_exchange_explicit(&common->worker.hotplug_overflowed,
+                                             false, memory_order_acq_rel);
+  if (overflowed) {
+    uint32_t guard = 0u;
+    do {
+      _maru_linux_common_resync_controllers(common);
+      while (_maru_linux_hotplug_try_dequeue(common, &op)) {
+        if (op.type == MARU_LINUX_HOTPLUG_OP_ADD) {
+          _maru_linux_handle_hotplug_add(common, op.fd, op.syspath, op.devnode);
+        } else {
+          _maru_linux_handle_hotplug_remove(common, op.syspath);
+        }
+      }
+
+      overflowed = atomic_exchange_explicit(&common->worker.hotplug_overflowed,
+                                            false, memory_order_acq_rel);
+      guard++;
+    } while (overflowed && guard < 4u);
+  }
+
   MARU_EventId type;
   MARU_Window *window;
   MARU_Event evt;

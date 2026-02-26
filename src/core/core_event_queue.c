@@ -6,8 +6,13 @@
 #include <stdatomic.h>
 #include <string.h>
 
+static bool _maru_is_power_of_two_u32(uint32_t value) {
+  return value != 0u && (value & (value - 1u)) == 0u;
+}
+
 bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t capacity_power_of_2) {
   if (!q) return false;
+  if (!_maru_is_power_of_two_u32(capacity_power_of_2)) return false;
   
   q->capacity = capacity_power_of_2;
   q->mask = capacity_power_of_2 - 1;
@@ -45,6 +50,8 @@ void _maru_event_queue_update_metrics(MARU_EventQueue *q, MARU_UserEventMetrics 
 
 bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type, 
                             MARU_Window *window, MARU_Event evt) {
+  if (!q || !q->buffer || q->capacity == 0) return false;
+
   size_t head, tail;
   
   do {
@@ -104,6 +111,8 @@ bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type,
 
 bool _maru_event_queue_pop(MARU_EventQueue *q, MARU_EventId *out_type, 
                            MARU_Window **out_window, MARU_Event *out_evt) {
+  if (!q || !q->buffer || q->capacity == 0) return false;
+
   size_t tail = atomic_load_explicit(&q->tail, memory_order_relaxed);
   MARU_QueuedEvent *slot = &q->buffer[tail & q->mask];
 
