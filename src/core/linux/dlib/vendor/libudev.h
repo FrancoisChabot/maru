@@ -49,6 +49,8 @@ struct udev_device *udev_device_new_from_syspath(struct udev *udev,
 
 const char *udev_device_get_action(struct udev_device *udev_device);
 const char *udev_device_get_devnode(struct udev_device *udev_device);
+const char *udev_device_get_syspath(struct udev_device *udev_device);
+const char *udev_device_get_property_value(struct udev_device *udev_device, const char *key);
 struct udev_device *udev_device_unref(struct udev_device *udev_device);
 
 #define udev_list_entry_foreach(entry, first)                                  \

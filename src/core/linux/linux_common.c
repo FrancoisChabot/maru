@@ -231,31 +231,36 @@ bool _maru_linux_common_init(MARU_Context_Linux_Common* common, MARU_Context_Bas
         common->worker.udev_lib.udev_monitor_enable_receiving(common->worker.udev_monitor);
         common->worker.udev_fd = common->worker.udev_lib.udev_monitor_get_fd(common->worker.udev_monitor);
       }
+    }
+  }
 
-      // Initial enumeration
-      struct udev_enumerate* enumerate = common->worker.udev_lib.udev_enumerate_new(common->worker.udev);
-      if (enumerate) {
-        common->worker.udev_lib.udev_enumerate_add_match_subsystem(enumerate, "input");
-        common->worker.udev_lib.udev_enumerate_scan_devices(enumerate);
-        
-        struct udev_list_entry* devices = common->worker.udev_lib.udev_enumerate_get_list_entry(enumerate);
-        struct udev_list_entry* entry;
+  return true;
+}
 
-        for (entry = devices; entry != NULL; entry = common->worker.udev_lib.udev_list_entry_get_next(entry)) {
-          const char* path = common->worker.udev_lib.udev_list_entry_get_name(entry);
-          struct udev_device* dev = common->worker.udev_lib.udev_device_new_from_syspath(common->worker.udev, path);
-          if (dev) {
-            _maru_linux_worker_process_device(common, dev, NULL);
-            common->worker.udev_lib.udev_device_unref(dev);
-          }
+bool _maru_linux_common_run(MARU_Context_Linux_Common* common) {
+  if (common->worker.udev) {
+    // Initial enumeration
+    struct udev_enumerate* enumerate = common->worker.udev_lib.udev_enumerate_new(common->worker.udev);
+    if (enumerate) {
+      common->worker.udev_lib.udev_enumerate_add_match_subsystem(enumerate, "input");
+      common->worker.udev_lib.udev_enumerate_scan_devices(enumerate);
+      
+      struct udev_list_entry* devices = common->worker.udev_lib.udev_enumerate_get_list_entry(enumerate);
+      struct udev_list_entry* entry;
+
+      for (entry = devices; entry != NULL; entry = common->worker.udev_lib.udev_list_entry_get_next(entry)) {
+        const char* path = common->worker.udev_lib.udev_list_entry_get_name(entry);
+        struct udev_device* dev = common->worker.udev_lib.udev_device_new_from_syspath(common->worker.udev, path);
+        if (dev) {
+          _maru_linux_worker_process_device(common, dev, NULL);
+          common->worker.udev_lib.udev_device_unref(dev);
         }
-        common->worker.udev_lib.udev_enumerate_unref(enumerate);
       }
+      common->worker.udev_lib.udev_enumerate_unref(enumerate);
     }
   }
 
   if (pthread_create(&common->worker.thread, NULL, _maru_linux_worker_main, common) != 0) {
-    _maru_linux_common_cleanup(common);
     return false;
   }
   common->worker.thread_started = true;

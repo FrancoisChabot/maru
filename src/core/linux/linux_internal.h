@@ -129,6 +129,7 @@ typedef struct MARU_Context_Linux_Common {
 } MARU_Context_Linux_Common;
 
 bool _maru_linux_common_init(MARU_Context_Linux_Common* common, MARU_Context_Base* ctx_base);
+bool _maru_linux_common_run(MARU_Context_Linux_Common* common);
 void _maru_linux_common_cleanup(MARU_Context_Linux_Common* common);
 void _maru_linux_common_handle_internal_event(MARU_Context_Linux_Common *common, MARU_InternalEventId type, MARU_Window *window, const MARU_Event *event);
 void _maru_linux_common_drain_internal_events(MARU_Context_Linux_Common *common);

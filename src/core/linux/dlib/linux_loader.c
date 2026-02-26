@@ -83,7 +83,7 @@ bool maru_linux_udev_load(struct MARU_Context_Base *ctx, MARU_Lib_Udev *out_lib)
   }
 
   bool functions_ok = true;
-#define MARU_LIB_FN(ret, name, args)                                  \
+#define MARU_LIB_FN(name)                                             \
   out_lib->name = dlsym(out_lib->base.handle, #name);                 \
   if (!out_lib->name) {                                               \
     _set_diagnostic(ctx, "dlsym(" #name ") failed");                  \

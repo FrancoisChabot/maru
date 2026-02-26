@@ -1,4 +1,5 @@
 #include "maru_internal.h"
+#include "maru_backend.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "maru/c/cursors.h"
@@ -11,110 +12,32 @@
 #include <string.h>
 #include <unistd.h>
 
-MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
-                                   MARU_Context **out_context) {
-  MARU_Context_X11 *ctx = (MARU_Context_X11 *)maru_context_alloc_bootstrap(
-      create_info, sizeof(MARU_Context_X11));
-  if (!ctx) {
-    return MARU_FAILURE;
-  }
+extern MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
+                                   MARU_Context **out_context);
+extern MARU_Status maru_destroyContext_X11(MARU_Context *context);
+extern MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
+                                    const MARU_ContextAttributes *attributes);
+extern MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, 
+                                        MARU_EventCallback callback, void *userdata);
+extern MARU_Status maru_wakeContext_X11(MARU_Context *context);
+extern void *maru_getContextNativeHandle_X11(MARU_Context *context);
+extern void *maru_getWindowNativeHandle_X11(MARU_Window *window);
 
-  ctx->base.pub.backend_type = MARU_BACKEND_X11;
+extern MARU_Status maru_createCursor_X11(MARU_Context *context,
+                                         const MARU_CursorCreateInfo *create_info,
+                                         MARU_Cursor **out_cursor);
+extern MARU_Status maru_destroyCursor_X11(MARU_Cursor *cursor);
+extern MARU_Status maru_createImage_X11(MARU_Context *context,
+                                        const MARU_ImageCreateInfo *create_info,
+                                        MARU_Image **out_image);
+extern MARU_Status maru_destroyImage_X11(MARU_Image *image);
 
-  if (create_info->allocator.alloc_cb) {
-    ctx->base.allocator = create_info->allocator;
-  } else {
-    ctx->base.allocator.alloc_cb = _maru_default_alloc;
-    ctx->base.allocator.realloc_cb = _maru_default_realloc;
-    ctx->base.allocator.free_cb = _maru_default_free;
-    ctx->base.allocator.userdata = NULL;
-  }
-  ctx->base.tuning = create_info->tuning;
-  _maru_init_context_base(&ctx->base);
-#ifdef MARU_GATHER_METRICS
-  _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_X11));
-#endif
-
-  if (!_maru_linux_common_init(&ctx->linux_common, &ctx->base)) {
-    maru_context_free(&ctx->base, ctx);
-    return MARU_FAILURE;
-  }
-  
-  ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
-  ctx->base.attrs_requested = create_info->attributes;
-  ctx->base.attrs_effective = create_info->attributes;
-  ctx->base.attrs_dirty_mask = 0;
-  ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
-  ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_mask = create_info->attributes.event_mask;
-  ctx->base.inhibit_idle = create_info->attributes.inhibit_idle;
-
-#ifdef MARU_INDIRECT_BACKEND
-  extern const MARU_Backend maru_backend_X11;
-  ctx->base.backend = &maru_backend_X11;
-#endif
-
-#ifdef MARU_VALIDATE_API_CALLS
-  extern MARU_ThreadId _maru_getCurrentThreadId(void);
-  ctx->base.creator_thread = _maru_getCurrentThreadId();
-#endif
-
-  *out_context = (MARU_Context *)ctx;
-  return MARU_SUCCESS;
-}
-
-MARU_Status maru_destroyContext_X11(MARU_Context *context) {
-  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
-  _maru_linux_common_cleanup(&ctx->linux_common);
-  _maru_cleanup_context_base(&ctx->base);
-  maru_context_free(&ctx->base, context);
-  return MARU_SUCCESS;
-}
-
-MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
-  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
-  (void)callback;
-  (void)userdata;
-
-  // 1. Drain hotplug events from worker thread
-  _maru_linux_common_drain_internal_events(&ctx->linux_common);
-
-  // 2. Prepare poll set
-  // In a real X11 implementation, we would get the connection FD here.
-  // For now, we only have controllers and the wake_fd.
-  struct pollfd pfds[32];
-  uint32_t nfds = 0;
-
-  // Slot 0: Wake FD
-  pfds[nfds].fd = ctx->linux_common.worker.event_fd;
-  pfds[nfds].events = POLLIN;
-  pfds[nfds].revents = 0;
-  nfds++;
-
-  // Controller FDs
-  uint32_t ctrl_count = _maru_linux_common_fill_pollfds(&ctx->linux_common, &pfds[nfds], 31);
-  uint32_t ctrl_start_idx = nfds;
-  nfds += ctrl_count;
-
-  int poll_timeout = (timeout_ms == MARU_NEVER) ? -1 : (int)timeout_ms;
-  int ret = poll(pfds, nfds, poll_timeout);
-
-  if (ret > 0) {
-    if (pfds[0].revents & POLLIN) {
-      uint64_t val;
-      read(ctx->linux_common.worker.event_fd, &val, sizeof(val));
-    }
-
-    if (ctrl_count > 0) {
-      _maru_linux_common_process_pollfds(&ctx->linux_common, &pfds[ctrl_start_idx], ctrl_count);
-    }
-  }
-
-  // Final drain in case poll returned due to worker activity
-  _maru_linux_common_drain_internal_events(&ctx->linux_common);
-
-  return MARU_SUCCESS;
-}
+extern MARU_Monitor *const *maru_getMonitors_X11(MARU_Context *context, uint32_t *out_count);
+extern void maru_retainMonitor_X11(MARU_Monitor *monitor);
+extern void maru_releaseMonitor_X11(MARU_Monitor *monitor);
+extern const MARU_VideoMode *maru_getMonitorModes_X11(const MARU_Monitor *monitor, uint32_t *out_count);
+extern MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode mode);
+extern void maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
 
 MARU_Status maru_createWindow_X11(MARU_Context *context,
                                  const MARU_WindowCreateInfo *create_info,
@@ -122,22 +45,41 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   (void)context;
   (void)create_info;
   (void)out_window;
-  return MARU_SUCCESS;
+  return MARU_FAILURE;
 }
 
 MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
   (void)window;
-  return MARU_SUCCESS;
+  return MARU_FAILURE;
+}
+
+void maru_getWindowGeometry_X11(MARU_Window *window,
+                               MARU_WindowGeometry *out_geometry) {
+    (void)window;
+    memset(out_geometry, 0, sizeof(*out_geometry));
+}
+
+MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
+                                  const MARU_WindowAttributes *attributes) {
+    (void)window;
+    (void)field_mask;
+    (void)attributes;
+    return MARU_FAILURE;
+}
+
+MARU_Status maru_requestWindowFocus_X11(MARU_Window *window) {
+    (void)window;
+    return MARU_FAILURE;
+}
+
+MARU_Status maru_requestWindowFrame_X11(MARU_Window *window) {
+    (void)window;
+    return MARU_FAILURE;
 }
 
 MARU_Status maru_requestWindowAttention_X11(MARU_Window *window) {
   (void)window;
   return MARU_FAILURE;
-}
-
-static void *maru_getContextNativeHandle_X11(MARU_Context *context) {
-  (void)context;
-  return NULL;
 }
 
 extern const char **maru_getVkExtensions_X11(const MARU_Context *context,
@@ -265,37 +207,25 @@ static MARU_Status maru_getAvailableMIMETypes_X11(
   return MARU_FAILURE;
 }
 
-static void *maru_getWindowNativeHandle_X11(MARU_Window *window) {
-  (void)window;
-  return NULL;
-}
-
 #ifdef MARU_INDIRECT_BACKEND
-static MARU_Status maru_createImage_X11(MARU_Context *context,
-                                        const MARU_ImageCreateInfo *create_info,
-                                        MARU_Image **out_image) {
-  (void)context;
-  (void)create_info;
-  (void)out_image;
-  return MARU_FAILURE;
-}
-
-static MARU_Status maru_destroyImage_X11(MARU_Image *image) {
-  (void)image;
-  return MARU_FAILURE;
+static void *maru_getWindowNativeHandle_X11_internal(MARU_Window *window) {
+  return maru_getWindowNativeHandle_X11(window);
 }
 
 const MARU_Backend maru_backend_X11 = {
   .destroyContext = maru_destroyContext_X11,
+  .updateContext = maru_updateContext_X11,
   .pumpEvents = maru_pumpEvents_X11,
+  .wakeContext = maru_wakeContext_X11,
   .createWindow = maru_createWindow_X11,
   .destroyWindow = maru_destroyWindow_X11,
-  .getWindowGeometry = NULL,
-  .updateWindow = NULL,
-  .requestWindowFocus = NULL,
+  .getWindowGeometry = maru_getWindowGeometry_X11,
+  .updateWindow = maru_updateWindow_X11,
+  .requestWindowFocus = maru_requestWindowFocus_X11,
+  .requestWindowFrame = maru_requestWindowFrame_X11,
   .requestWindowAttention = maru_requestWindowAttention_X11,
-  .createCursor = NULL,
-  .destroyCursor = NULL,
+  .createCursor = maru_createCursor_X11,
+  .destroyCursor = maru_destroyCursor_X11,
   .createImage = maru_createImage_X11,
   .destroyImage = maru_destroyImage_X11,
   .getControllers = maru_getControllers_X11,
@@ -308,12 +238,14 @@ const MARU_Backend maru_backend_X11 = {
   .provideData = maru_provideData_X11,
   .requestData = maru_requestData_X11,
   .getAvailableMIMETypes = maru_getAvailableMIMETypes_X11,
-  .wakeContext = NULL,
-  .getMonitorModes = NULL,
-  .setMonitorMode = NULL,
-  .resetMonitorMetrics = NULL,
+  .getMonitors = maru_getMonitors_X11,
+  .retainMonitor = maru_retainMonitor_X11,
+  .releaseMonitor = maru_releaseMonitor_X11,
+  .getMonitorModes = maru_getMonitorModes_X11,
+  .setMonitorMode = maru_setMonitorMode_X11,
+  .resetMonitorMetrics = maru_resetMonitorMetrics_X11,
   .getContextNativeHandle = maru_getContextNativeHandle_X11,
-  .getWindowNativeHandle = maru_getWindowNativeHandle_X11,
+  .getWindowNativeHandle = maru_getWindowNativeHandle_X11_internal,
   .getVkExtensions = maru_getVkExtensions_X11,
   .createVkSurface = maru_createVkSurface_X11,
 };
@@ -327,6 +259,13 @@ MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_inf
 MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
   MARU_API_VALIDATE(destroyContext, context);
   return maru_destroyContext_X11(context);
+}
+
+MARU_API MARU_Status
+maru_updateContext(MARU_Context *context, uint64_t field_mask,
+                   const MARU_ContextAttributes *attributes) {
+  MARU_API_VALIDATE(updateContext, context, field_mask, attributes);
+  return maru_updateContext_X11(context, field_mask, attributes);
 }
 
 MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
@@ -349,42 +288,37 @@ MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
 MARU_API void maru_getWindowGeometry(MARU_Window *window,
                                               MARU_WindowGeometry *out_geometry) {
   MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
+  maru_getWindowGeometry_X11(window, out_geometry);
 }
 
 MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes) {
   MARU_API_VALIDATE(updateWindow, window, field_mask, attributes);
-  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
-
-  return MARU_SUCCESS;
+  return maru_updateWindow_X11(window, field_mask, attributes);
 }
 
 MARU_API MARU_Status maru_createCursor(MARU_Context *context,
                                          const MARU_CursorCreateInfo *create_info,
                                          MARU_Cursor **out_cursor) {
   MARU_API_VALIDATE(createCursor, context, create_info, out_cursor);
-  return MARU_FAILURE; // Not implemented in X11 yet
+  return maru_createCursor_X11(context, create_info, out_cursor);
 }
 
 MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   MARU_API_VALIDATE(destroyCursor, cursor);
-  return MARU_FAILURE; // Not implemented in X11 yet
+  return maru_destroyCursor_X11(cursor);
 }
 
 MARU_API MARU_Status maru_createImage(MARU_Context *context,
                                       const MARU_ImageCreateInfo *create_info,
                                       MARU_Image **out_image) {
   MARU_API_VALIDATE(createImage, context, create_info, out_image);
-  (void)context;
-  (void)create_info;
-  (void)out_image;
-  return MARU_FAILURE; // Not implemented in X11 yet
+  return maru_createImage_X11(context, create_info, out_image);
 }
 
 MARU_API MARU_Status maru_destroyImage(MARU_Image *image) {
   MARU_API_VALIDATE(destroyImage, image);
-  (void)image;
-  return MARU_FAILURE; // Not implemented in X11 yet
+  return maru_destroyImage_X11(image);
 }
 
 MARU_API MARU_Status maru_getControllers(MARU_Context *context,
@@ -464,7 +398,12 @@ MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
 
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
-  return MARU_SUCCESS;
+  return maru_requestWindowFocus_X11(window);
+}
+
+MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
+  MARU_API_VALIDATE(requestWindowFrame, window);
+  return maru_requestWindowFrame_X11(window);
 }
 
 MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
@@ -474,49 +413,37 @@ MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
-  return MARU_FAILURE;
+  return maru_wakeContext_X11(context);
 }
 
 MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
   MARU_API_VALIDATE(getMonitors, context, out_count);
-  *out_count = 0;
-  return NULL;
+  return maru_getMonitors_X11(context, out_count);
 }
 
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(retainMonitor, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  atomic_fetch_add_explicit(&mon_base->ref_count, 1u, memory_order_relaxed);
+  maru_retainMonitor_X11(monitor);
 }
 
 MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(releaseMonitor, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  uint32_t current = atomic_load_explicit(&mon_base->ref_count, memory_order_acquire);
-  while (current > 0) {
-    if (atomic_compare_exchange_weak_explicit(&mon_base->ref_count, &current,
-                                              current - 1u, memory_order_acq_rel,
-                                              memory_order_acquire)) {
-      return;
-    }
-  }
+  maru_releaseMonitor_X11(monitor);
 }
 
 MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {
   MARU_API_VALIDATE(getMonitorModes, monitor, out_count);
-  *out_count = 0;
-  return NULL;
+  return maru_getMonitorModes_X11(monitor, out_count);
 }
 
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
   MARU_API_VALIDATE(setMonitorMode, monitor, mode);
-  return MARU_FAILURE;
+  return maru_setMonitorMode_X11(monitor, mode);
 }
 
 MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
+  maru_resetMonitorMetrics_X11(monitor);
 }
 
 MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,

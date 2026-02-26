@@ -693,6 +693,12 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   _wl_update_cursor_shape_device(ctx);
   ctx->base.attrs_dirty_mask = 0;
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
+
+  if (!_maru_linux_common_run(&ctx->linux_common)) {
+    maru_destroyContext_WL((MARU_Context *)ctx);
+    return MARU_FAILURE;
+  }
+
   *out_context = (MARU_Context *)ctx;
 
   return MARU_SUCCESS;

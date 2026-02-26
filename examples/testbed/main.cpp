@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "app.h"
+#include "maru/c/core.h"
 #include "maru/c/tuning.h"
 #include "maru/c/vulkan.h"
 #include "maru/maru.h"
@@ -436,6 +437,7 @@ static void FramePresent(ImGui_ImplVulkanH_Window *wd) {
 
 int main(int, char **) {
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+  create_info.backend = MARU_BACKEND_X11;
   create_info.attributes.diagnostic_cb = handle_maru_diagnostic;
   create_info.tuning.wayland.decoration_mode = MARU_WAYLAND_DECORATION_MODE_CSD;
 
