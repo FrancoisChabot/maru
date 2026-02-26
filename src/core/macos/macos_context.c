@@ -61,6 +61,11 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     ctx->base.tuning = default_tuning;
   }
 
+  _maru_init_context_base(&ctx->base);
+#ifdef MARU_GATHER_METRICS
+  _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_Cocoa));
+#endif
+
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_Cocoa;
   ctx->base.backend = &maru_backend_Cocoa;

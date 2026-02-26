@@ -5,14 +5,11 @@
 #include "maru/c/monitors.h"
 #include "maru/c/native/linux.h"
 #include "linux_internal.h"
+#include "x11_internal.h"
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
-
-typedef struct MARU_Context_X11 {
-  MARU_Context_Base base;
-  MARU_Context_Linux_Common linux_common;
-} MARU_Context_X11;
+#include <unistd.h>
 
 MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
                                    MARU_Context **out_context) {
@@ -34,8 +31,11 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   }
   ctx->base.tuning = create_info->tuning;
   _maru_init_context_base(&ctx->base);
+#ifdef MARU_GATHER_METRICS
+  _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_X11));
+#endif
 
-  if (!_maru_linux_common_init(&ctx->linux_common)) {
+  if (!_maru_linux_common_init(&ctx->linux_common, &ctx->base)) {
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -72,10 +72,47 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
 }
 
 MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
-  (void)context;
-  (void)timeout_ms;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   (void)callback;
   (void)userdata;
+
+  // 1. Drain hotplug events from worker thread
+  _maru_linux_common_drain_internal_events(&ctx->linux_common);
+
+  // 2. Prepare poll set
+  // In a real X11 implementation, we would get the connection FD here.
+  // For now, we only have controllers and the wake_fd.
+  struct pollfd pfds[32];
+  uint32_t nfds = 0;
+
+  // Slot 0: Wake FD
+  pfds[nfds].fd = ctx->linux_common.worker.event_fd;
+  pfds[nfds].events = POLLIN;
+  pfds[nfds].revents = 0;
+  nfds++;
+
+  // Controller FDs
+  uint32_t ctrl_count = _maru_linux_common_fill_pollfds(&ctx->linux_common, &pfds[nfds], 31);
+  uint32_t ctrl_start_idx = nfds;
+  nfds += ctrl_count;
+
+  int poll_timeout = (timeout_ms == MARU_NEVER) ? -1 : (int)timeout_ms;
+  int ret = poll(pfds, nfds, poll_timeout);
+
+  if (ret > 0) {
+    if (pfds[0].revents & POLLIN) {
+      uint64_t val;
+      read(ctx->linux_common.worker.event_fd, &val, sizeof(val));
+    }
+
+    if (ctrl_count > 0) {
+      _maru_linux_common_process_pollfds(&ctx->linux_common, &pfds[ctrl_start_idx], ctrl_count);
+    }
+  }
+
+  // Final drain in case poll returned due to worker activity
+  _maru_linux_common_drain_internal_events(&ctx->linux_common);
+
   return MARU_SUCCESS;
 }
 
@@ -111,43 +148,79 @@ extern MARU_Status maru_createVkSurface_X11(
 
 static MARU_Status maru_getControllers_X11(MARU_Context *context,
                                            MARU_ControllerList *out_list) {
-  (void)context;
-  out_list->controllers = NULL;
-  out_list->count = 0;
-  return MARU_FAILURE;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  MARU_Context_Linux_Common *common = &ctx->linux_common;
+
+  if (common->controller_count > ctx->controller_list_capacity) {
+    uint32_t new_capacity = common->controller_count;
+    if (new_capacity < 8) new_capacity = 8;
+    MARU_Controller **new_list = (MARU_Controller **)maru_context_realloc(
+        &ctx->base, ctx->controller_list_storage,
+        ctx->controller_list_capacity * sizeof(MARU_Controller *),
+        new_capacity * sizeof(MARU_Controller *));
+    if (!new_list) return MARU_FAILURE;
+    ctx->controller_list_storage = new_list;
+    ctx->controller_list_capacity = new_capacity;
+  }
+
+  uint32_t i = 0;
+  for (MARU_LinuxController *it = common->controllers; it; it = it->next) {
+    ctx->controller_list_storage[i++] = (MARU_Controller *)it;
+  }
+
+  out_list->controllers = ctx->controller_list_storage;
+  out_list->count = common->controller_count;
+  return MARU_SUCCESS;
 }
 
 static MARU_Status maru_retainController_X11(MARU_Controller *controller) {
-  (void)controller;
-  return MARU_FAILURE;
+  MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
+  atomic_fetch_add_explicit(&ctrl->ref_count, 1u, memory_order_relaxed);
+  return MARU_SUCCESS;
 }
 
 static MARU_Status maru_releaseController_X11(MARU_Controller *controller) {
-  (void)controller;
-  return MARU_FAILURE;
+  MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
+  uint32_t current = atomic_load_explicit(&ctrl->ref_count, memory_order_acquire);
+  while (current > 0) {
+    if (atomic_compare_exchange_weak_explicit(&ctrl->ref_count, &current,
+                                              current - 1u, memory_order_acq_rel,
+                                              memory_order_acquire)) {
+      if (current == 1u) {
+        MARU_Context_X11 *ctx = (MARU_Context_X11 *)ctrl->base.context;
+        _maru_linux_controller_destroy(&ctx->base, ctrl);
+      }
+      break;
+    }
+  }
+  return MARU_SUCCESS;
 }
 
 static MARU_Status maru_resetControllerMetrics_X11(MARU_Controller *controller) {
   (void)controller;
-  return MARU_FAILURE;
+  return MARU_SUCCESS;
 }
 
 static MARU_Status maru_getControllerInfo_X11(MARU_Controller *controller,
                                               MARU_ControllerInfo *out_info) {
-  (void)controller;
+  MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
   memset(out_info, 0, sizeof(*out_info));
-  return MARU_FAILURE;
+  out_info->name = ctrl->name;
+  out_info->vendor_id = ctrl->vendor_id;
+  out_info->product_id = ctrl->product_id;
+  out_info->version = ctrl->version;
+  memcpy(out_info->guid, ctrl->guid, 16);
+  out_info->is_standardized = ctrl->is_standardized;
+  return MARU_SUCCESS;
 }
 
 static MARU_Status
 maru_setControllerHapticLevels_X11(MARU_Controller *controller,
                                    uint32_t first_haptic, uint32_t count,
                                    const MARU_Scalar *intensities) {
-  (void)controller;
-  (void)first_haptic;
-  (void)count;
-  (void)intensities;
-  return MARU_FAILURE;
+  MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)ctrl->base.context;
+  return _maru_linux_common_set_haptic_levels(&ctx->linux_common, ctrl, first_haptic, count, intensities);
 }
 
 static MARU_Status maru_announceData_X11(MARU_Window *window,

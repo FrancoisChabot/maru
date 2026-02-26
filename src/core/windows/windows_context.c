@@ -85,6 +85,9 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   }
   ctx->base.tuning = create_info->tuning;
   _maru_init_context_base(&ctx->base);
+#ifdef MARU_GATHER_METRICS
+  _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_Windows));
+#endif
 
   ctx->base.attrs_requested = create_info->attributes;
   ctx->base.attrs_effective = create_info->attributes;

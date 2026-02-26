@@ -228,7 +228,7 @@ void vulkan_renderer_draw_frame(VulkanRenderer* renderer) {
 static void create_instance(VulkanRenderer* renderer, uint32_t extension_count, const char** extensions) {
   VkApplicationInfo appInfo = {0};
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  appInfo.pApplicationName = "LVKW Shared Renderer";
+  appInfo.pApplicationName = "MARU Shared Renderer";
   appInfo.apiVersion = VK_API_VERSION_1_0;
 
   VkInstanceCreateInfo createInfo = {0};

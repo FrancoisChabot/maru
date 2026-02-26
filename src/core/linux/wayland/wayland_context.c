@@ -567,6 +567,9 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   }
 
   _maru_init_context_base(&ctx->base);
+#ifdef MARU_GATHER_METRICS
+  _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_WL));
+#endif
   if (!_maru_wayland_init_context_mouse_channels(ctx)) {
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
@@ -601,20 +604,22 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     return MARU_FAILURE;
   }
 
-  if (!_maru_linux_common_init(&ctx->linux_common)) {
-    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
-                           MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                           "Failed to initialize Linux common context");
-    maru_context_free(&ctx->base, ctx);
-    return MARU_FAILURE;
-  }
-
   ctx->wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
   if (ctx->wake_fd < 0) {
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
                            MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                            "Failed to create wake eventfd");
-    goto cleanup_symbols;
+    maru_context_free(&ctx->base, ctx);
+    return MARU_FAILURE;
+  }
+
+  if (!_maru_linux_common_init(&ctx->linux_common, &ctx->base)) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
+                           MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                           "Failed to initialize Linux common context");
+    close(ctx->wake_fd);
+    maru_context_free(&ctx->base, ctx);
+    return MARU_FAILURE;
   }
 
   ctx->linux_common.xkb.ctx = maru_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
@@ -704,6 +709,7 @@ cleanup_symbols:
     maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
     ctx->base.mouse_button_channels = NULL;
   }
+  _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_linux_common_cleanup(&ctx->linux_common);
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
@@ -725,6 +731,7 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
     ctx->pump_pollfds.capacity = 0;
   }
 
+  _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_cleanup_context_base(&ctx->base);
   _maru_wayland_dataexchange_destroy(ctx);
 
@@ -824,6 +831,9 @@ MARU_Status maru_wakeContext_WL(MARU_Context *context) {
   if (maru_isContextLost(context)) {
     return MARU_ERROR_CONTEXT_LOST;
   }
+  if (ctx->wake_fd < 0) {
+    return MARU_FAILURE;
+  }
   const uint64_t one = 1;
   const ssize_t written = write(ctx->wake_fd, &one, sizeof(one));
   if (written == (ssize_t)sizeof(one) || (written < 0 && errno == EAGAIN)) {
@@ -840,6 +850,8 @@ typedef struct MARU_WLPumpStepState {
   int libdecor_index;
   int transfer_fd_count;
   int transfer_pfds_index;
+  int controller_fd_count;
+  int controller_pfds_index;
   nfds_t nfds;
   struct pollfd *fds;
 } MARU_WLPumpStepState;
@@ -864,6 +876,8 @@ static bool _maru_wayland_pump_prepare_pollfds(MARU_Context_WL *ctx,
   for (MARU_LinuxDataTransfer *it = ctx->data_transfers; it; it = it->next) {
     ++step->transfer_fd_count;
   }
+  
+  step->controller_fd_count = (int)ctx->linux_common.controller_count;
 
   step->nfds = 2;
   step->separate_libdecor_fd =
@@ -873,6 +887,7 @@ static bool _maru_wayland_pump_prepare_pollfds(MARU_Context_WL *ctx,
     step->nfds++;
   }
   step->nfds += (nfds_t)step->transfer_fd_count;
+  step->nfds += (nfds_t)step->controller_fd_count;
 
   if ((uint32_t)step->nfds > ctx->pump_pollfds.capacity) {
     const size_t old_size =
@@ -909,6 +924,11 @@ static bool _maru_wayland_pump_prepare_pollfds(MARU_Context_WL *ctx,
   if (step->transfer_fd_count > 0) {
     write_index += (nfds_t)maru_linux_dataexchange_fillPollFds(
         ctx->data_transfers, &step->fds[write_index], step->transfer_fd_count);
+  }
+
+  step->controller_pfds_index = (int)write_index;
+  if (step->controller_fd_count > 0) {
+    write_index += _maru_linux_common_fill_pollfds(&ctx->linux_common, &step->fds[write_index], (uint32_t)step->controller_fd_count);
   }
   (void)write_index;
 
@@ -1019,6 +1039,9 @@ static bool _maru_wayland_pump_poll_and_consume(MARU_Context_WL *ctx,
       maru_linux_dataexchange_processTransfers(
           &ctx->base, &ctx->data_transfers, step->fds, step->transfer_pfds_index,
           step->transfer_fd_count);
+    }
+    if (step->controller_fd_count > 0) {
+      _maru_linux_common_process_pollfds(&ctx->linux_common, &step->fds[step->controller_pfds_index], (uint32_t)step->controller_fd_count);
     }
   } else if (poll_result == 0) {
     maru_wl_display_cancel_read(ctx, ctx->wl.display);

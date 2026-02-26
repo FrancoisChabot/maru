@@ -136,6 +136,11 @@ typedef struct MARU_Image_Base {
   uint8_t *pixels;
 } MARU_Image_Base;
 
+typedef enum MARU_InternalEventId {
+  MARU_EVENT_INTERNAL_LINUX_DEVICE_ADD = 1000,
+  MARU_EVENT_INTERNAL_LINUX_DEVICE_REMOVE = 1001,
+} MARU_InternalEventId;
+
 typedef struct MARU_Monitor_Base {
   MARU_MonitorExposed pub;
 #ifdef MARU_INDIRECT_BACKEND

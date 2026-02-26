@@ -26,3 +26,14 @@ UTEST(LinuxWorker, MultipleCreateDestroy) {
     }
   }
 }
+
+UTEST(LinuxWorker, GetControllers) {
+  MARU_ContextCreateInfo create_info = {0};
+  MARU_Context *ctx = NULL;
+  if (maru_createContext(&create_info, &ctx) == MARU_SUCCESS) {
+    MARU_ControllerList list;
+    EXPECT_EQ(maru_getControllers(ctx, &list), MARU_SUCCESS);
+    // On a CI machine, list.count is likely 0, but the call should succeed.
+    maru_destroyContext(ctx);
+  }
+}

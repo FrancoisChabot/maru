@@ -171,6 +171,9 @@ typedef struct MARU_Context_WL {
   MARU_WaylandClipboardState clipboard;
   MARU_WaylandPrimarySelectionState primary_selection;
   MARU_LinuxDataTransfer *data_transfers;
+
+  MARU_Controller **controller_list_storage;
+  uint32_t controller_list_capacity;
 } MARU_Context_WL;
 
 typedef struct MARU_Window_WL {

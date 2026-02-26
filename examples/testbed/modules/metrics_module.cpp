@@ -35,6 +35,26 @@ void MetricsModule::render(MARU_Context* ctx, MARU_Window* window) {
                 ImGui::Text("Peak: %.3f ms (%llu ns)", peak_ms,
                             (unsigned long long)metrics->pump_duration_peak_ns);
             }
+
+            if (ImGui::CollapsingHeader("Cursors", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Text("Created: %llu (System: %llu, Custom: %llu)",
+                            (unsigned long long)metrics->cursor_create_count_total,
+                            (unsigned long long)metrics->cursor_create_count_system,
+                            (unsigned long long)metrics->cursor_create_count_custom);
+                ImGui::Text("Destroyed: %llu", (unsigned long long)metrics->cursor_destroy_count_total);
+                ImGui::Text("Alive: %llu (Peak: %llu)",
+                            (unsigned long long)metrics->cursor_alive_current,
+                            (unsigned long long)metrics->cursor_alive_peak);
+            }
+
+            if (ImGui::CollapsingHeader("Memory Usage", ImGuiTreeNodeFlags_DefaultOpen)) {
+                const double current_kb = (double)metrics->memory_allocated_current / 1024.0;
+                const double peak_kb = (double)metrics->memory_allocated_peak / 1024.0;
+                ImGui::Text("Current: %.2f KiB (%llu bytes)", current_kb,
+                            (unsigned long long)metrics->memory_allocated_current);
+                ImGui::Text("Peak: %.2f KiB (%llu bytes)", peak_kb,
+                            (unsigned long long)metrics->memory_allocated_peak);
+            }
         } else {
             ImGui::Text("Context metrics not available.");
         }

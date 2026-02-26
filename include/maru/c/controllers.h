@@ -134,9 +134,7 @@ typedef enum MARU_ControllerButton {
 typedef enum MARU_ControllerHaptic {
   MARU_CONTROLLER_HAPTIC_LOW_FREQ = 0,
   MARU_CONTROLLER_HAPTIC_HIGH_FREQ = 1,
-  MARU_CONTROLLER_HAPTIC_LEFT_TRIGGER = 2,
-  MARU_CONTROLLER_HAPTIC_RIGHT_TRIGGER = 3,
-  MARU_CONTROLLER_HAPTIC_STANDARD_COUNT = 4
+  MARU_CONTROLLER_HAPTIC_STANDARD_COUNT = 2
 } MARU_ControllerHaptic;
 
 /** @brief A transient list of controller handles. */

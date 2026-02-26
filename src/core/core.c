@@ -14,6 +14,13 @@
 #include "maru/c/native/wayland.h"
 #include "maru/c/native/win32.h"
 #include "maru/c/native/x11.h"
+#ifdef __linux__
+#include "linux/linux_internal.h"
+typedef struct MARU_Context_Linux {
+  MARU_Context_Base base;
+  MARU_Context_Linux_Common linux_common;
+} MARU_Context_Linux;
+#endif
 #include "core_event_queue.h"
 
 #ifdef MARU_VALIDATE_API_CALLS
@@ -94,6 +101,16 @@ void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {
   MARU_Event evt;
 
   while (_maru_event_queue_pop(&ctx_base->queued_events, &type, &window, &evt)) {
+#ifdef __linux__
+    if (type == (MARU_EventId)MARU_EVENT_INTERNAL_LINUX_DEVICE_ADD ||
+        type == (MARU_EventId)MARU_EVENT_INTERNAL_LINUX_DEVICE_REMOVE) {
+      if (ctx_base->pub.backend_type == MARU_BACKEND_WAYLAND || ctx_base->pub.backend_type == MARU_BACKEND_X11) {
+        MARU_Context_Linux *ctx_linux = (MARU_Context_Linux *)ctx_base;
+        _maru_linux_common_handle_internal_event(&ctx_linux->linux_common, (MARU_InternalEventId)type, window, &evt);
+      }
+      continue;
+    }
+#endif
     _maru_dispatch_event(ctx_base, type, window, &evt);
   }
   
@@ -669,6 +686,7 @@ MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
   ctx_base->metrics.pump_call_count_total = 0;
   ctx_base->metrics.pump_duration_avg_ns = 0;
   ctx_base->metrics.pump_duration_peak_ns = 0;
+  ctx_base->metrics.memory_allocated_peak = ctx_base->metrics.memory_allocated_current;
   return MARU_SUCCESS;
 }
 

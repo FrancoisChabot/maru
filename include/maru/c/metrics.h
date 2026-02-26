@@ -27,8 +27,8 @@ typedef struct MARU_UserEventMetrics {
 /**
  * @brief Context-scoped metrics that live for the lifetime of a context handle.
  *
- * The `version` field exists so new fields can be added in a backwards-compatible
- * way; future releases must only append data after this struct.
+ * Future releases must only append data after this struct to maintain 
+ * backwards compatibility for compiled binaries.
  */
 typedef struct MARU_ContextMetrics {
   const MARU_UserEventMetrics *user_events;
@@ -41,6 +41,9 @@ typedef struct MARU_ContextMetrics {
   uint64_t pump_call_count_total;
   uint64_t pump_duration_avg_ns;
   uint64_t pump_duration_peak_ns;
+
+  uint64_t memory_allocated_current;
+  uint64_t memory_allocated_peak;
 } MARU_ContextMetrics;
 
 /**
