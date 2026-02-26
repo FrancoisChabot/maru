@@ -79,7 +79,7 @@ typedef struct MARU_Context_Base {
   MARU_Window_Base *window_list_head;
   uint32_t window_count;
 
-  MARU_EventQueue user_event_queue;
+  MARU_EventQueue queued_events;
   MARU_ButtonState8 *mouse_button_states;
   MARU_MouseButtonChannelInfo *mouse_button_channels;
 
@@ -158,11 +158,14 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type, MARU_Window *window, const MARU_Event *event);
 void _maru_init_context_base(MARU_Context_Base *ctx_base);
-void _maru_drain_user_events(MARU_Context_Base *ctx_base);
+void _maru_drain_queued_events(MARU_Context_Base *ctx_base);
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window);
 void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window);
+
+MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
+                                      MARU_Window *window, const MARU_Event *evt);
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor);
 

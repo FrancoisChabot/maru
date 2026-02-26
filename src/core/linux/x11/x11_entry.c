@@ -4,48 +4,59 @@
 #include "maru/c/cursors.h"
 #include "maru/c/monitors.h"
 #include "maru/c/native/linux.h"
+#include "linux_internal.h"
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct MARU_Context_X11 {
+  MARU_Context_Base base;
+  MARU_Context_Linux_Common linux_common;
+} MARU_Context_X11;
+
 MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
                                    MARU_Context **out_context) {
-  MARU_Context_Base *ctx = (MARU_Context_Base *)maru_context_alloc_bootstrap(
-      create_info, sizeof(MARU_Context_Base));
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)maru_context_alloc_bootstrap(
+      create_info, sizeof(MARU_Context_X11));
   if (!ctx) {
     return MARU_FAILURE;
   }
 
-  ctx->pub.backend_type = MARU_BACKEND_X11;
+  ctx->base.pub.backend_type = MARU_BACKEND_X11;
 
   if (create_info->allocator.alloc_cb) {
-    ctx->allocator = create_info->allocator;
+    ctx->base.allocator = create_info->allocator;
   } else {
-    ctx->allocator.alloc_cb = _maru_default_alloc;
-    ctx->allocator.realloc_cb = _maru_default_realloc;
-    ctx->allocator.free_cb = _maru_default_free;
-    ctx->allocator.userdata = NULL;
+    ctx->base.allocator.alloc_cb = _maru_default_alloc;
+    ctx->base.allocator.realloc_cb = _maru_default_realloc;
+    ctx->base.allocator.free_cb = _maru_default_free;
+    ctx->base.allocator.userdata = NULL;
   }
-  ctx->tuning = create_info->tuning;
-  _maru_init_context_base(ctx);
+  ctx->base.tuning = create_info->tuning;
+  _maru_init_context_base(&ctx->base);
+
+  if (!_maru_linux_common_init(&ctx->linux_common)) {
+    maru_context_free(&ctx->base, ctx);
+    return MARU_FAILURE;
+  }
   
-  ctx->pub.flags = MARU_CONTEXT_STATE_READY;
-  ctx->attrs_requested = create_info->attributes;
-  ctx->attrs_effective = create_info->attributes;
-  ctx->attrs_dirty_mask = 0;
-  ctx->diagnostic_cb = create_info->attributes.diagnostic_cb;
-  ctx->diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->event_mask = create_info->attributes.event_mask;
-  ctx->inhibit_idle = create_info->attributes.inhibit_idle;
+  ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
+  ctx->base.attrs_requested = create_info->attributes;
+  ctx->base.attrs_effective = create_info->attributes;
+  ctx->base.attrs_dirty_mask = 0;
+  ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
+  ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
+  ctx->base.event_mask = create_info->attributes.event_mask;
+  ctx->base.inhibit_idle = create_info->attributes.inhibit_idle;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_X11;
-  ctx->backend = &maru_backend_X11;
+  ctx->base.backend = &maru_backend_X11;
 #endif
 
 #ifdef MARU_VALIDATE_API_CALLS
   extern MARU_ThreadId _maru_getCurrentThreadId(void);
-  ctx->creator_thread = _maru_getCurrentThreadId();
+  ctx->base.creator_thread = _maru_getCurrentThreadId();
 #endif
 
   *out_context = (MARU_Context *)ctx;
@@ -53,9 +64,10 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
 }
 
 MARU_Status maru_destroyContext_X11(MARU_Context *context) {
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  _maru_cleanup_context_base(ctx_base);
-  maru_context_free(ctx_base, context);
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  _maru_linux_common_cleanup(&ctx->linux_common);
+  _maru_cleanup_context_base(&ctx->base);
+  maru_context_free(&ctx->base, context);
   return MARU_SUCCESS;
 }
 

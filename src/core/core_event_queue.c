@@ -44,7 +44,7 @@ void _maru_event_queue_update_metrics(MARU_EventQueue *q, MARU_UserEventMetrics 
 }
 
 bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type, 
-                            MARU_Window *window, MARU_UserDefinedEvent evt) {
+                            MARU_Window *window, MARU_Event evt) {
   size_t head, tail;
   
   do {
@@ -103,7 +103,7 @@ bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type,
 }
 
 bool _maru_event_queue_pop(MARU_EventQueue *q, MARU_EventId *out_type, 
-                           MARU_Window **out_window, MARU_UserDefinedEvent *out_evt) {
+                           MARU_Window **out_window, MARU_Event *out_evt) {
   size_t tail = atomic_load_explicit(&q->tail, memory_order_relaxed);
   MARU_QueuedEvent *slot = &q->buffer[tail & q->mask];
 

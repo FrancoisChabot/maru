@@ -9,7 +9,6 @@ set(MARU_WAYLAND_SOURCES
     wayland_misc.c
     wayland_dataexchange.c
     wayland_utils.c
-    wayland_controllers.c
     dlib/loader.c
     protocols/maru_protocols.c
     wayland_vulkan.c

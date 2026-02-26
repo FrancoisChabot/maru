@@ -20,7 +20,7 @@ typedef struct MARU_QueuedEvent {
   _MARU_ATOMIC(int) state; // 0: Free, 1: Writing, 2: Ready
   MARU_EventId type;
   MARU_Window *window;
-  MARU_UserDefinedEvent evt;
+  MARU_Event evt;
 } MARU_QueuedEvent;
 
 typedef struct MARU_EventQueue {
@@ -50,10 +50,10 @@ void _maru_event_queue_update_metrics(MARU_EventQueue *q, MARU_UserEventMetrics 
 
 // Thread-safe push. Returns false if queue is full.
 bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type, 
-                            MARU_Window *window, MARU_UserDefinedEvent evt);
+                            MARU_Window *window, MARU_Event evt);
 
 // Single-consumer pop. Returns false if empty.
 bool _maru_event_queue_pop(MARU_EventQueue *q, MARU_EventId *out_type, 
-                           MARU_Window **out_window, MARU_UserDefinedEvent *out_evt);
+                           MARU_Window **out_window, MARU_Event *out_evt);
 
 #endif

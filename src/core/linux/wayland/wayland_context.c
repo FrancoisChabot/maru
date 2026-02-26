@@ -601,6 +601,14 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     return MARU_FAILURE;
   }
 
+  if (!_maru_linux_common_init(&ctx->linux_common)) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
+                           MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                           "Failed to initialize Linux common context");
+    maru_context_free(&ctx->base, ctx);
+    return MARU_FAILURE;
+  }
+
   ctx->wake_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
   if (ctx->wake_fd < 0) {
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
@@ -696,6 +704,7 @@ cleanup_symbols:
     maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
     ctx->base.mouse_button_channels = NULL;
   }
+  _maru_linux_common_cleanup(&ctx->linux_common);
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
   maru_context_free(&ctx->base, ctx);
@@ -779,6 +788,8 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   maru_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc,
                               &ctx->linux_common.xkb_lib, &ctx->dlib.opt.decor);
 
+
+  _maru_linux_common_cleanup(&ctx->linux_common);
 
   close(ctx->wake_fd);
   ctx->wake_fd = -1;
@@ -1132,7 +1143,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
 
-  _maru_drain_user_events(&ctx->base);
+  _maru_drain_queued_events(&ctx->base);
   MARU_WLPumpStepState step = {0};
   if (!_maru_wayland_pump_prepare_pollfds(ctx, &step, &status)) {
     goto pump_exit;
@@ -1149,7 +1160,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   }
   _maru_wayland_pump_post_tick(ctx);
 
-pump_exit:
+pump_exit:;
   const uint64_t pump_end_ns = _maru_wayland_get_monotonic_time_ns();
   if (pump_start_ns != 0 && pump_end_ns != 0 && pump_end_ns >= pump_start_ns) {
     _maru_wayland_record_pump_duration_ns(ctx, pump_end_ns - pump_start_ns);

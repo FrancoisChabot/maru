@@ -7,11 +7,13 @@ set(iface_direct "maru_iface${MARU_LIB_SUFFIX}_direct")
 
 # Direct target objects
 add_library("maru_x11_obj" OBJECT ${MARU_X11_SOURCES})
+target_include_directories("maru_x11_obj" PRIVATE ..)
 target_link_libraries("maru_x11_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
 set_property(TARGET "maru_x11_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
 
 # Indirect target objects
 add_library("maru_x11_indirect_obj" OBJECT ${MARU_X11_SOURCES})
+target_include_directories("maru_x11_indirect_obj" PRIVATE ..)
 target_link_libraries("maru_x11_indirect_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
 target_compile_definitions("maru_x11_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
 set_property(TARGET "maru_x11_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})

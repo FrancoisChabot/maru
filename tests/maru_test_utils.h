@@ -16,13 +16,24 @@ static inline MARU_Status _mock_destroyContext(MARU_Context* context) {
     return MARU_SUCCESS;
 }
 
+static inline MARU_Status _mock_updateContext(MARU_Context* context, uint64_t field_mask,
+                                              const MARU_ContextAttributes* attributes) {
+    _maru_update_context_base((MARU_Context_Base*)context, field_mask, attributes);
+    return MARU_SUCCESS;
+}
+
+static inline MARU_Status _mock_wakeContext(MARU_Context* context) {
+    (void)context;
+    return MARU_SUCCESS;
+}
+
 #ifdef MARU_INDIRECT_BACKEND
 static const MARU_Backend _maru_mock_backend = {
     .destroyContext = _mock_destroyContext,
-    .updateContext = NULL,
+    .updateContext = _mock_updateContext,
 
     .pumpEvents = NULL,
-    .wakeContext = NULL,
+    .wakeContext = _mock_wakeContext,
     
     .createWindow = NULL,
     .destroyWindow = NULL,

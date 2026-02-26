@@ -1,8 +1,8 @@
 set(MARU_LINUX_COMMON_SOURCES
     linux_entry.c
     linux_context.c
+    linux_common.c
     linux_dataexchange.c
-    linux_controllers.c
     dlib/linux_loader.c
 )
 

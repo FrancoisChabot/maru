@@ -82,24 +82,22 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
 
   uint32_t capacity = ctx_base->tuning.user_event_queue_size;
   if (capacity == 0) capacity = 256;
-  _maru_event_queue_init(&ctx_base->user_event_queue, ctx_base, capacity);
+  _maru_event_queue_init(&ctx_base->queued_events, ctx_base, capacity);
 
   ctx_base->metrics.user_events = &ctx_base->user_event_metrics;
   ctx_base->pub.metrics = &ctx_base->metrics;
 }
 
-void _maru_drain_user_events(MARU_Context_Base *ctx_base) {
+void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {
   MARU_EventId type;
   MARU_Window *window;
-  MARU_UserDefinedEvent user_evt;
   MARU_Event evt;
 
-  while (_maru_event_queue_pop(&ctx_base->user_event_queue, &type, &window, &user_evt)) {
-    evt.user = user_evt;
+  while (_maru_event_queue_pop(&ctx_base->queued_events, &type, &window, &evt)) {
     _maru_dispatch_event(ctx_base, type, window, &evt);
   }
   
-  _maru_event_queue_update_metrics(&ctx_base->user_event_queue, &ctx_base->user_event_metrics);
+  _maru_event_queue_update_metrics(&ctx_base->queued_events, &ctx_base->user_event_metrics);
 }
 
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
@@ -153,7 +151,7 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
     maru_context_free(ctx_base, ctx_base->mouse_button_channels);
     ctx_base->mouse_button_channels = NULL;
   }
-  _maru_event_queue_cleanup(&ctx_base->user_event_queue, ctx_base);
+  _maru_event_queue_cleanup(&ctx_base->queued_events, ctx_base);
 }
 
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
@@ -640,15 +638,22 @@ MARU_API MARU_Status maru_getLinuxWindowHandle(
 #endif
 
 
-MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
-                                      MARU_Window *window, MARU_UserDefinedEvent evt) {
-  MARU_API_VALIDATE(postEvent, context, type, window, evt);
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-
-  if (_maru_event_queue_push(&ctx_base->user_event_queue, type, window, evt)) {
-    return maru_wakeContext(context);
+MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
+                                      MARU_Window *window, const MARU_Event *evt) {
+  if (_maru_event_queue_push(&ctx_base->queued_events, type, window, *evt)) {
+    return maru_wakeContext((MARU_Context *)ctx_base);
   }
   return MARU_FAILURE;
+}
+
+MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
+                                      MARU_Window *window, MARU_UserDefinedEvent user_evt) {
+  MARU_API_VALIDATE(postEvent, context, type, window, user_evt);
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  MARU_Event evt;
+  evt.user = user_evt;
+
+  return _maru_post_event_internal(ctx_base, type, window, &evt);
 }
 
 

@@ -27,7 +27,24 @@
   MARU_LIB_FN(const char *, udev_device_get_devnode,                    \
               (struct udev_device * udev_device))                       \
   MARU_LIB_FN(struct udev_device *, udev_device_unref,                  \
-              (struct udev_device * udev_device))
+              (struct udev_device * udev_device))                       \
+  MARU_LIB_FN(struct udev_enumerate *, udev_enumerate_new,              \
+              (struct udev * udev))                                     \
+  MARU_LIB_FN(int, udev_enumerate_add_match_subsystem,                  \
+              (struct udev_enumerate * udev_enumerate,                  \
+               const char *subsystem))                                  \
+  MARU_LIB_FN(int, udev_enumerate_scan_devices,                         \
+              (struct udev_enumerate * udev_enumerate))                 \
+  MARU_LIB_FN(struct udev_list_entry *, udev_enumerate_get_list_entry,    \
+              (struct udev_enumerate * udev_enumerate))                 \
+  MARU_LIB_FN(struct udev_list_entry *, udev_list_entry_get_next,        \
+              (struct udev_list_entry * list_entry))                    \
+  MARU_LIB_FN(const char *, udev_list_entry_get_name,                   \
+              (struct udev_list_entry * list_entry))                    \
+  MARU_LIB_FN(struct udev_device *, udev_device_new_from_syspath,        \
+              (struct udev * udev, const char *syspath))                \
+  MARU_LIB_FN(struct udev_enumerate *, udev_enumerate_unref,            \
+              (struct udev_enumerate * udev_enumerate))
 
 typedef struct MARU_Lib_Udev {
   MARU_External_Lib_Base base;
