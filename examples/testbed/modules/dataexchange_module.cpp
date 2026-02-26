@@ -25,6 +25,10 @@ void DataExchangeModule::onContextRecreated(MARU_Context* ctx, MARU_Window* wind
     has_received_target_ = false;
     clipboard_mime_types_.clear();
     primary_mime_types_.clear();
+
+    MARU_WindowAttributes attrs = {0};
+    attrs.accept_drop = true;
+    maru_updateWindow(window, MARU_WINDOW_ATTR_ACCEPT_DROP, &attrs);
 }
 
 void DataExchangeModule::update(MARU_Context* ctx, MARU_Window* window) {
@@ -32,8 +36,34 @@ void DataExchangeModule::update(MARU_Context* ctx, MARU_Window* window) {
     (void)window;
 }
 
+static std::string _dnd_info;
+
 void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
     (void)window;
+
+    if (type == MARU_EVENT_DROP_ENTERED) {
+        _dnd_info = "Drop Entered";
+        if (event.drop_enter.feedback && event.drop_enter.feedback->action) {
+            *event.drop_enter.feedback->action = MARU_DROP_ACTION_COPY;
+        }
+        return;
+    }
+    if (type == MARU_EVENT_DROP_HOVERED) {
+        _dnd_info = "Drop Hovered at " + std::to_string(event.drop_hover.position.x) + ", " + std::to_string(event.drop_hover.position.y);
+        if (event.drop_hover.feedback && event.drop_hover.feedback->action) {
+            *event.drop_hover.feedback->action = MARU_DROP_ACTION_COPY;
+        }
+        return;
+    }
+    if (type == MARU_EVENT_DROP_EXITED) {
+        _dnd_info = "Drop Exited";
+        return;
+    }
+    if (type == MARU_EVENT_DROP_DROPPED) {
+        _dnd_info = "Drop Dropped";
+        return;
+    }
+
     if (type == MARU_EVENT_DATA_REQUESTED) {
         const MARU_DataRequestEvent* req = &event.data_requested;
         if (!req) return;
@@ -171,6 +201,13 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
             }
         }
         ImGui::EndChild();
+
+        ImGui::Separator();
+        ImGui::Text("Drag and Drop Info:");
+        ImGui::Text("%s", _dnd_info.empty() ? "No active DnD" : _dnd_info.c_str());
+        
+        static MARU_Scalar drop_zone_size = 100.0;
+        ImGui::Button("Drop Zone", ImVec2(drop_zone_size, drop_zone_size));
     }
     ImGui::End();
 }

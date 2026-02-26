@@ -568,33 +568,137 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
                                          uint32_t serial, struct wl_surface *surface,
                                          wl_fixed_t x, wl_fixed_t y,
                                          struct wl_data_offer *offer) {
-  (void)data;
   (void)data_device;
-  (void)serial;
-  (void)surface;
-  (void)x;
-  (void)y;
-  (void)offer;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  if (!ctx || !surface || !offer) return;
+
+  MARU_Window_WL *window = (MARU_Window_WL *)maru_wl_surface_get_user_data(ctx, surface);
+  if (!window || !window->base.attrs_effective.accept_drop) {
+    maru_wl_data_offer_accept(ctx, offer, serial, NULL);
+    return;
+  }
+
+  ctx->clipboard.dnd_offer = offer;
+  ctx->clipboard.dnd_serial = serial;
+
+  MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, offer);
+  if (!meta) return;
+
+  MARU_DropAction action = MARU_DROP_ACTION_NONE;
+  void *session_userdata = NULL;
+  MARU_DropFeedback feedback = {
+      .action = &action,
+      .session_userdata = &session_userdata,
+  };
+
+  MARU_Event evt = {0};
+  evt.drop_enter.position.x = (MARU_Scalar)wl_fixed_to_double(x);
+  evt.drop_enter.position.y = (MARU_Scalar)wl_fixed_to_double(y);
+  evt.drop_enter.feedback = &feedback;
+  evt.drop_enter.available_types.mime_types = meta->mime_types;
+  evt.drop_enter.available_types.count = meta->mime_count;
+  evt.drop_enter.modifiers = _maru_wayland_get_modifiers(ctx);
+
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_ENTERED, (MARU_Window *)window, &evt);
+
+  uint32_t wl_action = 0;
+  if (action & MARU_DROP_ACTION_COPY) wl_action |= 1u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY */;
+  if (action & MARU_DROP_ACTION_MOVE) wl_action |= 2u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE */;
+
+  if (wl_action != 0) {
+    const char *accepted_mime = (meta->mime_count > 0) ? meta->mime_types[0] : NULL;
+    maru_wl_data_offer_accept(ctx, offer, serial, accepted_mime);
+    maru_wl_data_offer_set_actions(ctx, offer, wl_action, wl_action);
+  } else {
+    maru_wl_data_offer_accept(ctx, offer, serial, NULL);
+  }
 }
 
 static void _clipboard_data_device_leave(void *data, struct wl_data_device *data_device) {
-  (void)data;
   (void)data_device;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  if (!ctx) return;
+
+  MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+  if (window) {
+    MARU_Event evt = {0};
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_EXITED, (MARU_Window *)window, &evt);
+  }
+  ctx->clipboard.dnd_offer = NULL;
+  ctx->clipboard.dnd_serial = 0;
 }
 
 static void _clipboard_data_device_motion(void *data, struct wl_data_device *data_device,
                                           uint32_t time, wl_fixed_t x,
                                           wl_fixed_t y) {
-  (void)data;
   (void)data_device;
   (void)time;
-  (void)x;
-  (void)y;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  if (!ctx || !ctx->clipboard.dnd_offer) return;
+
+  MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+  if (!window || !window->base.attrs_effective.accept_drop) return;
+
+  MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_offer);
+  if (!meta) return;
+
+  MARU_DropAction action = MARU_DROP_ACTION_NONE;
+  void *session_userdata = NULL;
+  MARU_DropFeedback feedback = {
+      .action = &action,
+      .session_userdata = &session_userdata,
+  };
+
+  MARU_Event evt = {0};
+  evt.drop_hover.position.x = (MARU_Scalar)wl_fixed_to_double(x);
+  evt.drop_hover.position.y = (MARU_Scalar)wl_fixed_to_double(y);
+  evt.drop_hover.feedback = &feedback;
+  evt.drop_hover.available_types.mime_types = meta->mime_types;
+  evt.drop_hover.available_types.count = meta->mime_count;
+  evt.drop_hover.modifiers = _maru_wayland_get_modifiers(ctx);
+
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_HOVERED, (MARU_Window *)window, &evt);
+
+  uint32_t wl_action = 0;
+  if (action & MARU_DROP_ACTION_COPY) wl_action |= 1u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY */;
+  if (action & MARU_DROP_ACTION_MOVE) wl_action |= 2u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE */;
+
+  if (wl_action != 0) {
+    const char *accepted_mime = (meta->mime_count > 0) ? meta->mime_types[0] : NULL;
+    maru_wl_data_offer_accept(ctx, ctx->clipboard.dnd_offer, ctx->clipboard.dnd_serial, accepted_mime);
+    maru_wl_data_offer_set_actions(ctx, ctx->clipboard.dnd_offer, wl_action, wl_action);
+  } else {
+    maru_wl_data_offer_accept(ctx, ctx->clipboard.dnd_offer, ctx->clipboard.dnd_serial, NULL);
+  }
 }
 
 static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_device) {
-  (void)data;
   (void)data_device;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  if (!ctx || !ctx->clipboard.dnd_offer) return;
+
+  MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+  if (!window || !window->base.attrs_effective.accept_drop) return;
+
+  MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_offer);
+  if (!meta) return;
+
+  MARU_Event evt = {0};
+  evt.drop.position.x = ctx->linux_common.pointer.x;
+  evt.drop.position.y = ctx->linux_common.pointer.y;
+  evt.drop.available_types.mime_types = meta->mime_types;
+  evt.drop.available_types.count = meta->mime_count;
+  evt.drop.modifiers = _maru_wayland_get_modifiers(ctx);
+
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED, (MARU_Window *)window, &evt);
+
+  // In Wayland, we MUST call finish on the offer if it was version 3+.
+  // And we should probably only do it after we've read the data if we wanted it.
+  // But for now, we just finish it.
+  maru_wl_data_offer_finish(ctx, ctx->clipboard.dnd_offer);
+
+  ctx->clipboard.dnd_offer = NULL;
+  ctx->clipboard.dnd_serial = 0;
 }
 
 static void _clipboard_data_device_selection(void *data,

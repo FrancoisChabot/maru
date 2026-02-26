@@ -72,6 +72,26 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
            << " IconEffective: " << (e.presentation.icon_effective ? "YES" : "NO");
     } else if (type == MARU_EVENT_MONITOR_CONNECTION_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_connection.monitor << " Connected: " << (e.monitor_connection.connected ? "YES" : "NO");
+    } else if (type == MARU_EVENT_DROP_ENTERED) {
+        ss << "Drop Enter: (" << e.drop_enter.position.x << "," << e.drop_enter.position.y << ") Count=" << e.drop_enter.available_types.count;
+    } else if (type == MARU_EVENT_DROP_HOVERED) {
+        ss << "Drop Hover: (" << e.drop_hover.position.x << "," << e.drop_hover.position.y << ") Count=" << e.drop_hover.available_types.count;
+    } else if (type == MARU_EVENT_DROP_EXITED) {
+        ss << "Drop Exit";
+    } else if (type == MARU_EVENT_DROP_DROPPED) {
+        ss << "Drop Dropped: (" << e.drop.position.x << "," << e.drop.position.y << ") Count=" << e.drop.available_types.count;
+    } else if (type == MARU_EVENT_DATA_RECEIVED) {
+        ss << "Data Received: Status=" << (int)e.data_received.status << " Mime=" << (e.data_received.mime_type ? e.data_received.mime_type : "N/A") << " Size=" << e.data_received.size;
+    } else if (type == MARU_EVENT_DATA_REQUESTED) {
+        ss << "Data Requested: Mime=" << (e.data_requested.mime_type ? e.data_requested.mime_type : "N/A");
+    } else if (type == MARU_EVENT_DATA_CONSUMED) {
+        ss << "Data Consumed: Mime=" << (e.data_consumed.mime_type ? e.data_consumed.mime_type : "N/A") << " Size=" << e.data_consumed.size;
+    } else if (type == MARU_EVENT_DRAG_FINISHED) {
+        ss << "Drag Finished: Action=" << (int)e.drag_finished.action;
+    } else if (type == MARU_EVENT_CONTROLLER_CONNECTION_CHANGED) {
+        ss << "Controller: " << (void*)e.controller_connection.controller << " Connected: " << (e.controller_connection.connected ? "YES" : "NO");
+    } else if (type == MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED) {
+        ss << "Controller: " << (void*)e.controller_button_state_changed.controller << " Button=" << e.controller_button_state_changed.button_id << " State=" << (e.controller_button_state_changed.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE");
     } else {
         ss << "No detailed payload parser";
     }
@@ -190,6 +210,16 @@ const char* EventLogModule::typeToString(MARU_EventId type) {
     if (type == MARU_EVENT_TEXT_EDIT_UPDATE) return "TEXT_EDIT_UPDATE";
     if (type == MARU_EVENT_TEXT_EDIT_COMMIT) return "TEXT_EDIT_COMMIT";
     if (type == MARU_EVENT_TEXT_EDIT_END) return "TEXT_EDIT_END";
+    if (type == MARU_EVENT_DROP_ENTERED) return "DROP_ENTERED";
+    if (type == MARU_EVENT_DROP_HOVERED) return "DROP_HOVERED";
+    if (type == MARU_EVENT_DROP_EXITED) return "DROP_EXITED";
+    if (type == MARU_EVENT_DROP_DROPPED) return "DROP_DROPPED";
+    if (type == MARU_EVENT_DATA_RECEIVED) return "DATA_RECEIVED";
+    if (type == MARU_EVENT_DATA_REQUESTED) return "DATA_REQUESTED";
+    if (type == MARU_EVENT_DATA_CONSUMED) return "DATA_CONSUMED";
+    if (type == MARU_EVENT_DRAG_FINISHED) return "DRAG_FINISHED";
+    if (type == MARU_EVENT_CONTROLLER_CONNECTION_CHANGED) return "CONTROLLER_CONNECTION_CHANGED";
+    if (type == MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED) return "CONTROLLER_BUTTON_STATE_CHANGED";
     if (type == MARU_EVENT_USER_0) return "USER_EVENT_0";
     return "UNKNOWN";
 }

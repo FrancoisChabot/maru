@@ -29,7 +29,6 @@
 #define WL_POINTER_AXIS_VERTICAL_SCROLL 0
 #define WL_POINTER_AXIS_HORIZONTAL_SCROLL 1
 
-static MARU_ModifierFlags _get_modifiers(MARU_Context_WL *ctx);
 
 static MARU_Window_WL *_maru_wayland_resolve_registered_window(
     MARU_Context_WL *ctx, const MARU_Window *candidate) {
@@ -441,7 +440,7 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer,
     evt.mouse_motion.delta.y = evt.mouse_motion.position.y - ctx->linux_common.pointer.y;
     evt.mouse_motion.raw_delta.x = 0.0;
     evt.mouse_motion.raw_delta.y = 0.0;
-    evt.mouse_motion.modifiers = _get_modifiers(ctx);
+    evt.mouse_motion.modifiers = _maru_wayland_get_modifiers(ctx);
     
     ctx->linux_common.pointer.x = evt.mouse_motion.position.x;
     ctx->linux_common.pointer.y = evt.mouse_motion.position.y;
@@ -486,7 +485,7 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
     MARU_Event evt = {0};
     evt.mouse_button.button_id = channel;
     evt.mouse_button.state = btn_state;
-    evt.mouse_button.modifiers = _get_modifiers(ctx);
+    evt.mouse_button.modifiers = _maru_wayland_get_modifiers(ctx);
     _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED,
                          (MARU_Window *)window, &evt);
 }
@@ -517,7 +516,7 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *wl_pointer) {
             evt.mouse_scroll.delta = ctx->scroll.delta;
             evt.mouse_scroll.steps.x = ctx->scroll.steps.x;
             evt.mouse_scroll.steps.y = ctx->scroll.steps.y;
-            evt.mouse_scroll.modifiers = _get_modifiers(ctx);
+            evt.mouse_scroll.modifiers = _maru_wayland_get_modifiers(ctx);
             _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)window, &evt);
         }
         memset(&ctx->scroll, 0, sizeof(ctx->scroll));
@@ -535,7 +534,7 @@ static void _pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_poin
     ctx->scroll.active = true;
 }
 
-static MARU_ModifierFlags _get_modifiers(MARU_Context_WL *ctx) {
+MARU_ModifierFlags _maru_wayland_get_modifiers(MARU_Context_WL *ctx) {
     MARU_ModifierFlags mods = 0;
     if (!ctx->linux_common.xkb.state) return 0;
 
@@ -571,7 +570,7 @@ static void _relative_pointer_handle_relative_motion(void *data, struct zwp_rela
     evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
     evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
     evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
-    evt.mouse_motion.modifiers = _get_modifiers(ctx);
+    evt.mouse_motion.modifiers = _maru_wayland_get_modifiers(ctx);
 
     _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)window, &evt);
 }
@@ -830,7 +829,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
         MARU_Event evt = {0};
         evt.key.raw_key = maru_key;
         evt.key.state = maru_state;
-        evt.key.modifiers = _get_modifiers(ctx);
+        evt.key.modifiers = _maru_wayland_get_modifiers(ctx);
 
         _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
     }

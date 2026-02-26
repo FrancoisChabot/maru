@@ -52,6 +52,9 @@ typedef struct MARU_WaylandClipboardState {
   struct wl_data_source *source;
   uint32_t serial;
 
+  struct wl_data_offer *dnd_offer;
+  uint32_t dnd_serial;
+
   const char **announced_mime_types;
   uint32_t announced_mime_count;
   uint32_t announced_mime_capacity;
@@ -215,8 +218,6 @@ typedef struct MARU_Window_WL {
   uint32_t monitor_count;
   uint32_t monitor_capacity;
   bool pending_resized_event;
-  bool accepts_drop;
-  bool primary_selection;
   bool ime_preedit_active;
   bool missing_text_input_v3_reported;
   bool missing_viewporter_reported;
@@ -494,6 +495,7 @@ void _maru_wayland_request_frame(MARU_Window_WL *window);
 uint64_t _maru_wayland_get_monotonic_time_ns(void);
 uint64_t _maru_wayland_cursor_next_frame_ns(const MARU_Context_WL *ctx);
 void _maru_wayland_advance_cursor_animation(MARU_Context_WL *ctx);
+MARU_ModifierFlags _maru_wayland_get_modifiers(MARU_Context_WL *ctx);
 
 bool _maru_wayland_init_libdecor(MARU_Context_WL *ctx);
 void _maru_wayland_cleanup_libdecor(MARU_Context_WL *ctx);
