@@ -7,23 +7,23 @@ A lightweight vulkan-first Platform Abstraction Layer for the modern age.
 What's neat about Maru?
 
 - It has no dynamic global state whatsoever, and is completely inert until invoked.
-- It goes out of its way to provide fast and steady timing (< 0.1ms generally, 0.3ms with a high-frequency mouse), even during unusual events like a controller hot-plugs.
+- It goes out of its way to provide fast and steady timing (< 0.1ms generally), even during unusual events like controller hot-plugs.
 - API use is aggressively validated in debug, and all guardrails can be disabled for maximum performance.
 - It exposes clear and detailed metrics about its internal timing and resource usage.
 
 ## Status
 
-Ready for use by early adopters on Linux.
+Ready for use by early adopters on Wayland.
 
 ## Quickstart 
 
 Run the following, and you should be presented with a ImGui-based playground to mess with the various things Maru provides.
 
-You first need need: 
+You first need: 
   - A C compiler (gcc/clang/msvc)
   - [git](https://git-scm.com/)
   - [CMake](https://cmake.org/) (3.20 or above)
-  - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home).
+  - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home). (N.B. only needed for the examples, the Maru library itslef doesn't require it)
 
 ```bash 
 # Linux/macOS: you may or may not have to do this depending on your environment.
