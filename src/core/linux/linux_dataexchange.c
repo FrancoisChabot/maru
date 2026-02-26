@@ -87,6 +87,21 @@ static bool _maru_linux_dataexchange_grow_buffer(MARU_Context_Base *ctx_base,
 static void _maru_linux_dataexchange_dispatch_complete(MARU_Context_Base *ctx_base,
                                                        MARU_LinuxDataTransfer *transfer,
                                                        MARU_Status status) {
+  if (transfer->user_tag == (void *)1) {
+#ifdef MARU_INDIRECT_BACKEND
+    if (ctx_base->pub.backend_type == MARU_BACKEND_WAYLAND) {
+      extern void _maru_wayland_dataexchange_handle_internal_transfer_complete(
+          void *ctx, MARU_Window *window, MARU_DataExchangeTarget target,
+          const char *mime_type, const void *data, size_t size, MARU_Status status);
+      _maru_wayland_dataexchange_handle_internal_transfer_complete(
+          (void *)ctx_base, transfer->window, transfer->target,
+          transfer->mime_type, transfer->buffer, transfer->size, status);
+      return;
+    }
+#endif
+    return;
+  }
+
   MARU_Event evt = {0};
   evt.data_received.user_tag = transfer->user_tag;
   evt.data_received.status = status;

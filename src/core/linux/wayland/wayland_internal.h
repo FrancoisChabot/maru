@@ -53,13 +53,25 @@ typedef struct MARU_WaylandClipboardState {
   uint32_t serial;
 
   struct wl_data_offer *dnd_offer;
+  struct wl_data_source *dnd_source;
   uint32_t dnd_serial;
   void *dnd_session_userdata;
   struct MARU_Window_WL *dnd_window;
 
+  struct {
+    bool pending;
+    MARU_Vec2Dip position;
+    MARU_ModifierFlags modifiers;
+    struct wl_data_offer *offer;
+  } dnd_drop;
+
   const char **announced_mime_types;
   uint32_t announced_mime_count;
   uint32_t announced_mime_capacity;
+
+  const char **dnd_announced_mime_types;
+  uint32_t dnd_announced_mime_count;
+  uint32_t dnd_announced_mime_capacity;
 
   uint8_t *read_cache;
   size_t read_cache_size;
@@ -67,6 +79,9 @@ typedef struct MARU_WaylandClipboardState {
 
   const char **mime_query_ptr;
   uint32_t mime_query_count;
+
+  const char **dnd_mime_query_ptr;
+  uint32_t dnd_mime_query_count;
 
   MARU_WaylandDataOfferMeta *offer_metas;
 } MARU_WaylandClipboardState;
@@ -463,6 +478,9 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
 MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
                                           MARU_DataExchangeTarget target,
                                           MARU_MIMETypeList *out_list);
+void _maru_wayland_dataexchange_handle_internal_transfer_complete(
+    void *ctx, MARU_Window *window, MARU_DataExchangeTarget target,
+    const char *mime_type, const void *data, size_t size, MARU_Status status);
 void _maru_wayland_dataexchange_onSeatCapabilities(MARU_Context_WL *ctx,
                                                    struct wl_seat *seat,
                                                    uint32_t caps);

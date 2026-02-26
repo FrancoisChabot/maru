@@ -22,10 +22,13 @@ private:
     bool enabled_ = false;
     bool owns_clipboard_ = false;
     bool owns_primary_selection_ = false;
+    bool is_dragging_ = false;
     MARU_Status last_status_ = MARU_SUCCESS;
     MARU_DataExchangeTarget last_received_target_ = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
     bool has_received_target_ = false;
     char input_buffer_[2048] = "";
     std::vector<std::string> clipboard_mime_types_;
     std::vector<std::string> primary_mime_types_;
+    std::vector<std::string> dnd_mime_types_;
+    std::vector<std::string> dropped_paths_;
 };

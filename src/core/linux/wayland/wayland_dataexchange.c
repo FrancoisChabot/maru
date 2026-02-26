@@ -27,6 +27,79 @@ typedef struct MARU_WaylandDataRequestHandle {
   bool consumed;
 } MARU_WaylandDataRequestHandle;
 
+static uint32_t _maru_wl_parse_uri_list(MARU_Context_WL *ctx, const char *data,
+                                        size_t size, const char ***out_paths) {
+  uint32_t count = 0;
+  const char *curr = data;
+  const char *end = data + size;
+
+  while (curr < end) {
+    const char *line_end = (const char *)memchr(curr, '\n', (size_t)(end - curr));
+    if (!line_end) line_end = end;
+
+    const char *line_start = curr;
+    while (line_start < line_end && (*line_start == ' ' || *line_start == '\t')) {
+      line_start++;
+    }
+
+    if (line_start < line_end && *line_start != '#') {
+      count++;
+    }
+    curr = (line_end < end) ? line_end + 1 : end;
+  }
+
+  if (count == 0) {
+    *out_paths = NULL;
+    return 0;
+  }
+
+  const char **paths =
+      (const char **)maru_context_alloc(&ctx->base, sizeof(char *) * count);
+  if (!paths) {
+    *out_paths = NULL;
+    return 0;
+  }
+
+  uint32_t idx = 0;
+  curr = data;
+  while (curr < end && idx < count) {
+    const char *line_end = (const char *)memchr(curr, '\n', (size_t)(end - curr));
+    if (!line_end) line_end = end;
+
+    const char *line_start = curr;
+    while (line_start < line_end && (*line_start == ' ' || *line_start == '\t')) {
+      line_start++;
+    }
+
+    const char *content_end = line_end;
+    while (content_end > line_start &&
+           (content_end[-1] == '\r' || content_end[-1] == ' ' ||
+            content_end[-1] == '\t')) {
+      content_end--;
+    }
+
+    if (line_start < content_end && *line_start != '#') {
+      const char *path_start = line_start;
+      if (content_end - line_start >= 7 &&
+          memcmp(line_start, "file://", 7) == 0) {
+        path_start += 7;
+      }
+
+      const size_t path_len = (size_t)(content_end - path_start);
+      char *copy = (char *)maru_context_alloc(&ctx->base, path_len + 1);
+      if (copy) {
+        memcpy(copy, path_start, path_len);
+        copy[path_len] = '\0';
+        paths[idx++] = copy;
+      }
+    }
+    curr = (line_end < end) ? line_end + 1 : end;
+  }
+
+  *out_paths = paths;
+  return idx;
+}
+
 static const char *_maru_wl_copy_string(MARU_Context_Base *ctx_base,
                                         const char *text) {
   if (!text) return NULL;
@@ -53,6 +126,14 @@ static void _maru_wl_clear_primary_mime_query(MARU_Context_WL *ctx) {
   ctx->primary_selection.mime_query_count = 0;
 }
 
+static void _maru_wl_clear_dnd_mime_query(MARU_Context_WL *ctx) {
+  if (ctx->clipboard.dnd_mime_query_ptr) {
+    maru_context_free(&ctx->base, (void *)ctx->clipboard.dnd_mime_query_ptr);
+    ctx->clipboard.dnd_mime_query_ptr = NULL;
+  }
+  ctx->clipboard.dnd_mime_query_count = 0;
+}
+
 static void _maru_wl_clear_announced_mimes(MARU_Context_WL *ctx) {
   for (uint32_t i = 0; i < ctx->clipboard.announced_mime_count; ++i) {
     maru_context_free(&ctx->base, (void *)ctx->clipboard.announced_mime_types[i]);
@@ -72,6 +153,16 @@ static void _maru_wl_clear_primary_announced_mimes(MARU_Context_WL *ctx) {
   ctx->primary_selection.announced_mime_types = NULL;
   ctx->primary_selection.announced_mime_count = 0;
   ctx->primary_selection.announced_mime_capacity = 0;
+}
+
+static void _maru_wl_clear_dnd_announced_mimes(MARU_Context_WL *ctx) {
+  for (uint32_t i = 0; i < ctx->clipboard.dnd_announced_mime_count; ++i) {
+    maru_context_free(&ctx->base, (void *)ctx->clipboard.dnd_announced_mime_types[i]);
+  }
+  maru_context_free(&ctx->base, (void *)ctx->clipboard.dnd_announced_mime_types);
+  ctx->clipboard.dnd_announced_mime_types = NULL;
+  ctx->clipboard.dnd_announced_mime_count = 0;
+  ctx->clipboard.dnd_announced_mime_capacity = 0;
 }
 
 static void _maru_wl_clear_read_cache(MARU_Context_WL *ctx) {
@@ -134,6 +225,34 @@ static bool _maru_wl_set_primary_announced_mimes(MARU_Context_WL *ctx,
   ctx->primary_selection.announced_mime_types = list;
   ctx->primary_selection.announced_mime_count = count;
   ctx->primary_selection.announced_mime_capacity = count;
+  return true;
+}
+
+static bool _maru_wl_set_dnd_announced_mimes(MARU_Context_WL *ctx,
+                                             const char **mime_types,
+                                             uint32_t count) {
+  _maru_wl_clear_dnd_announced_mimes(ctx);
+  if (count == 0) return true;
+
+  const char **list =
+      (const char **)maru_context_alloc(&ctx->base, sizeof(char *) * count);
+  if (!list) return false;
+  memset((void *)list, 0, sizeof(char *) * count);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    list[i] = _maru_wl_copy_string(&ctx->base, mime_types[i]);
+    if (!list[i]) {
+      for (uint32_t j = 0; j < i; ++j) {
+        maru_context_free(&ctx->base, (void *)list[j]);
+      }
+      maru_context_free(&ctx->base, (void *)list);
+      return false;
+    }
+  }
+
+  ctx->clipboard.dnd_announced_mime_types = list;
+  ctx->clipboard.dnd_announced_mime_count = count;
+  ctx->clipboard.dnd_announced_mime_capacity = count;
   return true;
 }
 
@@ -316,10 +435,13 @@ static bool _maru_wl_flush_or_mark_lost(MARU_Context_WL *ctx, const char *error_
 
 static bool _maru_wl_dataexchange_target_supported(MARU_Context_WL *ctx,
                                                    MARU_DataExchangeTarget target) {
-  if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
+  if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD ||
+      target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
     if (!ctx->protocols.opt.wl_data_device_manager) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "Clipboard requires wl_data_device_manager");
+                             target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD
+                                 ? "Clipboard requires wl_data_device_manager"
+                                 : "Drag and drop requires wl_data_device_manager");
       return false;
     }
     return true;
@@ -361,8 +483,20 @@ static void _clipboard_source_dnd_drop_performed(void *data,
 
 static void _clipboard_source_dnd_finished(void *data,
                                            struct wl_data_source *source) {
-  (void)data;
-  (void)source;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  if (!ctx || ctx->clipboard.dnd_source != source) return;
+
+  MARU_Event evt = {0};
+  // TODO: we should probably report the final action here.
+  evt.drag_finished.action = MARU_DROP_ACTION_NONE;
+
+  MARU_Window *event_window = ctx->linux_common.xkb.focused_window;
+  if (!event_window) event_window = ctx->linux_common.pointer.focused_window;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_DRAG_FINISHED, event_window, &evt);
+
+  ctx->clipboard.dnd_source = NULL;
+  maru_wl_data_source_destroy(ctx, source);
+  _maru_wl_clear_dnd_announced_mimes(ctx);
 }
 
 static void _clipboard_source_action(void *data, struct wl_data_source *source,
@@ -385,11 +519,15 @@ static void _maru_wl_destroy_request_handle(MARU_Context_WL *ctx,
 
 static void _clipboard_source_send(void *data, struct wl_data_source *source,
                                    const char *mime_type, int32_t fd) {
-  (void)source;
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   if (!ctx || fd < 0 || !mime_type) {
     if (fd >= 0) close(fd);
     return;
+  }
+
+  MARU_DataExchangeTarget target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+  if (ctx->clipboard.dnd_source == source) {
+    target = MARU_DATA_EXCHANGE_TARGET_DRAG_DROP;
   }
 
   MARU_WaylandDataRequestHandle *handle =
@@ -402,7 +540,7 @@ static void _clipboard_source_send(void *data, struct wl_data_source *source,
   handle->base.ctx_base = &ctx->base;
   handle->magic = MARU_WL_DATA_REQUEST_MAGIC;
   handle->fd = fd;
-  handle->target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+  handle->target = target;
   handle->mime_type = _maru_wl_copy_string(&ctx->base, mime_type);
   if (!handle->mime_type) {
     _maru_wl_destroy_request_handle(ctx, handle);
@@ -410,7 +548,7 @@ static void _clipboard_source_send(void *data, struct wl_data_source *source,
   }
 
   MARU_Event evt = {0};
-  evt.data_requested.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+  evt.data_requested.target = target;
   evt.data_requested.mime_type = handle->mime_type;
   evt.data_requested.internal_handle = handle;
 
@@ -468,6 +606,11 @@ static void _clipboard_source_cancelled(void *data, struct wl_data_source *sourc
     ctx->clipboard.source = NULL;
     maru_wl_data_source_destroy(ctx, current);
     _maru_wl_clear_announced_mimes(ctx);
+  } else if (ctx->clipboard.dnd_source && ctx->clipboard.dnd_source == source) {
+    struct wl_data_source *current = ctx->clipboard.dnd_source;
+    ctx->clipboard.dnd_source = NULL;
+    maru_wl_data_source_destroy(ctx, current);
+    _maru_wl_clear_dnd_announced_mimes(ctx);
   }
 }
 
@@ -686,21 +829,41 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
   MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_offer);
   if (!meta) return;
 
-  MARU_Event evt = {0};
-  evt.drop.position.x = ctx->linux_common.pointer.x;
-  evt.drop.position.y = ctx->linux_common.pointer.y;
-  evt.drop.session_userdata = &ctx->clipboard.dnd_session_userdata;
-  evt.drop.available_types.mime_types = meta->mime_types;
-  evt.drop.available_types.count = meta->mime_count;
-  evt.drop.modifiers = _maru_wayland_get_modifiers(ctx);
+  bool has_uri_list = false;
+  for (uint32_t i = 0; i < meta->mime_count; ++i) {
+    if (strcmp(meta->mime_types[i], "text/uri-list") == 0) {
+      has_uri_list = true;
+      break;
+    }
+  }
 
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED, (MARU_Window *)window, &evt);
+  if (has_uri_list) {
+    ctx->clipboard.dnd_drop.pending = true;
+    ctx->clipboard.dnd_drop.position.x = ctx->linux_common.pointer.x;
+    ctx->clipboard.dnd_drop.position.y = ctx->linux_common.pointer.y;
+    ctx->clipboard.dnd_drop.modifiers = _maru_wayland_get_modifiers(ctx);
+    ctx->clipboard.dnd_drop.offer = ctx->clipboard.dnd_offer;
+    
+    // We use (void*)1 as a special user_tag to identify internal pre-fetch
+    maru_requestData_WL((MARU_Window *)window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                         "text/uri-list", (void *)1);
+  } else {
+    MARU_Event evt = {0};
+    evt.drop.position.x = ctx->linux_common.pointer.x;
+    evt.drop.position.y = ctx->linux_common.pointer.y;
+    evt.drop.session_userdata = &ctx->clipboard.dnd_session_userdata;
+    evt.drop.available_types.mime_types = meta->mime_types;
+    evt.drop.available_types.count = meta->mime_count;
+    evt.drop.modifiers = _maru_wayland_get_modifiers(ctx);
+    evt.drop.paths = NULL;
+    evt.drop.path_count = 0;
 
-  maru_wl_data_offer_finish(ctx, ctx->clipboard.dnd_offer);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED, (MARU_Window *)window, &evt);
+    maru_wl_data_offer_finish(ctx, ctx->clipboard.dnd_offer);
+  }
 
   ctx->clipboard.dnd_offer = NULL;
   ctx->clipboard.dnd_serial = 0;
-  ctx->clipboard.dnd_session_userdata = NULL;
   ctx->clipboard.dnd_window = NULL;
 }
 
@@ -807,9 +970,16 @@ void _maru_wayland_dataexchange_onSeatRemoved(MARU_Context_WL *ctx) {
     ctx->clipboard.source = NULL;
     maru_wl_data_source_destroy(ctx, source);
   }
+  if (ctx->clipboard.dnd_source) {
+    struct wl_data_source *source = ctx->clipboard.dnd_source;
+    ctx->clipboard.dnd_source = NULL;
+    maru_wl_data_source_destroy(ctx, source);
+  }
   _maru_wl_clear_offer_metas(ctx);
   _maru_wl_clear_announced_mimes(ctx);
+  _maru_wl_clear_dnd_announced_mimes(ctx);
   _maru_wl_clear_mime_query(ctx);
+  _maru_wl_clear_dnd_mime_query(ctx);
   if (ctx->primary_selection.device) {
     maru_zwp_primary_selection_device_v1_destroy(ctx, ctx->primary_selection.device);
     ctx->primary_selection.device = NULL;
@@ -822,6 +992,7 @@ void _maru_wayland_dataexchange_onSeatRemoved(MARU_Context_WL *ctx) {
   _maru_wl_clear_primary_offer_metas(ctx);
   _maru_wl_clear_primary_announced_mimes(ctx);
   _maru_wl_clear_primary_mime_query(ctx);
+  memset(&ctx->clipboard.dnd_drop, 0, sizeof(ctx->clipboard.dnd_drop));
   maru_linux_dataexchange_destroyTransfers(&ctx->base, &ctx->data_transfers);
   ctx->clipboard.serial = 0;
   ctx->primary_selection.serial = 0;
@@ -841,12 +1012,64 @@ void _maru_wayland_dataexchange_destroy(MARU_Context_WL *ctx) {
   maru_linux_dataexchange_destroyTransfers(&ctx->base, &ctx->data_transfers);
 }
 
+bool _maru_wayland_dataexchange_handle_internal_event(void *ctx_ptr,
+                                                       MARU_EventId type,
+                                                       MARU_Window *window,
+                                                       const MARU_Event *event) {
+  MARU_Context_WL *ctx = (MARU_Context_WL *)ctx_ptr;
+  if (type != MARU_EVENT_DATA_RECEIVED) return false;
+  if (event->data_received.user_tag != (void *)1) return false;
+
+  if (ctx->clipboard.dnd_drop.pending) {
+    const char **paths = NULL;
+    uint32_t path_count = 0;
+
+    if (event->data_received.status == MARU_SUCCESS && event->data_received.data) {
+      path_count = _maru_wl_parse_uri_list(ctx, (const char *)event->data_received.data,
+                                          event->data_received.size, &paths);
+    }
+
+    MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_drop.offer);
+    
+    MARU_Event drop_evt = {0};
+    drop_evt.drop.position = ctx->clipboard.dnd_drop.position;
+    drop_evt.drop.session_userdata = &ctx->clipboard.dnd_session_userdata;
+    drop_evt.drop.modifiers = ctx->clipboard.dnd_drop.modifiers;
+    drop_evt.drop.paths = paths;
+    drop_evt.drop.path_count = (uint16_t)path_count;
+    if (meta) {
+      drop_evt.drop.available_types.mime_types = meta->mime_types;
+      drop_evt.drop.available_types.count = meta->mime_count;
+    }
+
+    ctx->clipboard.dnd_drop.pending = false;
+
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED, window, &drop_evt);
+
+    if (paths) {
+      for (uint32_t i = 0; i < path_count; ++i) {
+        maru_context_free(&ctx->base, (void *)paths[i]);
+      }
+      maru_context_free(&ctx->base, (void *)paths);
+    }
+
+    if (ctx->clipboard.dnd_drop.offer) {
+        maru_wl_data_offer_finish(ctx, ctx->clipboard.dnd_drop.offer);
+        ctx->clipboard.dnd_drop.offer = NULL;
+    }
+    
+    ctx->clipboard.dnd_session_userdata = NULL;
+  }
+
+  return true;
+}
+
 MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
                                  const char **mime_types, uint32_t count,
                                  MARU_DropActionMask allowed_actions) {
-  (void)allowed_actions;
   if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
-      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
+      target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
     return MARU_FAILURE;
   }
 
@@ -856,6 +1079,68 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
     return MARU_FAILURE;
   }
   _maru_wl_dataexchange_ensure_seat_devices(ctx);
+
+  if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
+    if (!ctx->clipboard.device || ctx->clipboard.serial == 0) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
+                             MARU_DIAGNOSTIC_PRECONDITION_FAILURE,
+                             "No valid data device/serial available for drag and drop");
+      return MARU_FAILURE;
+    }
+
+    _maru_wl_clear_dnd_mime_query(ctx);
+
+    if (count == 0) {
+      if (ctx->clipboard.dnd_source) {
+        struct wl_data_source *source = ctx->clipboard.dnd_source;
+        ctx->clipboard.dnd_source = NULL;
+        maru_wl_data_source_destroy(ctx, source);
+      }
+      _maru_wl_clear_dnd_announced_mimes(ctx);
+      return MARU_SUCCESS;
+    }
+
+    struct wl_data_source *source = maru_wl_data_device_manager_create_data_source(
+        ctx, ctx->protocols.opt.wl_data_device_manager);
+    if (!source) {
+      return MARU_FAILURE;
+    }
+    maru_wl_data_source_add_listener(ctx, source, &_clipboard_source_listener, ctx);
+
+    for (uint32_t i = 0; i < count; ++i) {
+      maru_wl_data_source_offer(ctx, source, mime_types[i]);
+    }
+
+    uint32_t wl_actions = 0;
+    if (allowed_actions & MARU_DROP_ACTION_COPY) wl_actions |= 1u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY */;
+    if (allowed_actions & MARU_DROP_ACTION_MOVE) wl_actions |= 2u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE */;
+    if (allowed_actions & MARU_DROP_ACTION_LINK) wl_actions |= 4u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK */;
+
+    if (wl_actions != 0) {
+      maru_wl_data_source_set_actions(ctx, source, wl_actions);
+    }
+
+    maru_wl_data_device_start_drag(ctx, ctx->clipboard.device, source,
+                                   wl_window->wl.surface, NULL,
+                                   ctx->clipboard.serial);
+
+    if (ctx->clipboard.dnd_source) {
+      struct wl_data_source *old_source = ctx->clipboard.dnd_source;
+      ctx->clipboard.dnd_source = NULL;
+      maru_wl_data_source_destroy(ctx, old_source);
+    }
+    ctx->clipboard.dnd_source = source;
+
+    if (!_maru_wl_set_dnd_announced_mimes(ctx, mime_types, count)) {
+      return MARU_FAILURE;
+    }
+
+    return _maru_wl_flush_or_mark_lost(
+               ctx, "wl_display_flush() failed while starting drag and drop")
+               ? MARU_SUCCESS
+               : MARU_ERROR_CONTEXT_LOST;
+  }
+
   if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     if (!ctx->clipboard.device || ctx->clipboard.serial == 0) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
@@ -969,7 +1254,8 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
 MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
                                 const char *mime_type, void *user_tag) {
   if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
-      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
+      target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
     return MARU_FAILURE;
   }
 
@@ -992,7 +1278,7 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
       return MARU_FAILURE;
     }
     maru_wl_data_offer_receive(ctx, ctx->clipboard.offer, mime_type, pipefd[1]);
-  } else {
+  } else if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
     if (!ctx->primary_selection.offer ||
         !_maru_wl_primary_offer_has_mime(ctx, ctx->primary_selection.offer,
                                          mime_type)) {
@@ -1002,6 +1288,18 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
     }
     maru_zwp_primary_selection_offer_v1_receive(
         ctx, ctx->primary_selection.offer, mime_type, pipefd[1]);
+  } else {
+    struct wl_data_offer *offer = ctx->clipboard.dnd_offer;
+    if (!offer && ctx->clipboard.dnd_drop.pending) {
+      offer = ctx->clipboard.dnd_drop.offer;
+    }
+
+    if (!offer || !_maru_wl_offer_has_mime(ctx, offer, mime_type)) {
+      close(pipefd[0]);
+      close(pipefd[1]);
+      return MARU_FAILURE;
+    }
+    maru_wl_data_offer_receive(ctx, offer, mime_type, pipefd[1]);
   }
   close(pipefd[1]);
 
@@ -1027,7 +1325,8 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
                                           MARU_DataExchangeTarget target,
                                           MARU_MIMETypeList *out_list) {
   if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
-      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
+      target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
     out_list->mime_types = NULL;
     out_list->count = 0;
     return MARU_FAILURE;
@@ -1058,7 +1357,7 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
         src_count = meta->mime_count;
       }
     }
-  } else {
+  } else if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
     _maru_wl_clear_primary_mime_query(ctx);
     if (ctx->primary_selection.announced_mime_count > 0) {
       src = ctx->primary_selection.announced_mime_types;
@@ -1069,6 +1368,25 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
       if (meta && meta->mime_count > 0) {
         src = meta->mime_types;
         src_count = meta->mime_count;
+      }
+    }
+  } else {
+    _maru_wl_clear_dnd_mime_query(ctx);
+    if (ctx->clipboard.dnd_announced_mime_count > 0) {
+      src = ctx->clipboard.dnd_announced_mime_types;
+      src_count = ctx->clipboard.dnd_announced_mime_count;
+    } else {
+      struct wl_data_offer *offer = ctx->clipboard.dnd_offer;
+      if (!offer && ctx->clipboard.dnd_drop.pending) {
+        offer = ctx->clipboard.dnd_drop.offer;
+      }
+      if (offer) {
+        MARU_WaylandDataOfferMeta *meta =
+            _maru_wl_find_offer_meta(ctx, offer);
+        if (meta && meta->mime_count > 0) {
+          src = meta->mime_types;
+          src_count = meta->mime_count;
+        }
       }
     }
   }
@@ -1085,18 +1403,24 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
     if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
       ctx->clipboard.mime_query_ptr = query;
       ctx->clipboard.mime_query_count = src_count;
-    } else {
+    } else if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
       ctx->primary_selection.mime_query_ptr = query;
       ctx->primary_selection.mime_query_count = src_count;
+    } else {
+      ctx->clipboard.dnd_mime_query_ptr = query;
+      ctx->clipboard.dnd_mime_query_count = src_count;
     }
   }
 
   if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     out_list->mime_types = ctx->clipboard.mime_query_ptr;
     out_list->count = ctx->clipboard.mime_query_count;
-  } else {
+  } else if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
     out_list->mime_types = ctx->primary_selection.mime_query_ptr;
     out_list->count = ctx->primary_selection.mime_query_count;
+  } else {
+    out_list->mime_types = ctx->clipboard.dnd_mime_query_ptr;
+    out_list->count = ctx->clipboard.dnd_mime_query_count;
   }
   return MARU_SUCCESS;
 }
@@ -1138,4 +1462,52 @@ MARU_Status maru_provideData_WL(const MARU_DataRequestEvent *request_event,
   handle->fd = -1;
   handle->consumed = true;
   return MARU_SUCCESS;
+}
+
+void _maru_wayland_dataexchange_handle_internal_transfer_complete(
+    void *ctx_ptr, MARU_Window *window, MARU_DataExchangeTarget target,
+    const char *mime_type, const void *data, size_t size, MARU_Status status) {
+  MARU_Context_WL *ctx = (MARU_Context_WL *)ctx_ptr;
+  (void)target;
+  (void)mime_type;
+
+  if (ctx->clipboard.dnd_drop.pending) {
+    const char **paths = NULL;
+    uint32_t path_count = 0;
+
+    if (status == MARU_SUCCESS && data) {
+      path_count = _maru_wl_parse_uri_list(ctx, (const char *)data, size, &paths);
+    }
+
+    MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_drop.offer);
+    
+    MARU_Event drop_evt = {0};
+    drop_evt.drop.position = ctx->clipboard.dnd_drop.position;
+    drop_evt.drop.session_userdata = &ctx->clipboard.dnd_session_userdata;
+    drop_evt.drop.modifiers = ctx->clipboard.dnd_drop.modifiers;
+    drop_evt.drop.paths = paths;
+    drop_evt.drop.path_count = (uint16_t)path_count;
+    if (meta) {
+      drop_evt.drop.available_types.mime_types = meta->mime_types;
+      drop_evt.drop.available_types.count = meta->mime_count;
+    }
+
+    ctx->clipboard.dnd_drop.pending = false;
+
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED, window, &drop_evt);
+
+    if (paths) {
+      for (uint32_t i = 0; i < path_count; ++i) {
+        maru_context_free(&ctx->base, (void *)paths[i]);
+      }
+      maru_context_free(&ctx->base, (void *)paths);
+    }
+
+    if (ctx->clipboard.dnd_drop.offer) {
+        maru_wl_data_offer_finish(ctx, ctx->clipboard.dnd_drop.offer);
+        ctx->clipboard.dnd_drop.offer = NULL;
+    }
+    
+    ctx->clipboard.dnd_session_userdata = NULL;
+  }
 }

@@ -281,22 +281,6 @@ MARU_API MARU_Status maru_retainController(MARU_Controller *controller) {
   return ctx_base->backend->retainController(controller);
 }
 
-MARU_API MARU_Status maru_releaseController(MARU_Controller *controller) {
-  MARU_API_VALIDATE(releaseController, controller);
-  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
-  if (!ctx_base->backend->releaseController) return MARU_FAILURE;
-  return ctx_base->backend->releaseController(controller);
-}
-
-MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
-  MARU_API_VALIDATE(resetControllerMetrics, controller);
-  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
-  if (!ctx_base->backend->resetControllerMetrics) return MARU_FAILURE;
-  return ctx_base->backend->resetControllerMetrics(controller);
-}
-
 MARU_API MARU_Status maru_getControllerInfo(MARU_Controller *controller,
                                             MARU_ControllerInfo *out_info) {
   MARU_API_VALIDATE(getControllerInfo, controller, out_info);
@@ -320,6 +304,22 @@ maru_setControllerHapticLevels(MARU_Controller *controller, uint32_t first_hapti
   if (!ctx_base->backend->setControllerHapticLevels) return MARU_FAILURE;
   return ctx_base->backend->setControllerHapticLevels(controller, first_haptic,
                                                       count, intensities);
+}
+
+MARU_API MARU_Status maru_releaseController(MARU_Controller *controller) {
+  MARU_API_VALIDATE(releaseController, controller);
+  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
+  if (!ctx_base->backend->releaseController) return MARU_FAILURE;
+  return ctx_base->backend->releaseController(controller);
+}
+
+MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
+  MARU_API_VALIDATE(resetControllerMetrics, controller);
+  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
+  if (!ctx_base->backend->resetControllerMetrics) return MARU_FAILURE;
+  return ctx_base->backend->resetControllerMetrics(controller);
 }
 
 MARU_API MARU_Status maru_announceData(MARU_Window *window,
@@ -634,7 +634,7 @@ MARU_API MARU_Status maru_getCocoaWindowHandle(
 MARU_API MARU_Status maru_getLinuxContextHandle(
     MARU_Context *context, MARU_LinuxContextHandle *out_handle) {
   if (!context || !out_handle) return MARU_FAILURE;
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   out_handle->backend = ctx_base->pub.backend_type;
   switch (ctx_base->pub.backend_type) {
     case MARU_BACKEND_WAYLAND:
@@ -650,7 +650,7 @@ MARU_API MARU_Status maru_getLinuxWindowHandle(
     MARU_Window *window, MARU_LinuxWindowHandle *out_handle) {
   if (!window || !out_handle) return MARU_FAILURE;
   MARU_Context *context = maru_getWindowContext(window);
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   out_handle->backend = ctx_base->pub.backend_type;
   switch (ctx_base->pub.backend_type) {
     case MARU_BACKEND_WAYLAND:

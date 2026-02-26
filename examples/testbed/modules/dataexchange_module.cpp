@@ -21,10 +21,13 @@ void DataExchangeModule::onContextRecreated(MARU_Context* ctx, MARU_Window* wind
     (void)window;
     owns_clipboard_ = false;
     owns_primary_selection_ = false;
+    is_dragging_ = false;
     last_status_ = MARU_SUCCESS;
     has_received_target_ = false;
     clipboard_mime_types_.clear();
     primary_mime_types_.clear();
+    dnd_mime_types_.clear();
+    dropped_paths_.clear();
 
     MARU_WindowAttributes attrs = {0};
     attrs.accept_drop = true;
@@ -41,8 +44,17 @@ static std::string _dnd_info;
 void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
     (void)window;
 
+    if (type == MARU_EVENT_DRAG_FINISHED) {
+        is_dragging_ = false;
+        return;
+    }
+
     if (type == MARU_EVENT_DROP_ENTERED) {
         _dnd_info = "Drop Entered";
+        dnd_mime_types_.clear();
+        for (uint32_t i = 0; i < event.drop_enter.available_types.count; ++i) {
+            dnd_mime_types_.emplace_back(event.drop_enter.available_types.mime_types[i]);
+        }
         if (event.drop_enter.feedback && event.drop_enter.feedback->action) {
             *event.drop_enter.feedback->action = MARU_DROP_ACTION_COPY;
         }
@@ -57,6 +69,12 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
             session_msg = (const char*)*event.drop_hover.feedback->session_userdata;
         }
         _dnd_info = "Drop Hovered at " + std::to_string(event.drop_hover.position.x) + ", " + std::to_string(event.drop_hover.position.y) + " Session: " + session_msg;
+        
+        dnd_mime_types_.clear();
+        for (uint32_t i = 0; i < event.drop_hover.available_types.count; ++i) {
+            dnd_mime_types_.emplace_back(event.drop_hover.available_types.mime_types[i]);
+        }
+
         if (event.drop_hover.feedback && event.drop_hover.feedback->action) {
             *event.drop_hover.feedback->action = MARU_DROP_ACTION_COPY;
         }
@@ -68,6 +86,7 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
             session_msg = (const char*)*event.drop_leave.session_userdata;
         }
         _dnd_info = std::string("Drop Exited. Session was: ") + session_msg;
+        dnd_mime_types_.clear();
         return;
     }
     if (type == MARU_EVENT_DROP_DROPPED) {
@@ -76,6 +95,16 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
             session_msg = (const char*)*event.drop.session_userdata;
         }
         _dnd_info = std::string("Drop Dropped. Session was: ") + session_msg;
+        
+        dropped_paths_.clear();
+        for (uint32_t i = 0; i < event.drop.path_count; ++i) {
+            dropped_paths_.emplace_back(event.drop.paths[i]);
+        }
+
+        dnd_mime_types_.clear();
+        for (uint32_t i = 0; i < event.drop.available_types.count; ++i) {
+            dnd_mime_types_.emplace_back(event.drop.available_types.mime_types[i]);
+        }
         return;
     }
 
@@ -83,7 +112,8 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         const MARU_DataRequestEvent* req = &event.data_requested;
         if (!req) return;
         if (req->target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
-            req->target != MARU_DATA_EXCHANGE_TARGET_PRIMARY) return;
+            req->target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
+            req->target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) return;
         if (!_is_text_mime(req->mime_type)) return;
         const size_t text_size = strnlen(input_buffer_, sizeof(input_buffer_));
         (void)maru_provideData(req, input_buffer_, text_size, MARU_DATA_PROVIDE_FLAG_NONE);
@@ -220,6 +250,35 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         ImGui::Separator();
         ImGui::Text("Drag and Drop Info:");
         ImGui::Text("%s", _dnd_info.empty() ? "No active DnD" : _dnd_info.c_str());
+
+        ImGui::Text("Active DnD MIME Types (%zu)", dnd_mime_types_.size());
+        if (ImGui::BeginChild("DnDMimeTypes", ImVec2(0, 60), true)) {
+            for (const std::string& mime : dnd_mime_types_) {
+                ImGui::BulletText("%s", mime.c_str());
+            }
+        }
+        ImGui::EndChild();
+
+        ImGui::Text("Dropped Paths (%zu)", dropped_paths_.size());
+        if (ImGui::BeginChild("DroppedPaths", ImVec2(0, 60), true)) {
+            for (const std::string& path : dropped_paths_) {
+                ImGui::BulletText("%s", path.c_str());
+            }
+        }
+        ImGui::EndChild();
+
+        ImGui::Button("Announce DnD Text", ImVec2(0, 0));
+        if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            if (!is_dragging_) {
+                 last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                                             clipboard_mimes, 2, MARU_DROP_ACTION_COPY);
+                 if (last_status_ == MARU_SUCCESS) {
+                     is_dragging_ = true;
+                 }
+            }
+        }
+        ImGui::SameLine();
+        ImGui::Text("(Drag this button)");
         
         static MARU_Scalar drop_zone_size = 100.0;
         ImGui::Button("Drop Zone", ImVec2(drop_zone_size, drop_zone_size));
