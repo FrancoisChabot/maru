@@ -580,15 +580,16 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
 
   ctx->clipboard.dnd_offer = offer;
   ctx->clipboard.dnd_serial = serial;
+  ctx->clipboard.dnd_session_userdata = NULL;
+  ctx->clipboard.dnd_window = window;
 
   MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, offer);
   if (!meta) return;
 
   MARU_DropAction action = MARU_DROP_ACTION_NONE;
-  void *session_userdata = NULL;
   MARU_DropFeedback feedback = {
       .action = &action,
-      .session_userdata = &session_userdata,
+      .session_userdata = &ctx->clipboard.dnd_session_userdata,
   };
 
   MARU_Event evt = {0};
@@ -619,13 +620,16 @@ static void _clipboard_data_device_leave(void *data, struct wl_data_device *data
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   if (!ctx) return;
 
-  MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+  MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (window) {
     MARU_Event evt = {0};
+    evt.drop_leave.session_userdata = &ctx->clipboard.dnd_session_userdata;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_EXITED, (MARU_Window *)window, &evt);
   }
   ctx->clipboard.dnd_offer = NULL;
   ctx->clipboard.dnd_serial = 0;
+  ctx->clipboard.dnd_session_userdata = NULL;
+  ctx->clipboard.dnd_window = NULL;
 }
 
 static void _clipboard_data_device_motion(void *data, struct wl_data_device *data_device,
@@ -636,17 +640,16 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   if (!ctx || !ctx->clipboard.dnd_offer) return;
 
-  MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+  MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (!window || !window->base.attrs_effective.accept_drop) return;
 
   MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_offer);
   if (!meta) return;
 
   MARU_DropAction action = MARU_DROP_ACTION_NONE;
-  void *session_userdata = NULL;
   MARU_DropFeedback feedback = {
       .action = &action,
-      .session_userdata = &session_userdata,
+      .session_userdata = &ctx->clipboard.dnd_session_userdata,
   };
 
   MARU_Event evt = {0};
@@ -677,7 +680,7 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   if (!ctx || !ctx->clipboard.dnd_offer) return;
 
-  MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.pointer.focused_window;
+  MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (!window || !window->base.attrs_effective.accept_drop) return;
 
   MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_offer);
@@ -686,19 +689,19 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
   MARU_Event evt = {0};
   evt.drop.position.x = ctx->linux_common.pointer.x;
   evt.drop.position.y = ctx->linux_common.pointer.y;
+  evt.drop.session_userdata = &ctx->clipboard.dnd_session_userdata;
   evt.drop.available_types.mime_types = meta->mime_types;
   evt.drop.available_types.count = meta->mime_count;
   evt.drop.modifiers = _maru_wayland_get_modifiers(ctx);
 
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED, (MARU_Window *)window, &evt);
 
-  // In Wayland, we MUST call finish on the offer if it was version 3+.
-  // And we should probably only do it after we've read the data if we wanted it.
-  // But for now, we just finish it.
   maru_wl_data_offer_finish(ctx, ctx->clipboard.dnd_offer);
 
   ctx->clipboard.dnd_offer = NULL;
   ctx->clipboard.dnd_serial = 0;
+  ctx->clipboard.dnd_session_userdata = NULL;
+  ctx->clipboard.dnd_window = NULL;
 }
 
 static void _clipboard_data_device_selection(void *data,

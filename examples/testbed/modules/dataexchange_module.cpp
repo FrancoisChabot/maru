@@ -46,21 +46,36 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         if (event.drop_enter.feedback && event.drop_enter.feedback->action) {
             *event.drop_enter.feedback->action = MARU_DROP_ACTION_COPY;
         }
+        if (event.drop_enter.feedback && event.drop_enter.feedback->session_userdata) {
+            *event.drop_enter.feedback->session_userdata = (void*)"Hello from session";
+        }
         return;
     }
     if (type == MARU_EVENT_DROP_HOVERED) {
-        _dnd_info = "Drop Hovered at " + std::to_string(event.drop_hover.position.x) + ", " + std::to_string(event.drop_hover.position.y);
+        const char* session_msg = "none";
+        if (event.drop_hover.feedback && event.drop_hover.feedback->session_userdata && *event.drop_hover.feedback->session_userdata) {
+            session_msg = (const char*)*event.drop_hover.feedback->session_userdata;
+        }
+        _dnd_info = "Drop Hovered at " + std::to_string(event.drop_hover.position.x) + ", " + std::to_string(event.drop_hover.position.y) + " Session: " + session_msg;
         if (event.drop_hover.feedback && event.drop_hover.feedback->action) {
             *event.drop_hover.feedback->action = MARU_DROP_ACTION_COPY;
         }
         return;
     }
     if (type == MARU_EVENT_DROP_EXITED) {
-        _dnd_info = "Drop Exited";
+        const char* session_msg = "none";
+        if (event.drop_leave.session_userdata && *event.drop_leave.session_userdata) {
+            session_msg = (const char*)*event.drop_leave.session_userdata;
+        }
+        _dnd_info = std::string("Drop Exited. Session was: ") + session_msg;
         return;
     }
     if (type == MARU_EVENT_DROP_DROPPED) {
-        _dnd_info = "Drop Dropped";
+        const char* session_msg = "none";
+        if (event.drop.session_userdata && *event.drop.session_userdata) {
+            session_msg = (const char*)*event.drop.session_userdata;
+        }
+        _dnd_info = std::string("Drop Dropped. Session was: ") + session_msg;
         return;
     }
 
