@@ -120,8 +120,8 @@ The short answer is that it doesn't by default. Every single mouse movement will
 
 Nope. There are too many decisions to make around that. The library has a mandate: deal with windows and I/O, and it sticks to it. It does a grand total of 2 Vulkan-specific things:
 
-1 - Get which extensions you need to provide `vkCreateInstance()` via `maru_vulkan_getVkExtensions()`
-2 - Create a `vkSurfaceKHR` for a given window (which you are responsible for deleting) via `maru_vulkan_createVkSurface()`
+1 - Get which extensions you need to provide `vkCreateInstance()` via `maru_getVkExtensions()`
+2 - Create a `vkSurfaceKHR` for a given window (which you are responsible for deleting) via `maru_createVkSurface()`
 
 ### Is there really no synchronous window creation mechanism?
 

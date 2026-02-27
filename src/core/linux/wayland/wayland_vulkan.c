@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include "maru/c/native/wayland.h"
 #include "maru/c/vulkan.h"
 #include "maru_internal.h"
-#include "vulkan_api_constraints.h"
+#include "maru_api_constraints.h"
 
 // Vulkan types and function pointers needed for the implementation.
 // We define them locally to avoid a hard dependency on Vulkan headers.
@@ -24,9 +27,6 @@ typedef VkResult (*PFN_vkCreateWaylandSurfaceKHR)(
     VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
     const void *pAllocator, VkSurfaceKHR *pSurface);
 
-extern __attribute__((weak)) MARU_VulkanVoidFunction
-vkGetInstanceProcAddr(VkInstance instance, const char *pName);
-
 const char **maru_getVkExtensions_WL(const MARU_Context *context,
                                      uint32_t *out_count) {
   (void)context;
@@ -43,19 +43,11 @@ MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
                                     MARU_VkGetInstanceProcAddrFunc vk_loader,
                                     VkSurfaceKHR *out_surface) {
   MARU_Context *ctx = maru_getWindowContext(window);
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)ctx;
-
-  if (!vk_loader) {
-    vk_loader = ctx_base->tuning.vulkan.vk_loader;
-  }
-  if (!vk_loader) {
-    vk_loader = (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr;
-  }
 
   if (!vk_loader) {
     MARU_REPORT_DIAGNOSTIC(
         ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
-        "No Vulkan loader available. Configure tuning.vulkan.vk_loader or pass vk_loader.");
+        "No Vulkan loader available. Pass vk_loader to maru_createVkSurface.");
     return MARU_FAILURE;
   }
 
@@ -95,16 +87,16 @@ MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
 }
 
 #ifndef MARU_INDIRECT_BACKEND
-MARU_API const char **maru_vulkan_getVkExtensions(const MARU_Context *context,
+MARU_API const char **maru_getVkExtensions(const MARU_Context *context,
                                                   uint32_t *out_count) {
-  MARU_VULKAN_API_VALIDATE(getVkExtensions, context, out_count);
+  MARU_API_VALIDATE(getVkExtensions, context, out_count);
   return maru_getVkExtensions_WL(context, out_count);
 }
 
-MARU_API MARU_Status maru_vulkan_createVkSurface(
+MARU_API MARU_Status maru_createVkSurface(
     MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
-  MARU_VULKAN_API_VALIDATE(createVkSurface, window, instance, vk_loader,
+  MARU_API_VALIDATE(createVkSurface, window, instance, vk_loader,
                            out_surface);
   return maru_createVkSurface_WL(window, instance, vk_loader, out_surface);
 }

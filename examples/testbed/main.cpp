@@ -449,7 +449,7 @@ int main(int, char **) {
 
   uint32_t extensions_count = 0;
   const char **maru_extensions =
-      maru_vulkan_getVkExtensions(context, &extensions_count);
+      maru_getVkExtensions(context, &extensions_count);
   ImVector<const char *> extensions;
   for (uint32_t i = 0; i < extensions_count; i++)
     extensions.push_back(maru_extensions[i]);
@@ -489,7 +489,7 @@ int main(int, char **) {
   g_PrimaryWindow = window;
 
   VkSurfaceKHR surface;
-  if (maru_vulkan_createVkSurface(
+  if (maru_createVkSurface(
           window, g_Instance,
           (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr,
           &surface) != MARU_SUCCESS) {

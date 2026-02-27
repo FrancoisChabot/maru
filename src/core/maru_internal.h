@@ -13,6 +13,7 @@
 #include "maru/c/details/cursors.h"
 #include "maru/c/details/images.h"
 #include "maru/c/details/monitors.h"
+#include "maru/c/details/controllers.h"
 
 /**
  * @file maru_internal.h

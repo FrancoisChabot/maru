@@ -54,8 +54,8 @@ typedef struct MARU_Backend {
   void *(*getContextNativeHandle)(MARU_Context *context);
   void *(*getWindowNativeHandle)(MARU_Window *window);
 
-  __typeof__(maru_vulkan_getVkExtensions) *getVkExtensions;
-  __typeof__(maru_vulkan_createVkSurface) *createVkSurface;
+  __typeof__(maru_getVkExtensions) *getVkExtensions;
+  __typeof__(maru_createVkSurface) *createVkSurface;
 
   // More to be added directly here
 } MARU_Backend;

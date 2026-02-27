@@ -60,7 +60,7 @@ int main() {
   }
 
   uint32_t vk_extension_count = 0;
-  const char **vk_extensions = maru_vulkan_getVkExtensions(context, &vk_extension_count);
+  const char **vk_extensions = maru_getVkExtensions(context, &vk_extension_count);
   if (!vk_extensions) {
     fprintf(stderr, "Failed to get Vulkan extensions.\n");
     maru_destroyContext(context);
@@ -96,7 +96,7 @@ int main() {
   }
 
   VkSurfaceKHR surface;
-  if (maru_vulkan_createVkSurface(window, renderer.instance, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr, &surface) !=
+  if (maru_createVkSurface(window, renderer.instance, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr, &surface) !=
       MARU_SUCCESS) {
     fprintf(stderr, "Failed to create Vulkan surface.\n");
     maru_destroyWindow(window);

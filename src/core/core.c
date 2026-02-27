@@ -377,8 +377,9 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
   return win_base->backend->getAvailableMIMETypes(window, target, out_list);
 }
 
-MARU_API const char **maru_vulkan_getVkExtensions(const MARU_Context *context,
+MARU_API const char **maru_getVkExtensions(const MARU_Context *context,
                                                   uint32_t *out_count) {
+  MARU_API_VALIDATE(getVkExtensions, context, out_count);
   if (!context || !out_count) {
     return NULL;
   }
@@ -390,9 +391,10 @@ MARU_API const char **maru_vulkan_getVkExtensions(const MARU_Context *context,
   return ctx_base->backend->getVkExtensions(context, out_count);
 }
 
-MARU_API MARU_Status maru_vulkan_createVkSurface(
+MARU_API MARU_Status maru_createVkSurface(
     MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
+  MARU_API_VALIDATE(createVkSurface, window, instance, vk_loader, out_surface);
   if (!window || !instance || !out_surface) {
     return MARU_FAILURE;
   }
@@ -547,6 +549,7 @@ static void *_maru_getWindowNativeHandleRaw(MARU_Window *window) {
 
 MARU_API MARU_Status maru_getWaylandContextHandle(
     MARU_Context *context, MARU_WaylandContextHandle *out_handle) {
+  MARU_API_VALIDATE(getWaylandContextHandle, context, out_handle);
   if (!context || !out_handle) return MARU_FAILURE;
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   if (ctx_base->pub.backend_type != MARU_BACKEND_WAYLAND) return MARU_FAILURE;
@@ -556,6 +559,7 @@ MARU_API MARU_Status maru_getWaylandContextHandle(
 
 MARU_API MARU_Status maru_getWaylandWindowHandle(
     MARU_Window *window, MARU_WaylandWindowHandle *out_handle) {
+  MARU_API_VALIDATE(getWaylandWindowHandle, window, out_handle);
   if (!window || !out_handle) return MARU_FAILURE;
   MARU_Context *context = maru_getWindowContext(window);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
@@ -568,6 +572,7 @@ MARU_API MARU_Status maru_getWaylandWindowHandle(
 
 MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
                                               MARU_X11ContextHandle *out_handle) {
+  MARU_API_VALIDATE(getX11ContextHandle, context, out_handle);
   if (!context || !out_handle) return MARU_FAILURE;
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   if (ctx_base->pub.backend_type != MARU_BACKEND_X11) return MARU_FAILURE;
@@ -577,6 +582,7 @@ MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
 
 MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
                                              MARU_X11WindowHandle *out_handle) {
+  MARU_API_VALIDATE(getX11WindowHandle, window, out_handle);
   if (!window || !out_handle) return MARU_FAILURE;
   MARU_Context *context = maru_getWindowContext(window);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
@@ -590,6 +596,7 @@ MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
 #ifdef MARU_ENABLE_BACKEND_WINDOWS
 MARU_API MARU_Status maru_getWin32ContextHandle(
     MARU_Context *context, MARU_Win32ContextHandle *out_handle) {
+  MARU_API_VALIDATE(getWin32ContextHandle, context, out_handle);
   if (!context || !out_handle) return MARU_FAILURE;
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   if (ctx_base->pub.backend_type != MARU_BACKEND_WINDOWS) return MARU_FAILURE;
@@ -599,6 +606,7 @@ MARU_API MARU_Status maru_getWin32ContextHandle(
 
 MARU_API MARU_Status maru_getWin32WindowHandle(
     MARU_Window *window, MARU_Win32WindowHandle *out_handle) {
+  MARU_API_VALIDATE(getWin32WindowHandle, window, out_handle);
   if (!window || !out_handle) return MARU_FAILURE;
   MARU_Context *context = maru_getWindowContext(window);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
@@ -613,6 +621,7 @@ MARU_API MARU_Status maru_getWin32WindowHandle(
 #ifdef MARU_ENABLE_BACKEND_COCOA
 MARU_API MARU_Status maru_getCocoaContextHandle(
     MARU_Context *context, MARU_CocoaContextHandle *out_handle) {
+  MARU_API_VALIDATE(getCocoaContextHandle, context, out_handle);
   if (!context || !out_handle) return MARU_FAILURE;
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   if (ctx_base->pub.backend_type != MARU_BACKEND_COCOA) return MARU_FAILURE;
@@ -622,6 +631,7 @@ MARU_API MARU_Status maru_getCocoaContextHandle(
 
 MARU_API MARU_Status maru_getCocoaWindowHandle(
     MARU_Window *window, MARU_CocoaWindowHandle *out_handle) {
+  MARU_API_VALIDATE(getCocoaWindowHandle, window, out_handle);
   if (!window || !out_handle) return MARU_FAILURE;
   MARU_Context *context = maru_getWindowContext(window);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
@@ -633,6 +643,7 @@ MARU_API MARU_Status maru_getCocoaWindowHandle(
 
 MARU_API MARU_Status maru_getLinuxContextHandle(
     MARU_Context *context, MARU_LinuxContextHandle *out_handle) {
+  MARU_API_VALIDATE(getLinuxContextHandle, context, out_handle);
   if (!context || !out_handle) return MARU_FAILURE;
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   out_handle->backend = ctx_base->pub.backend_type;
@@ -648,6 +659,7 @@ MARU_API MARU_Status maru_getLinuxContextHandle(
 
 MARU_API MARU_Status maru_getLinuxWindowHandle(
     MARU_Window *window, MARU_LinuxWindowHandle *out_handle) {
+  MARU_API_VALIDATE(getLinuxWindowHandle, window, out_handle);
   if (!window || !out_handle) return MARU_FAILURE;
   MARU_Context *context = maru_getWindowContext(window);
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;

@@ -38,7 +38,11 @@ typedef MARU_VulkanVoidFunction (*MARU_VkGetInstanceProcAddrFunc)(void *instance
 
 //N.B. If you are reviewing this API, imagine that this will be extended as needed as the backends are built...
 typedef struct MARU_ContextTuning {
+  // N.B. This queue exists only to keep events posted via maru_postEvent() around until the next pump.
+  // system events bypass this entirely. 
   uint32_t user_event_queue_size;
+  
+  
   uint32_t idle_timeout_ms;
 
   struct {
@@ -48,10 +52,6 @@ typedef struct MARU_ContextTuning {
   struct {
     uint32_t idle_poll_interval_ms;
   } x11;
-
-  struct {
-    MARU_VkGetInstanceProcAddrFunc vk_loader;
-  } vulkan;
 } MARU_ContextTuning;
 
 /** @brief Default tuning parameters. */
@@ -64,9 +64,6 @@ typedef struct MARU_ContextTuning {
     }, \
     .x11 = { \
       .idle_poll_interval_ms = 250 \
-    }, \
-    .vulkan = { \
-      .vk_loader = NULL \
     }, \
   }
 
