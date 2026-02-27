@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <X11/keysym.h>
+#include <X11/cursorfont.h>
 
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
                                     const MARU_ContextAttributes *attributes) {
@@ -771,6 +772,13 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->server_logical_size = win->base.attrs_effective.logical_size;
 
   ctx->x11_lib.XMapWindow(ctx->display, win->handle);
+  if (win->base.pub.cursor_mode == MARU_CURSOR_NORMAL &&
+      win->base.pub.current_cursor) {
+    MARU_Cursor_X11 *cursor = (MARU_Cursor_X11 *)win->base.pub.current_cursor;
+    if (cursor->base.ctx_base == &ctx->base && cursor->handle) {
+      ctx->x11_lib.XDefineCursor(ctx->display, win->handle, cursor->handle);
+    }
+  }
   ctx->x11_lib.XFlush(ctx->display);
 
   // Window creation happens outside maru_pumpEvents(), so dispatching directly
@@ -817,15 +825,97 @@ MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
 MARU_Status maru_createCursor_X11(MARU_Context *context,
                                          const MARU_CursorCreateInfo *create_info,
                                          MARU_Cursor **out_cursor) {
-  (void)context;
-  (void)create_info;
-  (void)out_cursor;
-  return MARU_FAILURE;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  Cursor cursor_handle = (Cursor)0;
+  bool is_system = false;
+
+  if (create_info->source == MARU_CURSOR_SOURCE_SYSTEM) {
+    unsigned int shape = XC_left_ptr;
+    switch (create_info->system_shape) {
+      case MARU_CURSOR_SHAPE_DEFAULT: shape = XC_left_ptr; break;
+      case MARU_CURSOR_SHAPE_HELP: shape = XC_question_arrow; break;
+      case MARU_CURSOR_SHAPE_HAND: shape = XC_hand2; break;
+      case MARU_CURSOR_SHAPE_WAIT: shape = XC_watch; break;
+      case MARU_CURSOR_SHAPE_CROSSHAIR: shape = XC_crosshair; break;
+      case MARU_CURSOR_SHAPE_TEXT: shape = XC_xterm; break;
+      case MARU_CURSOR_SHAPE_MOVE: shape = XC_fleur; break;
+      case MARU_CURSOR_SHAPE_NOT_ALLOWED: shape = XC_X_cursor; break;
+      case MARU_CURSOR_SHAPE_EW_RESIZE: shape = XC_sb_h_double_arrow; break;
+      case MARU_CURSOR_SHAPE_NS_RESIZE: shape = XC_sb_v_double_arrow; break;
+      case MARU_CURSOR_SHAPE_NESW_RESIZE: shape = XC_bottom_left_corner; break;
+      case MARU_CURSOR_SHAPE_NWSE_RESIZE: shape = XC_bottom_right_corner; break;
+      default: return MARU_FAILURE;
+    }
+    cursor_handle = ctx->x11_lib.XCreateFontCursor(ctx->display, shape);
+    if (!cursor_handle) {
+      return MARU_FAILURE;
+    }
+    is_system = true;
+  } else {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                           "Custom image cursors are not implemented yet on X11");
+    return MARU_FAILURE;
+  }
+
+  MARU_Cursor_X11 *cursor =
+      (MARU_Cursor_X11 *)maru_context_alloc(&ctx->base, sizeof(MARU_Cursor_X11));
+  if (!cursor) {
+    ctx->x11_lib.XFreeCursor(ctx->display, cursor_handle);
+    return MARU_FAILURE;
+  }
+  memset(cursor, 0, sizeof(MARU_Cursor_X11));
+
+  cursor->base.ctx_base = &ctx->base;
+  cursor->base.pub.metrics = &cursor->base.metrics;
+  cursor->base.pub.userdata = create_info->userdata;
+  cursor->base.pub.flags = is_system ? MARU_CURSOR_FLAG_SYSTEM : 0;
+#ifdef MARU_INDIRECT_BACKEND
+  cursor->base.backend = ctx->base.backend;
+#endif
+  cursor->handle = cursor_handle;
+  cursor->is_system = is_system;
+
+  ctx->base.metrics.cursor_create_count_total++;
+  if (is_system) ctx->base.metrics.cursor_create_count_system++;
+  else ctx->base.metrics.cursor_create_count_custom++;
+  ctx->base.metrics.cursor_alive_current++;
+  if (ctx->base.metrics.cursor_alive_current > ctx->base.metrics.cursor_alive_peak) {
+    ctx->base.metrics.cursor_alive_peak = ctx->base.metrics.cursor_alive_current;
+  }
+
+  *out_cursor = (MARU_Cursor *)cursor;
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_destroyCursor_X11(MARU_Cursor *cursor) {
-  (void)cursor;
-  return MARU_FAILURE;
+  MARU_Cursor_X11 *cur = (MARU_Cursor_X11 *)cursor;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)cur->base.ctx_base;
+
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_X11 *win = (MARU_Window_X11 *)it;
+    if (win->base.pub.current_cursor != cursor) {
+      continue;
+    }
+    win->base.pub.current_cursor = NULL;
+    win->base.attrs_requested.cursor = NULL;
+    win->base.attrs_effective.cursor = NULL;
+    if (win->base.pub.cursor_mode == MARU_CURSOR_NORMAL) {
+      ctx->x11_lib.XUndefineCursor(ctx->display, win->handle);
+    }
+  }
+
+  if (cur->handle) {
+    ctx->x11_lib.XFreeCursor(ctx->display, cur->handle);
+    cur->handle = 0;
+  }
+
+  ctx->base.metrics.cursor_destroy_count_total++;
+  if (ctx->base.metrics.cursor_alive_current > 0) {
+    ctx->base.metrics.cursor_alive_current--;
+  }
+
+  maru_context_free(&ctx->base, cur);
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_createImage_X11(MARU_Context *context,

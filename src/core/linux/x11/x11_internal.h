@@ -41,4 +41,10 @@ typedef struct MARU_Window_X11 {
   bool is_maximized;
 } MARU_Window_X11;
 
+typedef struct MARU_Cursor_X11 {
+  MARU_Cursor_Base base;
+  Cursor handle;
+  bool is_system;
+} MARU_Cursor_X11;
+
 #endif

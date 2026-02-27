@@ -23,6 +23,10 @@
   MARU_LIB_FN(XDestroyWindow)              \
   MARU_LIB_FN(XMapWindow)                  \
   MARU_LIB_FN(XUnmapWindow)                \
+  MARU_LIB_FN(XDefineCursor)               \
+  MARU_LIB_FN(XUndefineCursor)             \
+  MARU_LIB_FN(XCreateFontCursor)           \
+  MARU_LIB_FN(XFreeCursor)                 \
   MARU_LIB_FN(XSelectInput)                \
   MARU_LIB_FN(XInternAtom)                 \
   MARU_LIB_FN(XSendEvent)                  \
