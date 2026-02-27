@@ -27,6 +27,11 @@
   MARU_LIB_FN(XInternAtom)                 \
   MARU_LIB_FN(XSendEvent)                  \
   MARU_LIB_FN(XSetWMProtocols)             \
+  MARU_LIB_FN(XSetWMNormalHints)           \
+  MARU_LIB_FN(XStoreName)                  \
+  MARU_LIB_FN(XResizeWindow)               \
+  MARU_LIB_FN(XMoveWindow)                 \
+  MARU_LIB_FN(XIconifyWindow)              \
   MARU_LIB_FN(XTranslateCoordinates)       \
   MARU_LIB_FN(XLookupString)               \
   MARU_LIB_FN(XSync)                       \

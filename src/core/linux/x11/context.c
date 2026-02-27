@@ -689,6 +689,9 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->base.pub.cursor_mode = create_info->attributes.cursor_mode;
   win->base.pub.current_cursor = create_info->attributes.cursor;
   win->base.pub.title = create_info->attributes.title;
+  win->base.attrs_requested = create_info->attributes;
+  win->base.attrs_effective = create_info->attributes;
+  win->base.attrs_dirty_mask = 0;
 
 #ifdef MARU_INDIRECT_BACKEND
   win->base.backend = ctx->base.backend;
@@ -725,6 +728,28 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   _maru_register_window(&ctx->base, (MARU_Window *)win);
   
   win->base.pub.flags = MARU_WINDOW_STATE_READY;
+  if (create_info->attributes.visible) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+  }
+  if (create_info->attributes.resizable) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+  }
+  if (create_info->decorated) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
+  }
+  if (create_info->attributes.minimized) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+  }
+  if (create_info->attributes.fullscreen) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+  }
+  if (create_info->attributes.maximized) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+  }
+  if (create_info->attributes.mouse_passthrough) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
+  }
   win->base.attrs_effective.logical_size.x = (MARU_Scalar)width;
   win->base.attrs_effective.logical_size.y = (MARU_Scalar)height;
 
@@ -760,6 +785,14 @@ MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
   }
 
   _maru_unregister_window(&ctx->base, (MARU_Window *)win);
+  if (win->base.title_storage) {
+    maru_context_free(&ctx->base, win->base.title_storage);
+    win->base.title_storage = NULL;
+  }
+  if (win->base.surrounding_text_storage) {
+    maru_context_free(&ctx->base, win->base.surrounding_text_storage);
+    win->base.surrounding_text_storage = NULL;
+  }
   maru_context_free(&ctx->base, win);
   return MARU_SUCCESS;
 }

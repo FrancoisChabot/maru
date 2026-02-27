@@ -11,6 +11,84 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
+
+static uint64_t _maru_x11_now_ms(void) {
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+    return 0;
+  }
+  return ((uint64_t)ts.tv_sec * 1000ull) + ((uint64_t)ts.tv_nsec / 1000000ull);
+}
+
+static void _maru_x11_dispatch_presentation_state(MARU_Window_X11 *window,
+                                                   uint32_t changed_fields,
+                                                   bool icon_effective) {
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)window->base.ctx_base;
+  MARU_Event evt = {0};
+  evt.presentation.changed_fields = changed_fields;
+  evt.presentation.visible = (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+  evt.presentation.minimized = (window->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+  evt.presentation.maximized = (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+  evt.presentation.focused = (window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+  evt.presentation.icon_effective = icon_effective;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
+                       (MARU_Window *)window, &evt);
+}
+
+static void _maru_x11_send_net_wm_state(MARU_Context_X11 *ctx, MARU_Window_X11 *win,
+                                        long action, Atom atom1, Atom atom2) {
+  XEvent ev;
+  memset(&ev, 0, sizeof(ev));
+  ev.type = ClientMessage;
+  ev.xclient.window = win->handle;
+  ev.xclient.message_type = ctx->net_wm_state;
+  ev.xclient.format = 32;
+  ev.xclient.data.l[0] = action;
+  ev.xclient.data.l[1] = (long)atom1;
+  ev.xclient.data.l[2] = (long)atom2;
+  ev.xclient.data.l[3] = 1;
+  ctx->x11_lib.XSendEvent(ctx->display, ctx->root, False,
+                          SubstructureNotifyMask | SubstructureRedirectMask, &ev);
+}
+
+static void _maru_x11_apply_size_hints(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
+  XSizeHints hints;
+  memset(&hints, 0, sizeof(hints));
+
+  int32_t min_w = (int32_t)win->base.attrs_effective.min_size.x;
+  int32_t min_h = (int32_t)win->base.attrs_effective.min_size.y;
+  int32_t max_w = (int32_t)win->base.attrs_effective.max_size.x;
+  int32_t max_h = (int32_t)win->base.attrs_effective.max_size.y;
+
+  if ((win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) == 0) {
+    min_w = (int32_t)win->base.attrs_effective.logical_size.x;
+    min_h = (int32_t)win->base.attrs_effective.logical_size.y;
+    max_w = min_w;
+    max_h = min_h;
+  }
+
+  if (min_w > 0 && min_h > 0) {
+    hints.flags |= PMinSize;
+    hints.min_width = min_w;
+    hints.min_height = min_h;
+  }
+  if (max_w > 0 && max_h > 0) {
+    hints.flags |= PMaxSize;
+    hints.max_width = max_w;
+    hints.max_height = max_h;
+  }
+  if (win->base.attrs_effective.aspect_ratio.num > 0 &&
+      win->base.attrs_effective.aspect_ratio.denom > 0) {
+    hints.flags |= PAspect;
+    hints.min_aspect.x = (int32_t)win->base.attrs_effective.aspect_ratio.num;
+    hints.min_aspect.y = (int32_t)win->base.attrs_effective.aspect_ratio.denom;
+    hints.max_aspect.x = (int32_t)win->base.attrs_effective.aspect_ratio.num;
+    hints.max_aspect.y = (int32_t)win->base.attrs_effective.aspect_ratio.denom;
+  }
+
+  ctx->x11_lib.XSetWMNormalHints(ctx->display, win->handle, &hints);
+}
 
 extern MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
                                    MARU_Context **out_context);
@@ -48,25 +126,318 @@ extern void maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
 
 MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
                                   const MARU_WindowAttributes *attributes) {
-    (void)window;
-    (void)field_mask;
-    (void)attributes;
-    return MARU_FAILURE;
+  MARU_Window_X11 *win = (MARU_Window_X11 *)window;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+  MARU_WindowAttributes *requested = &win->base.attrs_requested;
+  MARU_WindowAttributes *effective = &win->base.attrs_effective;
+  MARU_Status status = MARU_SUCCESS;
+  uint32_t presentation_changed = 0u;
+
+  win->base.attrs_dirty_mask |= field_mask;
+
+  if (field_mask & MARU_WINDOW_ATTR_TITLE) {
+    if (win->base.title_storage) {
+      maru_context_free(&ctx->base, win->base.title_storage);
+      win->base.title_storage = NULL;
+    }
+    requested->title = NULL;
+    effective->title = NULL;
+    win->base.pub.title = NULL;
+
+    if (attributes->title) {
+      size_t len = strlen(attributes->title);
+      win->base.title_storage = (char *)maru_context_alloc(&ctx->base, len + 1);
+      if (win->base.title_storage) {
+        memcpy(win->base.title_storage, attributes->title, len + 1);
+        requested->title = win->base.title_storage;
+        effective->title = win->base.title_storage;
+        win->base.pub.title = win->base.title_storage;
+      } else {
+        status = MARU_FAILURE;
+      }
+    }
+    ctx->x11_lib.XStoreName(ctx->display, win->handle,
+                            win->base.pub.title ? win->base.pub.title : "MARU Window");
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
+    requested->logical_size = attributes->logical_size;
+    effective->logical_size = attributes->logical_size;
+    ctx->x11_lib.XResizeWindow(ctx->display, win->handle,
+                               (unsigned int)effective->logical_size.x,
+                               (unsigned int)effective->logical_size.y);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_POSITION) {
+    requested->position = attributes->position;
+    effective->position = attributes->position;
+    ctx->x11_lib.XMoveWindow(ctx->display, win->handle, (int)effective->position.x,
+                             (int)effective->position.y);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
+    requested->fullscreen = attributes->fullscreen;
+    effective->fullscreen = attributes->fullscreen;
+    if (effective->fullscreen) {
+      win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+      _maru_x11_send_net_wm_state(ctx, win, 1, ctx->net_wm_state_fullscreen, None);
+    } else {
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+      _maru_x11_send_net_wm_state(ctx, win, 0, ctx->net_wm_state_fullscreen, None);
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
+    requested->maximized = attributes->maximized;
+    const bool was_maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+    if (requested->maximized) {
+      win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+      _maru_x11_send_net_wm_state(ctx, win, 1, ctx->net_wm_state_maximized_vert,
+                                  ctx->net_wm_state_maximized_horz);
+    } else {
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+      _maru_x11_send_net_wm_state(ctx, win, 0, ctx->net_wm_state_maximized_vert,
+                                  ctx->net_wm_state_maximized_horz);
+    }
+    effective->maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+    if (was_maximized != effective->maximized) {
+      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
+    requested->min_size = attributes->min_size;
+    effective->min_size = attributes->min_size;
+  }
+  if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
+    requested->max_size = attributes->max_size;
+    effective->max_size = attributes->max_size;
+  }
+  if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
+    requested->aspect_ratio = attributes->aspect_ratio;
+    effective->aspect_ratio = attributes->aspect_ratio;
+  }
+  if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
+    requested->resizable = attributes->resizable;
+    effective->resizable = attributes->resizable;
+    if (effective->resizable) {
+      win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+    } else {
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
+    }
+  }
+  if (field_mask & (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE |
+                    MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE)) {
+    _maru_x11_apply_size_hints(ctx, win);
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
+    requested->visible = attributes->visible;
+    const bool was_visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+    const bool was_minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+
+    if (attributes->visible) {
+      ctx->x11_lib.XMapWindow(ctx->display, win->handle);
+      win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+      effective->visible = true;
+      effective->minimized = false;
+    } else {
+      ctx->x11_lib.XUnmapWindow(ctx->display, win->handle);
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+      effective->visible = false;
+    }
+
+    if (was_visible != effective->visible) {
+      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+    }
+    if (was_minimized != effective->minimized) {
+      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MINIMIZED) {
+    requested->minimized = attributes->minimized;
+    const bool was_minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+    const bool was_visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+
+    if (attributes->minimized) {
+      (void)ctx->x11_lib.XIconifyWindow(ctx->display, win->handle, ctx->screen);
+      win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+      effective->minimized = true;
+      effective->visible = false;
+    } else {
+      ctx->x11_lib.XMapWindow(ctx->display, win->handle);
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+      win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      effective->minimized = false;
+      effective->visible = true;
+    }
+
+    if (was_minimized != effective->minimized) {
+      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+    }
+    if (was_visible != effective->visible) {
+      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
+    requested->event_mask = attributes->event_mask;
+    effective->event_mask = attributes->event_mask;
+    win->base.pub.event_mask = attributes->event_mask;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
+    requested->accept_drop = attributes->accept_drop;
+    effective->accept_drop = attributes->accept_drop;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
+    requested->primary_selection = attributes->primary_selection;
+    effective->primary_selection = attributes->primary_selection;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
+    requested->cursor = attributes->cursor;
+    effective->cursor = attributes->cursor;
+    win->base.pub.current_cursor = attributes->cursor;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
+    requested->cursor_mode = attributes->cursor_mode;
+    effective->cursor_mode = attributes->cursor_mode;
+    win->base.pub.cursor_mode = attributes->cursor_mode;
+    if (attributes->cursor_mode != MARU_CURSOR_NORMAL) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "X11 cursor hidden/locked modes are not implemented yet");
+      status = MARU_FAILURE;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
+    requested->mouse_passthrough = attributes->mouse_passthrough;
+    effective->mouse_passthrough = attributes->mouse_passthrough;
+    if (effective->mouse_passthrough) {
+      win->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "X11 mouse passthrough is not implemented yet");
+      status = MARU_FAILURE;
+    } else {
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
+    requested->monitor = attributes->monitor;
+    effective->monitor = attributes->monitor;
+    if (attributes->monitor) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "X11 monitor targeting is not implemented yet");
+      status = MARU_FAILURE;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
+    requested->text_input_type = attributes->text_input_type;
+    effective->text_input_type = attributes->text_input_type;
+    if (attributes->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "X11 text input hints are not implemented yet");
+      status = MARU_FAILURE;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_RECT) {
+    requested->text_input_rect = attributes->text_input_rect;
+    effective->text_input_rect = attributes->text_input_rect;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
+    if (win->base.surrounding_text_storage) {
+      maru_context_free(&ctx->base, win->base.surrounding_text_storage);
+      win->base.surrounding_text_storage = NULL;
+    }
+    requested->surrounding_text = NULL;
+    effective->surrounding_text = NULL;
+    if (attributes->surrounding_text) {
+      size_t len = strlen(attributes->surrounding_text);
+      win->base.surrounding_text_storage = (char *)maru_context_alloc(&ctx->base, len + 1);
+      if (win->base.surrounding_text_storage) {
+        memcpy(win->base.surrounding_text_storage, attributes->surrounding_text, len + 1);
+        requested->surrounding_text = win->base.surrounding_text_storage;
+        effective->surrounding_text = win->base.surrounding_text_storage;
+      } else {
+        status = MARU_FAILURE;
+      }
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET) {
+    requested->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
+    requested->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
+    effective->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
+    effective->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
+    requested->viewport_size = attributes->viewport_size;
+    effective->viewport_size = attributes->viewport_size;
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_ICON) {
+    requested->icon = attributes->icon;
+    effective->icon = attributes->icon;
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                           "X11 window icon updates are not implemented yet");
+    status = MARU_FAILURE;
+    presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_ICON;
+  }
+
+  if (presentation_changed != 0) {
+    _maru_x11_dispatch_presentation_state(win, presentation_changed, true);
+  }
+
+  ctx->x11_lib.XFlush(ctx->display);
+  win->base.attrs_dirty_mask &= ~field_mask;
+  return status;
 }
 
 MARU_Status maru_requestWindowFocus_X11(MARU_Window *window) {
-    (void)window;
-    return MARU_FAILURE;
+  MARU_Window_X11 *win = (MARU_Window_X11 *)window;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+
+  XEvent ev;
+  memset(&ev, 0, sizeof(ev));
+  ev.type = ClientMessage;
+  ev.xclient.window = win->handle;
+  ev.xclient.message_type = ctx->net_active_window;
+  ev.xclient.format = 32;
+  ev.xclient.data.l[0] = 1;
+  ev.xclient.data.l[1] = CurrentTime;
+  ctx->x11_lib.XSendEvent(ctx->display, ctx->root, False,
+                          SubstructureNotifyMask | SubstructureRedirectMask, &ev);
+  ctx->x11_lib.XSetInputFocus(ctx->display, win->handle, RevertToParent, CurrentTime);
+  ctx->x11_lib.XRaiseWindow(ctx->display, win->handle);
+  ctx->x11_lib.XFlush(ctx->display);
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_requestWindowFrame_X11(MARU_Window *window) {
-    (void)window;
-    return MARU_FAILURE;
+  MARU_Window_X11 *win = (MARU_Window_X11 *)window;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+  MARU_Event evt = {0};
+  evt.frame.timestamp_ms = (uint32_t)_maru_x11_now_ms();
+  return _maru_post_event_internal(&ctx->base, MARU_EVENT_WINDOW_FRAME, window, &evt);
 }
 
 MARU_Status maru_requestWindowAttention_X11(MARU_Window *window) {
-  (void)window;
-  return MARU_FAILURE;
+  MARU_Window_X11 *win = (MARU_Window_X11 *)window;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+  _maru_x11_send_net_wm_state(ctx, win, 1, ctx->net_wm_state_demands_attention, None);
+  ctx->x11_lib.XFlush(ctx->display);
+  return MARU_SUCCESS;
 }
 
 extern const char **maru_getVkExtensions_X11(const MARU_Context *context,
