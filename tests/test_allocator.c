@@ -42,6 +42,9 @@ UTEST(AllocatorTest, CustomAllocatorIsUsed) {
 
 UTEST(AllocatorTest, MemoryMetricsTracking) {
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+    MARU_TestTrackingAllocator tracking = {0};
+    maru_test_tracking_allocator_init(&tracking);
+    maru_test_tracking_allocator_apply(&tracking, &create_info);
     MARU_Context* context = maru_test_createContext(&create_info);
     ASSERT_TRUE(context != NULL);
     
@@ -64,11 +67,16 @@ UTEST(AllocatorTest, MemoryMetricsTracking) {
 #endif
     
     maru_destroyContext(context);
+    EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));
+    maru_test_tracking_allocator_shutdown(&tracking);
 }
 
 UTEST(AllocatorTest, MemoryMetricsPeakReset) {
 #ifdef MARU_GATHER_METRICS
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+    MARU_TestTrackingAllocator tracking = {0};
+    maru_test_tracking_allocator_init(&tracking);
+    maru_test_tracking_allocator_apply(&tracking, &create_info);
     MARU_Context* context = maru_test_createContext(&create_info);
     ASSERT_TRUE(context != NULL);
     
@@ -88,17 +96,23 @@ UTEST(AllocatorTest, MemoryMetricsPeakReset) {
     EXPECT_LT(metrics->memory_allocated_peak, peak_with_alloc);
     
     maru_destroyContext(context);
+    EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));
+    maru_test_tracking_allocator_shutdown(&tracking);
 #endif
 }
 
 UTEST(AllocatorTest, DefaultAllocatorWorks) {
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+    MARU_TestTrackingAllocator tracking = {0};
+    maru_test_tracking_allocator_init(&tracking);
+    maru_test_tracking_allocator_apply(&tracking, &create_info);
     
     MARU_Context* context = maru_test_createContext(&create_info);
     ASSERT_TRUE(context != NULL);
     
     EXPECT_EQ(maru_destroyContext(context), MARU_SUCCESS);
+    EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));
+    maru_test_tracking_allocator_shutdown(&tracking);
 }
 
 UTEST_MAIN()
-

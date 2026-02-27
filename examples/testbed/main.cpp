@@ -324,7 +324,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window *wd,
   IM_ASSERT(g_MinImageCount >= 2);
   ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device,
                                          wd, g_QueueFamily, g_Allocator, width,
-                                         height, g_MinImageCount);
+                                         height, g_MinImageCount, 0);
 }
 
 static void CleanupVulkan() {
@@ -525,10 +525,10 @@ int main(int, char **) {
   init_info.QueueFamily = g_QueueFamily;
   init_info.Queue = g_Queue;
   init_info.DescriptorPool = g_DescriptorPool;
-  init_info.RenderPass = wd->RenderPass;
+  init_info.PipelineInfoMain.RenderPass = wd->RenderPass;
   init_info.MinImageCount = g_MinImageCount;
   init_info.ImageCount = wd->ImageCount;
-  init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+  init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
   init_info.Allocator = g_Allocator;
   init_info.CheckVkResultFn = check_vk_result;
   ImGui_ImplVulkan_Init(&init_info);
@@ -568,7 +568,7 @@ int main(int, char **) {
         ImGui_ImplVulkanH_CreateOrResizeWindow(
             g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily,
             g_Allocator, target_width, target_height,
-            g_MinImageCount);
+            g_MinImageCount, 0);
         g_MainWindowData.FrameIndex = 0;
         g_SwapChainRebuild = false;
         g_PendingResize = false;

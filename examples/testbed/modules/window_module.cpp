@@ -164,7 +164,7 @@ void WindowModule::update(MARU_Context* ctx, MARU_Window* window) {
             if (geom.pixel_size.x > 0 && geom.pixel_size.y > 0 &&
                 (sw->swapchain_rebuild || sw->wd.Width != (int)geom.pixel_size.x || sw->wd.Height != (int)geom.pixel_size.y)) {
                 ImGui_ImplVulkanH_CreateOrResizeWindow(
-                    instance_, physical_device_, device_, &sw->wd, queue_family_, nullptr, (int)geom.pixel_size.x, (int)geom.pixel_size.y, 2);
+                    instance_, physical_device_, device_, &sw->wd, queue_family_, nullptr, (int)geom.pixel_size.x, (int)geom.pixel_size.y, 2, 0);
                 sw->wd.FrameIndex = 0;
                 sw->swapchain_rebuild = false;
             }
@@ -242,7 +242,7 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow& sw) {
             return;
         }
         ImGui_ImplVulkanH_CreateOrResizeWindow(
-            instance_, physical_device_, device_, &sw.wd, queue_family_, nullptr, (int)geom.pixel_size.x, (int)geom.pixel_size.y, 2);
+            instance_, physical_device_, device_, &sw.wd, queue_family_, nullptr, (int)geom.pixel_size.x, (int)geom.pixel_size.y, 2, 0);
         sw.vk_window_initialized = true;
     }
 
