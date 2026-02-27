@@ -90,6 +90,76 @@ static void _maru_x11_apply_size_hints(MARU_Context_X11 *ctx, MARU_Window_X11 *w
   ctx->x11_lib.XSetWMNormalHints(ctx->display, win->handle, &hints);
 }
 
+static bool _maru_x11_apply_mouse_passthrough(MARU_Context_X11 *ctx,
+                                              MARU_Window_X11 *win) {
+  if (!win->handle) {
+    return false;
+  }
+  if (!ctx->xshape_lib.base.available) {
+    return !win->base.attrs_effective.mouse_passthrough;
+  }
+
+  int shape_event = 0;
+  int shape_error = 0;
+  if (!ctx->xshape_lib.XShapeQueryExtension(ctx->display, &shape_event,
+                                            &shape_error)) {
+    return !win->base.attrs_effective.mouse_passthrough;
+  }
+
+  if (win->base.attrs_effective.mouse_passthrough) {
+    ctx->xshape_lib.XShapeCombineRectangles(ctx->display, win->handle, 0, 0,
+                                            ShapeInput, NULL, 0, ShapeSet,
+                                            YXBanded);
+    return true;
+  }
+
+  const int width = (int)win->server_logical_size.x;
+  const int height = (int)win->server_logical_size.y;
+  XRectangle rect;
+  rect.x = 0;
+  rect.y = 0;
+  rect.width = (unsigned short)((width > 0) ? width : 1);
+  rect.height = (unsigned short)((height > 0) ? height : 1);
+  ctx->xshape_lib.XShapeCombineRectangles(ctx->display, win->handle, 0, 0,
+                                          ShapeInput, &rect, 1, ShapeSet,
+                                          YXBanded);
+  return true;
+}
+
+static bool _maru_x11_apply_icon(MARU_Context_X11 *ctx, MARU_Window_X11 *win,
+                                 const MARU_Image *icon) {
+  if (!icon) {
+    ctx->x11_lib.XDeleteProperty(ctx->display, win->handle, ctx->net_wm_icon);
+    return true;
+  }
+
+  const MARU_Image_Base *img = (const MARU_Image_Base *)icon;
+  if (img->ctx_base != &ctx->base || !img->pixels || img->width == 0 ||
+      img->height == 0) {
+    return false;
+  }
+
+  const size_t pixel_count = (size_t)img->width * (size_t)img->height;
+  const size_t elem_count = 2u + pixel_count;
+  unsigned long *prop = (unsigned long *)maru_context_alloc(
+      &ctx->base, elem_count * sizeof(unsigned long));
+  if (!prop) {
+    return false;
+  }
+  prop[0] = (unsigned long)img->width;
+  prop[1] = (unsigned long)img->height;
+  const uint32_t *pixels = (const uint32_t *)img->pixels;
+  for (size_t i = 0; i < pixel_count; ++i) {
+    prop[2u + i] = (unsigned long)pixels[i];
+  }
+
+  ctx->x11_lib.XChangeProperty(ctx->display, win->handle, ctx->net_wm_icon,
+                               XA_CARDINAL, 32, PropModeReplace,
+                               (const unsigned char *)prop, (int)elem_count);
+  maru_context_free(&ctx->base, prop);
+  return true;
+}
+
 extern MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
                                    MARU_Context **out_context);
 extern MARU_Status maru_destroyContext_X11(MARU_Context *context);
@@ -330,21 +400,35 @@ MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
     effective->mouse_passthrough = attributes->mouse_passthrough;
     if (effective->mouse_passthrough) {
       win->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "X11 mouse passthrough is not implemented yet");
-      status = MARU_FAILURE;
     } else {
       win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
+    }
+    if (!_maru_x11_apply_mouse_passthrough(ctx, win)) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "X11 mouse passthrough requires XShape support");
+      effective->mouse_passthrough = false;
+      requested->mouse_passthrough = false;
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
+      status = MARU_FAILURE;
     }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
+    if (attributes->monitor &&
+        ((const MARU_Monitor_Base *)attributes->monitor)->ctx_base != &ctx->base) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_INVALID_ARGUMENT,
+                             "Monitor does not belong to this context");
+      status = MARU_FAILURE;
+    }
     requested->monitor = attributes->monitor;
     effective->monitor = attributes->monitor;
     if (attributes->monitor) {
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "X11 monitor targeting is not implemented yet");
-      status = MARU_FAILURE;
+      const MARU_Monitor_X11 *monitor = (const MARU_Monitor_X11 *)attributes->monitor;
+      const int x = (int)monitor->base.pub.logical_position.x;
+      const int y = (int)monitor->base.pub.logical_position.y;
+      ctx->x11_lib.XMoveWindow(ctx->display, win->handle, x, y);
+      win->base.attrs_effective.position.x = (MARU_Scalar)x;
+      win->base.attrs_effective.position.y = (MARU_Scalar)y;
     }
   }
 
@@ -405,9 +489,9 @@ MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
   if (field_mask & MARU_WINDOW_ATTR_ICON) {
     requested->icon = attributes->icon;
     effective->icon = attributes->icon;
-    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                           "X11 window icon updates are not implemented yet");
-    status = MARU_FAILURE;
+    if (!_maru_x11_apply_icon(ctx, win, attributes->icon)) {
+      status = MARU_FAILURE;
+    }
     presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_ICON;
   }
 

@@ -38,7 +38,11 @@
   MARU_LIB_FN(XQueryExtension)             \
   MARU_LIB_FN(XSelectInput)                \
   MARU_LIB_FN(XInternAtom)                 \
+  MARU_LIB_FN(XGetAtomName)                \
+  MARU_LIB_FN(XFree)                       \
   MARU_LIB_FN(XSendEvent)                  \
+  MARU_LIB_FN(XChangeProperty)             \
+  MARU_LIB_FN(XDeleteProperty)             \
   MARU_LIB_FN(XSetWMProtocols)             \
   MARU_LIB_FN(XSetWMNormalHints)           \
   MARU_LIB_FN(XStoreName)                  \

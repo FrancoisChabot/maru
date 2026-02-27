@@ -2,7 +2,6 @@
 #include "maru/c/vulkan.h"
 #include "maru_internal.h"
 #include "vulkan_api_constraints.h"
-#include <stdio.h>
 
 // Vulkan types and function pointers needed for the implementation.
 // We define them locally to avoid a hard dependency on Vulkan headers.
@@ -43,7 +42,6 @@ const char **maru_getVkExtensions_X11(const MARU_Context *context,
 MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
                                      MARU_VkGetInstanceProcAddrFunc vk_loader,
                                      VkSurfaceKHR *out_surface) {
-  fprintf(stderr, "[X11 DEBUG] maru_createVkSurface_X11 started\n");
   MARU_Context *ctx = maru_getWindowContext(window);
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)ctx;
 
@@ -58,7 +56,6 @@ MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
     MARU_REPORT_DIAGNOSTIC(
         ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
         "No Vulkan loader available. Configure tuning.vulkan.vk_loader or pass vk_loader.");
-    fprintf(stderr, "[X11 DEBUG] No Vulkan loader available\n");
     return MARU_FAILURE;
   }
 
@@ -69,7 +66,6 @@ MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
   if (!create_surface_fn) {
     MARU_REPORT_DIAGNOSTIC(ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
                            "vkCreateXlibSurfaceKHR not found");
-    fprintf(stderr, "[X11 DEBUG] vkCreateXlibSurfaceKHR not found\n");
     return MARU_FAILURE;
   }
 
@@ -77,12 +73,8 @@ MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
   if (maru_getX11WindowHandle(window, &x11_handle) != MARU_SUCCESS) {
     MARU_REPORT_DIAGNOSTIC(ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
                            "Failed to retrieve X11 window handles");
-    fprintf(stderr, "[X11 DEBUG] Failed to retrieve X11 window handles\n");
     return MARU_FAILURE;
   }
-
-  fprintf(stderr, "[X11 DEBUG] Creating surface for dpy=%p, win=0x%lx\n", 
-          (void*)x11_handle.display, (unsigned long)x11_handle.window);
 
   VkXlibSurfaceCreateInfoKHR cinfo = {
       .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
@@ -96,11 +88,9 @@ MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
   if (vk_res != VK_SUCCESS) {
     MARU_REPORT_DIAGNOSTIC(ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
                            "vkCreateXlibSurfaceKHR failure");
-    fprintf(stderr, "[X11 DEBUG] vkCreateXlibSurfaceKHR failure (res=%d)\n", (int)vk_res);
     return MARU_FAILURE;
   }
 
-  fprintf(stderr, "[X11 DEBUG] maru_createVkSurface_X11 success\n");
   return MARU_SUCCESS;
 }
 
