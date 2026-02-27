@@ -96,7 +96,7 @@ int main() {
   }
 
   VkSurfaceKHR surface;
-  if (maru_createVkSurface(window, renderer.instance, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr, &surface) !=
+  if (maru_createVkSurface(window, renderer.instance, vkGetInstanceProcAddr, &surface) !=
       MARU_SUCCESS) {
     fprintf(stderr, "Failed to create Vulkan surface.\n");
     maru_destroyWindow(window);

@@ -116,6 +116,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   if (!maru_isWindowReady((MARU_Window *)window)) {
     window->base.pub.flags |= MARU_WINDOW_STATE_READY;
     MARU_Event evt = {0};
+    maru_getWindowGeometry_WL((MARU_Window *)window, &evt.window_ready.geometry);
     _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)window, &evt);
   }
 

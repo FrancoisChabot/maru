@@ -61,7 +61,6 @@ jobs:
                   -DMARU_ENABLE_DIAGNOSTICS=ON
                   -DMARU_GATHER_METRICS=ON
                   -DMARU_VALIDATE_API_CALLS=ON
-                  -DMARU_RECOVERABLE_API_CALLS=ON
                   -DMARU_ENABLE_CONTROLLERS=ON
 
         steps:

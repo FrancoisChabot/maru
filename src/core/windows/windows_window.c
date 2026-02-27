@@ -630,6 +630,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   _maru_register_window(&ctx->base, (MARU_Window *)window);
 
   MARU_Event evt = { {0} };
+  maru_getWindowGeometry_Windows((MARU_Window *)window, &evt.window_ready.geometry);
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)window, &evt);
 
   *out_window = (MARU_Window *)window;

@@ -27,8 +27,6 @@ typedef struct MARU_Window MARU_Window;
 
 /** @brief Opaque handle to a Vulkan surface. */
 typedef struct VkSurfaceKHR_T *VkSurfaceKHR;
-/** @brief Opaque handle to a Vulkan instance. */
-typedef struct VkInstance_T *VkInstance;
 
 /** @brief Retrieves the list of Vulkan instance extensions required by MARU. 
 

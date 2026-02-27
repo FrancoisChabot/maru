@@ -217,7 +217,7 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow& sw) {
         if (!maru_isWindowReady(sw.window)) {
             return;
         }
-        if (maru_createVkSurface(sw.window, instance_, (MARU_VkGetInstanceProcAddrFunc)vkGetInstanceProcAddr, &sw.surface) != MARU_SUCCESS) {
+        if (maru_createVkSurface(sw.window, instance_, vkGetInstanceProcAddr, &sw.surface) != MARU_SUCCESS) {
             sw.should_close = true;
             return;
         }

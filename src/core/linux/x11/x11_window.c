@@ -277,6 +277,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   // Window creation happens outside maru_pumpEvents(), so dispatching directly
   // would drop these events when no pump callback is installed yet.
   MARU_Event mevt = {0};
+  maru_getWindowGeometry_X11((MARU_Window *)win, &mevt.window_ready.geometry);
   _maru_post_event_internal(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)win, &mevt);
 
   MARU_Event revt = {0};

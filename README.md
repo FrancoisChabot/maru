@@ -2,13 +2,13 @@
 
 [![License](https://img.shields.io/badge/license-zlib-blue.svg)](LICENSE.md)
 
-A lightweight vulkan-first Platform Abstraction Layer for the modern age.
+A lightweight vulkan-centric Platform Abstraction Layer for the modern age.
 
 What's neat about Maru?
 
 - It has no dynamic global state whatsoever, and is completely inert until invoked.
 - It goes out of its way to provide fast and steady timing (< 0.1ms generally), even during unusual events like controller hot-plugs.
-- API use is aggressively validated in debug, and all guardrails can be disabled for maximum performance.
+- API use is aggressively validated by default, and all guardrails can be disabled for maximum performance.
 - It exposes clear and detailed metrics about its internal timing and resource usage.
 
 ## Status
@@ -17,17 +17,17 @@ Ready for use by early adopters on Linux.
 
 ### Backend statuses
 
-Wayland: Feature complete
-X11: Functional for basic usage
-macOS: Stubbed in.
-Window: Stubbed in.
+- Wayland: Feature complete.
+- X11: Almost feature complete. There are a few holes left in Drag-and-drop, IME handling and idle inhibition.
+- Window: Minimally functional.
+- macOS: Stubbed in.
 
 ## Quickstart 
 
 Run the following, and you should be presented with a ImGui-based playground to mess with the various things Maru provides.
 
 You first need: 
-  - A C compiler (gcc/clang/msvc)
+  - A C/C++ compiler (gcc/clang/msvc)
   - [git](https://git-scm.com/)
   - [CMake](https://cmake.org/) (3.20 or above)
   - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home). (N.B. only needed for the examples, the Maru library itslef doesn't require it)
@@ -67,6 +67,77 @@ FetchContent_MakeAvailable(maru)
 target_link_libraries(your_target PRIVATE maru::maru)
 ```
 
+## Usage example
+
+```cpp
+// N.B. Maru does not include vulkan headers for you, it does not care if you 
+// include them before or after it, and it doesn't require any #define beforehand.
+#include <vulkan/vulkan.h>
+#include "maru/maru.hpp"
+
+// ...
+
+using namespace std::chrono_literals;
+
+int main() {
+  bool keep_running = true;
+
+  // Create a maru context
+  maru::Context context;
+
+  // Create your vulkan renderer. (all we need is the VkInstance at this point)
+  // examples/basic_cpp shows what Renderer can look like.
+  Renderer renderer(context.getVkExtensions());
+  
+  // Create a window.
+  MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
+  window_info.attributes.title = "Maru Basic C++ Example";
+  window_info.attributes.logical_size = {800, 600};
+  maru::Window window = context.createWindow(window_info);
+
+  // Setup our event handler.
+  // N.B. maru::makeDispatcher requires C++20.
+  auto event_handler = maru::makeDispatcher(
+      [&](maru::WindowCloseEvent) { 
+        keep_running = false; 
+      },
+      [&](maru::WindowResizedEvent e) {
+        renderer.on_resized(e->geometry);
+      },
+      [&](maru::MouseMotionEvent e) {
+        std::cout << "mouse movement: (" << e->position.x << ", " << e->position.y << ")\n";
+      },
+      [&](maru::KeyboardEvent e) {
+        std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";
+      },
+      [&](maru::ControllerButtonStateChangedEvent e) {
+        std::cout << "Controller Button: (" << e->button_id << ", " << e->state << ")\n";
+      },
+      [&](maru::WindowReadyEvent e) {
+        // Create the OS-specific surface for Vulkan.
+        // vkGetInstanceProcAddr is usually provided by your vulkan loader.
+        renderer.setup_surface(
+          window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr), 
+          e->geometry
+        );
+      });
+
+  while (keep_running) {
+    // Avoid busy-looping before the window is ready.
+    auto pump_timeout = renderer.ready() ? 0ms : 16ms;
+    context.pumpEvents(event_handler, pump_timeout);
+
+    if (renderer.ready()) {
+      renderer.draw_frame();
+    }
+  }
+
+  return 0;
+}
+```
+
+Consult the `examples/` directory for more, including the pure C equivalent of this in `examples/basic_c`
+
 ## Safety, Validation and diagnostics
 
 Maru provides a few different options to control the validation behavior. These are all fixed at the time of compiling the library.
@@ -97,12 +168,17 @@ Maru provides a few different options to control the validation behavior. These 
 
 Here are the rule of thumbs:
 
-- Each `MARU_Context` is its own little universe. They are fully independant from one-another, and you can instantiate different contexts in different threads.
+- Each `MARU_Context` is its own little universe. They are **fully** independant from one-another, and you can instantiate different contexts in different threads.
 - The thread that creates a `MARU_Context` is that context's owner thread.
 - `maru_postEvent()`, `maru_wakeContext()`, `maru_*retain()` and `maru_*release()` are the only functions that are truly thread-safe.
-- Any function that does not return a `MARU_Status` is a **pasive accessor**, and can be safely called from arbitrary threads; provided that you synchronize with
-the Context's thread with a R/W lock.
+- Any function that does not return a `MARU_Status` is a **pasive accessor**, and can be safely called from arbitrary threads; provided that you synchronize with the Context's thread with a R/W lock.
 - Any other function has to be called from the context's owner thread.
+
+#### Aren't there mutations that Maru could flag as thread-safe-with-external-synchronization? 
+
+Quite possibly, but we have no intention of getting into that. 
+
+Going for that level of granularity would make the threading model more complex for you to reason about, and the implementation a lot harder for us to maintain reliably. The current contract is easier to work with and more robust in the long term.
 
 ### Does Maru use X11 or Wayland on Linux?
 
@@ -114,14 +190,19 @@ If you want to exclusively support X11 or Wayland, that's also possible, and it 
 
 ### How does Maru handle high-frequency mouse input?
 
-The short answer is that it doesn't by default. Every single mouse movement will be dispatched to your callback to accomodate engines that already provide their own event queues.
+The short answer is that it doesn't. Every single mouse movement will be dispatched to your callback to ensure 
+zero-latency access to raw OS input and to accomodate engines that already provide their own event queues. There is optional tooling to make that easier in the works, but for now you have to deal with the flood yourself.
 
 ### Does Maru initialize Vulkan for me?
 
 Nope. There are too many decisions to make around that. The library has a mandate: deal with windows and I/O, and it sticks to it. It does a grand total of 2 Vulkan-specific things:
 
 1 - Get which extensions you need to provide `vkCreateInstance()` via `maru_getVkExtensions()`
-2 - Create a `vkSurfaceKHR` for a given window (which you are responsible for deleting) via `maru_createVkSurface()`
+2 - Create a `vkSurfaceKHR` (which you are responsible for deleting) for a given window via `maru_createVkSurface()`
+
+### Can I use Maru for other rendering APIs (OpenGL, DX11/12, etc...)?
+
+Not at the moment. Maybe one day, if there's enough demand for it. However, supporting OpenGL or other similar legacy APIs would involve breaking some of the hard guarantees that we are currently providing, so we are not keen on it. DX12/Metal would be an easier sell.
 
 ### Is there really no synchronous window creation mechanism?
 
@@ -129,7 +210,7 @@ Nope. There are too many decisions to make around that. The library has a mandat
 
 Unfortunately, asynchronous window creation is absolutely necessary to get a smooth experience in certain backends. On top of that, synchronous window creation is too sticky/tempting of an API, so it's easy to paint oneself in a corner and run into issues later down the road.
 
-### What's up with the attribute substructs in the createInfos? What goes in them seems arbitrary.
+### What's up with the attribute substructs in the createInfos?
 
 Some properties of context/windows must be set at creation, and others can be changed on the fly later. Attributes represent the later, and the same struct type is used when populating the create infos and when invoking `maru_updateWindow()` / `maru_updateContext()`. That makes things nice and consistent.
 
@@ -143,17 +224,23 @@ The wording distinction is to make dealing with High DPI (retina) displays easie
 
 All coordinate variables and types have either `logical` or `pixel` in their name to make crystal clear if they are referring to logical OS dimensions or to the actual pixel count. In short, use `logical` units for your UI and `pixel` for rendering.
 
-### Why do I need to pass the event handling callback to maru_pumpEvents().
+### Why do I need to pass the event handling callback to maru_pumpEvents() every single time?.
 
-Maru guarantees that events are only ever dispatched during maru_pumpEvents(). Having the callback only exist for the during of the pump enshrines this on both sides of the fence.
+Maru guarantees that events are only ever dispatched during maru_pumpEvents(). Having the callback only exist for the duration of the pump enshrines this on both sides of the fence.
 
-### Why does Maru create a worker thread (in some backends)? I thought this was supposed to be light!
+### Why does Maru create a worker thread in some backends? I thought this was supposed to be lightweight!
 
-There are a few interactions (e.g. hot-plugging a controller in Linux) that inevitably introduce timing unpredictability on certain platforms. These operations are offloaded to the worker thread so that your app/game doesn't get stuck for up to 20ms when they happen.
+Maru isn't lightweight for the sake of it. It is lightweight so that your app/game can run as fast and smoothly as possible.
+
+Certain OS operations (e.g. scanning for gamepads on Linux via udev or handling device-change notifications on Windows) can block for several milliseconds. If we ran these on your main thread, you could see a hitch in your frame rate every time a controller was plugged in.
+
+We offload these non-deterministic blocking calls to a dedicated worker thread. This ensures that maru_pumpEvents() remains fast and predictable, even during unusual OS events.
+
+That's why having an extra thread (in the backends that warrant it) is the lightweight thing to do.
 
 ### Do I really need CMake to build the library itself? Can I just compile the files myself and use the headers?
 
-Not reliably. Even if it was reasonably feasible today, it might break with any release. The CMake path is the only one we plan on ensuring stability on.
+Not reliably. Even if it was reasonably feasible today, it might break with any release. The CMake path is the only one we plan on ensuring stability on for now.
 
 ## Acknowledgements
 

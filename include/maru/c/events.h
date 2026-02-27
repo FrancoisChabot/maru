@@ -211,7 +211,9 @@ static inline MARU_EventMask maru_eventMaskRemove(MARU_EventMask mask, MARU_Even
 */
 
 /** @brief Payload for MARU_EVENT_WINDOW_READY. */
-typedef struct MARU_WindowReadyEvent { char _unused; } MARU_WindowReadyEvent;
+typedef struct MARU_WindowReadyEvent {
+  MARU_WindowGeometry geometry;
+} MARU_WindowReadyEvent;
 /** @brief Payload for MARU_EVENT_CLOSE_REQUESTED. */
 typedef struct MARU_WindowCloseEvent { char _unused; } MARU_WindowCloseEvent;
 /** @brief Payload for MARU_EVENT_WINDOW_FRAME. */

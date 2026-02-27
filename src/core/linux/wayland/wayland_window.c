@@ -543,6 +543,7 @@ static void _xdg_surface_handle_configure(void *data, struct xdg_surface *xdg_su
   if (!maru_isWindowReady((MARU_Window *)window)) {
     window->base.pub.flags |= MARU_WINDOW_STATE_READY;
     MARU_Event evt = {0};
+    maru_getWindowGeometry_WL((MARU_Window *)window, &evt.window_ready.geometry);
     _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)window, &evt);
   }
 
