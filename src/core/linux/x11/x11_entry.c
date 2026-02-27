@@ -90,22 +90,6 @@ static void _maru_x11_apply_size_hints(MARU_Context_X11 *ctx, MARU_Window_X11 *w
   ctx->x11_lib.XSetWMNormalHints(ctx->display, win->handle, &hints);
 }
 
-static void _maru_x11_apply_cursor(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
-  if (win->base.pub.cursor_mode != MARU_CURSOR_NORMAL) {
-    return;
-  }
-
-  if (win->base.pub.current_cursor) {
-    MARU_Cursor_X11 *cursor = (MARU_Cursor_X11 *)win->base.pub.current_cursor;
-    if (cursor->base.ctx_base == &ctx->base && cursor->handle) {
-      ctx->x11_lib.XDefineCursor(ctx->display, win->handle, cursor->handle);
-      return;
-    }
-  }
-
-  ctx->x11_lib.XUndefineCursor(ctx->display, win->handle);
-}
-
 extern MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
                                    MARU_Context **out_context);
 extern MARU_Status maru_destroyContext_X11(MARU_Context *context);
@@ -331,15 +315,14 @@ MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
     requested->cursor_mode = attributes->cursor_mode;
     effective->cursor_mode = attributes->cursor_mode;
     win->base.pub.cursor_mode = attributes->cursor_mode;
-    if (attributes->cursor_mode != MARU_CURSOR_NORMAL) {
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "X11 cursor hidden/locked modes are not implemented yet");
-      status = MARU_FAILURE;
-    }
   }
 
   if (field_mask & (MARU_WINDOW_ATTR_CURSOR | MARU_WINDOW_ATTR_CURSOR_MODE)) {
-    _maru_x11_apply_cursor(ctx, win);
+    if (!_maru_x11_apply_window_cursor_mode(ctx, win)) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "X11 cursor mode transition failed");
+      status = MARU_FAILURE;
+    }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {

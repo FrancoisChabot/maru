@@ -19,6 +19,10 @@
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
 
+bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
+void _maru_x11_release_pointer_lock(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
+static bool _maru_x11_enable_xi2_raw_motion(MARU_Context_X11 *ctx);
+
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
                                     const MARU_ContextAttributes *attributes) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
@@ -119,9 +123,12 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     return MARU_FAILURE;
   }
   (void)maru_load_xcursor_symbols(&ctx->base, &ctx->xcursor_lib);
+  (void)maru_load_xi2_symbols(&ctx->base, &ctx->xi2_lib);
 
   ctx->display = ctx->x11_lib.XOpenDisplay(NULL);
   if (!ctx->display) {
+    maru_unload_xi2_symbols(&ctx->xi2_lib);
+    maru_unload_xcursor_symbols(&ctx->xcursor_lib);
     maru_unload_x11_symbols(&ctx->x11_lib);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
@@ -140,9 +147,12 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->net_wm_state_maximized_horz = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
   ctx->net_wm_state_demands_attention = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
   ctx->net_active_window = ctx->x11_lib.XInternAtom(ctx->display, "_NET_ACTIVE_WINDOW", False);
+  (void)_maru_x11_enable_xi2_raw_motion(ctx);
 
   if (!_maru_linux_common_init(&ctx->linux_common, &ctx->base)) {
     ctx->x11_lib.XCloseDisplay(ctx->display);
+    maru_unload_xi2_symbols(&ctx->xi2_lib);
+    maru_unload_xcursor_symbols(&ctx->xcursor_lib);
     maru_unload_x11_symbols(&ctx->x11_lib);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
@@ -178,6 +188,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
 
 MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  _maru_x11_release_pointer_lock(ctx, NULL);
   
   while (ctx->base.window_list_head) {
     extern MARU_Status maru_destroyWindow_X11(MARU_Window * window);
@@ -187,9 +198,14 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   _maru_linux_common_cleanup(&ctx->linux_common);
   
   if (ctx->display) {
+    if (ctx->hidden_cursor) {
+      ctx->x11_lib.XFreeCursor(ctx->display, ctx->hidden_cursor);
+      ctx->hidden_cursor = (Cursor)0;
+    }
     ctx->x11_lib.XCloseDisplay(ctx->display);
   }
   maru_unload_xcursor_symbols(&ctx->xcursor_lib);
+  maru_unload_xi2_symbols(&ctx->xi2_lib);
   maru_unload_x11_symbols(&ctx->x11_lib);
 
   _maru_cleanup_context_base(&ctx->base);
@@ -214,6 +230,43 @@ static MARU_Window_X11 *_maru_x11_find_window(MARU_Context_X11 *ctx, Window hand
     }
   }
   return NULL;
+}
+
+static bool _maru_x11_enable_xi2_raw_motion(MARU_Context_X11 *ctx) {
+  if (!ctx->xi2_lib.base.available) {
+    return false;
+  }
+
+  int xi_event = 0;
+  int xi_error = 0;
+  int xi_opcode = 0;
+  if (!ctx->x11_lib.XQueryExtension(ctx->display, "XInputExtension", &xi_opcode,
+                                    &xi_event, &xi_error)) {
+    return false;
+  }
+
+  int xi_major = 2;
+  int xi_minor = 0;
+  if (ctx->xi2_lib.XIQueryVersion(ctx->display, &xi_major, &xi_minor) != Success) {
+    return false;
+  }
+
+  unsigned char mask[(XI_LASTEVENT + 7) / 8];
+  memset(mask, 0, sizeof(mask));
+  XISetMask(mask, XI_RawMotion);
+
+  XIEventMask event_mask;
+  event_mask.deviceid = XIAllMasterDevices;
+  event_mask.mask_len = (int)sizeof(mask);
+  event_mask.mask = mask;
+  if (ctx->xi2_lib.XISelectEvents(ctx->display, ctx->root, &event_mask, 1) != Success) {
+    return false;
+  }
+
+  ctx->xi2_opcode = xi_opcode;
+  ctx->xi2_raw_motion_enabled = true;
+  ctx->x11_lib.XFlush(ctx->display);
+  return true;
 }
 
 extern void maru_getWindowGeometry_X11(MARU_Window *window,
@@ -382,6 +435,121 @@ static uint32_t _maru_x11_cursor_frame_delay_ms(uint32_t delay_ms) {
   return (delay_ms == 0) ? 1u : delay_ms;
 }
 
+static void _maru_x11_clear_locked_raw_accum(MARU_Context_X11 *ctx) {
+  ctx->locked_raw_dx_accum = (MARU_Scalar)0.0;
+  ctx->locked_raw_dy_accum = (MARU_Scalar)0.0;
+  ctx->locked_raw_pending = false;
+}
+
+static bool _maru_x11_ensure_hidden_cursor(MARU_Context_X11 *ctx) {
+  if (ctx->hidden_cursor) {
+    return true;
+  }
+
+  static const char empty_data[1] = {0};
+  Pixmap bitmap = ctx->x11_lib.XCreateBitmapFromData(ctx->display, ctx->root,
+                                                     empty_data, 1u, 1u);
+  if (!bitmap) {
+    return false;
+  }
+
+  XColor black;
+  memset(&black, 0, sizeof(black));
+  Cursor cursor = ctx->x11_lib.XCreatePixmapCursor(
+      ctx->display, bitmap, bitmap, &black, &black, 0u, 0u);
+  ctx->x11_lib.XFreePixmap(ctx->display, bitmap);
+  if (!cursor) {
+    return false;
+  }
+
+  ctx->hidden_cursor = cursor;
+  return true;
+}
+
+void _maru_x11_release_pointer_lock(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
+  if (ctx->locked_window && (!win || ctx->locked_window == win)) {
+    ctx->x11_lib.XUngrabPointer(ctx->display, CurrentTime);
+    if (ctx->locked_window) {
+      ctx->locked_window->suppress_lock_warp_event = false;
+    }
+    ctx->locked_window = NULL;
+    _maru_x11_clear_locked_raw_accum(ctx);
+  }
+}
+
+static void _maru_x11_recenter_locked_pointer(MARU_Context_X11 *ctx,
+                                              MARU_Window_X11 *win) {
+  if (!win->handle) {
+    return;
+  }
+  win->suppress_lock_warp_event = true;
+  ctx->x11_lib.XWarpPointer(ctx->display, None, win->handle, 0, 0, 0, 0,
+                            win->lock_center_x, win->lock_center_y);
+}
+
+bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
+  if (!ctx || !win || !win->handle) {
+    return false;
+  }
+
+  if (win->base.pub.cursor_mode == MARU_CURSOR_LOCKED) {
+    if (!_maru_x11_ensure_hidden_cursor(ctx)) {
+      return false;
+    }
+
+    const int32_t width = (int32_t)win->server_logical_size.x;
+    const int32_t height = (int32_t)win->server_logical_size.y;
+    win->lock_center_x = (width > 0) ? (width / 2) : 0;
+    win->lock_center_y = (height > 0) ? (height / 2) : 0;
+
+    const bool focused =
+        (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    if (focused) {
+      if (ctx->locked_window != win) {
+        _maru_x11_release_pointer_lock(ctx, NULL);
+        const int grab_result = ctx->x11_lib.XGrabPointer(
+            ctx->display, win->handle, True,
+            (unsigned int)(PointerMotionMask | ButtonPressMask | ButtonReleaseMask),
+            GrabModeAsync, GrabModeAsync, win->handle, ctx->hidden_cursor, CurrentTime);
+        if (grab_result != GrabSuccess) {
+          return false;
+        }
+        ctx->locked_window = win;
+        _maru_x11_clear_locked_raw_accum(ctx);
+      }
+    }
+
+    ctx->x11_lib.XDefineCursor(ctx->display, win->handle, ctx->hidden_cursor);
+    if (focused && ctx->locked_window == win) {
+      _maru_x11_recenter_locked_pointer(ctx, win);
+    }
+    return true;
+  }
+
+  if (ctx->locked_window == win) {
+    _maru_x11_release_pointer_lock(ctx, win);
+  }
+
+  if (win->base.pub.cursor_mode == MARU_CURSOR_HIDDEN) {
+    if (!_maru_x11_ensure_hidden_cursor(ctx)) {
+      return false;
+    }
+    ctx->x11_lib.XDefineCursor(ctx->display, win->handle, ctx->hidden_cursor);
+    return true;
+  }
+
+  if (win->base.pub.current_cursor) {
+    MARU_Cursor_X11 *cursor = (MARU_Cursor_X11 *)win->base.pub.current_cursor;
+    if (cursor->base.ctx_base == &ctx->base && cursor->handle) {
+      ctx->x11_lib.XDefineCursor(ctx->display, win->handle, cursor->handle);
+      return true;
+    }
+  }
+
+  ctx->x11_lib.XUndefineCursor(ctx->display, win->handle);
+  return true;
+}
+
 static void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx,
                                               uint64_t duration_ns) {
   MARU_ContextMetrics *metrics = &ctx->base.metrics;
@@ -526,6 +694,39 @@ static bool _maru_x11_advance_animated_cursors(MARU_Context_X11 *ctx,
 }
 
 static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
+  if (ev->type == GenericEvent && ctx->xi2_raw_motion_enabled &&
+      ev->xcookie.extension == ctx->xi2_opcode &&
+      ctx->x11_lib.XGetEventData(ctx->display, &ev->xcookie)) {
+    if (ev->xcookie.evtype == XI_RawMotion && ctx->locked_window &&
+        (ctx->locked_window->base.pub.cursor_mode == MARU_CURSOR_LOCKED)) {
+      const XIRawEvent *raw = (const XIRawEvent *)ev->xcookie.data;
+      if (raw && raw->raw_values && raw->valuators.mask &&
+          raw->valuators.mask_len > 0) {
+        const double *values = raw->raw_values;
+        const int bit_count = raw->valuators.mask_len * 8;
+        MARU_Scalar raw_dx = (MARU_Scalar)0.0;
+        MARU_Scalar raw_dy = (MARU_Scalar)0.0;
+        for (int bit = 0; bit < bit_count; ++bit) {
+          if (!XIMaskIsSet(raw->valuators.mask, bit)) {
+            continue;
+          }
+          const MARU_Scalar value = (MARU_Scalar)(*values++);
+          if (bit == 0) {
+            raw_dx += value;
+          } else if (bit == 1) {
+            raw_dy += value;
+          }
+        }
+        if (raw_dx != (MARU_Scalar)0.0 || raw_dy != (MARU_Scalar)0.0) {
+          ctx->locked_raw_dx_accum += raw_dx;
+          ctx->locked_raw_dy_accum += raw_dy;
+          ctx->locked_raw_pending = true;
+        }
+      }
+    }
+    ctx->x11_lib.XFreeEventData(ctx->display, &ev->xcookie);
+  }
+
   switch (ev->type) {
     case ClientMessage: {
       if (ev->xclient.message_type == ctx->wm_protocols &&
@@ -550,6 +751,12 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
         if (changed) {
           win->server_logical_size.x = new_w;
           win->server_logical_size.y = new_h;
+          if (win->base.pub.cursor_mode == MARU_CURSOR_LOCKED &&
+              ctx->locked_window == win) {
+            win->lock_center_x = ev->xconfigure.width / 2;
+            win->lock_center_y = ev->xconfigure.height / 2;
+            _maru_x11_recenter_locked_pointer(ctx, win);
+          }
 
           const bool viewport_active =
               (win->base.attrs_effective.viewport_size.x > (MARU_Scalar)0.0) &&
@@ -588,6 +795,7 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
         fprintf(stderr, "[X11 DEBUG] FocusIn\n");
         win->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
         ctx->linux_common.xkb.focused_window = (MARU_Window *)win;
+        (void)_maru_x11_apply_window_cursor_mode(ctx, win);
         MARU_Event mevt = {0};
         mevt.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
         mevt.presentation.focused = true;
@@ -600,6 +808,9 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
       if (win) {
         fprintf(stderr, "[X11 DEBUG] FocusOut\n");
         win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
+        if (ctx->locked_window == win) {
+          _maru_x11_release_pointer_lock(ctx, win);
+        }
         memset(win->base.keyboard_state, 0, sizeof(win->base.keyboard_state));
         if (ctx->linux_common.xkb.focused_window == (MARU_Window *)win) {
           ctx->linux_common.xkb.focused_window = NULL;
@@ -614,6 +825,44 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
     case MotionNotify: {
       MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xmotion.window);
       if (win) {
+        if (win->base.pub.cursor_mode == MARU_CURSOR_LOCKED &&
+            ctx->locked_window == win) {
+          ctx->linux_common.pointer.focused_window = (MARU_Window *)win;
+          if (win->suppress_lock_warp_event &&
+              ev->xmotion.x == win->lock_center_x &&
+              ev->xmotion.y == win->lock_center_y) {
+            win->suppress_lock_warp_event = false;
+            break;
+          }
+
+          const MARU_Scalar dx =
+              (MARU_Scalar)(ev->xmotion.x - win->lock_center_x);
+          const MARU_Scalar dy =
+              (MARU_Scalar)(ev->xmotion.y - win->lock_center_y);
+          if (dx != (MARU_Scalar)0.0 || dy != (MARU_Scalar)0.0) {
+            MARU_Event mevt = {0};
+            mevt.mouse_motion.position.x = (MARU_Scalar)ctx->linux_common.pointer.x;
+            mevt.mouse_motion.position.y = (MARU_Scalar)ctx->linux_common.pointer.y;
+            mevt.mouse_motion.delta.x = dx;
+            mevt.mouse_motion.delta.y = dy;
+            if (ctx->locked_raw_pending) {
+              mevt.mouse_motion.raw_delta.x = ctx->locked_raw_dx_accum;
+              mevt.mouse_motion.raw_delta.y = ctx->locked_raw_dy_accum;
+            } else {
+              mevt.mouse_motion.raw_delta.x = dx;
+              mevt.mouse_motion.raw_delta.y = dy;
+            }
+            _maru_x11_clear_locked_raw_accum(ctx);
+            mevt.mouse_motion.modifiers = _maru_x11_get_modifiers(ev->xmotion.state);
+            _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED,
+                                 (MARU_Window *)win, &mevt);
+            _maru_x11_recenter_locked_pointer(ctx, win);
+          }
+          break;
+        }
+
+        _maru_x11_clear_locked_raw_accum(ctx);
+
         MARU_Event mevt = {0};
         const MARU_Scalar x = (MARU_Scalar)ev->xmotion.x;
         const MARU_Scalar y = (MARU_Scalar)ev->xmotion.y;
@@ -623,6 +872,8 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
           mevt.mouse_motion.delta.x = x - (MARU_Scalar)ctx->linux_common.pointer.x;
           mevt.mouse_motion.delta.y = y - (MARU_Scalar)ctx->linux_common.pointer.y;
         }
+        mevt.mouse_motion.raw_delta.x = (MARU_Scalar)0.0;
+        mevt.mouse_motion.raw_delta.y = (MARU_Scalar)0.0;
         mevt.mouse_motion.modifiers = _maru_x11_get_modifiers(ev->xmotion.state);
 
         ctx->linux_common.pointer.focused_window = (MARU_Window *)win;
@@ -919,13 +1170,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->server_logical_size = win->base.attrs_effective.logical_size;
 
   ctx->x11_lib.XMapWindow(ctx->display, win->handle);
-  if (win->base.pub.cursor_mode == MARU_CURSOR_NORMAL &&
-      win->base.pub.current_cursor) {
-    MARU_Cursor_X11 *cursor = (MARU_Cursor_X11 *)win->base.pub.current_cursor;
-    if (cursor->base.ctx_base == &ctx->base && cursor->handle) {
-      ctx->x11_lib.XDefineCursor(ctx->display, win->handle, cursor->handle);
-    }
-  }
+  (void)_maru_x11_apply_window_cursor_mode(ctx, win);
   ctx->x11_lib.XFlush(ctx->display);
 
   // Window creation happens outside maru_pumpEvents(), so dispatching directly
@@ -944,6 +1189,9 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
 MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
   MARU_Window_X11 *win = (MARU_Window_X11 *)window;
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+  if (ctx->locked_window == win) {
+    _maru_x11_release_pointer_lock(ctx, win);
+  }
 
   if (win->handle) {
     ctx->x11_lib.XUnmapWindow(ctx->display, win->handle);

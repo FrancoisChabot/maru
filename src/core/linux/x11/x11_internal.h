@@ -7,8 +7,10 @@
 #include "linux_internal.h"
 #include "dlib/x11.h"
 #include "dlib/xcursor.h"
+#include "dlib/xi2.h"
 
 typedef struct MARU_Cursor_X11 MARU_Cursor_X11;
+typedef struct MARU_Window_X11 MARU_Window_X11;
 
 typedef struct MARU_Context_X11 {
   MARU_Context_Base base;
@@ -16,10 +18,18 @@ typedef struct MARU_Context_X11 {
 
   MARU_Lib_X11 x11_lib;
   MARU_Lib_Xcursor xcursor_lib;
+  MARU_Lib_Xi2 xi2_lib;
   Display *display;
   int screen;
   Window root;
   MARU_Cursor_X11 *animated_cursors_head;
+  Cursor hidden_cursor;
+  MARU_Window_X11 *locked_window;
+  bool xi2_raw_motion_enabled;
+  int xi2_opcode;
+  MARU_Scalar locked_raw_dx_accum;
+  MARU_Scalar locked_raw_dy_accum;
+  bool locked_raw_pending;
   
   Atom wm_protocols;
   Atom wm_delete_window;
@@ -36,7 +46,7 @@ typedef struct MARU_Context_X11 {
   uint32_t controller_list_capacity;
 } MARU_Context_X11;
 
-typedef struct MARU_Window_X11 {
+struct MARU_Window_X11 {
   MARU_Window_Base base;
   Window handle;
   Colormap colormap;
@@ -44,7 +54,10 @@ typedef struct MARU_Window_X11 {
   
   bool is_fullscreen;
   bool is_maximized;
-} MARU_Window_X11;
+  int lock_center_x;
+  int lock_center_y;
+  bool suppress_lock_warp_event;
+};
 
 struct MARU_Cursor_X11 {
   MARU_Cursor_Base base;
@@ -59,5 +72,8 @@ struct MARU_Cursor_X11 {
   MARU_Cursor_X11 *anim_prev;
   MARU_Cursor_X11 *anim_next;
 };
+
+bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
+void _maru_x11_release_pointer_lock(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
 
 #endif

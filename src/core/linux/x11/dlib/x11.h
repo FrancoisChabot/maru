@@ -14,6 +14,8 @@
   MARU_LIB_FN(XCloseDisplay)               \
   MARU_LIB_FN(XPending)                    \
   MARU_LIB_FN(XNextEvent)                  \
+  MARU_LIB_FN(XGetEventData)               \
+  MARU_LIB_FN(XFreeEventData)              \
   MARU_LIB_FN(XConnectionNumber)           \
   MARU_LIB_FN(XFlush)                      \
   MARU_LIB_FN(XCreateSimpleWindow)         \
@@ -26,7 +28,14 @@
   MARU_LIB_FN(XDefineCursor)               \
   MARU_LIB_FN(XUndefineCursor)             \
   MARU_LIB_FN(XCreateFontCursor)           \
+  MARU_LIB_FN(XCreateBitmapFromData)       \
+  MARU_LIB_FN(XCreatePixmapCursor)         \
   MARU_LIB_FN(XFreeCursor)                 \
+  MARU_LIB_FN(XFreePixmap)                 \
+  MARU_LIB_FN(XGrabPointer)                \
+  MARU_LIB_FN(XUngrabPointer)              \
+  MARU_LIB_FN(XWarpPointer)                \
+  MARU_LIB_FN(XQueryExtension)             \
   MARU_LIB_FN(XSelectInput)                \
   MARU_LIB_FN(XInternAtom)                 \
   MARU_LIB_FN(XSendEvent)                  \

@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include "x11.h"
 #include "xcursor.h"
+#include "xi2.h"
 
 struct MARU_Context_Base;
 
@@ -14,5 +15,7 @@ bool maru_load_x11_symbols(struct MARU_Context_Base *ctx, MARU_Lib_X11 *x11);
 void maru_unload_x11_symbols(MARU_Lib_X11 *x11);
 bool maru_load_xcursor_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xcursor *xcursor);
 void maru_unload_xcursor_symbols(MARU_Lib_Xcursor *xcursor);
+bool maru_load_xi2_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xi2 *xi2);
+void maru_unload_xi2_symbols(MARU_Lib_Xi2 *xi2);
 
 #endif
