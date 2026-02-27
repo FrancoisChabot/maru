@@ -557,10 +557,18 @@ int main(int, char **) {
       const bool need_rebuild = g_SwapChainRebuild || debounce_elapsed;
       if (geometry.pixel_size.x > 0 && geometry.pixel_size.y > 0 &&
           need_rebuild) {
+        const int target_width =
+            (g_PendingResize && g_PendingViewportSize.x > 0)
+                ? (int)g_PendingViewportSize.x
+                : (int)geometry.pixel_size.x;
+        const int target_height =
+            (g_PendingResize && g_PendingViewportSize.y > 0)
+                ? (int)g_PendingViewportSize.y
+                : (int)geometry.pixel_size.y;
         ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
         ImGui_ImplVulkanH_CreateOrResizeWindow(
             g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily,
-            g_Allocator, (int)geometry.pixel_size.x, (int)geometry.pixel_size.y,
+            g_Allocator, target_width, target_height,
             g_MinImageCount);
         g_MainWindowData.FrameIndex = 0;
         g_SwapChainRebuild = false;

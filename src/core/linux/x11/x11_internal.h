@@ -35,6 +35,7 @@ typedef struct MARU_Window_X11 {
   MARU_Window_Base base;
   Window handle;
   Colormap colormap;
+  MARU_Vec2Dip server_logical_size;
   
   bool is_fullscreen;
   bool is_maximized;

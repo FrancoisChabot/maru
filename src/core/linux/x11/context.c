@@ -19,10 +19,14 @@
 
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
                                     const MARU_ContextAttributes *attributes) {
-  (void)context;
-  (void)field_mask;
-  (void)attributes;
-  return MARU_FAILURE;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  _maru_update_context_base(&ctx->base, field_mask, attributes);
+
+  if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
+    // X11 idle inhibition plumbing is not implemented yet.
+  }
+
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_destroyContext_X11(MARU_Context *context);
@@ -404,16 +408,28 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
     case ConfigureNotify: {
       MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xconfigure.window);
       if (win) {
-        bool changed = (win->base.attrs_effective.logical_size.x != (MARU_Scalar)ev->xconfigure.width) ||
-                       (win->base.attrs_effective.logical_size.y != (MARU_Scalar)ev->xconfigure.height);
+        const MARU_Scalar new_w = (MARU_Scalar)ev->xconfigure.width;
+        const MARU_Scalar new_h = (MARU_Scalar)ev->xconfigure.height;
+        const bool changed = (win->server_logical_size.x != new_w) ||
+                             (win->server_logical_size.y != new_h);
         
         if (changed) {
-          fprintf(stderr, "[X11 DEBUG] ConfigureNotify: %dx%d\n", ev->xconfigure.width, ev->xconfigure.height);
-          win->base.attrs_effective.logical_size.x = (MARU_Scalar)ev->xconfigure.width;
-          win->base.attrs_effective.logical_size.y = (MARU_Scalar)ev->xconfigure.height;
-          
+          win->server_logical_size.x = new_w;
+          win->server_logical_size.y = new_h;
+
+          const bool viewport_active =
+              (win->base.attrs_effective.viewport_size.x > (MARU_Scalar)0.0) &&
+              (win->base.attrs_effective.viewport_size.y > (MARU_Scalar)0.0);
+          if (!viewport_active) {
+            win->base.attrs_effective.logical_size = win->server_logical_size;
+          }
+
           MARU_Event mevt = {0};
-          maru_getWindowGeometry_X11((MARU_Window *)win, &mevt.resized.geometry);
+          mevt.resized.geometry.logical_size = win->server_logical_size;
+          mevt.resized.geometry.pixel_size.x = ev->xconfigure.width;
+          mevt.resized.geometry.pixel_size.y = ev->xconfigure.height;
+          mevt.resized.geometry.scale = (MARU_Scalar)1.0;
+          mevt.resized.geometry.buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
           _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &mevt);
         }
       }
@@ -752,6 +768,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   }
   win->base.attrs_effective.logical_size.x = (MARU_Scalar)width;
   win->base.attrs_effective.logical_size.y = (MARU_Scalar)height;
+  win->server_logical_size = win->base.attrs_effective.logical_size;
 
   ctx->x11_lib.XMapWindow(ctx->display, win->handle);
   ctx->x11_lib.XFlush(ctx->display);

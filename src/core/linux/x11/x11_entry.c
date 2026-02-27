@@ -384,6 +384,13 @@ MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
   if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
     requested->viewport_size = attributes->viewport_size;
     effective->viewport_size = attributes->viewport_size;
+    const bool viewport_disabled =
+        (effective->viewport_size.x <= (MARU_Scalar)0.0) ||
+        (effective->viewport_size.y <= (MARU_Scalar)0.0);
+    if (viewport_disabled) {
+      // When viewport override is disabled, consume the latest server size.
+      effective->logical_size = win->server_logical_size;
+    }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_ICON) {
