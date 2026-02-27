@@ -14,6 +14,7 @@
 #include <poll.h>
 #include <linux/input-event-codes.h>
 #include <stdio.h>
+#include <time.h>
 #include <X11/keysym.h>
 
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
@@ -353,6 +354,39 @@ static uint32_t _maru_x11_find_mouse_button_id(const MARU_Context_X11 *ctx,
   return UINT32_MAX;
 }
 
+static uint64_t _maru_x11_get_monotonic_time_ns(void) {
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+    return 0;
+  }
+  return ((uint64_t)ts.tv_sec * 1000000000ull) + (uint64_t)ts.tv_nsec;
+}
+
+static void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx,
+                                              uint64_t duration_ns) {
+  MARU_ContextMetrics *metrics = &ctx->base.metrics;
+  metrics->pump_call_count_total++;
+  if (metrics->pump_call_count_total == 1) {
+    metrics->pump_duration_avg_ns = duration_ns;
+    metrics->pump_duration_peak_ns = duration_ns;
+    return;
+  }
+
+  if (duration_ns > metrics->pump_duration_peak_ns) {
+    metrics->pump_duration_peak_ns = duration_ns;
+  }
+
+  if (duration_ns >= metrics->pump_duration_avg_ns) {
+    metrics->pump_duration_avg_ns +=
+        (duration_ns - metrics->pump_duration_avg_ns) /
+        metrics->pump_call_count_total;
+  } else {
+    metrics->pump_duration_avg_ns -=
+        (metrics->pump_duration_avg_ns - duration_ns) /
+        metrics->pump_call_count_total;
+  }
+}
+
 static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
   switch (ev->type) {
     case ClientMessage: {
@@ -534,6 +568,7 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
 MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  const uint64_t pump_start_ns = _maru_x11_get_monotonic_time_ns();
   MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
 
@@ -598,6 +633,11 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
   ctx->base.pump_ctx = NULL;
+
+  const uint64_t pump_end_ns = _maru_x11_get_monotonic_time_ns();
+  if (pump_start_ns != 0 && pump_end_ns != 0 && pump_end_ns >= pump_start_ns) {
+    _maru_x11_record_pump_duration_ns(ctx, pump_end_ns - pump_start_ns);
+  }
 
   return MARU_SUCCESS;
 }
