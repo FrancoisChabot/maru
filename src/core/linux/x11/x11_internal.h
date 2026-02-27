@@ -6,15 +6,20 @@
 
 #include "linux_internal.h"
 #include "dlib/x11.h"
+#include "dlib/xcursor.h"
+
+typedef struct MARU_Cursor_X11 MARU_Cursor_X11;
 
 typedef struct MARU_Context_X11 {
   MARU_Context_Base base;
   MARU_Context_Linux_Common linux_common;
 
   MARU_Lib_X11 x11_lib;
+  MARU_Lib_Xcursor xcursor_lib;
   Display *display;
   int screen;
   Window root;
+  MARU_Cursor_X11 *animated_cursors_head;
   
   Atom wm_protocols;
   Atom wm_delete_window;
@@ -41,10 +46,18 @@ typedef struct MARU_Window_X11 {
   bool is_maximized;
 } MARU_Window_X11;
 
-typedef struct MARU_Cursor_X11 {
+struct MARU_Cursor_X11 {
   MARU_Cursor_Base base;
   Cursor handle;
   bool is_system;
-} MARU_Cursor_X11;
+  bool is_animated;
+  Cursor *frame_handles;
+  uint32_t *frame_delays_ms;
+  uint32_t frame_count;
+  uint32_t current_frame;
+  uint64_t next_frame_deadline_ms;
+  MARU_Cursor_X11 *anim_prev;
+  MARU_Cursor_X11 *anim_next;
+};
 
 #endif
