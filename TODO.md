@@ -2,8 +2,7 @@
 
 ## Cross-Backend
 
-- [ ] Emit `MARU_EVENT_DATA_CONSUMED`
-  - Also: We need to test zero-copy data provision properly
+- [ ] We need to test zero-copy data provision properly
 
 ## X11 Backend
 

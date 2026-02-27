@@ -24,6 +24,7 @@ typedef struct MARU_WaylandDataRequestHandle {
   int fd;
   MARU_DataExchangeTarget target;
   const char *mime_type;
+  MARU_Window *window;
   bool consumed;
 } MARU_WaylandDataRequestHandle;
 
@@ -537,10 +538,15 @@ static void _clipboard_source_send(void *data, struct wl_data_source *source,
     return;
   }
   memset(handle, 0, sizeof(*handle));
+  
+  MARU_Window *event_window = ctx->linux_common.xkb.focused_window;
+  if (!event_window) event_window = ctx->linux_common.pointer.focused_window;
+
   handle->base.ctx_base = &ctx->base;
   handle->magic = MARU_WL_DATA_REQUEST_MAGIC;
   handle->fd = fd;
   handle->target = target;
+  handle->window = event_window;
   handle->mime_type = _maru_wl_copy_string(&ctx->base, mime_type);
   if (!handle->mime_type) {
     _maru_wl_destroy_request_handle(ctx, handle);
@@ -552,8 +558,6 @@ static void _clipboard_source_send(void *data, struct wl_data_source *source,
   evt.data_requested.mime_type = handle->mime_type;
   evt.data_requested.internal_handle = handle;
 
-  MARU_Window *event_window = ctx->linux_common.xkb.focused_window;
-  if (!event_window) event_window = ctx->linux_common.pointer.focused_window;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED, event_window, &evt);
 
   _maru_wl_destroy_request_handle(ctx, handle);
@@ -576,10 +580,15 @@ static void _primary_selection_source_send(
     return;
   }
   memset(handle, 0, sizeof(*handle));
+  
+  MARU_Window *event_window = ctx->linux_common.xkb.focused_window;
+  if (!event_window) event_window = ctx->linux_common.pointer.focused_window;
+
   handle->base.ctx_base = &ctx->base;
   handle->magic = MARU_WL_DATA_REQUEST_MAGIC;
   handle->fd = fd;
   handle->target = MARU_DATA_EXCHANGE_TARGET_PRIMARY;
+  handle->window = event_window;
   handle->mime_type = _maru_wl_copy_string(&ctx->base, mime_type);
   if (!handle->mime_type) {
     _maru_wl_destroy_request_handle(ctx, handle);
@@ -591,8 +600,6 @@ static void _primary_selection_source_send(
   evt.data_requested.mime_type = handle->mime_type;
   evt.data_requested.internal_handle = handle;
 
-  MARU_Window *event_window = ctx->linux_common.xkb.focused_window;
-  if (!event_window) event_window = ctx->linux_common.pointer.focused_window;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED, event_window, &evt);
 
   _maru_wl_destroy_request_handle(ctx, handle);
@@ -1428,7 +1435,6 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
 MARU_Status maru_provideData_WL(const MARU_DataRequestEvent *request_event,
                                 const void *data, size_t size,
                                 MARU_DataProvideFlags flags) {
-  (void)flags;
   if (!request_event || !request_event->internal_handle) return MARU_FAILURE;
 
   MARU_WaylandDataRequestHandle *handle =
@@ -1438,30 +1444,19 @@ MARU_Status maru_provideData_WL(const MARU_DataRequestEvent *request_event,
     return MARU_FAILURE;
   }
 
-  const uint8_t *bytes = (const uint8_t *)data;
-  size_t remaining = size;
-  while (remaining > 0) {
-    const ssize_t written = write(handle->fd, bytes, remaining);
-    if (written > 0) {
-      bytes += (size_t)written;
-      remaining -= (size_t)written;
-      continue;
-    }
-    if (written < 0 && errno == EINTR) continue;
-    if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-      struct pollfd pfd = {.fd = handle->fd, .events = POLLOUT, .revents = 0};
-      if (poll(&pfd, 1, 1000) > 0) continue;
-    }
-    close(handle->fd);
+  MARU_Context_WL *ctx = (MARU_Context_WL *)handle->base.ctx_base;
+  const bool zero_copy = (flags & MARU_DATA_PROVIDE_FLAG_ZERO_COPY) != 0;
+
+  MARU_Status status = maru_linux_dataexchange_queueWriteTransfer(
+      &ctx->base, &ctx->data_transfers, handle->fd, handle->window,
+      handle->target, handle->mime_type, data, size, zero_copy);
+
+  if (status == MARU_SUCCESS) {
     handle->fd = -1;
     handle->consumed = true;
-    return MARU_FAILURE;
   }
 
-  close(handle->fd);
-  handle->fd = -1;
-  handle->consumed = true;
-  return MARU_SUCCESS;
+  return status;
 }
 
 void _maru_wayland_dataexchange_handle_internal_transfer_complete(

@@ -56,13 +56,68 @@ MARU_Status maru_linux_dataexchange_queueTransfer(MARU_Context_Base *ctx_base,
   return MARU_SUCCESS;
 }
 
+MARU_Status maru_linux_dataexchange_queueWriteTransfer(MARU_Context_Base *ctx_base,
+                                                       MARU_LinuxDataTransfer **head,
+                                                       int fd,
+                                                       MARU_Window *window,
+                                                       MARU_DataExchangeTarget target,
+                                                       const char *mime_type,
+                                                       const void *data,
+                                                       size_t size,
+                                                       bool zero_copy) {
+  if (!ctx_base || !head || fd < 0 || !mime_type) {
+    if (fd >= 0) close(fd);
+    return MARU_FAILURE;
+  }
+
+  MARU_LinuxDataTransfer *transfer =
+      (MARU_LinuxDataTransfer *)maru_context_alloc(ctx_base, sizeof(*transfer));
+  if (!transfer) {
+    close(fd);
+    return MARU_FAILURE;
+  }
+  memset(transfer, 0, sizeof(*transfer));
+
+  transfer->mime_type = _maru_linux_dataexchange_copy_string(ctx_base, mime_type);
+  if (!transfer->mime_type) {
+    maru_context_free(ctx_base, transfer);
+    close(fd);
+    return MARU_FAILURE;
+  }
+
+  transfer->fd = fd;
+  transfer->window = window;
+  transfer->target = target;
+  transfer->is_write = true;
+  transfer->is_zero_copy = zero_copy;
+  transfer->size = size;
+
+  if (zero_copy) {
+    transfer->buffer = (uint8_t *)data;
+  } else if (size > 0) {
+    transfer->buffer = (uint8_t *)maru_context_alloc(ctx_base, size);
+    if (!transfer->buffer) {
+      maru_context_free(ctx_base, (void *)transfer->mime_type);
+      maru_context_free(ctx_base, transfer);
+      close(fd);
+      return MARU_FAILURE;
+    }
+    memcpy(transfer->buffer, data, size);
+    transfer->capacity = size;
+  }
+
+  transfer->next = *head;
+  *head = transfer;
+  return MARU_SUCCESS;
+}
+
 int maru_linux_dataexchange_fillPollFds(const MARU_LinuxDataTransfer *head,
                                         struct pollfd *pfds, int max_count) {
   int count = 0;
   const MARU_LinuxDataTransfer *curr = head;
   while (curr && count < max_count) {
     pfds[count].fd = curr->fd;
-    pfds[count].events = POLLIN;
+    pfds[count].events = curr->is_write ? POLLOUT : POLLIN;
     pfds[count].revents = 0;
     curr = curr->next;
     ++count;
@@ -87,6 +142,17 @@ static bool _maru_linux_dataexchange_grow_buffer(MARU_Context_Base *ctx_base,
 static void _maru_linux_dataexchange_dispatch_complete(MARU_Context_Base *ctx_base,
                                                        MARU_LinuxDataTransfer *transfer,
                                                        MARU_Status status) {
+  if (transfer->is_write) {
+    MARU_Event evt = {0};
+    evt.data_consumed.target = transfer->target;
+    evt.data_consumed.mime_type = transfer->mime_type;
+    evt.data_consumed.data = transfer->buffer;
+    evt.data_consumed.size = transfer->size;
+    evt.data_consumed.action = MARU_DROP_ACTION_NONE; // Optional?
+    _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_CONSUMED, transfer->window, &evt);
+    return;
+  }
+
   if (transfer->user_tag == (void *)1) {
 #ifdef MARU_INDIRECT_BACKEND
     if (ctx_base->pub.backend_type == MARU_BACKEND_WAYLAND) {
@@ -129,7 +195,31 @@ void maru_linux_dataexchange_processTransfers(MARU_Context_Base *ctx_base,
     bool done = false;
     bool error = (revents & (POLLERR | POLLNVAL)) != 0;
 
-    if (!error && (revents & (POLLIN | POLLHUP)) != 0) {
+    if (!error && curr->is_write) {
+      if ((revents & POLLOUT) != 0) {
+        for (;;) {
+          const size_t remaining = curr->size - curr->processed;
+          if (remaining == 0) {
+            done = true;
+            break;
+          }
+          const ssize_t n = write(curr->fd, curr->buffer + curr->processed, remaining);
+          if (n > 0) {
+            curr->processed += (size_t)n;
+            continue;
+          }
+          if (n == 0) {
+            // Should not happen for write?
+            done = true;
+            break;
+          }
+          if (errno == EINTR) continue;
+          if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+          error = true;
+          break;
+        }
+      }
+    } else if (!error && (revents & (POLLIN | POLLHUP)) != 0) {
       for (;;) {
         uint8_t tmp[4096];
         const ssize_t n = read(curr->fd, tmp, sizeof(tmp));
@@ -159,7 +249,9 @@ void maru_linux_dataexchange_processTransfers(MARU_Context_Base *ctx_base,
                                                  error ? MARU_FAILURE : MARU_SUCCESS);
       close(curr->fd);
       *link = next;
-      maru_context_free(ctx_base, curr->buffer);
+      if (!curr->is_zero_copy) {
+          maru_context_free(ctx_base, curr->buffer);
+      }
       maru_context_free(ctx_base, (void *)curr->mime_type);
       maru_context_free(ctx_base, curr);
     } else {
@@ -179,7 +271,9 @@ void maru_linux_dataexchange_destroyTransfers(MARU_Context_Base *ctx_base,
   while (curr) {
     MARU_LinuxDataTransfer *next = curr->next;
     if (curr->fd >= 0) close(curr->fd);
-    maru_context_free(ctx_base, curr->buffer);
+    if (!curr->is_zero_copy) {
+      maru_context_free(ctx_base, curr->buffer);
+    }
     maru_context_free(ctx_base, (void *)curr->mime_type);
     maru_context_free(ctx_base, curr);
     curr = next;

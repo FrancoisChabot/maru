@@ -944,6 +944,15 @@ MARU_Status _maru_x11_provideData(const MARU_DataRequestEvent *request_event,
   req.time = CurrentTime;
   _maru_x11_send_selection_notify(ctx, &req, handle->property_atom);
   ctx->x11_lib.XFlush(ctx->display);
+
+  MARU_Event consumed_evt = {0};
+  consumed_evt.data_consumed.target = handle->target;
+  consumed_evt.data_consumed.mime_type = handle->mime_type;
+  consumed_evt.data_consumed.data = data;
+  consumed_evt.data_consumed.size = size;
+  consumed_evt.data_consumed.action = MARU_DROP_ACTION_NONE;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_CONSUMED, (MARU_Window *)handle->window, &consumed_evt);
+
   handle->consumed = true;
   return MARU_SUCCESS;
 }
