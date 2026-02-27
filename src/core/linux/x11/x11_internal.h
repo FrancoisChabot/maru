@@ -27,6 +27,7 @@ typedef struct MARU_Context_X11 {
   Display *display;
   int screen;
   Window root;
+  XIM xim;
   MARU_Cursor_X11 *animated_cursors_head;
   Cursor hidden_cursor;
   MARU_Window_X11 *locked_window;
@@ -63,6 +64,11 @@ struct MARU_Window_X11 {
   int lock_center_x;
   int lock_center_y;
   bool suppress_lock_warp_event;
+  XIC xic;
+  uint64_t text_input_session_id;
+  bool text_input_session_active;
+  bool ime_preedit_active;
+  char *ime_preedit_storage;
 };
 
 struct MARU_Cursor_X11 {
@@ -92,5 +98,6 @@ struct MARU_Monitor_X11 {
 
 bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
 void _maru_x11_release_pointer_lock(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
+void _maru_x11_refresh_text_input_state(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
 
 #endif

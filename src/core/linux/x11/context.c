@@ -10,6 +10,8 @@
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
+#include <wchar.h>
 #include <unistd.h>
 #include <poll.h>
 #include <limits.h>
@@ -139,6 +141,10 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     return MARU_FAILURE;
   }
 
+  (void)setlocale(LC_CTYPE, "");
+  (void)ctx->x11_lib.XSetLocaleModifiers("");
+  ctx->xim = ctx->x11_lib.XOpenIM(ctx->display, NULL, NULL, NULL);
+
   ctx->screen = DefaultScreen(ctx->display);
   ctx->root = RootWindow(ctx->display, ctx->screen);
 
@@ -206,6 +212,10 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   _maru_linux_common_cleanup(&ctx->linux_common);
   
   if (ctx->display) {
+    if (ctx->xim) {
+      ctx->x11_lib.XCloseIM(ctx->xim);
+      ctx->xim = NULL;
+    }
     if (ctx->hidden_cursor) {
       ctx->x11_lib.XFreeCursor(ctx->display, ctx->hidden_cursor);
       ctx->hidden_cursor = (Cursor)0;
@@ -250,6 +260,259 @@ static MARU_Window_X11 *_maru_x11_find_window(MARU_Context_X11 *ctx, Window hand
     }
   }
   return NULL;
+}
+
+static bool _maru_x11_replace_utf8_storage(MARU_Context_X11 *ctx, char **storage,
+                                           const char *text, size_t len) {
+  char *copy = NULL;
+  if (len > 0) {
+    copy = (char *)maru_context_alloc(&ctx->base, len + 1u);
+    if (!copy) {
+      return false;
+    }
+    memcpy(copy, text, len);
+    copy[len] = '\0';
+  }
+  if (*storage) {
+    maru_context_free(&ctx->base, *storage);
+  }
+  *storage = copy;
+  return true;
+}
+
+static bool _maru_x11_copy_xim_text(MARU_Context_X11 *ctx, const XIMText *text,
+                                    char **out_utf8, size_t *out_len) {
+  *out_utf8 = NULL;
+  *out_len = 0;
+  if (!text || text->length == 0) {
+    return true;
+  }
+
+  if (text->encoding_is_wchar) {
+    const wchar_t *w = text->string.wide_char;
+    if (!w) return true;
+    const size_t needed = wcstombs(NULL, w, 0);
+    if (needed == (size_t)-1) {
+      return false;
+    }
+    char *buf = (char *)maru_context_alloc(&ctx->base, needed + 1u);
+    if (!buf) {
+      return false;
+    }
+    const size_t written = wcstombs(buf, w, needed + 1u);
+    if (written == (size_t)-1) {
+      maru_context_free(&ctx->base, buf);
+      return false;
+    }
+    *out_utf8 = buf;
+    *out_len = written;
+    return true;
+  }
+
+  if (!text->string.multi_byte) {
+    return true;
+  }
+  const size_t len = (size_t)text->length;
+  char *buf = (char *)maru_context_alloc(&ctx->base, len + 1u);
+  if (!buf) {
+    return false;
+  }
+  memcpy(buf, text->string.multi_byte, len);
+  buf[len] = '\0';
+  *out_utf8 = buf;
+  *out_len = len;
+  return true;
+}
+
+static bool _maru_x11_update_ic_spot(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
+  if (!win->xic) {
+    return true;
+  }
+  XPoint spot;
+  spot.x = (short)win->base.attrs_effective.text_input_rect.origin.x;
+  spot.y = (short)(win->base.attrs_effective.text_input_rect.origin.y +
+                   win->base.attrs_effective.text_input_rect.size.y);
+
+  XVaNestedList preedit_attrs =
+      ctx->x11_lib.XVaCreateNestedList(0, XNSpotLocation, &spot, NULL);
+  if (!preedit_attrs) {
+    return false;
+  }
+
+  (void)ctx->x11_lib.XSetICValues(win->xic, XNPreeditAttributes, preedit_attrs,
+                                  NULL);
+  ctx->x11_lib.XFree(preedit_attrs);
+  return true;
+}
+
+static void _maru_x11_dispatch_preedit_update(MARU_Context_X11 *ctx,
+                                              MARU_Window_X11 *win,
+                                              int32_t caret_pos_hint) {
+  const char *preedit = win->ime_preedit_storage ? win->ime_preedit_storage : "";
+  const uint32_t len = (uint32_t)strlen(preedit);
+  uint32_t caret = 0;
+  if (caret_pos_hint > 0) {
+    caret = (uint32_t)caret_pos_hint;
+    if (caret > len) {
+      caret = len;
+    }
+  }
+
+  MARU_Event evt = {0};
+  evt.text_edit_update.session_id = win->text_input_session_id;
+  evt.text_edit_update.preedit_utf8 = preedit;
+  evt.text_edit_update.preedit_length = len;
+  evt.text_edit_update.caret.start_byte = caret;
+  evt.text_edit_update.caret.length_byte = 0;
+  evt.text_edit_update.selection.start_byte = caret;
+  evt.text_edit_update.selection.length_byte = 0;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_UPDATE, (MARU_Window *)win,
+                       &evt);
+}
+
+static void _maru_x11_emit_reset_commit(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
+  if (!win->xic) {
+    return;
+  }
+  char *committed = ctx->x11_lib.XmbResetIC(win->xic);
+  if (!committed || committed[0] == '\0') {
+    return;
+  }
+  MARU_Event evt = {0};
+  evt.text_edit_commit.session_id = win->text_input_session_id;
+  evt.text_edit_commit.committed_utf8 = committed;
+  evt.text_edit_commit.committed_length = (uint32_t)strlen(committed);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win,
+                       &evt);
+  ctx->x11_lib.XFree(committed);
+}
+
+static void _maru_x11_xim_preedit_draw(XIC xic, XPointer client_data,
+                                       XPointer call_data) {
+  (void)xic;
+  MARU_Window_X11 *win = (MARU_Window_X11 *)client_data;
+  if (!win || !win->base.ctx_base || !call_data) {
+    return;
+  }
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+  XIMPreeditDrawCallbackStruct *draw = (XIMPreeditDrawCallbackStruct *)call_data;
+
+  char *text_utf8 = NULL;
+  size_t text_len = 0;
+  if (!draw->text) {
+    (void)_maru_x11_replace_utf8_storage(ctx, &win->ime_preedit_storage, "", 0);
+  } else if (_maru_x11_copy_xim_text(ctx, draw->text, &text_utf8, &text_len)) {
+    if (text_utf8) {
+      (void)_maru_x11_replace_utf8_storage(ctx, &win->ime_preedit_storage, text_utf8,
+                                           text_len);
+      maru_context_free(&ctx->base, text_utf8);
+    }
+  }
+
+  win->ime_preedit_active =
+      (win->ime_preedit_storage && win->ime_preedit_storage[0] != '\0');
+  _maru_x11_dispatch_preedit_update(ctx, win, draw->caret);
+}
+
+static void _maru_x11_xim_preedit_done(XIC xic, XPointer client_data,
+                                       XPointer call_data) {
+  (void)xic;
+  (void)call_data;
+  MARU_Window_X11 *win = (MARU_Window_X11 *)client_data;
+  if (!win || !win->base.ctx_base) {
+    return;
+  }
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+  (void)_maru_x11_replace_utf8_storage(ctx, &win->ime_preedit_storage, "", 0);
+  win->ime_preedit_active = false;
+  _maru_x11_dispatch_preedit_update(ctx, win, 0);
+}
+
+static void _maru_x11_begin_text_session(MARU_Context_X11 *ctx,
+                                         MARU_Window_X11 *win) {
+  if (!win->xic || win->text_input_session_active ||
+      win->base.attrs_effective.text_input_type == MARU_TEXT_INPUT_TYPE_NONE) {
+    return;
+  }
+  ctx->x11_lib.XSetICFocus(win->xic);
+  win->text_input_session_id++;
+  win->text_input_session_active = true;
+  win->ime_preedit_active = false;
+
+  MARU_Event evt = {0};
+  evt.text_edit_start.session_id = win->text_input_session_id;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_START, (MARU_Window *)win,
+                       &evt);
+}
+
+static void _maru_x11_end_text_session(MARU_Context_X11 *ctx, MARU_Window_X11 *win,
+                                       bool canceled) {
+  if (!win->text_input_session_active) {
+    return;
+  }
+  _maru_x11_emit_reset_commit(ctx, win);
+  if (win->xic) {
+    ctx->x11_lib.XUnsetICFocus(win->xic);
+  }
+  win->text_input_session_active = false;
+  win->ime_preedit_active = false;
+  (void)_maru_x11_replace_utf8_storage(ctx, &win->ime_preedit_storage, "", 0);
+
+  MARU_Event evt = {0};
+  evt.text_edit_end.session_id = win->text_input_session_id;
+  evt.text_edit_end.canceled = canceled;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_END, (MARU_Window *)win,
+                       &evt);
+}
+
+void _maru_x11_refresh_text_input_state(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
+  const bool ime_enabled =
+      (win->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE);
+  const bool focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+
+  if (!ime_enabled) {
+    _maru_x11_end_text_session(ctx, win, true);
+    if (win->xic) {
+      ctx->x11_lib.XDestroyIC(win->xic);
+      win->xic = NULL;
+    }
+    return;
+  }
+
+  if (!win->xic && ctx->xim) {
+    XIMCallback draw_cb;
+    memset(&draw_cb, 0, sizeof(draw_cb));
+    draw_cb.client_data = (XPointer)win;
+    draw_cb.callback = (XIMProc)_maru_x11_xim_preedit_draw;
+
+    XIMCallback done_cb;
+    memset(&done_cb, 0, sizeof(done_cb));
+    done_cb.client_data = (XPointer)win;
+    done_cb.callback = (XIMProc)_maru_x11_xim_preedit_done;
+
+    XPoint spot;
+    spot.x = (short)win->base.attrs_effective.text_input_rect.origin.x;
+    spot.y = (short)(win->base.attrs_effective.text_input_rect.origin.y +
+                     win->base.attrs_effective.text_input_rect.size.y);
+    XVaNestedList preedit_attrs = ctx->x11_lib.XVaCreateNestedList(
+        0, XNSpotLocation, &spot, XNPreeditDrawCallback, &draw_cb,
+        XNPreeditDoneCallback, &done_cb, NULL);
+    win->xic = ctx->x11_lib.XCreateIC(
+        ctx->xim, XNInputStyle, (XIMPreeditCallbacks | XIMStatusNothing),
+        XNClientWindow, win->handle, XNFocusWindow, win->handle,
+        XNPreeditAttributes, preedit_attrs, NULL);
+    if (preedit_attrs) {
+      ctx->x11_lib.XFree(preedit_attrs);
+    }
+  } else {
+    (void)_maru_x11_update_ic_spot(ctx, win);
+  }
+
+  if (focused) {
+    _maru_x11_begin_text_session(ctx, win);
+  } else if (win->xic) {
+    ctx->x11_lib.XUnsetICFocus(win->xic);
+  }
 }
 
 static bool _maru_x11_enable_xi2_raw_motion(MARU_Context_X11 *ctx) {
@@ -826,6 +1089,7 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
         win->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
         ctx->linux_common.xkb.focused_window = (MARU_Window *)win;
         (void)_maru_x11_apply_window_cursor_mode(ctx, win);
+        _maru_x11_refresh_text_input_state(ctx, win);
         MARU_Event mevt = {0};
         mevt.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
         mevt.presentation.focused = true;
@@ -837,6 +1101,7 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
       MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xfocus.window);
       if (win) {
         win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
+        _maru_x11_end_text_session(ctx, win, false);
         if (ctx->locked_window == win) {
           _maru_x11_release_pointer_lock(ctx, win);
         }
@@ -965,8 +1230,42 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
       const bool is_press = (ev->type == KeyPress);
       KeySym keysym = NoSymbol;
-      char text_buf[32];
-      const int text_len = ctx->x11_lib.XLookupString(&ev->xkey, text_buf, sizeof(text_buf), &keysym, NULL);
+      char text_buf[64];
+      int text_len = 0;
+      bool emit_text = false;
+      if (is_press && win->xic &&
+          win->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
+        Status lookup_status = 0;
+        text_len = ctx->x11_lib.Xutf8LookupString(
+            win->xic, &ev->xkey, text_buf, (int)(sizeof(text_buf) - 1u), &keysym,
+            &lookup_status);
+        if (lookup_status == XBufferOverflow && text_len > 0) {
+          char *dyn_buf = (char *)maru_context_alloc(&ctx->base, (size_t)text_len + 1u);
+          if (dyn_buf) {
+            text_len = ctx->x11_lib.Xutf8LookupString(
+                win->xic, &ev->xkey, dyn_buf, text_len, &keysym, &lookup_status);
+            if (text_len > 0 &&
+                (lookup_status == XLookupChars || lookup_status == XLookupBoth)) {
+              MARU_Event text_evt = {0};
+              text_evt.text_edit_commit.session_id = win->text_input_session_id;
+              text_evt.text_edit_commit.committed_utf8 = dyn_buf;
+              text_evt.text_edit_commit.committed_length = (uint32_t)text_len;
+              _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT,
+                                   (MARU_Window *)win, &text_evt);
+            }
+            maru_context_free(&ctx->base, dyn_buf);
+          }
+          text_len = 0;
+        } else {
+          emit_text = (text_len > 0) &&
+                      (lookup_status == XLookupChars ||
+                       lookup_status == XLookupBoth);
+        }
+      } else {
+        text_len = ctx->x11_lib.XLookupString(&ev->xkey, text_buf, (int)sizeof(text_buf),
+                                              &keysym, NULL);
+        emit_text = is_press && (text_len > 0);
+      }
       const MARU_Key key = _maru_x11_map_keysym(keysym);
       const MARU_ButtonState state =
           is_press ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
@@ -985,8 +1284,10 @@ static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
         _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)win, &mevt);
       }
 
-      if (is_press && text_len > 0) {
+      if (emit_text && text_len > 0) {
+        text_buf[text_len] = '\0';
         MARU_Event text_evt = {0};
+        text_evt.text_edit_commit.session_id = win->text_input_session_id;
         text_evt.text_edit_commit.committed_utf8 = text_buf;
         text_evt.text_edit_commit.committed_length = (uint32_t)text_len;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win, &text_evt);
@@ -1201,6 +1502,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->base.attrs_effective.logical_size.x = (MARU_Scalar)width;
   win->base.attrs_effective.logical_size.y = (MARU_Scalar)height;
   win->server_logical_size = win->base.attrs_effective.logical_size;
+  _maru_x11_refresh_text_input_state(ctx, win);
 
   ctx->x11_lib.XMapWindow(ctx->display, win->handle);
   (void)_maru_x11_apply_window_cursor_mode(ctx, win);
@@ -1249,6 +1551,15 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
 MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
   MARU_Window_X11 *win = (MARU_Window_X11 *)window;
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+  _maru_x11_end_text_session(ctx, win, true);
+  if (win->xic) {
+    ctx->x11_lib.XDestroyIC(win->xic);
+    win->xic = NULL;
+  }
+  if (win->ime_preedit_storage) {
+    maru_context_free(&ctx->base, win->ime_preedit_storage);
+    win->ime_preedit_storage = NULL;
+  }
   if (ctx->locked_window == win) {
     _maru_x11_release_pointer_lock(ctx, win);
   }

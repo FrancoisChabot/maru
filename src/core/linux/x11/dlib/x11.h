@@ -10,6 +10,17 @@
 #include <X11/Xatom.h>
 
 #define MARU_X11_FUNCTIONS_TABLE           \
+  MARU_LIB_FN(XSetLocaleModifiers)         \
+  MARU_LIB_FN(XOpenIM)                     \
+  MARU_LIB_FN(XCloseIM)                    \
+  MARU_LIB_FN(XCreateIC)                   \
+  MARU_LIB_FN(XDestroyIC)                  \
+  MARU_LIB_FN(XSetICFocus)                 \
+  MARU_LIB_FN(XUnsetICFocus)               \
+  MARU_LIB_FN(XSetICValues)                \
+  MARU_LIB_FN(Xutf8LookupString)           \
+  MARU_LIB_FN(XmbResetIC)                  \
+  MARU_LIB_FN(XVaCreateNestedList)         \
   MARU_LIB_FN(XOpenDisplay)                \
   MARU_LIB_FN(XCloseDisplay)               \
   MARU_LIB_FN(XPending)                    \

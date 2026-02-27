@@ -435,11 +435,6 @@ MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
   if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
     requested->text_input_type = attributes->text_input_type;
     effective->text_input_type = attributes->text_input_type;
-    if (attributes->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
-      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                             "X11 text input hints are not implemented yet");
-      status = MARU_FAILURE;
-    }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_RECT) {
@@ -472,6 +467,12 @@ MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
     requested->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
     effective->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
     effective->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
+  }
+
+  if (field_mask & (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
+                    MARU_WINDOW_ATTR_SURROUNDING_TEXT |
+                    MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET)) {
+    _maru_x11_refresh_text_input_state(ctx, win);
   }
 
   if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
