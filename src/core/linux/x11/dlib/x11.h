@@ -46,11 +46,16 @@
   MARU_LIB_FN(XGrabPointer)                \
   MARU_LIB_FN(XUngrabPointer)              \
   MARU_LIB_FN(XWarpPointer)                \
+  MARU_LIB_FN(XQueryPointer)               \
   MARU_LIB_FN(XQueryExtension)             \
   MARU_LIB_FN(XSelectInput)                \
   MARU_LIB_FN(XInternAtom)                 \
   MARU_LIB_FN(XGetAtomName)                \
   MARU_LIB_FN(XFree)                       \
+  MARU_LIB_FN(XConvertSelection)           \
+  MARU_LIB_FN(XSetSelectionOwner)          \
+  MARU_LIB_FN(XGetSelectionOwner)          \
+  MARU_LIB_FN(XGetWindowProperty)          \
   MARU_LIB_FN(XSendEvent)                  \
   MARU_LIB_FN(XChangeProperty)             \
   MARU_LIB_FN(XDeleteProperty)             \

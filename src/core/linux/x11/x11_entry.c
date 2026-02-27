@@ -362,6 +362,7 @@ MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
   if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
     requested->accept_drop = attributes->accept_drop;
     effective->accept_drop = attributes->accept_drop;
+    (void)_maru_x11_apply_window_drop_target(ctx, win);
   }
 
   if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
@@ -628,42 +629,26 @@ static MARU_Status maru_announceData_X11(MARU_Window *window,
                                          MARU_DataExchangeTarget target,
                                          const char **mime_types, uint32_t count,
                                          MARU_DropActionMask allowed_actions) {
-  (void)window;
-  (void)target;
-  (void)mime_types;
-  (void)count;
-  (void)allowed_actions;
-  return MARU_FAILURE;
+  return _maru_x11_announceData(window, target, mime_types, count,
+                                allowed_actions);
 }
 
 static MARU_Status
 maru_provideData_X11(const MARU_DataRequestEvent *request_event, const void *data,
                      size_t size, MARU_DataProvideFlags flags) {
-  (void)request_event;
-  (void)data;
-  (void)size;
-  (void)flags;
-  return MARU_FAILURE;
+  return _maru_x11_provideData(request_event, data, size, flags);
 }
 
 static MARU_Status maru_requestData_X11(MARU_Window *window,
                                         MARU_DataExchangeTarget target,
                                         const char *mime_type, void *user_tag) {
-  (void)window;
-  (void)target;
-  (void)mime_type;
-  (void)user_tag;
-  return MARU_FAILURE;
+  return _maru_x11_requestData(window, target, mime_type, user_tag);
 }
 
 static MARU_Status maru_getAvailableMIMETypes_X11(
     MARU_Window *window, MARU_DataExchangeTarget target,
     MARU_MIMETypeList *out_list) {
-  (void)window;
-  (void)target;
-  out_list->mime_types = NULL;
-  out_list->count = 0;
-  return MARU_FAILURE;
+  return _maru_x11_getAvailableMIMETypes(window, target, out_list);
 }
 
 #ifdef MARU_INDIRECT_BACKEND
