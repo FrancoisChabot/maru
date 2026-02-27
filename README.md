@@ -71,13 +71,13 @@ target_link_libraries(your_target PRIVATE maru::maru)
 
 Maru provides a few different options to control the validation behavior. These are all fixed at the time of compiling the library.
 
-* **MARU_VALIDATE_API_CALLS**: `OFF` by default. Setting it to `ON` will activate VERY aggressive validation of the API use. This includes thread affinity checks, state validation, the works.
+* **MARU_VALIDATE_API_CALLS**: `ON` by default. It drives VERY aggressive validation of the API use. This includes thread affinity checks, state validation, the works. You'll want to turn it to `OFF` for releases.
 
 * **MARU_ENABLE_DIAGNOSTICS**: `ON` by default. Setting it to `OFF` will strip virtually all logging and reporting overhead from the library, including the string literals.
 
 * **MARU_GATHER_METRICS**: `ON` by default. Setting it to `OFF` it will stop the gathering of internal metrics.
 
-* **MARU_ENABLE_INTERNAL_CHECKS**: `OFF` by default. Setting it to `ON` will enable a lot of internal validation logic. (Only use this if you suspect a bug in Maru itself).
+* **MARU_ENABLE_INTERNAL_CHECKS**: `OFF` by default. Setting it to `ON` will enable internal validation logic double-checks. Only use this if you suspect a bug in Maru itself.
 
 ### Recommended configurations
 
