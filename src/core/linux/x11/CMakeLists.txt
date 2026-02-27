@@ -1,6 +1,11 @@
 set(MARU_X11_SOURCES
     x11_entry.c
-    context.c
+    X11_context.c
+    x11_window.c
+    x11_input.c
+    x11_dataexchange.c
+    x11_monitor.c
+    x11_cursor.c
     x11_vulkan.c
     dlib/loader.c
 )

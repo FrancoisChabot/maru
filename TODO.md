@@ -2,13 +2,8 @@
 
 ## Cross-Backend
 
-- [ ] Emit `MARU_EVENT_DATA_CONSUMED` for outbound drag-and-drop on Wayland.
-  - Current behavior: Wayland emits `MARU_EVENT_DRAG_FINISHED` but does not emit `MARU_EVENT_DATA_CONSUMED`.
-  - Expected behavior: when the compositor/target reports final action and payload consumption, dispatch `MARU_EVENT_DATA_CONSUMED` (with target/action/mime/data metadata as available).
-
-- [ ] Emit `MARU_EVENT_DATA_CONSUMED` for outbound drag-and-drop on X11.
-  - Current behavior: X11 outbound XDND now emits `MARU_EVENT_DRAG_FINISHED`, but not `MARU_EVENT_DATA_CONSUMED`.
-  - Expected behavior: dispatch consumed event when drop completion/action is known.
+- [ ] Emit `MARU_EVENT_DATA_CONSUMED`
+  - Also: We need to test zero-copy data provision properly
 
 ## X11 Backend
 
@@ -35,5 +30,4 @@
 
 ### Validation / Coverage
 
-- [ ] Add automated tests for X11 dataexchange and XDND state machines (inbound + outbound paths).
-- [ ] Add regression tests for creation-time attribute application (title/visibility/minimized/fullscreen/maximized/position/hints).
+- [ ] Determine proper automated testing strategy on each backend. 
