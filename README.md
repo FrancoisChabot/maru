@@ -13,7 +13,14 @@ What's neat about Maru?
 
 ## Status
 
-Ready for use by early adopters on Wayland.
+Ready for use by early adopters on Linux.
+
+### Backend statuses
+
+Wayland: Feature complete
+X11: Functional for basic usage
+macOS: Stubbed in.
+Window: Stubbed in.
 
 ## Quickstart 
 

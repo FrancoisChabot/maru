@@ -23,6 +23,13 @@ extern MARU_Status maru_wakeContext_X11(MARU_Context *context);
 extern void *maru_getContextNativeHandle_X11(MARU_Context *context);
 extern void *maru_getWindowNativeHandle_X11(MARU_Window *window);
 
+extern MARU_Status maru_createWindow_X11(MARU_Context *context,
+                                 const MARU_WindowCreateInfo *create_info,
+                                 MARU_Window **out_window);
+extern MARU_Status maru_destroyWindow_X11(MARU_Window *window);
+extern void maru_getWindowGeometry_X11(MARU_Window *window,
+                               MARU_WindowGeometry *out_geometry);
+
 extern MARU_Status maru_createCursor_X11(MARU_Context *context,
                                          const MARU_CursorCreateInfo *create_info,
                                          MARU_Cursor **out_cursor);
@@ -38,26 +45,6 @@ extern void maru_releaseMonitor_X11(MARU_Monitor *monitor);
 extern const MARU_VideoMode *maru_getMonitorModes_X11(const MARU_Monitor *monitor, uint32_t *out_count);
 extern MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode mode);
 extern void maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
-
-MARU_Status maru_createWindow_X11(MARU_Context *context,
-                                 const MARU_WindowCreateInfo *create_info,
-                                 MARU_Window **out_window) {
-  (void)context;
-  (void)create_info;
-  (void)out_window;
-  return MARU_FAILURE;
-}
-
-MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
-  (void)window;
-  return MARU_FAILURE;
-}
-
-void maru_getWindowGeometry_X11(MARU_Window *window,
-                               MARU_WindowGeometry *out_geometry) {
-    (void)window;
-    memset(out_geometry, 0, sizeof(*out_geometry));
-}
 
 MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
                                   const MARU_WindowAttributes *attributes) {
@@ -106,7 +93,7 @@ static MARU_Status maru_getControllers_X11(MARU_Context *context,
   }
 
   uint32_t i = 0;
-  for (MARU_LinuxController *it = common->controllers; it; it = it->next) {
+  for (MARU_LinuxController * it = common->controllers; it; it = it->next) {
     ctx->controller_list_storage[i++] = (MARU_Controller *)it;
   }
 

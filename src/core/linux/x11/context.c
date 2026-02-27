@@ -12,6 +12,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <poll.h>
+#include <linux/input-event-codes.h>
+#include <stdio.h>
+#include <X11/keysym.h>
 
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
                                     const MARU_ContextAttributes *attributes) {
@@ -22,6 +25,57 @@ MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
 }
 
 MARU_Status maru_destroyContext_X11(MARU_Context *context);
+
+static bool _maru_x11_init_context_mouse_channels(MARU_Context_X11 *ctx) {
+  static const struct {
+    const char *name;
+    uint32_t native_code;
+  } channel_defs[] = {
+      {"left", BTN_LEFT},       {"right", BTN_RIGHT},     {"middle", BTN_MIDDLE},
+      {"side", BTN_SIDE},       {"extra", BTN_EXTRA},     {"forward", BTN_FORWARD},
+      {"back", BTN_BACK},       {"task", BTN_TASK},
+  };
+  const uint32_t channel_count = (uint32_t)(sizeof(channel_defs) / sizeof(channel_defs[0]));
+
+  ctx->base.mouse_button_channels =
+      (MARU_MouseButtonChannelInfo *)maru_context_alloc(&ctx->base,
+                                                        sizeof(MARU_MouseButtonChannelInfo) * channel_count);
+  if (!ctx->base.mouse_button_channels) {
+    return false;
+  }
+
+  ctx->base.mouse_button_states =
+      (MARU_ButtonState8 *)maru_context_alloc(&ctx->base, sizeof(MARU_ButtonState8) * channel_count);
+  if (!ctx->base.mouse_button_states) {
+    maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
+    ctx->base.mouse_button_channels = NULL;
+    return false;
+  }
+
+  memset(ctx->base.mouse_button_states, 0, sizeof(MARU_ButtonState8) * channel_count);
+  for (uint32_t i = 0; i < channel_count; ++i) {
+    ctx->base.mouse_button_channels[i].name = channel_defs[i].name;
+    ctx->base.mouse_button_channels[i].native_code = channel_defs[i].native_code;
+    ctx->base.mouse_button_channels[i].is_default = false;
+  }
+
+  ctx->base.pub.mouse_button_count = channel_count;
+  ctx->base.pub.mouse_button_channels = ctx->base.mouse_button_channels;
+  ctx->base.pub.mouse_button_state = ctx->base.mouse_button_states;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_LEFT] = 0;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_RIGHT] = 1;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_MIDDLE] = 2;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_BACK] = 6;
+  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_FORWARD] = 5;
+
+  ctx->base.mouse_button_channels[0].is_default = true;
+  ctx->base.mouse_button_channels[1].is_default = true;
+  ctx->base.mouse_button_channels[2].is_default = true;
+  ctx->base.mouse_button_channels[5].is_default = true;
+  ctx->base.mouse_button_channels[6].is_default = true;
+
+  return true;
+}
 
 MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
                                    MARU_Context **out_context) {
@@ -46,6 +100,12 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
 #ifdef MARU_GATHER_METRICS
   _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_X11));
 #endif
+
+  if (!_maru_x11_init_context_mouse_channels(ctx)) {
+    _maru_cleanup_context_base(&ctx->base);
+    maru_context_free(&ctx->base, ctx);
+    return MARU_FAILURE;
+  }
 
   if (!maru_load_x11_symbols(&ctx->base, &ctx->x11_lib)) {
     maru_context_free(&ctx->base, ctx);
@@ -110,6 +170,12 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
 
 MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  
+  while (ctx->base.window_list_head) {
+    extern MARU_Status maru_destroyWindow_X11(MARU_Window * window);
+    maru_destroyWindow_X11((MARU_Window *)ctx->base.window_list_head);
+  }
+
   _maru_linux_common_cleanup(&ctx->linux_common);
   
   if (ctx->display) {
@@ -131,19 +197,356 @@ MARU_Status maru_wakeContext_X11(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
+static MARU_Window_X11 *_maru_x11_find_window(MARU_Context_X11 *ctx, Window handle) {
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_X11 *win = (MARU_Window_X11 *)it;
+    if (win->handle == handle) {
+      return win;
+    }
+  }
+  return NULL;
+}
+
+extern void maru_getWindowGeometry_X11(MARU_Window *window,
+                               MARU_WindowGeometry *out_geometry);
+
+static MARU_ModifierFlags _maru_x11_get_modifiers(unsigned int state) {
+  MARU_ModifierFlags mods = 0;
+  if (state & ShiftMask) mods |= MARU_MODIFIER_SHIFT;
+  if (state & ControlMask) mods |= MARU_MODIFIER_CONTROL;
+  if (state & Mod1Mask) mods |= MARU_MODIFIER_ALT;
+  if (state & Mod4Mask) mods |= MARU_MODIFIER_META;
+  if (state & LockMask) mods |= MARU_MODIFIER_CAPS_LOCK;
+  if (state & Mod2Mask) mods |= MARU_MODIFIER_NUM_LOCK;
+  return mods;
+}
+
+static MARU_Key _maru_x11_map_keysym(KeySym keysym) {
+  switch (keysym) {
+    case XK_space: return MARU_KEY_SPACE;
+    case XK_apostrophe: return MARU_KEY_APOSTROPHE;
+    case XK_comma: return MARU_KEY_COMMA;
+    case XK_minus: return MARU_KEY_MINUS;
+    case XK_period: return MARU_KEY_PERIOD;
+    case XK_slash: return MARU_KEY_SLASH;
+    case XK_0: return MARU_KEY_0;
+    case XK_1: return MARU_KEY_1;
+    case XK_2: return MARU_KEY_2;
+    case XK_3: return MARU_KEY_3;
+    case XK_4: return MARU_KEY_4;
+    case XK_5: return MARU_KEY_5;
+    case XK_6: return MARU_KEY_6;
+    case XK_7: return MARU_KEY_7;
+    case XK_8: return MARU_KEY_8;
+    case XK_9: return MARU_KEY_9;
+    case XK_semicolon: return MARU_KEY_SEMICOLON;
+    case XK_equal: return MARU_KEY_EQUAL;
+    case XK_a: case XK_A: return MARU_KEY_A;
+    case XK_b: case XK_B: return MARU_KEY_B;
+    case XK_c: case XK_C: return MARU_KEY_C;
+    case XK_d: case XK_D: return MARU_KEY_D;
+    case XK_e: case XK_E: return MARU_KEY_E;
+    case XK_f: case XK_F: return MARU_KEY_F;
+    case XK_g: case XK_G: return MARU_KEY_G;
+    case XK_h: case XK_H: return MARU_KEY_H;
+    case XK_i: case XK_I: return MARU_KEY_I;
+    case XK_j: case XK_J: return MARU_KEY_J;
+    case XK_k: case XK_K: return MARU_KEY_K;
+    case XK_l: case XK_L: return MARU_KEY_L;
+    case XK_m: case XK_M: return MARU_KEY_M;
+    case XK_n: case XK_N: return MARU_KEY_N;
+    case XK_o: case XK_O: return MARU_KEY_O;
+    case XK_p: case XK_P: return MARU_KEY_P;
+    case XK_q: case XK_Q: return MARU_KEY_Q;
+    case XK_r: case XK_R: return MARU_KEY_R;
+    case XK_s: case XK_S: return MARU_KEY_S;
+    case XK_t: case XK_T: return MARU_KEY_T;
+    case XK_u: case XK_U: return MARU_KEY_U;
+    case XK_v: case XK_V: return MARU_KEY_V;
+    case XK_w: case XK_W: return MARU_KEY_W;
+    case XK_x: case XK_X: return MARU_KEY_X;
+    case XK_y: case XK_Y: return MARU_KEY_Y;
+    case XK_z: case XK_Z: return MARU_KEY_Z;
+    case XK_bracketleft: return MARU_KEY_LEFT_BRACKET;
+    case XK_backslash: return MARU_KEY_BACKSLASH;
+    case XK_bracketright: return MARU_KEY_RIGHT_BRACKET;
+    case XK_grave: return MARU_KEY_GRAVE_ACCENT;
+    case XK_Escape: return MARU_KEY_ESCAPE;
+    case XK_Return: return MARU_KEY_ENTER;
+    case XK_Tab: return MARU_KEY_TAB;
+    case XK_BackSpace: return MARU_KEY_BACKSPACE;
+    case XK_Insert: return MARU_KEY_INSERT;
+    case XK_Delete: return MARU_KEY_DELETE;
+    case XK_Right: return MARU_KEY_RIGHT;
+    case XK_Left: return MARU_KEY_LEFT;
+    case XK_Down: return MARU_KEY_DOWN;
+    case XK_Up: return MARU_KEY_UP;
+    case XK_Page_Up: return MARU_KEY_PAGE_UP;
+    case XK_Page_Down: return MARU_KEY_PAGE_DOWN;
+    case XK_Home: return MARU_KEY_HOME;
+    case XK_End: return MARU_KEY_END;
+    case XK_Caps_Lock: return MARU_KEY_CAPS_LOCK;
+    case XK_Scroll_Lock: return MARU_KEY_SCROLL_LOCK;
+    case XK_Num_Lock: return MARU_KEY_NUM_LOCK;
+    case XK_Print: return MARU_KEY_PRINT_SCREEN;
+    case XK_Pause: return MARU_KEY_PAUSE;
+    case XK_F1: return MARU_KEY_F1;
+    case XK_F2: return MARU_KEY_F2;
+    case XK_F3: return MARU_KEY_F3;
+    case XK_F4: return MARU_KEY_F4;
+    case XK_F5: return MARU_KEY_F5;
+    case XK_F6: return MARU_KEY_F6;
+    case XK_F7: return MARU_KEY_F7;
+    case XK_F8: return MARU_KEY_F8;
+    case XK_F9: return MARU_KEY_F9;
+    case XK_F10: return MARU_KEY_F10;
+    case XK_F11: return MARU_KEY_F11;
+    case XK_F12: return MARU_KEY_F12;
+    case XK_KP_0: return MARU_KEY_KP_0;
+    case XK_KP_1: return MARU_KEY_KP_1;
+    case XK_KP_2: return MARU_KEY_KP_2;
+    case XK_KP_3: return MARU_KEY_KP_3;
+    case XK_KP_4: return MARU_KEY_KP_4;
+    case XK_KP_5: return MARU_KEY_KP_5;
+    case XK_KP_6: return MARU_KEY_KP_6;
+    case XK_KP_7: return MARU_KEY_KP_7;
+    case XK_KP_8: return MARU_KEY_KP_8;
+    case XK_KP_9: return MARU_KEY_KP_9;
+    case XK_KP_Decimal: return MARU_KEY_KP_DECIMAL;
+    case XK_KP_Divide: return MARU_KEY_KP_DIVIDE;
+    case XK_KP_Multiply: return MARU_KEY_KP_MULTIPLY;
+    case XK_KP_Subtract: return MARU_KEY_KP_SUBTRACT;
+    case XK_KP_Add: return MARU_KEY_KP_ADD;
+    case XK_KP_Enter: return MARU_KEY_KP_ENTER;
+    case XK_KP_Equal: return MARU_KEY_KP_EQUAL;
+    case XK_Shift_L: return MARU_KEY_LEFT_SHIFT;
+    case XK_Control_L: return MARU_KEY_LEFT_CONTROL;
+    case XK_Alt_L: return MARU_KEY_LEFT_ALT;
+    case XK_Super_L: return MARU_KEY_LEFT_META;
+    case XK_Shift_R: return MARU_KEY_RIGHT_SHIFT;
+    case XK_Control_R: return MARU_KEY_RIGHT_CONTROL;
+    case XK_Alt_R: return MARU_KEY_RIGHT_ALT;
+    case XK_Super_R: return MARU_KEY_RIGHT_META;
+    case XK_Menu: return MARU_KEY_MENU;
+    default: return MARU_KEY_UNKNOWN;
+  }
+}
+
+static uint32_t _maru_x11_button_to_native_code(unsigned int x_button) {
+  switch (x_button) {
+    case Button1: return BTN_LEFT;
+    case Button2: return BTN_MIDDLE;
+    case Button3: return BTN_RIGHT;
+    case 8: return BTN_SIDE;
+    case 9: return BTN_EXTRA;
+    default: return 0;
+  }
+}
+
+static uint32_t _maru_x11_find_mouse_button_id(const MARU_Context_X11 *ctx,
+                                               uint32_t native_code) {
+  for (uint32_t i = 0; i < ctx->base.pub.mouse_button_count; ++i) {
+    if (ctx->base.pub.mouse_button_channels[i].native_code == native_code) {
+      return i;
+    }
+  }
+  return UINT32_MAX;
+}
+
+static void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
+  switch (ev->type) {
+    case ClientMessage: {
+      if (ev->xclient.message_type == ctx->wm_protocols &&
+          (Atom)ev->xclient.data.l[0] == ctx->wm_delete_window) {
+        MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xclient.window);
+        if (win) {
+          fprintf(stderr, "[X11 DEBUG] Close requested\n");
+          MARU_Event mevt = {0};
+          _maru_dispatch_event(&ctx->base, MARU_EVENT_CLOSE_REQUESTED, (MARU_Window *)win, &mevt);
+        }
+      }
+      break;
+    }
+    case ConfigureNotify: {
+      MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xconfigure.window);
+      if (win) {
+        bool changed = (win->base.attrs_effective.logical_size.x != (MARU_Scalar)ev->xconfigure.width) ||
+                       (win->base.attrs_effective.logical_size.y != (MARU_Scalar)ev->xconfigure.height);
+        
+        if (changed) {
+          fprintf(stderr, "[X11 DEBUG] ConfigureNotify: %dx%d\n", ev->xconfigure.width, ev->xconfigure.height);
+          win->base.attrs_effective.logical_size.x = (MARU_Scalar)ev->xconfigure.width;
+          win->base.attrs_effective.logical_size.y = (MARU_Scalar)ev->xconfigure.height;
+          
+          MARU_Event mevt = {0};
+          maru_getWindowGeometry_X11((MARU_Window *)win, &mevt.resized.geometry);
+          _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &mevt);
+        }
+      }
+      break;
+    }
+    case Expose: {
+      MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xexpose.window);
+      if (win && ev->xexpose.count == 0) {
+        fprintf(stderr, "[X11 DEBUG] Expose event\n");
+        MARU_Event mevt = {0};
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME, (MARU_Window *)win, &mevt);
+      }
+      break;
+    }
+    case MapNotify: {
+      fprintf(stderr, "[X11 DEBUG] MapNotify\n");
+      break;
+    }
+    case FocusIn: {
+      MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xfocus.window);
+      if (win) {
+        fprintf(stderr, "[X11 DEBUG] FocusIn\n");
+        win->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
+        ctx->linux_common.xkb.focused_window = (MARU_Window *)win;
+        MARU_Event mevt = {0};
+        mevt.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
+        mevt.presentation.focused = true;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)win, &mevt);
+      }
+      break;
+    }
+    case FocusOut: {
+      MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xfocus.window);
+      if (win) {
+        fprintf(stderr, "[X11 DEBUG] FocusOut\n");
+        win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
+        memset(win->base.keyboard_state, 0, sizeof(win->base.keyboard_state));
+        if (ctx->linux_common.xkb.focused_window == (MARU_Window *)win) {
+          ctx->linux_common.xkb.focused_window = NULL;
+        }
+        MARU_Event mevt = {0};
+        mevt.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
+        mevt.presentation.focused = false;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)win, &mevt);
+      }
+      break;
+    }
+    case MotionNotify: {
+      MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xmotion.window);
+      if (win) {
+        MARU_Event mevt = {0};
+        const MARU_Scalar x = (MARU_Scalar)ev->xmotion.x;
+        const MARU_Scalar y = (MARU_Scalar)ev->xmotion.y;
+        mevt.mouse_motion.position.x = x;
+        mevt.mouse_motion.position.y = y;
+        if (ctx->linux_common.pointer.focused_window == (MARU_Window *)win) {
+          mevt.mouse_motion.delta.x = x - (MARU_Scalar)ctx->linux_common.pointer.x;
+          mevt.mouse_motion.delta.y = y - (MARU_Scalar)ctx->linux_common.pointer.y;
+        }
+        mevt.mouse_motion.modifiers = _maru_x11_get_modifiers(ev->xmotion.state);
+
+        ctx->linux_common.pointer.focused_window = (MARU_Window *)win;
+        ctx->linux_common.pointer.x = (double)x;
+        ctx->linux_common.pointer.y = (double)y;
+
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)win, &mevt);
+      }
+      break;
+    }
+    case ButtonPress:
+    case ButtonRelease: {
+      MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xbutton.window);
+      if (!win) break;
+
+      const bool is_press = (ev->type == ButtonPress);
+      const unsigned int btn = ev->xbutton.button;
+
+      if (is_press && (btn >= 4 && btn <= 7)) {
+        MARU_Event mevt = {0};
+        mevt.mouse_scroll.modifiers = _maru_x11_get_modifiers(ev->xbutton.state);
+        if (btn == 4) {
+          mevt.mouse_scroll.delta.y = (MARU_Scalar)1.0;
+          mevt.mouse_scroll.steps.y = 1;
+        } else if (btn == 5) {
+          mevt.mouse_scroll.delta.y = (MARU_Scalar)-1.0;
+          mevt.mouse_scroll.steps.y = -1;
+        } else if (btn == 6) {
+          mevt.mouse_scroll.delta.x = (MARU_Scalar)-1.0;
+          mevt.mouse_scroll.steps.x = -1;
+        } else {
+          mevt.mouse_scroll.delta.x = (MARU_Scalar)1.0;
+          mevt.mouse_scroll.steps.x = 1;
+        }
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)win, &mevt);
+        break;
+      }
+
+      const uint32_t native_code = _maru_x11_button_to_native_code(btn);
+      if (native_code == 0) break;
+
+      const uint32_t button_id = _maru_x11_find_mouse_button_id(ctx, native_code);
+      if (button_id == UINT32_MAX) break;
+
+      const MARU_ButtonState state =
+          is_press ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+      ctx->base.mouse_button_states[button_id] = (MARU_ButtonState8)state;
+
+      MARU_Event mevt = {0};
+      mevt.mouse_button.button_id = button_id;
+      mevt.mouse_button.state = state;
+      mevt.mouse_button.modifiers = _maru_x11_get_modifiers(ev->xbutton.state);
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)win, &mevt);
+      break;
+    }
+    case KeyPress:
+    case KeyRelease: {
+      MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xkey.window);
+      if (!win) break;
+
+      const bool is_press = (ev->type == KeyPress);
+      KeySym keysym = NoSymbol;
+      char text_buf[32];
+      const int text_len = ctx->x11_lib.XLookupString(&ev->xkey, text_buf, sizeof(text_buf), &keysym, NULL);
+      const MARU_Key key = _maru_x11_map_keysym(keysym);
+      const MARU_ButtonState state =
+          is_press ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+
+      bool is_repeat = false;
+      if (key != MARU_KEY_UNKNOWN) {
+        is_repeat = is_press && (win->base.keyboard_state[key] == (MARU_ButtonState8)MARU_BUTTON_STATE_PRESSED);
+        win->base.keyboard_state[key] = (MARU_ButtonState8)state;
+      }
+
+      if (!is_repeat) {
+        MARU_Event mevt = {0};
+        mevt.key.raw_key = key;
+        mevt.key.state = state;
+        mevt.key.modifiers = _maru_x11_get_modifiers(ev->xkey.state);
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)win, &mevt);
+      }
+
+      if (is_press && text_len > 0) {
+        MARU_Event text_evt = {0};
+        text_evt.text_edit_commit.committed_utf8 = text_buf;
+        text_evt.text_edit_commit.committed_length = (uint32_t)text_len;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win, &text_evt);
+      }
+      break;
+    }
+  }
+}
+
 MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
-  (void)callback;
-  (void)userdata;
+  MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
+  ctx->base.pump_ctx = &pump_ctx;
 
   // 1. Drain hotplug events from worker thread
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
+  _maru_drain_queued_events(&ctx->base);
 
   // 2. Process already pending X11 events
   while (ctx->x11_lib.XPending(ctx->display)) {
       XEvent ev;
       ctx->x11_lib.XNextEvent(ctx->display, &ev);
-      // TODO: Process X11 event
+      if (ctx->x11_lib.XFilterEvent(&ev, None)) continue;
+      _maru_x11_process_event(ctx, &ev);
   }
 
   // 3. Prepare poll set
@@ -173,11 +576,11 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU
   if (ret > 0) {
     if (pfds[0].revents & POLLIN) {
       uint64_t val;
-      read(ctx->linux_common.worker.event_fd, &val, sizeof(val));
+      if (read(ctx->linux_common.worker.event_fd, &val, sizeof(val)) < 0) {}
     }
 
     if (pfds[1].revents & POLLIN) {
-        // X11 events available, will be processed in next XPending loop or immediately after poll
+        // X11 events available
     }
 
     if (ctrl_count > 0) {
@@ -189,10 +592,12 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU
   while (ctx->x11_lib.XPending(ctx->display)) {
       XEvent ev;
       ctx->x11_lib.XNextEvent(ctx->display, &ev);
-      // TODO: Process X11 event
+      if (ctx->x11_lib.XFilterEvent(&ev, None)) continue;
+      _maru_x11_process_event(ctx, &ev);
   }
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
+  ctx->base.pump_ctx = NULL;
 
   return MARU_SUCCESS;
 }
@@ -205,6 +610,118 @@ void *maru_getContextNativeHandle_X11(MARU_Context *context) {
 void *maru_getWindowNativeHandle_X11(MARU_Window *window) {
   MARU_Window_X11 *win = (MARU_Window_X11 *)window;
   return (void *)(uintptr_t)win->handle;
+}
+
+void maru_getWindowGeometry_X11(MARU_Window *window,
+                               MARU_WindowGeometry *out_geometry) {
+  MARU_Window_X11 *win = (MARU_Window_X11 *)window;
+  memset(out_geometry, 0, sizeof(*out_geometry));
+  
+  out_geometry->logical_size = win->base.attrs_effective.logical_size;
+  out_geometry->pixel_size.x = (int32_t)win->base.attrs_effective.logical_size.x;
+  out_geometry->pixel_size.y = (int32_t)win->base.attrs_effective.logical_size.y;
+  out_geometry->scale = (MARU_Scalar)1.0;
+  out_geometry->buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
+  fprintf(stderr, "[X11 DEBUG] getWindowGeometry: %fx%f (%dx%d)\n", 
+          out_geometry->logical_size.x, out_geometry->logical_size.y,
+          out_geometry->pixel_size.x, out_geometry->pixel_size.y);
+}
+
+MARU_Status maru_createWindow_X11(MARU_Context *context,
+                                 const MARU_WindowCreateInfo *create_info,
+                                 MARU_Window **out_window) {
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  MARU_Window_X11 *win = (MARU_Window_X11 *)maru_context_alloc(&ctx->base, sizeof(MARU_Window_X11));
+  if (!win) return MARU_FAILURE;
+
+  memset(win, 0, sizeof(*win));
+  win->base.ctx_base = &ctx->base;
+  win->base.pub.context = context;
+  win->base.pub.userdata = create_info->userdata;
+  win->base.pub.metrics = &win->base.metrics;
+  win->base.pub.keyboard_state = win->base.keyboard_state;
+  win->base.pub.keyboard_key_count = MARU_KEY_COUNT;
+  win->base.pub.mouse_button_state = ctx->base.pub.mouse_button_state;
+  win->base.pub.mouse_button_channels = ctx->base.pub.mouse_button_channels;
+  win->base.pub.mouse_button_count = ctx->base.pub.mouse_button_count;
+  memcpy(win->base.pub.mouse_default_button_channels, ctx->base.pub.mouse_default_button_channels, sizeof(win->base.pub.mouse_default_button_channels));
+  win->base.pub.event_mask = create_info->attributes.event_mask;
+  win->base.pub.cursor_mode = create_info->attributes.cursor_mode;
+  win->base.pub.current_cursor = create_info->attributes.cursor;
+  win->base.pub.title = create_info->attributes.title;
+
+#ifdef MARU_INDIRECT_BACKEND
+  win->base.backend = ctx->base.backend;
+#endif
+
+  int32_t width = (int32_t)create_info->attributes.logical_size.x;
+  int32_t height = (int32_t)create_info->attributes.logical_size.y;
+  if (width <= 0) width = 640;
+  if (height <= 0) height = 480;
+
+  Visual *visual = DefaultVisual(ctx->display, ctx->screen);
+  int depth = DefaultDepth(ctx->display, ctx->screen);
+
+  XSetWindowAttributes swa;
+  swa.colormap = ctx->x11_lib.XCreateColormap(ctx->display, ctx->root, visual, AllocNone);
+  swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | FocusChangeMask;
+  swa.border_pixel = 0;
+  swa.background_pixel = 0;
+
+  win->colormap = swa.colormap;
+  win->handle = ctx->x11_lib.XCreateWindow(ctx->display, ctx->root, 
+                                           0, 0, (uint32_t)width, (uint32_t)height, 
+                                           0, depth, InputOutput, visual, 
+                                           CWColormap | CWEventMask | CWBackPixel | CWBorderPixel, &swa);
+
+  if (!win->handle) {
+    ctx->x11_lib.XFreeColormap(ctx->display, win->colormap);
+    maru_context_free(&ctx->base, win);
+    return MARU_FAILURE;
+  }
+
+  ctx->x11_lib.XSetWMProtocols(ctx->display, win->handle, &ctx->wm_delete_window, 1);
+
+  _maru_register_window(&ctx->base, (MARU_Window *)win);
+  
+  win->base.pub.flags = MARU_WINDOW_STATE_READY;
+  win->base.attrs_effective.logical_size.x = (MARU_Scalar)width;
+  win->base.attrs_effective.logical_size.y = (MARU_Scalar)height;
+
+  ctx->x11_lib.XMapWindow(ctx->display, win->handle);
+  ctx->x11_lib.XFlush(ctx->display);
+
+  // Window creation happens outside maru_pumpEvents(), so dispatching directly
+  // would drop these events when no pump callback is installed yet.
+  MARU_Event mevt = {0};
+  _maru_post_event_internal(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)win, &mevt);
+
+  MARU_Event revt = {0};
+  maru_getWindowGeometry_X11((MARU_Window *)win, &revt.resized.geometry);
+  _maru_post_event_internal(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &revt);
+
+  *out_window = (MARU_Window *)win;
+  return MARU_SUCCESS;
+}
+
+MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
+  MARU_Window_X11 *win = (MARU_Window_X11 *)window;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+
+  if (win->handle) {
+    ctx->x11_lib.XUnmapWindow(ctx->display, win->handle);
+    ctx->x11_lib.XDestroyWindow(ctx->display, win->handle);
+    win->handle = 0;
+  }
+
+  if (win->colormap) {
+    ctx->x11_lib.XFreeColormap(ctx->display, win->colormap);
+    win->colormap = 0;
+  }
+
+  _maru_unregister_window(&ctx->base, (MARU_Window *)win);
+  maru_context_free(&ctx->base, win);
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_createCursor_X11(MARU_Context *context,

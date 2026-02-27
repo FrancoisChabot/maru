@@ -17,6 +17,9 @@
   MARU_LIB_FN(XConnectionNumber)           \
   MARU_LIB_FN(XFlush)                      \
   MARU_LIB_FN(XCreateSimpleWindow)         \
+  MARU_LIB_FN(XCreateWindow)               \
+  MARU_LIB_FN(XCreateColormap)             \
+  MARU_LIB_FN(XFreeColormap)               \
   MARU_LIB_FN(XDestroyWindow)              \
   MARU_LIB_FN(XMapWindow)                  \
   MARU_LIB_FN(XUnmapWindow)                \
@@ -25,6 +28,7 @@
   MARU_LIB_FN(XSendEvent)                  \
   MARU_LIB_FN(XSetWMProtocols)             \
   MARU_LIB_FN(XTranslateCoordinates)       \
+  MARU_LIB_FN(XLookupString)               \
   MARU_LIB_FN(XSync)                       \
   MARU_LIB_FN(XRaiseWindow)                \
   MARU_LIB_FN(XSetInputFocus)              \

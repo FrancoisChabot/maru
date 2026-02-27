@@ -34,6 +34,7 @@ typedef struct MARU_Context_X11 {
 typedef struct MARU_Window_X11 {
   MARU_Window_Base base;
   Window handle;
+  Colormap colormap;
   
   bool is_fullscreen;
   bool is_maximized;
