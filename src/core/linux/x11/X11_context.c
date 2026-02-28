@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "maru_internal.h"
-#include "maru_api_constraints.h"
-#include "maru_mem_internal.h"
-#include "linux_internal.h"
-#include "x11_internal.h"
 #include "dlib/loader.h"
+#include "linux_internal.h"
+#include "maru_api_constraints.h"
+#include "maru_internal.h"
+#include "maru_mem_internal.h"
+#include "x11_internal.h"
+#include <limits.h>
+#include <locale.h>
+#include <poll.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
-#include <locale.h>
-#include <unistd.h>
-#include <poll.h>
-#include <limits.h>
 #include <time.h>
+#include <unistd.h>
 
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
-                                    const MARU_ContextAttributes *attributes) {
+                                   const MARU_ContextAttributes *attributes) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   _maru_update_context_base(&ctx->base, field_mask, attributes);
 
@@ -66,9 +66,11 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   (void)maru_load_xi2_symbols(&ctx->base, &ctx->xi2_lib);
   (void)maru_load_xshape_symbols(&ctx->base, &ctx->xshape_lib);
   (void)maru_load_xrandr_symbols(&ctx->base, &ctx->xrandr_lib);
+  (void)maru_load_xfixes_symbols(&ctx->base, &ctx->xfixes_lib);
 
   ctx->display = ctx->x11_lib.XOpenDisplay(NULL);
   if (!ctx->display) {
+    maru_unload_xfixes_symbols(&ctx->xfixes_lib);
     maru_unload_xrandr_symbols(&ctx->xrandr_lib);
     maru_unload_xshape_symbols(&ctx->xshape_lib);
     maru_unload_xi2_symbols(&ctx->xi2_lib);
@@ -85,42 +87,68 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->screen = DefaultScreen(ctx->display);
   ctx->root = RootWindow(ctx->display, ctx->screen);
 
-  ctx->wm_protocols = ctx->x11_lib.XInternAtom(ctx->display, "WM_PROTOCOLS", False);
-  ctx->wm_delete_window = ctx->x11_lib.XInternAtom(ctx->display, "WM_DELETE_WINDOW", False);
-  ctx->net_wm_name = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_NAME", False);
-  ctx->net_wm_icon_name = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_ICON_NAME", False);
-  ctx->net_wm_icon = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_ICON", False);
-  ctx->net_wm_state = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE", False);
-  ctx->net_wm_state_fullscreen = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_FULLSCREEN", False);
-  ctx->net_wm_state_maximized_vert = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
-  ctx->net_wm_state_maximized_horz = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
-  ctx->net_wm_state_demands_attention = ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
-  ctx->net_active_window = ctx->x11_lib.XInternAtom(ctx->display, "_NET_ACTIVE_WINDOW", False);
-  ctx->selection_clipboard = ctx->x11_lib.XInternAtom(ctx->display, "CLIPBOARD", False);
+  ctx->wm_protocols =
+      ctx->x11_lib.XInternAtom(ctx->display, "WM_PROTOCOLS", False);
+  ctx->wm_delete_window =
+      ctx->x11_lib.XInternAtom(ctx->display, "WM_DELETE_WINDOW", False);
+  ctx->net_wm_name =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_NAME", False);
+  ctx->net_wm_icon_name =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_ICON_NAME", False);
+  ctx->net_wm_icon =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_ICON", False);
+  ctx->net_wm_state =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE", False);
+  ctx->net_wm_state_fullscreen =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_FULLSCREEN", False);
+  ctx->net_wm_state_maximized_vert = ctx->x11_lib.XInternAtom(
+      ctx->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+  ctx->net_wm_state_maximized_horz = ctx->x11_lib.XInternAtom(
+      ctx->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+  ctx->net_wm_state_demands_attention = ctx->x11_lib.XInternAtom(
+      ctx->display, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
+  ctx->net_active_window =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_ACTIVE_WINDOW", False);
+  ctx->motif_wm_hints =
+      ctx->x11_lib.XInternAtom(ctx->display, "_MOTIF_WM_HINTS", False);
+  ctx->selection_clipboard =
+      ctx->x11_lib.XInternAtom(ctx->display, "CLIPBOARD", False);
   ctx->selection_primary = XA_PRIMARY;
-  ctx->selection_targets = ctx->x11_lib.XInternAtom(ctx->display, "TARGETS", False);
+  ctx->selection_targets =
+      ctx->x11_lib.XInternAtom(ctx->display, "TARGETS", False);
   ctx->selection_incr = ctx->x11_lib.XInternAtom(ctx->display, "INCR", False);
-  ctx->utf8_string = ctx->x11_lib.XInternAtom(ctx->display, "UTF8_STRING", False);
+  ctx->utf8_string =
+      ctx->x11_lib.XInternAtom(ctx->display, "UTF8_STRING", False);
   ctx->text_atom = ctx->x11_lib.XInternAtom(ctx->display, "TEXT", False);
-  ctx->compound_text = ctx->x11_lib.XInternAtom(ctx->display, "COMPOUND_TEXT", False);
+  ctx->compound_text =
+      ctx->x11_lib.XInternAtom(ctx->display, "COMPOUND_TEXT", False);
   ctx->maru_selection_property =
       ctx->x11_lib.XInternAtom(ctx->display, "MARU_SELECTION", False);
   ctx->xdnd_aware = ctx->x11_lib.XInternAtom(ctx->display, "XdndAware", False);
   ctx->xdnd_enter = ctx->x11_lib.XInternAtom(ctx->display, "XdndEnter", False);
-  ctx->xdnd_position = ctx->x11_lib.XInternAtom(ctx->display, "XdndPosition", False);
-  ctx->xdnd_status = ctx->x11_lib.XInternAtom(ctx->display, "XdndStatus", False);
+  ctx->xdnd_position =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndPosition", False);
+  ctx->xdnd_status =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndStatus", False);
   ctx->xdnd_leave = ctx->x11_lib.XInternAtom(ctx->display, "XdndLeave", False);
   ctx->xdnd_drop = ctx->x11_lib.XInternAtom(ctx->display, "XdndDrop", False);
-  ctx->xdnd_finished = ctx->x11_lib.XInternAtom(ctx->display, "XdndFinished", False);
-  ctx->xdnd_selection = ctx->x11_lib.XInternAtom(ctx->display, "XdndSelection", False);
-  ctx->xdnd_type_list = ctx->x11_lib.XInternAtom(ctx->display, "XdndTypeList", False);
-  ctx->xdnd_action_copy = ctx->x11_lib.XInternAtom(ctx->display, "XdndActionCopy", False);
-  ctx->xdnd_action_move = ctx->x11_lib.XInternAtom(ctx->display, "XdndActionMove", False);
-  ctx->xdnd_action_link = ctx->x11_lib.XInternAtom(ctx->display, "XdndActionLink", False);
+  ctx->xdnd_finished =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndFinished", False);
+  ctx->xdnd_selection =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndSelection", False);
+  ctx->xdnd_type_list =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndTypeList", False);
+  ctx->xdnd_action_copy =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndActionCopy", False);
+  ctx->xdnd_action_move =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndActionMove", False);
+  ctx->xdnd_action_link =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndActionLink", False);
   (void)_maru_x11_enable_xi2_raw_motion(ctx);
 
   if (!_maru_linux_common_init(&ctx->linux_common, &ctx->base)) {
     ctx->x11_lib.XCloseDisplay(ctx->display);
+    maru_unload_xfixes_symbols(&ctx->xfixes_lib);
     maru_unload_xrandr_symbols(&ctx->xrandr_lib);
     maru_unload_xshape_symbols(&ctx->xshape_lib);
     maru_unload_xi2_symbols(&ctx->xi2_lib);
@@ -129,7 +157,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
-  
+
   ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
   ctx->base.attrs_requested = create_info->attributes;
   ctx->base.attrs_effective = create_info->attributes;
@@ -161,7 +189,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
 MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   _maru_x11_release_pointer_lock(ctx, NULL);
-  
+
   while (ctx->base.window_list_head) {
     maru_destroyWindow_X11((MARU_Window *)ctx->base.window_list_head);
   }
@@ -171,18 +199,21 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   _maru_x11_clear_pending_request(ctx, &ctx->clipboard_request);
   _maru_x11_clear_pending_request(ctx, &ctx->primary_request);
   _maru_x11_clear_pending_request(ctx, &ctx->dnd_request);
-  
-  MARU_X11DataOffer *clipboard_offer = _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD);
-  MARU_X11DataOffer *primary_offer = _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_PRIMARY);
-  MARU_X11DataOffer *dnd_offer = _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
-  
+
+  MARU_X11DataOffer *clipboard_offer =
+      _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD);
+  MARU_X11DataOffer *primary_offer =
+      _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_PRIMARY);
+  MARU_X11DataOffer *dnd_offer =
+      _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
+
   _maru_x11_clear_offer(ctx, clipboard_offer);
   _maru_x11_clear_offer(ctx, primary_offer);
   _maru_x11_clear_offer(ctx, dnd_offer);
 
   _maru_x11_clear_dnd_session(ctx);
   _maru_x11_clear_dnd_source_session(ctx, false, MARU_DROP_ACTION_NONE);
-  
+
   if (ctx->display) {
     if (ctx->xim) {
       ctx->x11_lib.XCloseIM(ctx->xim);
@@ -197,13 +228,15 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
 
   while (ctx->base.monitor_cache_count > 0) {
     MARU_Monitor_Base *monitor =
-        (MARU_Monitor_Base *)ctx->base.monitor_cache[ctx->base.monitor_cache_count - 1u];
+        (MARU_Monitor_Base *)
+            ctx->base.monitor_cache[ctx->base.monitor_cache_count - 1u];
     monitor->is_active = false;
     monitor->pub.flags |= MARU_MONITOR_STATE_LOST;
     ctx->base.monitor_cache_count--;
     maru_releaseMonitor_X11((MARU_Monitor *)monitor);
   }
 
+  maru_unload_xfixes_symbols(&ctx->xfixes_lib);
   maru_unload_xrandr_symbols(&ctx->xrandr_lib);
   maru_unload_xshape_symbols(&ctx->xshape_lib);
   maru_unload_xcursor_symbols(&ctx->xcursor_lib);
@@ -219,13 +252,13 @@ MARU_Status maru_wakeContext_X11(MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   uint64_t val = 1;
   if (write(ctx->linux_common.worker.event_fd, &val, sizeof(val)) < 0) {
-      return MARU_FAILURE;
+    return MARU_FAILURE;
   }
   return MARU_SUCCESS;
 }
 
 bool _maru_x11_copy_string(MARU_Context_X11 *ctx, const char *src,
-                                  char **out_str) {
+                           char **out_str) {
   const size_t len = strlen(src);
   char *copy = (char *)maru_context_alloc(&ctx->base, len + 1u);
   if (!copy) {
@@ -254,7 +287,7 @@ uint64_t _maru_x11_get_monotonic_time_ms(void) {
 }
 
 void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx,
-                                              uint64_t duration_ns) {
+                                       uint64_t duration_ns) {
   MARU_ContextMetrics *metrics = &ctx->base.metrics;
   metrics->pump_call_count_total++;
   if (metrics->pump_call_count_total == 1) {
@@ -282,7 +315,8 @@ static uint64_t _maru_x11_next_cursor_deadline_ms(const MARU_Context_X11 *ctx) {
   uint64_t next_deadline = 0;
   for (const MARU_Cursor_X11 *cur = ctx->animated_cursors_head; cur;
        cur = cur->anim_next) {
-    if (!cur->is_animated || cur->frame_count <= 1 || cur->next_frame_deadline_ms == 0) {
+    if (!cur->is_animated || cur->frame_count <= 1 ||
+        cur->next_frame_deadline_ms == 0) {
       continue;
     }
     if (next_deadline == 0 || cur->next_frame_deadline_ms < next_deadline) {
@@ -356,12 +390,16 @@ void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
     ctx->x11_lib.XFreeEventData(ctx->display, &ev->xcookie);
   }
 
-  if (_maru_x11_process_window_event(ctx, ev)) return;
-  if (_maru_x11_process_input_event(ctx, ev)) return;
-  if (_maru_x11_process_dataexchange_event(ctx, ev)) return;
+  if (_maru_x11_process_window_event(ctx, ev))
+    return;
+  if (_maru_x11_process_input_event(ctx, ev))
+    return;
+  if (_maru_x11_process_dataexchange_event(ctx, ev))
+    return;
 }
 
-MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
+MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
+                                MARU_EventCallback callback, void *userdata) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   const uint64_t pump_start_ns = _maru_x11_get_monotonic_time_ns();
   MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
@@ -372,10 +410,11 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU
   _maru_drain_queued_events(&ctx->base);
 
   while (ctx->x11_lib.XPending(ctx->display)) {
-      XEvent ev;
-      ctx->x11_lib.XNextEvent(ctx->display, &ev);
-      if (ctx->x11_lib.XFilterEvent(&ev, None)) continue;
-      _maru_x11_process_event(ctx, &ev);
+    XEvent ev;
+    ctx->x11_lib.XNextEvent(ctx->display, &ev);
+    if (ctx->x11_lib.XFilterEvent(&ev, None))
+      continue;
+    _maru_x11_process_event(ctx, &ev);
   }
 
   {
@@ -398,7 +437,8 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU
   pfds[nfds].revents = 0;
   nfds++;
 
-  uint32_t ctrl_count = _maru_linux_common_fill_pollfds(&ctx->linux_common, &pfds[nfds], 32 - nfds);
+  uint32_t ctrl_count = _maru_linux_common_fill_pollfds(&ctx->linux_common,
+                                                        &pfds[nfds], 32 - nfds);
   uint32_t ctrl_start_idx = nfds;
   nfds += ctrl_count;
 
@@ -408,22 +448,25 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms, MARU
   if (ret > 0) {
     if (pfds[0].revents & POLLIN) {
       uint64_t val;
-      if (read(ctx->linux_common.worker.event_fd, &val, sizeof(val)) < 0) {}
+      if (read(ctx->linux_common.worker.event_fd, &val, sizeof(val)) < 0) {
+      }
     }
 
     if (pfds[1].revents & POLLIN) {
     }
 
     if (ctrl_count > 0) {
-      _maru_linux_common_process_pollfds(&ctx->linux_common, &pfds[ctrl_start_idx], ctrl_count);
+      _maru_linux_common_process_pollfds(&ctx->linux_common,
+                                         &pfds[ctrl_start_idx], ctrl_count);
     }
   }
 
   while (ctx->x11_lib.XPending(ctx->display)) {
-      XEvent ev;
-      ctx->x11_lib.XNextEvent(ctx->display, &ev);
-      if (ctx->x11_lib.XFilterEvent(&ev, None)) continue;
-      _maru_x11_process_event(ctx, &ev);
+    XEvent ev;
+    ctx->x11_lib.XNextEvent(ctx->display, &ev);
+    if (ctx->x11_lib.XFilterEvent(&ev, None))
+      continue;
+    _maru_x11_process_event(ctx, &ev);
   }
 
   {

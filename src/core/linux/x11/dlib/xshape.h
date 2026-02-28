@@ -10,7 +10,9 @@
 
 #define MARU_XSHAPE_FUNCTIONS_TABLE   \
   MARU_LIB_FN(XShapeQueryExtension)   \
-  MARU_LIB_FN(XShapeCombineRectangles)
+  MARU_LIB_FN(XShapeQueryVersion)     \
+  MARU_LIB_FN(XShapeCombineRectangles) \
+  MARU_LIB_FN(XShapeCombineMask)
 
 typedef struct MARU_Lib_Xshape {
   MARU_External_Lib_Base base;

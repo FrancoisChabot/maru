@@ -18,7 +18,7 @@
 ### Windowing / Context
 
 - [ ] Implement `MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE` on X11.
-- [ ] Do a full create-vs-update parity pass for window attributes (single-source apply path to prevent drift).
+- [x] Do a full create-vs-update parity pass for window attributes (single-source apply path to prevent drift).
 
 ### Text / IME
 

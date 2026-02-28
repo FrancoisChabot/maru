@@ -489,9 +489,8 @@ int main(int, char **) {
   g_PrimaryWindow = window;
 
   VkSurfaceKHR surface;
-  if (maru_createVkSurface(
-          window, g_Instance, vkGetInstanceProcAddr,
-          &surface) != MARU_SUCCESS) {
+  if (maru_createVkSurface(window, g_Instance, vkGetInstanceProcAddr,
+                           &surface) != MARU_SUCCESS) {
     fprintf(stderr, "Failed to create Vulkan surface.\n");
     maru_destroyWindow(window);
     if (window_icon) {
@@ -567,8 +566,7 @@ int main(int, char **) {
         ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
         ImGui_ImplVulkanH_CreateOrResizeWindow(
             g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily,
-            g_Allocator, target_width, target_height,
-            g_MinImageCount, 0);
+            g_Allocator, target_width, target_height, g_MinImageCount, 0);
         g_MainWindowData.FrameIndex = 0;
         g_SwapChainRebuild = false;
         g_PendingResize = false;

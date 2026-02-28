@@ -10,6 +10,7 @@
 #include "dlib/xi2.h"
 #include "dlib/xshape.h"
 #include "dlib/xrandr.h"
+#include "dlib/xfixes.h"
 #include "maru/c/vulkan.h"
 
 typedef struct MARU_Cursor_X11 MARU_Cursor_X11;
@@ -86,6 +87,7 @@ typedef struct MARU_Context_X11 {
   MARU_Lib_Xi2 xi2_lib;
   MARU_Lib_Xshape xshape_lib;
   MARU_Lib_Xrandr xrandr_lib;
+  MARU_Lib_Xfixes xfixes_lib;
   Display *display;
   int screen;
   Window root;
@@ -110,6 +112,7 @@ typedef struct MARU_Context_X11 {
   Atom net_wm_state_maximized_horz;
   Atom net_wm_state_demands_attention;
   Atom net_active_window;
+  Atom motif_wm_hints;
   Atom selection_clipboard;
   Atom selection_primary;
   Atom selection_targets;
@@ -158,6 +161,7 @@ struct MARU_Window_X11 {
   
   bool is_fullscreen;
   bool is_maximized;
+  bool pending_maximize_request;
   int lock_center_x;
   int lock_center_y;
   bool suppress_lock_warp_event;
