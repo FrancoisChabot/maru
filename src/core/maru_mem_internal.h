@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "maru/maru.h"
 #include "maru_internal.h"
@@ -92,6 +93,7 @@ static inline void *maru_context_alloc_bootstrap(const MARU_ContextCreateInfo *c
 }
 
 static inline void *maru_context_alloc(MARU_Context_Base *ctx_base, size_t size) {
+  fprintf(stderr, "maru_context_alloc(%zu)\n", size);
 #ifdef MARU_GATHER_METRICS
   MARU_MemoryHeader *header = (MARU_MemoryHeader *)ctx_base->allocator.alloc_cb(size + sizeof(MARU_MemoryHeader), ctx_base->allocator.userdata);
   if (!header) {

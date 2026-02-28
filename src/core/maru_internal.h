@@ -112,6 +112,8 @@ typedef struct MARU_Window_Base {
   
   char *title_storage;
   char *surrounding_text_storage;
+
+  bool pending_ready_event;
 } MARU_Window_Base;
 
 typedef struct MARU_Cursor_Base {
@@ -170,6 +172,12 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window);
 void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window);
 
+/** @brief Posts an event to the internal thread-safe queue. 
+ *
+ *  This should ONLY be used for events coming from other threads, or for user-posted
+ *  events. System events originating from the main event loop SHOULD be dispatched
+ *  directly using _maru_dispatch_event().
+ */
 MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
                                       MARU_Window *window, const MARU_Event *evt);
 

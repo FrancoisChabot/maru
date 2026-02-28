@@ -184,7 +184,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->base.attrs_effective.surrounding_text =
       win->base.attrs_requested.surrounding_text;
   
-  win->base.pub.flags = MARU_WINDOW_STATE_READY;
+  win->base.pub.flags = 0;
   if (create_info->attributes.visible) {
     win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
   }
@@ -274,15 +274,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   }
   ctx->x11_lib.XFlush(ctx->display);
 
-  // Window creation happens outside maru_pumpEvents(), so dispatching directly
-  // would drop these events when no pump callback is installed yet.
-  MARU_Event mevt = {0};
-  maru_getWindowGeometry_X11((MARU_Window *)win, &mevt.window_ready.geometry);
-  _maru_post_event_internal(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)win, &mevt);
-
-  MARU_Event revt = {0};
-  maru_getWindowGeometry_X11((MARU_Window *)win, &revt.resized.geometry);
-  _maru_post_event_internal(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &revt);
+  win->base.pending_ready_event = true;
 
   *out_window = (MARU_Window *)win;
   return MARU_SUCCESS;
@@ -751,7 +743,8 @@ MARU_Status maru_requestWindowFrame_X11(MARU_Window *window) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
   MARU_Event evt = {0};
   evt.frame.timestamp_ms = (uint32_t)_maru_x11_get_monotonic_time_ms();
-  return _maru_post_event_internal(&ctx->base, MARU_EVENT_WINDOW_FRAME, window, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME, window, &evt);
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_requestWindowAttention_X11(MARU_Window *window) {

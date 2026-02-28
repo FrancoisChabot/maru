@@ -6,6 +6,7 @@
 #include "maru/c/native/cocoa.h"
 #include <stdatomic.h>
 #include <string.h>
+#include <stdio.h>
 
 #ifdef MARU_INDIRECT_BACKEND
 const MARU_Backend maru_backend_Cocoa = {
@@ -55,6 +56,7 @@ const MARU_Backend maru_backend_Cocoa = {
 #else
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
                                          MARU_Context **out_context) {
+  fprintf(stderr, "maru_createContext starting\n");
   MARU_API_VALIDATE(createContext, create_info, out_context);
   return maru_createContext_Cocoa(create_info, out_context);
 }

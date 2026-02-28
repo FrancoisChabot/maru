@@ -626,12 +626,9 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
     maru_updateWindow_Windows((MARU_Window *)window, init_mask, &create_info->attributes);
   }
 
-  window->base.pub.flags |= MARU_WINDOW_STATE_READY;
   _maru_register_window(&ctx->base, (MARU_Window *)window);
 
-  MARU_Event evt = { {0} };
-  maru_getWindowGeometry_Windows((MARU_Window *)window, &evt.window_ready.geometry);
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)window, &evt);
+  window->base.pending_ready_event = true;
 
   *out_window = (MARU_Window *)window;
   return MARU_SUCCESS;

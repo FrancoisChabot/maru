@@ -4,6 +4,7 @@
 #include "maru/c/details/controllers.h"
 #include <string.h>
 #include <stdatomic.h>
+#include <stdio.h>
 
 #include <stdlib.h>
 
@@ -62,8 +63,9 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
                           MARU_Window *window, const MARU_Event *event) {
+  MARU_ASSUME(ctx->pump_ctx != NULL);
+
   const MARU_EventMask event_bit = MARU_EVENT_MASK(type);
-  if (!ctx->pump_ctx) return;
   if ((ctx->event_mask & event_bit) == 0) return;
   if (window && (maru_getWindowEventMask(window) & event_bit) == 0) return;
   if (window &&
@@ -77,6 +79,14 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
 }
 
 void _maru_init_context_base(MARU_Context_Base *ctx_base) {
+  fprintf(stderr, "_maru_init_context_base started\n");
+  if (ctx_base->allocator.alloc_cb == NULL) {
+    fprintf(stderr, "Initializing default allocator in context base\n");
+    ctx_base->allocator.alloc_cb = _maru_default_alloc;
+    ctx_base->allocator.realloc_cb = _maru_default_realloc;
+    ctx_base->allocator.free_cb = _maru_default_free;
+    ctx_base->allocator.userdata = NULL;
+  }
   ctx_base->pub.userdata = NULL;
   ctx_base->mouse_button_states = NULL;
   ctx_base->mouse_button_channels = NULL;
@@ -106,6 +116,17 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
 }
 
 void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {
+  // First, check for windows that need a READY event
+  for (MARU_Window_Base *it = ctx_base->window_list_head; it; it = it->ctx_next) {
+    if (it->pending_ready_event) {
+      it->pending_ready_event = false;
+      it->pub.flags |= MARU_WINDOW_STATE_READY;
+      MARU_Event evt = {0};
+      maru_getWindowGeometry((MARU_Window *)it, &evt.window_ready.geometry);
+      _maru_dispatch_event(ctx_base, MARU_EVENT_WINDOW_READY, (MARU_Window *)it, &evt);
+    }
+  }
+
   MARU_EventId type;
   MARU_Window *window;
   MARU_Event evt;
@@ -212,6 +233,7 @@ void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
 
 
 void *_maru_default_alloc(size_t size, void *userdata) {
+  fprintf(stderr, "_maru_default_alloc(%zu)\n", size);
   (void)userdata;
   return malloc(size);
 }

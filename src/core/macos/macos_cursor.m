@@ -16,3 +16,9 @@ MARU_Status maru_destroyCursor_Cocoa(MARU_Cursor *cursor) {
 MARU_Status maru_resetCursorMetrics_Cocoa(MARU_Cursor *cursor) {
   return MARU_FAILURE;
 }
+
+MARU_Status maru_getStandardCursor_Cocoa(MARU_Context *context,
+                                          MARU_CursorShape shape,
+                                          MARU_Cursor **out_cursor) {
+  return MARU_FAILURE;
+}

@@ -148,6 +148,8 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms, 
   };
   ctx->base.pump_ctx = &pump_ctx;
 
+  _maru_drain_queued_events(&ctx->base);
+
   MSG msg;
   if (timeout_ms == 0) {
     while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -169,6 +171,8 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms, 
     }
   }
   
+  _maru_drain_queued_events(&ctx->base);
+
   ctx->base.pump_ctx = NULL;
   return MARU_SUCCESS;
 }

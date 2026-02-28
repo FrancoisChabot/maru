@@ -5,22 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "C/C++ Debug (gdb Launch)",
+            "name": "C/C++ Debug (lldb Launch)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/examples/maru_testbed",
+            "program": "${workspaceFolder}/build/examples/basic_c/maru_basic_c",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
+            "MIMode": "lldb"
         }
     ]
 }

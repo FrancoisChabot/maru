@@ -7,6 +7,13 @@
 #include "maru_internal.h"
 #include <stdlib.h>
 
+#ifdef MARU_ENABLE_INTERNAL_CHECKS
+#define MARU_ASSUME(cond) \
+    do { if (!(cond)) abort(); } while(0)
+#else
+#define MARU_ASSUME(cond) (void)0
+#endif
+
 #ifdef MARU_VALIDATE_API_CALLS
 
 #define MARU_CONSTRAINT_CHECK(cond) \
