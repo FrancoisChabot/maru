@@ -1,0 +1,62 @@
+# macOS Backend Implementation Checklist
+
+This checklist tracks the implementation status of the Maru macOS (Cocoa) backend.
+
+## 1. Core & Context
+- [x] Context Creation/Destruction (`maru_createContext_Cocoa`, `maru_destroyContext_Cocoa`)
+- [x] Event Pumping (`maru_pumpEvents_Cocoa`)
+- [x] Context Waking (`maru_wakeContext_Cocoa`)
+- [x] Context Attribute Updates (`maru_updateContext_Cocoa`)
+- [x] Native Handle Access (`_maru_getContextNativeHandle_Cocoa`)
+- [ ] **TODO:** Implement System Idle Inhibition (`MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE`)
+- [ ] **TODO:** Support for `NSApplicationActivationPolicyProhibited` or `Accessory` if requested.
+
+## 2. Window Management
+- [x] Window Creation/Destruction (`maru_createWindow_Cocoa`, `maru_destroyWindow_Cocoa`)
+- [x] Geometry Reporting (`maru_getWindowGeometry_Cocoa`)
+- [x] Title Management (`MARU_WINDOW_ATTR_TITLE`)
+- [x] Sizing and Positioning (`MARU_WINDOW_ATTR_LOGICAL_SIZE`, `MARU_WINDOW_ATTR_POSITION`)
+- [x] Visibility Control (`MARU_WINDOW_ATTR_VISIBLE`)
+- [x] Min/Max/Fullscreen States (`MARU_WINDOW_ATTR_MINIMIZED`, `MARU_WINDOW_ATTR_MAXIMIZED`, `MARU_WINDOW_ATTR_FULLSCREEN`)
+- [x] Focus Requests (`maru_requestWindowFocus_Cocoa`)
+- [x] Attention Requests (`maru_requestWindowAttention_Cocoa`)
+- [ ] **TODO:** Mouse Passthrough Implementation (`MARU_WINDOW_STATE_MOUSE_PASSTHROUGH`)
+- [ ] **TODO:** Implement Frame Request (`maru_requestWindowFrame_Cocoa`)
+- [ ] **TODO:** Window Icon Support
+
+## 3. Input & Events
+- [x] Keyboard Events (`MARU_EVENT_KEY_STATE_CHANGED`)
+- [x] Key Translation Table (Incomplete, needs validation for all keys)
+- [x] Modifier Mapping (`Shift`, `Control`, `Option`, `Command`, `CapsLock`)
+- [x] Mouse Button Events (`MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED`)
+- [x] Mouse Motion Events (`MARU_EVENT_MOUSE_MOVED`)
+- [x] Scroll Wheel Events (`MARU_EVENT_MOUSE_SCROLLED`)
+- [x] Window Resized Events (`MARU_EVENT_WINDOW_RESIZED`)
+- [x] Close Request Events (`MARU_EVENT_CLOSE_REQUESTED`)
+- [x] Window Ready Events (`MARU_EVENT_WINDOW_READY`)
+- [ ] **TODO:** Mouse Enter/Leave Events
+- [ ] **TODO:** Window Focus Events (Dispatched via Delegate)
+- [ ] **TODO:** IME / Text Input Support
+
+## 4. Vulkan Integration
+- [x] Extension Reporting (`VK_KHR_surface`, `VK_EXT_metal_surface`)
+- [x] Surface Creation (`maru_createVkSurface_Cocoa` via `CAMetalLayer`)
+
+## 5. Monitors (STUBBED)
+- [ ] **TODO:** Monitor Enumeration (`maru_getMonitors_Cocoa`)
+- [ ] **TODO:** Video Mode Enumeration (`maru_getMonitorModes_Cocoa`)
+- [ ] **TODO:** Setting Video Modes (`maru_setMonitorMode_Cocoa`)
+- [ ] **TODO:** Monitor Change Notifications
+
+## 6. Cursors & Images (STUBBED)
+- [ ] **TODO:** Standard Cursor Shapes (`maru_getStandardCursor_Cocoa`)
+- [ ] **TODO:** Custom Cursor Creation (`maru_createCursor_Cocoa`)
+- [ ] **TODO:** Image Resource Management (`maru_createImage_Cocoa`)
+
+## 7. Controllers / Gamepads (STUBBED)
+- [ ] **TODO:** Controller Enumeration (GCController integration)
+- [ ] **TODO:** Haptic Feedback Support
+
+## 8. Data Exchange / Clipboard / DnD (STUBBED)
+- [ ] **TODO:** Clipboard Access (`NSPasteboard`)
+- [ ] **TODO:** Drag and Drop Implementation

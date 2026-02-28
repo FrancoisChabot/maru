@@ -275,6 +275,10 @@ void ImGui_ImplMaru_NewFrame() {
 }
 
 void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
+    if (!ImGui::GetCurrentContext()) return;
+    ImGui_ImplMaru_Data* bd = ImGui_ImplMaru_GetBackendData();
+    if (!bd) return;
+    
     ImGuiIO& io = ImGui::GetIO();
     if (type == MARU_EVENT_MOUSE_MOVED) {
         io.AddMousePosEvent((float)event->mouse_motion.position.x, (float)event->mouse_motion.position.y);

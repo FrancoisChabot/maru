@@ -487,6 +487,7 @@ int main(int, char **) {
   }
   g_PrimaryWindow = window;
 
+  printf("Waiting for window to be ready...\n");
   while (g_KeepRunning && !g_WindowReady) {
     if (maru_pumpEvents(context, 16, handle_maru_event, NULL) != MARU_SUCCESS) {
       fprintf(stderr, "Failed while waiting for window readiness.\n");
@@ -499,6 +500,7 @@ int main(int, char **) {
       return 1;
     }
   }
+
   if (!g_WindowReady) {
     maru_destroyWindow(window);
     if (window_icon) {
@@ -561,9 +563,6 @@ int main(int, char **) {
 
     while (g_KeepRunning) {
       maru_pumpEvents(context, 0, handle_maru_event, NULL);
-
-      if (!g_WindowReady)
-        continue;
 
       if (app.update(context, window) == AppStatus::EXIT)
         g_KeepRunning = false;

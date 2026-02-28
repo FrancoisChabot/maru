@@ -11,12 +11,36 @@
 #include <objc/message.h>
 #include <objc/runtime.h>
 
+#include "core_event_queue.h"
+#include <pthread.h>
+
 typedef struct MARU_Context_Cocoa {
   MARU_Context_Base base;
 
   id ns_app;
   uint64_t last_modifiers;
+  
+  struct MARU_Context_Cocoa *next;
+  struct MARU_Context_Cocoa *prev;
+
+  MARU_EventQueue route_queue;
+  pthread_mutex_t route_mutex; // For signaling
+  pthread_cond_t route_cond;
 } MARU_Context_Cocoa;
+
+// Default capacity for the macOS routing queue. 
+// This is separate from the user-tuned user_event_queue_size.
+#define MARU_COCOA_ROUTE_QUEUE_CAPACITY 1024
+
+// Global state for macOS event routing
+typedef struct MARU_Cocoa_Global {
+    MARU_Context_Cocoa *contexts_head;
+    MARU_Context_Cocoa *primary_context;
+    pthread_mutex_t mutex;
+    bool initialized;
+} MARU_Cocoa_Global;
+
+extern MARU_Cocoa_Global g_maru_cocoa;
 
 typedef struct MARU_Window_Cocoa {
   MARU_Window_Base base;

@@ -50,18 +50,49 @@ static MARU_ModifierFlags _maru_cocoa_translate_modifiers(NSEventModifierFlags f
     return mods;
 }
 
-static MARU_Window_Cocoa *_maru_cocoa_resolve_window(MARU_Context_Cocoa *ctx, NSWindow *nsWindow) {
+MARU_Cocoa_Global g_maru_cocoa = {NULL, NULL, PTHREAD_MUTEX_INITIALIZER, false};
+
+static MARU_Window_Cocoa *_maru_cocoa_resolve_window_globally(NSWindow *nsWindow, MARU_Context_Cocoa **out_ctx) {
     if (!nsWindow) return NULL;
-    for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
-        MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)it;
-        if (win->ns_window == nsWindow) return win;
+    
+    pthread_mutex_lock(&g_maru_cocoa.mutex);
+    for (MARU_Context_Cocoa *ctx = g_maru_cocoa.contexts_head; ctx; ctx = ctx->next) {
+        for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+            MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)it;
+            if (win->ns_window == nsWindow) {
+                if (out_ctx) *out_ctx = ctx;
+                pthread_mutex_unlock(&g_maru_cocoa.mutex);
+                return win;
+            }
+        }
     }
+    pthread_mutex_unlock(&g_maru_cocoa.mutex);
     return NULL;
 }
 
-static void _maru_cocoa_process_event(MARU_Context_Cocoa *ctx, NSEvent *nsEvent) {
+static void _maru_cocoa_process_event(MARU_Context_Cocoa *pumping_ctx, NSEvent *nsEvent) {
     NSEventType type = [nsEvent type];
-    MARU_Window_Cocoa *window = _maru_cocoa_resolve_window(ctx, [nsEvent window]);
+    MARU_Context_Cocoa *target_ctx = NULL;
+    MARU_Window_Cocoa *window = _maru_cocoa_resolve_window_globally([nsEvent window], &target_ctx);
+
+    if (!target_ctx) {
+        // Application-wide events go to the primary context if it exists
+        target_ctx = g_maru_cocoa.primary_context;
+    }
+
+    if (!target_ctx) return;
+
+    // Helper to dispatch or route an event
+    #define DISPATCH_OR_ROUTE(TYPE, EVT) \
+        if (target_ctx == pumping_ctx) { \
+            _maru_dispatch_event(&target_ctx->base, TYPE, (MARU_Window *)window, &EVT); \
+        } else { \
+            if (_maru_event_queue_push(&target_ctx->route_queue, TYPE, (MARU_Window *)window, EVT)) { \
+                pthread_mutex_lock(&target_ctx->route_mutex); \
+                pthread_cond_signal(&target_ctx->route_cond); \
+                pthread_mutex_unlock(&target_ctx->route_mutex); \
+            } \
+        }
 
     switch (type) {
         case NSEventTypeKeyDown:
@@ -77,7 +108,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *ctx, NSEvent *nsEvent)
             event.key.state = state;
             event.key.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
-            _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)window, &event);
+            DISPATCH_OR_ROUTE(MARU_EVENT_KEY_STATE_CHANGED, event);
             break;
         }
         case NSEventTypeFlagsChanged: {
@@ -101,7 +132,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *ctx, NSEvent *nsEvent)
             event.key.state = pressed ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
             event.key.modifiers = _maru_cocoa_translate_modifiers(new_mods);
             
-            _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)window, &event);
+            DISPATCH_OR_ROUTE(MARU_EVENT_KEY_STATE_CHANGED, event);
             break;
         }
         case NSEventTypeLeftMouseDown:
@@ -124,7 +155,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *ctx, NSEvent *nsEvent)
             event.mouse_button.state = state;
             event.mouse_button.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
-            _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)window, &event);
+            DISPATCH_OR_ROUTE(MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED, event);
             break;
         }
         case NSEventTypeMouseMoved:
@@ -144,7 +175,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *ctx, NSEvent *nsEvent)
             event.mouse_motion.raw_delta.y = (MARU_Scalar)[nsEvent deltaY];
             event.mouse_motion.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
-            _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)window, &event);
+            DISPATCH_OR_ROUTE(MARU_EVENT_MOUSE_MOVED, event);
             break;
         }
         case NSEventTypeScrollWheel: {
@@ -159,7 +190,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *ctx, NSEvent *nsEvent)
             }
             event.mouse_scroll.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
-            _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)window, &event);
+            DISPATCH_OR_ROUTE(MARU_EVENT_MOUSE_SCROLLED, event);
             break;
         }
         default:
@@ -169,8 +200,22 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *ctx, NSEvent *nsEvent)
 
 MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
                                       MARU_Context **out_context) {
+    pthread_mutex_lock(&g_maru_cocoa.mutex);
+    
+    bool is_first = (g_maru_cocoa.contexts_head == NULL);
+    if (is_first) {
+        if (![NSThread isMainThread]) {
+            pthread_mutex_unlock(&g_maru_cocoa.mutex);
+            fprintf(stderr, "Error: The first Maru context on macOS must be created on the main thread.\n");
+            return MARU_FAILURE;
+        }
+    }
+
     MARU_Context_Cocoa *ctx = maru_context_alloc_bootstrap(create_info, sizeof(MARU_Context_Cocoa));
-    if (!ctx) return MARU_FAILURE;
+    if (!ctx) {
+        pthread_mutex_unlock(&g_maru_cocoa.mutex);
+        return MARU_FAILURE;
+    }
 
     if (create_info->allocator.alloc_cb) {
         ctx->base.allocator = create_info->allocator;
@@ -194,15 +239,30 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
     _maru_update_context_base(&ctx->base, MARU_CONTEXT_ATTR_ALL, &create_info->attributes);
 
-    [NSApplication sharedApplication];
-    
-    // Default to regular application if not specified. 
-    // Usually we'd want this to be configurable but let's stick to standard for now.
-    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-    [NSApp finishLaunching];
+    if (!_maru_event_queue_init(&ctx->route_queue, &ctx->base, MARU_COCOA_ROUTE_QUEUE_CAPACITY)) {
+        maru_context_free(&ctx->base, ctx);
+        pthread_mutex_unlock(&g_maru_cocoa.mutex);
+        return MARU_FAILURE;
+    }
+    pthread_mutex_init(&ctx->route_mutex, NULL);
+    pthread_cond_init(&ctx->route_cond, NULL);
+
+    if (is_first) {
+        [NSApplication sharedApplication];
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        [NSApp finishLaunching];
+        g_maru_cocoa.primary_context = ctx;
+    }
 
     ctx->ns_app = NSApp;
     ctx->last_modifiers = [NSEvent modifierFlags];
+    
+    // Add to global context registry
+    ctx->next = g_maru_cocoa.contexts_head;
+    if (g_maru_cocoa.contexts_head) g_maru_cocoa.contexts_head->prev = ctx;
+    g_maru_cocoa.contexts_head = ctx;
+
+    pthread_mutex_unlock(&g_maru_cocoa.mutex);
 
     *out_context = (MARU_Context *)ctx;
     return MARU_SUCCESS;
@@ -210,7 +270,20 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
 MARU_Status maru_destroyContext_Cocoa(MARU_Context *context) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
+    
+    pthread_mutex_lock(&g_maru_cocoa.mutex);
+    
+    if (ctx->prev) ctx->prev->next = ctx->next;
+    if (ctx->next) ctx->next->prev = ctx->prev;
+    if (g_maru_cocoa.contexts_head == ctx) g_maru_cocoa.contexts_head = ctx->next;
+    if (g_maru_cocoa.primary_context == ctx) g_maru_cocoa.primary_context = g_maru_cocoa.contexts_head;
+    
+    pthread_mutex_unlock(&g_maru_cocoa.mutex);
+
     _maru_cleanup_context_base(&ctx->base);
+    _maru_event_queue_cleanup(&ctx->route_queue, &ctx->base);
+    pthread_mutex_destroy(&ctx->route_mutex);
+    pthread_cond_destroy(&ctx->route_cond);
     maru_context_free(&ctx->base, ctx);
     return MARU_SUCCESS;
 }
@@ -221,6 +294,15 @@ MARU_Status maru_updateContext_Cocoa(MARU_Context *context, uint64_t field_mask,
     return MARU_SUCCESS;
 }
 
+static void _maru_cocoa_drain_route_queue(MARU_Context_Cocoa *ctx) {
+    MARU_EventId type;
+    MARU_Window *window;
+    MARU_Event evt;
+    while (_maru_event_queue_pop(&ctx->route_queue, &type, &window, &evt)) {
+        _maru_dispatch_event(&ctx->base, type, window, &evt);
+    }
+}
+
 MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
     
@@ -229,34 +311,68 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MA
 
     @autoreleasepool {
         _maru_drain_queued_events(&ctx->base);
+        _maru_cocoa_drain_route_queue(ctx);
 
-        NSDate *until = nil;
-        if (timeout_ms == 0) {
-            until = [NSDate distantPast];
-        } else if (timeout_ms == 0xFFFFFFFF) { // Assuming 0xFFFFFFFF for "Never" if not defined
-            until = [NSDate distantFuture];
-        } else {
-            until = [NSDate dateWithTimeIntervalSinceNow:timeout_ms / 1000.0];
-        }
+        // Only the main thread is allowed to pump NSApp.
+        // Worker threads just drain their internal queues.
+        if ([NSThread isMainThread]) {
+            NSDate *until = nil;
+            if (timeout_ms == 0) {
+                until = [NSDate distantPast];
+            } else if (timeout_ms == 0xFFFFFFFF) {
+                until = [NSDate distantFuture];
+            } else {
+                until = [NSDate dateWithTimeIntervalSinceNow:timeout_ms / 1000.0];
+            }
 
-        NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                                            untilDate:until
-                                               inMode:NSDefaultRunLoopMode
-                                              dequeue:YES];
-        if (event) {
-            _maru_cocoa_process_event(ctx, event);
-            [NSApp sendEvent:event];
-
-            // Drain remaining immediately available events
-            while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                                                 untilDate:[NSDate distantPast]
-                                                    inMode:NSDefaultRunLoopMode
-                                                   dequeue:YES])) {
+            NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                                untilDate:until
+                                                   inMode:NSDefaultRunLoopMode
+                                                  dequeue:YES];
+            if (event) {
                 _maru_cocoa_process_event(ctx, event);
                 [NSApp sendEvent:event];
+
+                while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                                     untilDate:[NSDate distantPast]
+                                                        inMode:NSDefaultRunLoopMode
+                                                       dequeue:YES])) {
+                    _maru_cocoa_process_event(ctx, event);
+                    [NSApp sendEvent:event];
+                }
             }
+        } else if (timeout_ms > 0) {
+            // Worker thread: wait for events to be routed if timeout > 0
+            struct timespec ts;
+            if (timeout_ms != 0xFFFFFFFF) {
+                struct timeval tv;
+                gettimeofday(&tv, NULL);
+                ts.tv_sec = tv.tv_sec + (timeout_ms / 1000);
+                ts.tv_nsec = ((long)tv.tv_usec + (long)(timeout_ms % 1000) * 1000L) * 1000L;
+                if (ts.tv_nsec >= 1000000000) {
+                    ts.tv_sec++;
+                    ts.tv_nsec -= 1000000000;
+                }
+            }
+
+            pthread_mutex_lock(&ctx->route_mutex);
+            // Only wait if the queue is empty
+            MARU_EventId t; MARU_Window *w; MARU_Event e;
+            if (!_maru_event_queue_pop(&ctx->route_queue, &t, &w, &e)) {
+                if (timeout_ms == 0xFFFFFFFF) {
+                    pthread_cond_wait(&ctx->route_cond, &ctx->route_mutex);
+                } else {
+                    pthread_cond_timedwait(&ctx->route_cond, &ctx->route_mutex, &ts);
+                }
+            } else {
+                // We popped an event while trying to wait, put it back or dispatch it.
+                // Simplest is to just dispatch it here and continue draining below.
+                _maru_dispatch_event(&ctx->base, t, w, &e);
+            }
+            pthread_mutex_unlock(&ctx->route_mutex);
         }
 
+        _maru_cocoa_drain_route_queue(ctx);
         _maru_drain_queued_events(&ctx->base);
     }
 

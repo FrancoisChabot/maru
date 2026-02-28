@@ -6,8 +6,8 @@ A vulkan-centric Platform Abstraction Layer that gets out of your way.
 
 What's neat about Maru?
 
-- It has no dynamic global state whatsoever unless OS-mandated and is completely inert until invoked.
-- It goes out of its way to provide steady and predictable timing.
+- It has no dynamic global state whatsoever unless OS-mandated, and is completely inert until invoked.
+- It goes out of its way to provide fast and steady timing (< 0.1ms generally), even during unusual events like controller hot-plugs.
 - API use is aggressively validated by default, and all guardrails can be disabled for maximum performance.
 - It exposes clear and detailed metrics about its internal timing and resource usage.
 
