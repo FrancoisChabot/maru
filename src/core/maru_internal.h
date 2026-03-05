@@ -157,6 +157,19 @@ typedef struct MARU_Monitor_Base {
   bool is_active; // If false, the monitor was disconnected but is still retained.
 } MARU_Monitor_Base;
 
+typedef struct MARU_Controller_Base {
+  MARU_ControllerExposed pub;
+#ifdef MARU_INDIRECT_BACKEND
+  const struct MARU_Backend *backend;
+#endif
+
+  MARU_Context_Base *ctx_base;
+  MARU_ControllerMetrics metrics;
+  
+  _Atomic uint32_t ref_count;
+  bool is_active;
+} MARU_Controller_Base;
+
 #ifdef MARU_ENABLE_DIAGNOSTICS
 void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const char *msg);
 #define MARU_REPORT_DIAGNOSTIC(ctx, diag, msg) _maru_reportDiagnostic(ctx, diag, msg)
@@ -182,6 +195,7 @@ MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId 
                                       MARU_Window *window, const MARU_Event *evt);
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor);
+void _maru_controller_free(MARU_Controller_Base *controller);
 
 #ifdef __cplusplus
 }

@@ -10,7 +10,10 @@
 @property (nonatomic, assign) MARU_Window_Cocoa *window;
 @end
 
-@interface MARU_ContentView : NSView
+@interface MARU_ContentView : NSView {
+    NSTrackingArea *trackingArea;
+}
+@property (nonatomic, assign) MARU_Window_Cocoa *maruWindow;
 @end
 
 @implementation MARU_ContentView
@@ -18,6 +21,25 @@
 + (Class)layerClass { return [CAMetalLayer class]; }
 - (CALayer *)makeBackingLayer { return [CAMetalLayer layer]; }
 - (BOOL)acceptsFirstResponder { return YES; }
+
+- (void)updateTrackingAreas {
+    if (trackingArea) {
+        [self removeTrackingArea:trackingArea];
+        [trackingArea release];
+    }
+    NSTrackingAreaOptions options = (NSTrackingActiveInKeyWindow | NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingInVisibleRect);
+    trackingArea = [[NSTrackingArea alloc] initWithRect:[self bounds] options:options owner:self userInfo:nil];
+    [self addTrackingArea:trackingArea];
+    [super updateTrackingAreas];
+}
+
+- (void)dealloc {
+    if (trackingArea) {
+        [self removeTrackingArea:trackingArea];
+        [trackingArea release];
+    }
+    [super dealloc];
+}
 
 // We let the context handle the events by overriding these and doing nothing, 
 // which prevents the "bleep" sound from the OS.
@@ -31,6 +53,29 @@
 - (void)otherMouseDown:(NSEvent *)event { (void)event; }
 - (void)otherMouseUp:(NSEvent *)event { (void)event; }
 - (void)scrollWheel:(NSEvent *)event { (void)event; }
+- (void)mouseEntered:(NSEvent *)event { (void)event; }
+- (void)mouseExited:(NSEvent *)event { (void)event; }
+
+- (void)resetCursorRects {
+    [super resetCursorRects];
+    if (self.maruWindow) {
+        MARU_CursorMode mode = self.maruWindow->base.pub.cursor_mode;
+        if (mode == MARU_CURSOR_HIDDEN || mode == MARU_CURSOR_LOCKED) {
+            NSImage *transparentImage = [[NSImage alloc] initWithSize:NSMakeSize(1, 1)];
+            NSCursor *invisibleCursor = [[NSCursor alloc] initWithImage:transparentImage hotSpot:NSMakePoint(0, 0)];
+            [self addCursorRect:[self bounds] cursor:invisibleCursor];
+            [transparentImage release];
+            [invisibleCursor release];
+        } else {
+            MARU_Cursor_Cocoa *cur = (MARU_Cursor_Cocoa *)self.maruWindow->base.pub.current_cursor;
+            if (cur && cur->ns_cursor) {
+                [self addCursorRect:[self bounds] cursor:cur->ns_cursor];
+            } else {
+                [self addCursorRect:[self bounds] cursor:[NSCursor arrowCursor]];
+            }
+        }
+    }
+}
 @end
 
 static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame) {
@@ -69,10 +114,18 @@ static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame
 
 - (void)windowDidBecomeKey:(NSNotification *)notification {
     self.window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
+    MARU_Event event = {0};
+    event.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
+    event.presentation.focused = true;
+    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)self.window, &event);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification {
     self.window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
+    MARU_Event event = {0};
+    event.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
+    event.presentation.focused = false;
+    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)self.window, &event);
 }
 
 @end
@@ -140,6 +193,15 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
       }
     }
 
+    if (create_info->attributes.icon) {
+        MARU_Image_Cocoa *img_cocoa = (MARU_Image_Cocoa *)create_info->attributes.icon;
+        if (img_cocoa->ns_image) {
+            [NSApp setApplicationIconImage:img_cocoa->ns_image];
+            win->base.attrs_requested.icon = create_info->attributes.icon;
+            win->base.attrs_effective.icon = create_info->attributes.icon;
+        }
+    }
+
 #ifdef MARU_INDIRECT_BACKEND
     win->base.backend = &maru_backend_Cocoa;
 #endif
@@ -155,6 +217,9 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
                                                          defer:NO];
     [nsWindow setTitle:[NSString stringWithUTF8String:create_info->attributes.title]];
     [nsWindow setReleasedWhenClosed:NO];
+    if (win->base.attrs_effective.mouse_passthrough) {
+        [nsWindow setIgnoresMouseEvents:YES];
+    }
 
     MARU_WindowDelegate *delegate = [[MARU_WindowDelegate alloc] init];
     delegate.window = win;
@@ -162,6 +227,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
 
     MARU_ContentView *view = [[MARU_ContentView alloc] initWithFrame:contentRect];
     [view setWantsLayer:YES];
+    view.maruWindow = win;
     
     win->ns_window = nsWindow;
     win->ns_view = view;
@@ -320,12 +386,39 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         requested->cursor = attributes->cursor;
         effective->cursor = attributes->cursor;
         win->base.pub.current_cursor = effective->cursor;
+        [nsWindow invalidateCursorRectsForView:win->ns_view];
     }
 
     if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
         requested->cursor_mode = attributes->cursor_mode;
         effective->cursor_mode = attributes->cursor_mode;
         win->base.pub.cursor_mode = effective->cursor_mode;
+        [nsWindow invalidateCursorRectsForView:win->ns_view];
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
+        requested->mouse_passthrough = attributes->mouse_passthrough;
+        effective->mouse_passthrough = attributes->mouse_passthrough;
+        if (effective->mouse_passthrough) {
+            win->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
+            [nsWindow setIgnoresMouseEvents:YES];
+        } else {
+            win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
+            [nsWindow setIgnoresMouseEvents:NO];
+        }
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_ICON) {
+        requested->icon = attributes->icon;
+        effective->icon = attributes->icon;
+        if (effective->icon) {
+            MARU_Image_Cocoa *img_cocoa = (MARU_Image_Cocoa *)effective->icon;
+            if (img_cocoa->ns_image) {
+                [NSApp setApplicationIconImage:img_cocoa->ns_image];
+            }
+        } else {
+            [NSApp setApplicationIconImage:nil];
+        }
     }
 
     win->base.attrs_dirty_mask &= ~field_mask;

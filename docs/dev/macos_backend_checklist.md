@@ -20,9 +20,9 @@ This checklist tracks the implementation status of the Maru macOS (Cocoa) backen
 - [x] Min/Max/Fullscreen States (`MARU_WINDOW_ATTR_MINIMIZED`, `MARU_WINDOW_ATTR_MAXIMIZED`, `MARU_WINDOW_ATTR_FULLSCREEN`)
 - [x] Focus Requests (`maru_requestWindowFocus_Cocoa`)
 - [x] Attention Requests (`maru_requestWindowAttention_Cocoa`)
-- [ ] **TODO:** Mouse Passthrough Implementation (`MARU_WINDOW_STATE_MOUSE_PASSTHROUGH`)
+- [x] Mouse Passthrough Implementation (`MARU_WINDOW_STATE_MOUSE_PASSTHROUGH`)
 - [ ] **TODO:** Implement Frame Request (`maru_requestWindowFrame_Cocoa`)
-- [ ] **TODO:** Window Icon Support
+- [x] Window Icon Support
 
 ## 3. Input & Events
 - [x] Keyboard Events (`MARU_EVENT_KEY_STATE_CHANGED`)
@@ -34,8 +34,8 @@ This checklist tracks the implementation status of the Maru macOS (Cocoa) backen
 - [x] Window Resized Events (`MARU_EVENT_WINDOW_RESIZED`)
 - [x] Close Request Events (`MARU_EVENT_CLOSE_REQUESTED`)
 - [x] Window Ready Events (`MARU_EVENT_WINDOW_READY`)
-- [ ] **TODO:** Mouse Enter/Leave Events
-- [ ] **TODO:** Window Focus Events (Dispatched via Delegate)
+- [x] Mouse Enter/Leave Events (Not defined by MARU API)
+- [x] Window Focus Events (Dispatched via Delegate)
 - [ ] **TODO:** IME / Text Input Support
 
 ## 4. Vulkan Integration
@@ -43,15 +43,15 @@ This checklist tracks the implementation status of the Maru macOS (Cocoa) backen
 - [x] Surface Creation (`maru_createVkSurface_Cocoa` via `CAMetalLayer`)
 
 ## 5. Monitors (STUBBED)
-- [ ] **TODO:** Monitor Enumeration (`maru_getMonitors_Cocoa`)
-- [ ] **TODO:** Video Mode Enumeration (`maru_getMonitorModes_Cocoa`)
-- [ ] **TODO:** Setting Video Modes (`maru_setMonitorMode_Cocoa`)
+- [x] Monitor Enumeration (`maru_getMonitors_Cocoa`)
+- [x] Video Mode Enumeration (`maru_getMonitorModes_Cocoa`)
+- [x] Setting Video Modes (`maru_setMonitorMode_Cocoa`) (Deprecated on macOS, returns MARU_FAILURE)
 - [ ] **TODO:** Monitor Change Notifications
 
-## 6. Cursors & Images (STUBBED)
-- [ ] **TODO:** Standard Cursor Shapes (`maru_getStandardCursor_Cocoa`)
-- [ ] **TODO:** Custom Cursor Creation (`maru_createCursor_Cocoa`)
-- [ ] **TODO:** Image Resource Management (`maru_createImage_Cocoa`)
+## 6. Cursors & Images
+- [x] Standard Cursor Shapes (`maru_getStandardCursor_Cocoa`)
+- [x] Custom Cursor Creation (`maru_createCursor_Cocoa`)
+- [x] Image Resource Management (`maru_createImage_Cocoa`)
 
 ## 7. Controllers / Gamepads (STUBBED)
 - [ ] **TODO:** Controller Enumeration (GCController integration)

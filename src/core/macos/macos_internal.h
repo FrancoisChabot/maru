@@ -20,24 +20,17 @@ typedef struct MARU_Context_Cocoa {
   id ns_app;
   uint64_t last_modifiers;
   
-  struct MARU_Context_Cocoa *next;
-  struct MARU_Context_Cocoa *prev;
-
-  MARU_EventQueue route_queue;
-  pthread_mutex_t route_mutex; // For signaling
-  pthread_cond_t route_cond;
+  MARU_Controller_Base **controller_cache;
+  uint32_t controller_cache_count;
+  uint32_t controller_cache_capacity;
+  _Atomic bool controllers_dirty;
 } MARU_Context_Cocoa;
-
-// Default capacity for the macOS routing queue. 
-// This is separate from the user-tuned user_event_queue_size.
-#define MARU_COCOA_ROUTE_QUEUE_CAPACITY 1024
 
 // Global state for macOS event routing
 typedef struct MARU_Cocoa_Global {
-    MARU_Context_Cocoa *contexts_head;
     MARU_Context_Cocoa *primary_context;
-    pthread_mutex_t mutex;
     bool initialized;
+    id controller_observer;
 } MARU_Cocoa_Global;
 
 extern MARU_Cocoa_Global g_maru_cocoa;
@@ -50,6 +43,17 @@ typedef struct MARU_Window_Cocoa {
   id ns_layer;
   MARU_Vec2Dip size;
 } MARU_Window_Cocoa;
+
+typedef struct MARU_Image_Cocoa {
+    MARU_Image_Base base;
+    id ns_image;
+} MARU_Image_Cocoa;
+
+typedef struct MARU_Cursor_Cocoa {
+    MARU_Cursor_Base base;
+    id ns_cursor;
+    id ns_image;
+} MARU_Cursor_Cocoa;
 
 MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
                                       MARU_Context **out_context);
@@ -89,6 +93,7 @@ MARU_Status maru_createImage_Cocoa(MARU_Context *context,
 MARU_Status maru_destroyImage_Cocoa(MARU_Image *image);
 
 MARU_Status maru_getControllers_Cocoa(MARU_Context *context, MARU_ControllerList *out_list);
+void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base);
 MARU_Status maru_retainController_Cocoa(MARU_Controller *controller);
 MARU_Status maru_releaseController_Cocoa(MARU_Controller *controller);
 MARU_Status maru_resetControllerMetrics_Cocoa(MARU_Controller *controller);
