@@ -243,6 +243,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
     ctx->ns_app = NSApp;
     ctx->last_modifiers = [NSEvent modifierFlags];
+    ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
     
     *out_context = (MARU_Context *)ctx;
     return MARU_SUCCESS;
@@ -250,6 +251,12 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
 MARU_Status maru_destroyContext_Cocoa(MARU_Context *context) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
+
+    while (ctx->base.window_list_head) {
+        MARU_Window *window = (MARU_Window *)ctx->base.window_list_head;
+        maru_destroyWindow_Cocoa(window);
+    }
+
     _maru_cocoa_cleanup_controller_observer(ctx);
     
     for (uint32_t i = 0; i < ctx->controller_cache_count; ++i) {
