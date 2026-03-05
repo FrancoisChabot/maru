@@ -14,6 +14,48 @@ static HMODULE _maru_win32_get_user32(void) {
   return GetModuleHandleA("user32.dll");
 }
 
+static uint64_t _maru_win32_get_monotonic_time_ns(void) {
+  LARGE_INTEGER frequency;
+  LARGE_INTEGER counter;
+  if (!QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0) {
+    return 0u;
+  }
+  if (!QueryPerformanceCounter(&counter) || counter.QuadPart < 0) {
+    return 0u;
+  }
+
+  const uint64_t freq = (uint64_t)frequency.QuadPart;
+  const uint64_t ticks = (uint64_t)counter.QuadPart;
+  const uint64_t secs = ticks / freq;
+  const uint64_t rem_ticks = ticks % freq;
+  return (secs * 1000000000ull) + ((rem_ticks * 1000000000ull) / freq);
+}
+
+static void _maru_win32_record_pump_duration_ns(MARU_Context_Windows *ctx,
+                                                uint64_t duration_ns) {
+  MARU_ContextMetrics *metrics = &ctx->base.metrics;
+  metrics->pump_call_count_total++;
+  if (metrics->pump_call_count_total == 1) {
+    metrics->pump_duration_avg_ns = duration_ns;
+    metrics->pump_duration_peak_ns = duration_ns;
+    return;
+  }
+
+  if (duration_ns > metrics->pump_duration_peak_ns) {
+    metrics->pump_duration_peak_ns = duration_ns;
+  }
+
+  if (duration_ns >= metrics->pump_duration_avg_ns) {
+    metrics->pump_duration_avg_ns +=
+        (duration_ns - metrics->pump_duration_avg_ns) /
+        metrics->pump_call_count_total;
+  } else {
+    metrics->pump_duration_avg_ns -=
+        (metrics->pump_duration_avg_ns - duration_ns) /
+        metrics->pump_call_count_total;
+  }
+}
+
 static bool _maru_windows_init_context_mouse_channels(MARU_Context_Windows *ctx) {
   static const struct {
     const char *name;
@@ -141,6 +183,7 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
 
 MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+  const uint64_t pump_start_ns = _maru_win32_get_monotonic_time_ns();
   
   MARU_PumpContext pump_ctx = {
     .callback = callback,
@@ -174,6 +217,10 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms, 
   _maru_drain_queued_events(&ctx->base);
 
   ctx->base.pump_ctx = NULL;
+  const uint64_t pump_end_ns = _maru_win32_get_monotonic_time_ns();
+  if (pump_start_ns != 0u && pump_end_ns != 0u && pump_end_ns >= pump_start_ns) {
+    _maru_win32_record_pump_duration_ns(ctx, pump_end_ns - pump_start_ns);
+  }
   return MARU_SUCCESS;
 }
 

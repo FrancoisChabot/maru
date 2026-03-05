@@ -59,6 +59,39 @@ static uint64_t _maru_cocoa_now_ms(void) {
     return (uint64_t)(uptime * 1000.0);
 }
 
+static uint64_t _maru_cocoa_now_ns(void) {
+    const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
+    if (uptime <= 0.0) {
+        return 0u;
+    }
+    return (uint64_t)(uptime * 1000000000.0);
+}
+
+static void _maru_cocoa_record_pump_duration_ns(MARU_Context_Cocoa *ctx,
+                                                 uint64_t duration_ns) {
+    MARU_ContextMetrics *metrics = &ctx->base.metrics;
+    metrics->pump_call_count_total++;
+    if (metrics->pump_call_count_total == 1) {
+        metrics->pump_duration_avg_ns = duration_ns;
+        metrics->pump_duration_peak_ns = duration_ns;
+        return;
+    }
+
+    if (duration_ns > metrics->pump_duration_peak_ns) {
+        metrics->pump_duration_peak_ns = duration_ns;
+    }
+
+    if (duration_ns >= metrics->pump_duration_avg_ns) {
+        metrics->pump_duration_avg_ns +=
+            (duration_ns - metrics->pump_duration_avg_ns) /
+            metrics->pump_call_count_total;
+    } else {
+        metrics->pump_duration_avg_ns -=
+            (metrics->pump_duration_avg_ns - duration_ns) /
+            metrics->pump_call_count_total;
+    }
+}
+
 static const void *g_maru_cocoa_window_assoc_key = &g_maru_cocoa_window_assoc_key;
 
 void _maru_cocoa_associate_window(id ns_window, MARU_Window_Cocoa *window) {
@@ -277,6 +310,7 @@ MARU_Status maru_updateContext_Cocoa(MARU_Context *context, uint64_t field_mask,
 
 MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
+    const uint64_t pump_start_ns = _maru_cocoa_now_ns();
     
     MARU_PumpContext pump_ctx = {callback, userdata};
     ctx->base.pump_ctx = &pump_ctx;
@@ -331,6 +365,10 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MA
     }
 
     ctx->base.pump_ctx = NULL;
+    const uint64_t pump_end_ns = _maru_cocoa_now_ns();
+    if (pump_start_ns != 0u && pump_end_ns != 0u && pump_end_ns >= pump_start_ns) {
+        _maru_cocoa_record_pump_duration_ns(ctx, pump_end_ns - pump_start_ns);
+    }
     return MARU_SUCCESS;
 }
 

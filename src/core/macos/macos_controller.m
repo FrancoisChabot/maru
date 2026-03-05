@@ -72,11 +72,12 @@ static void _maru_cocoa_dispatch_button_event(MARU_Controller_Cocoa *c, uint32_t
 static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *ctx, GCController *gc) {
     MARU_Controller_Cocoa *c = maru_context_alloc(&ctx->base, sizeof(MARU_Controller_Cocoa));
     if (!c) return NULL;
-    
+    memset(c, 0, sizeof(MARU_Controller_Cocoa));
+
     c->base.ctx_base = &ctx->base;
     c->base.pub.context = (MARU_Context *)ctx;
     c->base.is_active = true;
-    c->base.ref_count = 1;
+    atomic_init(&c->base.ref_count, 1u);
     c->gc_controller = gc;
     
     c->base.pub.analog_count = MARU_CONTROLLER_ANALOG_STANDARD_COUNT;
@@ -86,6 +87,12 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     c->analog_states = maru_context_alloc(&ctx->base, sizeof(MARU_AnalogInputState) * c->base.pub.analog_count);
     c->button_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_ButtonChannelInfo) * c->base.pub.button_count);
     c->button_states = maru_context_alloc(&ctx->base, sizeof(MARU_ButtonState8) * c->base.pub.button_count);
+    if (!c->analog_channel_infos || !c->analog_states || !c->button_channel_infos || !c->button_states) {
+        _maru_controller_free(&c->base);
+        return NULL;
+    }
+    memset(c->analog_states, 0, sizeof(MARU_AnalogInputState) * c->base.pub.analog_count);
+    memset(c->button_states, 0, sizeof(MARU_ButtonState8) * c->base.pub.button_count);
     
     c->base.pub.analog_channels = c->analog_channel_infos;
     c->base.pub.analogs = c->analog_states;
@@ -220,8 +227,18 @@ void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base) {
             
             if (ctx->controller_cache_count == ctx->controller_cache_capacity) {
                 uint32_t old_cap = ctx->controller_cache_capacity;
-                ctx->controller_cache_capacity = old_cap == 0 ? 4 : old_cap * 2;
-                ctx->controller_cache = maru_context_realloc(&ctx->base, ctx->controller_cache, sizeof(MARU_Controller_Base *) * old_cap, sizeof(MARU_Controller_Base *) * ctx->controller_cache_capacity);
+                uint32_t new_cap = old_cap == 0 ? 4 : old_cap * 2;
+                MARU_Controller_Base **new_cache =
+                    maru_context_realloc(&ctx->base,
+                                         ctx->controller_cache,
+                                         sizeof(MARU_Controller_Base *) * old_cap,
+                                         sizeof(MARU_Controller_Base *) * new_cap);
+                if (!new_cache) {
+                    _maru_controller_free(&c->base);
+                    continue;
+                }
+                ctx->controller_cache = new_cache;
+                ctx->controller_cache_capacity = new_cap;
             }
             ctx->controller_cache[ctx->controller_cache_count++] = &c->base;
             
@@ -257,14 +274,24 @@ MARU_Status maru_getControllers_Cocoa(MARU_Context *context,
 
 MARU_Status maru_retainController_Cocoa(MARU_Controller *controller) {
     MARU_Controller_Base *c = (MARU_Controller_Base *)controller;
-    c->ref_count++;
+    atomic_fetch_add_explicit(&c->ref_count, 1u, memory_order_relaxed);
     return MARU_SUCCESS;
 }
 
 MARU_Status maru_releaseController_Cocoa(MARU_Controller *controller) {
     MARU_Controller_Base *c = (MARU_Controller_Base *)controller;
-    if (--c->ref_count == 0) {
-        _maru_controller_free(c);
+    uint32_t current = atomic_load_explicit(&c->ref_count, memory_order_acquire);
+    while (current > 0u) {
+        if (atomic_compare_exchange_weak_explicit(&c->ref_count,
+                                                  &current,
+                                                  current - 1u,
+                                                  memory_order_acq_rel,
+                                                  memory_order_acquire)) {
+            if (current == 1u) {
+                _maru_controller_free(c);
+            }
+            return MARU_SUCCESS;
+        }
     }
     return MARU_SUCCESS;
 }
