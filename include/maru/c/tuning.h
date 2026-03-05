@@ -27,6 +27,16 @@ typedef enum MARU_WaylandDecorationMode {
   MARU_WAYLAND_DECORATION_MODE_NONE = 3,
 } MARU_WaylandDecorationMode;
 
+/** @brief Policy used to resolve standard cursor shapes across backends. */
+typedef enum MARU_CursorPolicy {
+  /** Use native system cursors and fall back to Maru-provided shapes when unsupported. */
+  MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK = 0,
+  /** Use native system cursor APIs only; unsupported shapes fall back to default arrow. */
+  MARU_CURSOR_POLICY_SYSTEM_ONLY = 1,
+  /** Always use Maru-provided shapes, ignoring native system cursor APIs. */
+  MARU_CURSOR_POLICY_MARU_ONLY = 2,
+} MARU_CursorPolicy;
+
 /** @brief Generic function pointer for Vulkan return types. */
 typedef void (*MARU_VulkanVoidFunction)(void);
 
@@ -48,6 +58,8 @@ typedef struct MARU_ContextTuning {
   
   uint32_t idle_timeout_ms;
 
+  MARU_CursorPolicy cursor_policy;
+
   struct {
     MARU_WaylandDecorationMode decoration_mode;
   } wayland;
@@ -63,6 +75,7 @@ typedef struct MARU_ContextTuning {
   {                                                            \
     .user_event_queue_size = 256, \
     .idle_timeout_ms = 0, \
+    .cursor_policy = MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK, \
     .wayland = { \
       .decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO \
     }, \

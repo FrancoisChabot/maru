@@ -45,9 +45,16 @@ typedef struct MARU_PumpContext {
 } MARU_PumpContext;
 
 typedef struct MARU_Window_Base MARU_Window_Base;
+typedef struct MARU_Cursor_Base MARU_Cursor_Base;
 typedef struct MARU_DataRequestHandleBase {
   struct MARU_Context_Base *ctx_base;
 } MARU_DataRequestHandleBase;
+
+typedef struct MARU_CursorAnimationCallbacks {
+  void (*select_frame)(MARU_Cursor_Base *cursor, uint32_t frame_index);
+  bool (*reapply)(MARU_Cursor_Base *cursor);
+  void (*on_reapplied)(MARU_Cursor_Base *cursor);
+} MARU_CursorAnimationCallbacks;
 
 typedef struct MARU_Context_Base {
   MARU_ContextExposed pub;
@@ -78,6 +85,7 @@ typedef struct MARU_Context_Base {
   uint32_t monitor_cache_capacity;
 
   MARU_Window_Base *window_list_head;
+  MARU_Cursor_Base *animated_cursor_head;
   uint32_t window_count;
 
   MARU_EventQueue queued_events;
@@ -116,7 +124,7 @@ typedef struct MARU_Window_Base {
   bool pending_ready_event;
 } MARU_Window_Base;
 
-typedef struct MARU_Cursor_Base {
+struct MARU_Cursor_Base {
   MARU_CursorExposed pub;
 #ifdef MARU_INDIRECT_BACKEND
   const struct MARU_Backend *backend;
@@ -124,7 +132,15 @@ typedef struct MARU_Cursor_Base {
 
   MARU_Context_Base *ctx_base;
   MARU_CursorMetrics metrics;
-} MARU_Cursor_Base;
+  const uint32_t *anim_frame_delays_ms;
+  const MARU_CursorAnimationCallbacks *anim_callbacks;
+  MARU_Cursor_Base *anim_prev;
+  MARU_Cursor_Base *anim_next;
+  uint32_t anim_frame_count;
+  uint32_t anim_current_frame;
+  uint64_t anim_next_frame_deadline_ms;
+  bool anim_enabled;
+};
 
 typedef struct MARU_Image_Base {
   MARU_ImageExposed pub;
@@ -184,6 +200,16 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window);
 void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window);
+uint32_t _maru_cursor_frame_delay_ms(uint32_t delay_ms);
+bool _maru_register_animated_cursor(MARU_Cursor_Base *cursor, uint32_t frame_count,
+                                    const uint32_t *frame_delays_ms,
+                                    const MARU_CursorAnimationCallbacks *callbacks,
+                                    uint64_t now_ms);
+void _maru_unregister_animated_cursor(MARU_Cursor_Base *cursor);
+bool _maru_advance_animated_cursors(MARU_Context_Base *ctx_base, uint64_t now_ms);
+uint32_t _maru_adjust_timeout_for_cursor_animation(const MARU_Context_Base *ctx_base,
+                                                   uint32_t timeout_ms,
+                                                   uint64_t now_ms);
 
 /** @brief Posts an event to the internal thread-safe queue. 
  *

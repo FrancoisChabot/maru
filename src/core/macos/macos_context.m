@@ -51,6 +51,14 @@ static MARU_ModifierFlags _maru_cocoa_translate_modifiers(NSEventModifierFlags f
     return mods;
 }
 
+static uint64_t _maru_cocoa_now_ms(void) {
+    const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
+    if (uptime <= 0.0) {
+        return 0u;
+    }
+    return (uint64_t)(uptime * 1000.0);
+}
+
 MARU_Cocoa_Global g_maru_cocoa = {NULL, false, nil};
 
 static MARU_Window_Cocoa *_maru_cocoa_resolve_window(NSWindow *nsWindow) {
@@ -200,6 +208,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
         ctx->base.allocator.userdata = NULL;
     }
 
+    ctx->base.tuning = create_info->tuning;
     _maru_init_context_base(&ctx->base);
     ctx->base.pub.backend_type = MARU_BACKEND_COCOA;
 #ifdef MARU_INDIRECT_BACKEND
@@ -261,10 +270,17 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MA
         _maru_drain_queued_events(&ctx->base);
 
         if ([NSThread isMainThread]) {
+            const uint64_t pre_wait_ms = _maru_cocoa_now_ms();
+            if (pre_wait_ms != 0u) {
+                _maru_advance_animated_cursors(&ctx->base, pre_wait_ms);
+                timeout_ms =
+                    _maru_adjust_timeout_for_cursor_animation(&ctx->base, timeout_ms, pre_wait_ms);
+            }
+
             NSDate *until = nil;
             if (timeout_ms == 0) {
                 until = [NSDate distantPast];
-            } else if (timeout_ms == 0xFFFFFFFF) {
+            } else if (timeout_ms == MARU_NEVER) {
                 until = [NSDate distantFuture];
             } else {
                 until = [NSDate dateWithTimeIntervalSinceNow:timeout_ms / 1000.0];
@@ -285,6 +301,11 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MA
                     _maru_cocoa_process_event(event);
                     [NSApp sendEvent:event];
                 }
+            }
+
+            const uint64_t post_wait_ms = _maru_cocoa_now_ms();
+            if (post_wait_ms != 0u) {
+                _maru_advance_animated_cursors(&ctx->base, post_wait_ms);
             }
         }
         _maru_drain_queued_events(&ctx->base);

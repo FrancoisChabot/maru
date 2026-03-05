@@ -222,67 +222,32 @@ static bool _maru_x11_reapply_cursor_to_windows(MARU_Context_X11 *ctx,
   return applied;
 }
 
-static void _maru_x11_link_animated_cursor(MARU_Context_X11 *ctx,
-                                           MARU_Cursor_X11 *cursor) {
-  cursor->anim_prev = NULL;
-  cursor->anim_next = ctx->animated_cursors_head;
-  if (ctx->animated_cursors_head) {
-    ctx->animated_cursors_head->anim_prev = cursor;
+static void _maru_x11_select_animated_cursor_frame(MARU_Cursor_Base *cursor_base,
+                                                    uint32_t frame_index) {
+  MARU_Cursor_X11 *cursor = (MARU_Cursor_X11 *)cursor_base;
+  if (!cursor->frame_handles || frame_index >= cursor->anim_frame_count) {
+    return;
   }
-  ctx->animated_cursors_head = cursor;
+  cursor->handle = cursor->frame_handles[frame_index];
 }
 
-static void _maru_x11_unlink_animated_cursor(MARU_Context_X11 *ctx,
-                                             MARU_Cursor_X11 *cursor) {
-  if (cursor->anim_prev) {
-    cursor->anim_prev->anim_next = cursor->anim_next;
-  } else if (ctx->animated_cursors_head == cursor) {
-    ctx->animated_cursors_head = cursor->anim_next;
-  }
-  if (cursor->anim_next) {
-    cursor->anim_next->anim_prev = cursor->anim_prev;
-  }
-  cursor->anim_prev = NULL;
-  cursor->anim_next = NULL;
+static bool _maru_x11_reapply_animated_cursor(MARU_Cursor_Base *cursor_base) {
+  MARU_Cursor_X11 *cursor = (MARU_Cursor_X11 *)cursor_base;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)cursor->base.ctx_base;
+  return _maru_x11_reapply_cursor_to_windows(ctx, cursor);
 }
 
-bool _maru_x11_advance_animated_cursors(MARU_Context_X11 *ctx,
-                                               uint64_t now_ms) {
-  bool any_applied = false;
-  const uint32_t max_advance_per_pump = 16u;
-  for (MARU_Cursor_X11 *cur = ctx->animated_cursors_head; cur; cur = cur->anim_next) {
-    if (!cur->is_animated || cur->frame_count <= 1 || !cur->frame_handles ||
-        !cur->frame_delays_ms) {
-      continue;
-    }
-    if (cur->next_frame_deadline_ms == 0) {
-      cur->next_frame_deadline_ms = now_ms + (uint64_t)cur->frame_delays_ms[cur->current_frame];
-    }
-    if (now_ms < cur->next_frame_deadline_ms) {
-      continue;
-    }
-
-    uint32_t advanced = 0;
-    while (now_ms >= cur->next_frame_deadline_ms && advanced < max_advance_per_pump) {
-      cur->current_frame = (cur->current_frame + 1u) % cur->frame_count;
-      cur->handle = cur->frame_handles[cur->current_frame];
-      cur->next_frame_deadline_ms +=
-          (uint64_t)cur->frame_delays_ms[cur->current_frame];
-      advanced++;
-    }
-    if (advanced == max_advance_per_pump && now_ms >= cur->next_frame_deadline_ms) {
-      cur->next_frame_deadline_ms = now_ms + 1u;
-    }
-    if (advanced > 0 && _maru_x11_reapply_cursor_to_windows(ctx, cur)) {
-      any_applied = true;
-    }
-  }
-  return any_applied;
+static void _maru_x11_on_reapplied_animated_cursor(MARU_Cursor_Base *cursor_base) {
+  MARU_Cursor_X11 *cursor = (MARU_Cursor_X11 *)cursor_base;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)cursor->base.ctx_base;
+  ctx->x11_lib.XFlush(ctx->display);
 }
 
-static uint32_t _maru_x11_cursor_frame_delay_ms(uint32_t delay_ms) {
-  return (delay_ms == 0) ? 1u : delay_ms;
-}
+static const MARU_CursorAnimationCallbacks g_maru_x11_cursor_animation_callbacks = {
+    .select_frame = _maru_x11_select_animated_cursor_frame,
+    .reapply = _maru_x11_reapply_animated_cursor,
+    .on_reapplied = _maru_x11_on_reapplied_animated_cursor,
+};
 
 static bool _maru_x11_create_custom_cursor_frame(MARU_Context_X11 *ctx,
                                                  const MARU_CursorFrame *frame,
@@ -395,7 +360,7 @@ MARU_Status maru_createCursor_X11(MARU_Context *context,
           maru_context_free(&ctx->base, anim_frame_handles);
           return MARU_FAILURE;
         }
-        anim_frame_delays_ms[i] = _maru_x11_cursor_frame_delay_ms(frame->delay_ms);
+        anim_frame_delays_ms[i] = _maru_cursor_frame_delay_ms(frame->delay_ms);
       }
       cursor_handle = anim_frame_handles[0];
     } else {
@@ -434,17 +399,23 @@ MARU_Status maru_createCursor_X11(MARU_Context *context,
   cursor->handle = cursor_handle;
   cursor->is_system = is_system;
   if (anim_frame_handles && anim_frame_delays_ms && anim_frame_count > 1) {
-    cursor->is_animated = true;
     cursor->frame_handles = anim_frame_handles;
-    cursor->frame_delays_ms = anim_frame_delays_ms;
-    cursor->frame_count = anim_frame_count;
-    cursor->current_frame = 0;
+    cursor->anim_frame_delays_ms = anim_frame_delays_ms;
+    cursor->anim_frame_count = anim_frame_count;
     const uint64_t now_ms = _maru_x11_get_monotonic_time_ms();
-    if (now_ms != 0) {
-      cursor->next_frame_deadline_ms =
-          now_ms + (uint64_t)cursor->frame_delays_ms[cursor->current_frame];
+    if (!_maru_register_animated_cursor(&cursor->base, anim_frame_count,
+                                        cursor->anim_frame_delays_ms,
+                                        &g_maru_x11_cursor_animation_callbacks, now_ms)) {
+      for (uint32_t i = 0; i < anim_frame_count; ++i) {
+        if (cursor->frame_handles[i]) {
+          ctx->x11_lib.XFreeCursor(ctx->display, cursor->frame_handles[i]);
+        }
+      }
+      maru_context_free(&ctx->base, cursor->anim_frame_delays_ms);
+      maru_context_free(&ctx->base, cursor->frame_handles);
+      maru_context_free(&ctx->base, cursor);
+      return MARU_FAILURE;
     }
-    _maru_x11_link_animated_cursor(ctx, cursor);
   }
 
   ctx->base.metrics.cursor_create_count_total++;
@@ -476,10 +447,10 @@ MARU_Status maru_destroyCursor_X11(MARU_Cursor *cursor) {
     }
   }
 
-  if (cur->is_animated) {
-    _maru_x11_unlink_animated_cursor(ctx, cur);
+  if (cur->anim_frame_count > 1 && cur->frame_handles) {
+    _maru_unregister_animated_cursor(&cur->base);
     if (cur->frame_handles) {
-      for (uint32_t i = 0; i < cur->frame_count; ++i) {
+      for (uint32_t i = 0; i < cur->anim_frame_count; ++i) {
         if (cur->frame_handles[i]) {
           ctx->x11_lib.XFreeCursor(ctx->display, cur->frame_handles[i]);
         }
@@ -487,13 +458,11 @@ MARU_Status maru_destroyCursor_X11(MARU_Cursor *cursor) {
       maru_context_free(&ctx->base, cur->frame_handles);
       cur->frame_handles = NULL;
     }
-    if (cur->frame_delays_ms) {
-      maru_context_free(&ctx->base, cur->frame_delays_ms);
-      cur->frame_delays_ms = NULL;
+    if (cur->anim_frame_delays_ms) {
+      maru_context_free(&ctx->base, cur->anim_frame_delays_ms);
+      cur->anim_frame_delays_ms = NULL;
     }
-    cur->frame_count = 0;
-    cur->current_frame = 0;
-    cur->next_frame_deadline_ms = 0;
+    cur->anim_frame_count = 0;
     cur->handle = 0;
   } else if (cur->handle) {
     ctx->x11_lib.XFreeCursor(ctx->display, cur->handle);

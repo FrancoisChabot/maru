@@ -53,6 +53,10 @@ typedef struct MARU_Cursor_Cocoa {
     MARU_Cursor_Base base;
     id ns_cursor;
     id ns_image;
+    id *ns_frame_cursors;
+    id *ns_frame_images;
+    uint32_t *anim_frame_delays_ms;
+    uint32_t anim_frame_count;
 } MARU_Cursor_Cocoa;
 
 MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,

@@ -89,6 +89,7 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
   ctx_base->pub.userdata = NULL;
   ctx_base->mouse_button_states = NULL;
   ctx_base->mouse_button_channels = NULL;
+  ctx_base->animated_cursor_head = NULL;
   ctx_base->pub.mouse_button_state = NULL;
   ctx_base->pub.mouse_button_channels = NULL;
   ctx_base->pub.mouse_button_count = 0;
@@ -207,6 +208,7 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
     maru_context_free(ctx_base, ctx_base->mouse_button_channels);
     ctx_base->mouse_button_channels = NULL;
   }
+  ctx_base->animated_cursor_head = NULL;
   _maru_event_queue_cleanup(&ctx_base->queued_events, ctx_base);
 }
 
@@ -237,6 +239,143 @@ void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
   if (ctx_base->window_count > 0) {
     ctx_base->window_count--;
   }
+}
+
+uint32_t _maru_cursor_frame_delay_ms(uint32_t delay_ms) {
+  return (delay_ms == 0u) ? 1u : delay_ms;
+}
+
+static void _maru_link_animated_cursor(MARU_Context_Base *ctx_base,
+                                       MARU_Cursor_Base *cursor) {
+  cursor->anim_prev = NULL;
+  cursor->anim_next = ctx_base->animated_cursor_head;
+  if (ctx_base->animated_cursor_head) {
+    ctx_base->animated_cursor_head->anim_prev = cursor;
+  }
+  ctx_base->animated_cursor_head = cursor;
+}
+
+bool _maru_register_animated_cursor(MARU_Cursor_Base *cursor, uint32_t frame_count,
+                                    const uint32_t *frame_delays_ms,
+                                    const MARU_CursorAnimationCallbacks *callbacks,
+                                    uint64_t now_ms) {
+  if (!cursor || !cursor->ctx_base || !frame_delays_ms || !callbacks ||
+      !callbacks->select_frame || !callbacks->reapply || frame_count <= 1u) {
+    return false;
+  }
+
+  cursor->anim_frame_count = frame_count;
+  cursor->anim_frame_delays_ms = frame_delays_ms;
+  cursor->anim_callbacks = callbacks;
+  cursor->anim_current_frame = 0u;
+  cursor->anim_next_frame_deadline_ms =
+      (now_ms == 0u) ? 0u : now_ms + (uint64_t)frame_delays_ms[0];
+  cursor->anim_enabled = true;
+  _maru_link_animated_cursor(cursor->ctx_base, cursor);
+  return true;
+}
+
+void _maru_unregister_animated_cursor(MARU_Cursor_Base *cursor) {
+  if (!cursor || !cursor->anim_enabled || !cursor->ctx_base) {
+    return;
+  }
+  MARU_Context_Base *ctx_base = cursor->ctx_base;
+  if (cursor->anim_prev) {
+    cursor->anim_prev->anim_next = cursor->anim_next;
+  } else if (ctx_base->animated_cursor_head == cursor) {
+    ctx_base->animated_cursor_head = cursor->anim_next;
+  }
+  if (cursor->anim_next) {
+    cursor->anim_next->anim_prev = cursor->anim_prev;
+  }
+  cursor->anim_prev = NULL;
+  cursor->anim_next = NULL;
+  cursor->anim_enabled = false;
+}
+
+bool _maru_advance_animated_cursors(MARU_Context_Base *ctx_base, uint64_t now_ms) {
+  if (!ctx_base || now_ms == 0u) {
+    return false;
+  }
+
+  bool any_reapplied = false;
+  const uint32_t max_advance_per_pump = 16u;
+  for (MARU_Cursor_Base *cursor = ctx_base->animated_cursor_head; cursor;
+       cursor = cursor->anim_next) {
+    if (!cursor->anim_enabled || !cursor->anim_callbacks ||
+        !cursor->anim_callbacks->select_frame || !cursor->anim_callbacks->reapply ||
+        !cursor->anim_frame_delays_ms || cursor->anim_frame_count <= 1u) {
+      continue;
+    }
+
+    if (cursor->anim_next_frame_deadline_ms == 0u) {
+      cursor->anim_next_frame_deadline_ms =
+          now_ms + (uint64_t)cursor->anim_frame_delays_ms[cursor->anim_current_frame];
+    }
+    if (now_ms < cursor->anim_next_frame_deadline_ms) {
+      continue;
+    }
+
+    uint32_t advanced = 0u;
+    while (now_ms >= cursor->anim_next_frame_deadline_ms &&
+           advanced < max_advance_per_pump) {
+      cursor->anim_current_frame =
+          (cursor->anim_current_frame + 1u) % cursor->anim_frame_count;
+      cursor->anim_callbacks->select_frame(cursor, cursor->anim_current_frame);
+      cursor->anim_next_frame_deadline_ms +=
+          (uint64_t)cursor->anim_frame_delays_ms[cursor->anim_current_frame];
+      advanced++;
+    }
+    if (advanced == max_advance_per_pump &&
+        now_ms >= cursor->anim_next_frame_deadline_ms) {
+      cursor->anim_next_frame_deadline_ms = now_ms + 1u;
+    }
+    if (advanced > 0u && cursor->anim_callbacks->reapply(cursor)) {
+      if (cursor->anim_callbacks->on_reapplied) {
+        cursor->anim_callbacks->on_reapplied(cursor);
+      }
+      any_reapplied = true;
+    }
+  }
+
+  return any_reapplied;
+}
+
+uint32_t _maru_adjust_timeout_for_cursor_animation(const MARU_Context_Base *ctx_base,
+                                                   uint32_t timeout_ms,
+                                                   uint64_t now_ms) {
+  if (!ctx_base || now_ms == 0u) {
+    return timeout_ms;
+  }
+
+  uint64_t next_deadline = 0u;
+  for (const MARU_Cursor_Base *cursor = ctx_base->animated_cursor_head; cursor;
+       cursor = cursor->anim_next) {
+    if (!cursor->anim_enabled || cursor->anim_frame_count <= 1u ||
+        cursor->anim_next_frame_deadline_ms == 0u) {
+      continue;
+    }
+    if (next_deadline == 0u || cursor->anim_next_frame_deadline_ms < next_deadline) {
+      next_deadline = cursor->anim_next_frame_deadline_ms;
+    }
+  }
+
+  if (next_deadline == 0u) {
+    return timeout_ms;
+  }
+  if (next_deadline <= now_ms) {
+    return 0u;
+  }
+
+  uint64_t wait_ms_u64 = next_deadline - now_ms;
+  if (wait_ms_u64 > (uint64_t)UINT32_MAX) {
+    wait_ms_u64 = (uint64_t)UINT32_MAX;
+  }
+  const uint32_t cursor_timeout_ms = (uint32_t)wait_ms_u64;
+  if (timeout_ms == MARU_NEVER || cursor_timeout_ms < timeout_ms) {
+    return cursor_timeout_ms;
+  }
+  return timeout_ms;
 }
 
 

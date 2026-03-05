@@ -550,49 +550,22 @@ void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx,
   }
 }
 
-static uint64_t _maru_x11_next_cursor_deadline_ms(const MARU_Context_X11 *ctx) {
-  uint64_t next_deadline = 0;
-  for (const MARU_Cursor_X11 *cur = ctx->animated_cursors_head; cur;
-       cur = cur->anim_next) {
-    if (!cur->is_animated || cur->frame_count <= 1 ||
-        cur->next_frame_deadline_ms == 0) {
-      continue;
-    }
-    if (next_deadline == 0 || cur->next_frame_deadline_ms < next_deadline) {
-      next_deadline = cur->next_frame_deadline_ms;
-    }
-  }
-  return next_deadline;
-}
-
 static int _maru_x11_compute_poll_timeout_ms(MARU_Context_X11 *ctx,
                                              uint32_t timeout_ms) {
-  int timeout = -1;
-  if (timeout_ms != MARU_NEVER) {
-    timeout = (timeout_ms > (uint32_t)INT_MAX) ? INT_MAX : (int)timeout_ms;
-  }
-  const uint64_t cursor_deadline_ms = _maru_x11_next_cursor_deadline_ms(ctx);
-  if (cursor_deadline_ms == 0) {
-    return timeout;
-  }
-
   const uint64_t now_ms = _maru_x11_get_monotonic_time_ms();
-  if (now_ms == 0) {
-    return timeout;
-  }
-  if (cursor_deadline_ms <= now_ms) {
-    return 0;
+  uint32_t effective_timeout = timeout_ms;
+  if (now_ms != 0u) {
+    effective_timeout =
+        _maru_adjust_timeout_for_cursor_animation(&ctx->base, timeout_ms, now_ms);
   }
 
-  uint64_t wait_ms_u64 = cursor_deadline_ms - now_ms;
-  if (wait_ms_u64 > (uint64_t)INT_MAX) {
-    wait_ms_u64 = (uint64_t)INT_MAX;
+  if (effective_timeout == MARU_NEVER) {
+    return -1;
   }
-  const int cursor_timeout_ms = (int)wait_ms_u64;
-  if (timeout < 0 || cursor_timeout_ms < timeout) {
-    timeout = cursor_timeout_ms;
+  if (effective_timeout > (uint32_t)INT_MAX) {
+    return INT_MAX;
   }
-  return timeout;
+  return (int)effective_timeout;
 }
 
 void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
@@ -704,8 +677,8 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
 
   {
     const uint64_t now_ms = _maru_x11_get_monotonic_time_ms();
-    if (now_ms != 0 && _maru_x11_advance_animated_cursors(ctx, now_ms)) {
-      ctx->x11_lib.XFlush(ctx->display);
+    if (now_ms != 0u) {
+      _maru_advance_animated_cursors(&ctx->base, now_ms);
     }
   }
 
@@ -757,8 +730,8 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
 
   {
     const uint64_t now_ms = _maru_x11_get_monotonic_time_ms();
-    if (now_ms != 0 && _maru_x11_advance_animated_cursors(ctx, now_ms)) {
-      ctx->x11_lib.XFlush(ctx->display);
+    if (now_ms != 0u) {
+      _maru_advance_animated_cursors(&ctx->base, now_ms);
     }
   }
 

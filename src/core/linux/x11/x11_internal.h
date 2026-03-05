@@ -114,7 +114,6 @@ typedef struct MARU_Context_X11 {
   int screen;
   Window root;
   XIM xim;
-  MARU_Cursor_X11 *animated_cursors_head;
   Cursor hidden_cursor;
   MARU_Window_X11 *locked_window;
   bool xi2_raw_motion_enabled;
@@ -231,14 +230,9 @@ struct MARU_Cursor_X11 {
   MARU_Cursor_Base base;
   Cursor handle;
   bool is_system;
-  bool is_animated;
   Cursor *frame_handles;
-  uint32_t *frame_delays_ms;
-  uint32_t frame_count;
-  uint32_t current_frame;
-  uint64_t next_frame_deadline_ms;
-  MARU_Cursor_X11 *anim_prev;
-  MARU_Cursor_X11 *anim_next;
+  uint32_t *anim_frame_delays_ms;
+  uint32_t anim_frame_count;
 };
 
 struct MARU_Monitor_X11 {
@@ -256,7 +250,6 @@ struct MARU_Monitor_X11 {
 bool _maru_x11_copy_string(MARU_Context_X11 *ctx, const char *src, char **out_str);
 MARU_Window_X11 *_maru_x11_find_window(MARU_Context_X11 *ctx, Window handle);
 void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx);
-bool _maru_x11_advance_animated_cursors(MARU_Context_X11 *ctx, uint64_t now_ms);
 uint64_t _maru_x11_get_monotonic_time_ms(void);
 uint64_t _maru_x11_get_monotonic_time_ns(void);
 void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx, uint64_t duration_ns);
