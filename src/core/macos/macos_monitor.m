@@ -63,6 +63,7 @@ MARU_Monitor *const *maru_getMonitors_Cocoa(MARU_Context *context, uint32_t *out
         
         mon->base.ctx_base = ctx_base;
         mon->base.is_active = true;
+        atomic_init(&mon->base.ref_count, 1u);
         
 #ifdef MARU_INDIRECT_BACKEND
         mon->base.backend = &maru_backend_Cocoa;
@@ -102,18 +103,31 @@ MARU_Monitor *const *maru_getMonitors_Cocoa(MARU_Context *context, uint32_t *out
 }
 
 void maru_retainMonitor_Cocoa(MARU_Monitor *monitor) {
-    MARU_Monitor_Cocoa *mon = (MARU_Monitor_Cocoa *)monitor;
-    // Base ref counting is handled by maru_retainMonitor in core.c, 
-    // but the backend can intercept. We just rely on core here or implement custom logic if needed.
-    (void)mon;
+    MARU_Monitor_Base *base = (MARU_Monitor_Base *)monitor;
+    atomic_fetch_add_explicit(&base->ref_count, 1u, memory_order_relaxed);
 }
 
 void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor) {
     MARU_Monitor_Cocoa *mon = (MARU_Monitor_Cocoa *)monitor;
-    if (mon->modes) {
-        maru_context_free(mon->base.ctx_base, mon->modes);
+    MARU_Monitor_Base *base = (MARU_Monitor_Base *)monitor;
+    uint32_t current = atomic_load_explicit(&base->ref_count, memory_order_acquire);
+    while (current > 0u) {
+        if (atomic_compare_exchange_weak_explicit(&base->ref_count,
+                                                  &current,
+                                                  current - 1u,
+                                                  memory_order_acq_rel,
+                                                  memory_order_acquire)) {
+            if (current == 1u && !base->is_active) {
+                if (mon->modes) {
+                    maru_context_free(mon->base.ctx_base, mon->modes);
+                    mon->modes = NULL;
+                    mon->mode_count = 0;
+                }
+                maru_context_free(mon->base.ctx_base, mon);
+            }
+            return;
+        }
     }
-    maru_context_free(mon->base.ctx_base, mon);
 }
 
 const MARU_VideoMode *maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor, uint32_t *out_count) {
