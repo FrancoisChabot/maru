@@ -19,21 +19,13 @@ typedef struct MARU_Context_Cocoa {
 
   id ns_app;
   uint64_t last_modifiers;
+  id controller_observer;
   
   MARU_Controller_Base **controller_cache;
   uint32_t controller_cache_count;
   uint32_t controller_cache_capacity;
   _Atomic bool controllers_dirty;
 } MARU_Context_Cocoa;
-
-// Global state for macOS event routing
-typedef struct MARU_Cocoa_Global {
-    MARU_Context_Cocoa *primary_context;
-    bool initialized;
-    id controller_observer;
-} MARU_Cocoa_Global;
-
-extern MARU_Cocoa_Global g_maru_cocoa;
 
 typedef struct MARU_Window_Cocoa {
   MARU_Window_Base base;
@@ -97,6 +89,7 @@ MARU_Status maru_createImage_Cocoa(MARU_Context *context,
 MARU_Status maru_destroyImage_Cocoa(MARU_Image *image);
 
 MARU_Status maru_getControllers_Cocoa(MARU_Context *context, MARU_ControllerList *out_list);
+void _maru_cocoa_cleanup_controller_observer(MARU_Context_Cocoa *ctx);
 void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base);
 MARU_Status maru_retainController_Cocoa(MARU_Controller *controller);
 MARU_Status maru_releaseController_Cocoa(MARU_Controller *controller);
@@ -121,5 +114,8 @@ void maru_resetMonitorMetrics_Cocoa(MARU_Monitor *monitor);
 
 const char **maru_getVkExtensions_Cocoa(const MARU_Context *context, uint32_t *out_count);
 MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
+
+void _maru_cocoa_associate_window(id ns_window, MARU_Window_Cocoa *window);
+MARU_Window_Cocoa *_maru_cocoa_window_from_ns_window(id ns_window);
 
 #endif

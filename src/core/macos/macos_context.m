@@ -59,26 +59,40 @@ static uint64_t _maru_cocoa_now_ms(void) {
     return (uint64_t)(uptime * 1000.0);
 }
 
-MARU_Cocoa_Global g_maru_cocoa = {NULL, false, nil};
+static const void *g_maru_cocoa_window_assoc_key = &g_maru_cocoa_window_assoc_key;
 
-static MARU_Window_Cocoa *_maru_cocoa_resolve_window(NSWindow *nsWindow) {
-    if (!nsWindow || !g_maru_cocoa.primary_context) return NULL;
-    
-    for (MARU_Window_Base *it = g_maru_cocoa.primary_context->base.window_list_head; it; it = it->ctx_next) {
-        MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)it;
-        if (win->ns_window == nsWindow) {
-            return win;
-        }
-    }
-    return NULL;
+void _maru_cocoa_associate_window(id ns_window, MARU_Window_Cocoa *window) {
+    if (!ns_window) return;
+    objc_setAssociatedObject(ns_window, g_maru_cocoa_window_assoc_key, (id)window,
+                             OBJC_ASSOCIATION_ASSIGN);
 }
 
-static void _maru_cocoa_process_event(NSEvent *nsEvent) {
-    NSEventType type = [nsEvent type];
-    MARU_Context_Cocoa *target_ctx = g_maru_cocoa.primary_context;
-    if (!target_ctx) return;
+MARU_Window_Cocoa *_maru_cocoa_window_from_ns_window(id ns_window) {
+    if (!ns_window) return NULL;
+    return (MARU_Window_Cocoa *)objc_getAssociatedObject(
+        ns_window, g_maru_cocoa_window_assoc_key);
+}
 
-    MARU_Window_Cocoa *window = _maru_cocoa_resolve_window([nsEvent window]);
+static void _maru_cocoa_dispatch_window_event(MARU_Context_Cocoa *active_ctx,
+                                              MARU_Window_Cocoa *window,
+                                              MARU_EventId type,
+                                              const MARU_Event *event) {
+    if (!active_ctx || !window || !event) return;
+
+    MARU_Context_Base *target_ctx = window->base.ctx_base;
+    if (target_ctx == &active_ctx->base && target_ctx->pump_ctx) {
+        _maru_dispatch_event(target_ctx, type, (MARU_Window *)window, event);
+    } else {
+        _maru_post_event_internal(target_ctx, type, (MARU_Window *)window, event);
+    }
+}
+
+static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
+                                      NSEvent *nsEvent) {
+    if (!active_ctx || !nsEvent) return;
+
+    NSEventType type = [nsEvent type];
+    MARU_Window_Cocoa *window = _maru_cocoa_window_from_ns_window([nsEvent window]);
 
     switch (type) {
         case NSEventTypeKeyDown:
@@ -94,7 +108,8 @@ static void _maru_cocoa_process_event(NSEvent *nsEvent) {
             event.key.state = state;
             event.key.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
-            _maru_dispatch_event(&target_ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)window, &event);
+            _maru_cocoa_dispatch_window_event(active_ctx, window,
+                                              MARU_EVENT_KEY_STATE_CHANGED, &event);
             break;
         }
         case NSEventTypeFlagsChanged: {
@@ -118,7 +133,8 @@ static void _maru_cocoa_process_event(NSEvent *nsEvent) {
             event.key.state = pressed ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
             event.key.modifiers = _maru_cocoa_translate_modifiers(new_mods);
             
-            _maru_dispatch_event(&target_ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)window, &event);
+            _maru_cocoa_dispatch_window_event(active_ctx, window,
+                                              MARU_EVENT_KEY_STATE_CHANGED, &event);
             break;
         }
         case NSEventTypeLeftMouseDown:
@@ -141,7 +157,9 @@ static void _maru_cocoa_process_event(NSEvent *nsEvent) {
             event.mouse_button.state = state;
             event.mouse_button.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
-            _maru_dispatch_event(&target_ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)window, &event);
+            _maru_cocoa_dispatch_window_event(active_ctx, window,
+                                              MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED,
+                                              &event);
             break;
         }
         case NSEventTypeMouseMoved:
@@ -161,7 +179,8 @@ static void _maru_cocoa_process_event(NSEvent *nsEvent) {
             event.mouse_motion.raw_delta.y = (MARU_Scalar)[nsEvent deltaY];
             event.mouse_motion.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
-            _maru_dispatch_event(&target_ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)window, &event);
+            _maru_cocoa_dispatch_window_event(active_ctx, window,
+                                              MARU_EVENT_MOUSE_MOVED, &event);
             break;
         }
         case NSEventTypeScrollWheel: {
@@ -176,7 +195,8 @@ static void _maru_cocoa_process_event(NSEvent *nsEvent) {
             }
             event.mouse_scroll.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
-            _maru_dispatch_event(&target_ctx->base, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)window, &event);
+            _maru_cocoa_dispatch_window_event(active_ctx, window,
+                                              MARU_EVENT_MOUSE_SCROLLED, &event);
             break;
         }
         default:
@@ -188,11 +208,6 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
                                       MARU_Context **out_context) {
     if (![NSThread isMainThread]) {
         fprintf(stderr, "Error: Maru context on macOS must be created on the main thread.\n");
-        return MARU_FAILURE;
-    }
-
-    if (g_maru_cocoa.primary_context) {
-        fprintf(stderr, "Error: Maru currently only supports a single context on macOS.\n");
         return MARU_FAILURE;
     }
 
@@ -225,8 +240,6 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp finishLaunching];
-    
-    g_maru_cocoa.primary_context = ctx;
 
     ctx->ns_app = NSApp;
     ctx->last_modifiers = [NSEvent modifierFlags];
@@ -237,8 +250,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
 MARU_Status maru_destroyContext_Cocoa(MARU_Context *context) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
-    
-    if (g_maru_cocoa.primary_context == ctx) g_maru_cocoa.primary_context = NULL;
+    _maru_cocoa_cleanup_controller_observer(ctx);
     
     for (uint32_t i = 0; i < ctx->controller_cache_count; ++i) {
         maru_releaseController_Cocoa((MARU_Controller *)ctx->controller_cache[i]);
@@ -291,14 +303,14 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MA
                                                    inMode:NSDefaultRunLoopMode
                                                   dequeue:YES];
             if (event) {
-                _maru_cocoa_process_event(event);
+                _maru_cocoa_process_event(ctx, event);
                 [NSApp sendEvent:event];
 
                 while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
                                                      untilDate:[NSDate distantPast]
                                                         inMode:NSDefaultRunLoopMode
                                                        dequeue:YES])) {
-                    _maru_cocoa_process_event(event);
+                    _maru_cocoa_process_event(ctx, event);
                     [NSApp sendEvent:event];
                 }
             }
@@ -316,6 +328,7 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MA
 }
 
 MARU_Status maru_wakeContext_Cocoa(MARU_Context *context) {
+    (void)context;
     NSEvent* event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
                                         location:NSMakePoint(0, 0)
                                    modifierFlags:0

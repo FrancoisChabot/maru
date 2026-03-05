@@ -17,12 +17,14 @@ typedef struct MARU_Controller_Cocoa {
 } MARU_Controller_Cocoa;
 
 @interface MARU_ControllerObserver : NSObject
+@property (nonatomic, assign) MARU_Context_Cocoa *context;
 @end
 
 @implementation MARU_ControllerObserver
 
 - (void)controllerDidConnect:(NSNotification *)notification {
-    MARU_Context_Cocoa *ctx = g_maru_cocoa.primary_context;
+    (void)notification;
+    MARU_Context_Cocoa *ctx = self.context;
     if (ctx) {
         atomic_store(&ctx->controllers_dirty, true);
         maru_wakeContext_Cocoa((MARU_Context *)ctx);
@@ -30,7 +32,8 @@ typedef struct MARU_Controller_Cocoa {
 }
 
 - (void)controllerDidDisconnect:(NSNotification *)notification {
-    MARU_Context_Cocoa *ctx = g_maru_cocoa.primary_context;
+    (void)notification;
+    MARU_Context_Cocoa *ctx = self.context;
     if (ctx) {
         atomic_store(&ctx->controllers_dirty, true);
         maru_wakeContext_Cocoa((MARU_Context *)ctx);
@@ -157,23 +160,36 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     return c;
 }
 
-static void _maru_cocoa_ensure_observer(void) {
-    if (!g_maru_cocoa.controller_observer) {
-        g_maru_cocoa.controller_observer = [[MARU_ControllerObserver alloc] init];
-        [[NSNotificationCenter defaultCenter] addObserver:g_maru_cocoa.controller_observer
-                                                 selector:@selector(controllerDidConnect:)
-                                                     name:GCControllerDidConnectNotification
-                                                   object:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:g_maru_cocoa.controller_observer
-                                                 selector:@selector(controllerDidDisconnect:)
-                                                     name:GCControllerDidDisconnectNotification
-                                                   object:nil];
+static void _maru_cocoa_ensure_observer(MARU_Context_Cocoa *ctx) {
+    if (!ctx || ctx->controller_observer) {
+        return;
     }
+
+    MARU_ControllerObserver *observer = [[MARU_ControllerObserver alloc] init];
+    observer.context = ctx;
+    [[NSNotificationCenter defaultCenter] addObserver:observer
+                                             selector:@selector(controllerDidConnect:)
+                                                 name:GCControllerDidConnectNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:observer
+                                             selector:@selector(controllerDidDisconnect:)
+                                                 name:GCControllerDidDisconnectNotification
+                                               object:nil];
+    ctx->controller_observer = observer;
+}
+
+void _maru_cocoa_cleanup_controller_observer(MARU_Context_Cocoa *ctx) {
+    if (!ctx || !ctx->controller_observer) {
+        return;
+    }
+    [[NSNotificationCenter defaultCenter] removeObserver:ctx->controller_observer];
+    [ctx->controller_observer release];
+    ctx->controller_observer = nil;
 }
 
 void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)ctx_base;
-    _maru_cocoa_ensure_observer();
+    _maru_cocoa_ensure_observer(ctx);
     
     atomic_store(&ctx->controllers_dirty, false);
     

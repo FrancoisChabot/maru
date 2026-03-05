@@ -233,6 +233,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     win->ns_view = view;
     win->ns_layer = [view layer];
     win->size = create_info->attributes.logical_size;
+    _maru_cocoa_associate_window(nsWindow, win);
 
     [nsWindow setContentView:view];
     [nsWindow makeKeyAndOrderFront:nil];
@@ -249,6 +250,7 @@ MARU_Status maru_destroyWindow_Cocoa(MARU_Window *window) {
     _maru_unregister_window(win->base.ctx_base, window);
     
     NSWindow *nsWindow = win->ns_window;
+    _maru_cocoa_associate_window(nsWindow, NULL);
     id delegate = [nsWindow delegate];
     [nsWindow setDelegate:nil];
     [delegate release];
