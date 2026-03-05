@@ -434,10 +434,27 @@ MARU_Status maru_requestWindowFocus_Cocoa(MARU_Window *window) {
 }
 
 MARU_Status maru_requestWindowFrame_Cocoa(MARU_Window *window) {
-    return MARU_SUCCESS;
+    MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
+    if (!win || !win->base.ctx_base) {
+        return MARU_FAILURE;
+    }
+
+    MARU_Event event = {0};
+    const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
+    if (uptime > 0.0) {
+        event.frame.timestamp_ms = (uint32_t)(uptime * 1000.0);
+    }
+
+    if (win->base.ctx_base->pump_ctx) {
+        _maru_dispatch_event(win->base.ctx_base, MARU_EVENT_WINDOW_FRAME, window, &event);
+        return MARU_SUCCESS;
+    }
+
+    return _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_FRAME, window, &event);
 }
 
 MARU_Status maru_requestWindowAttention_Cocoa(MARU_Window *window) {
+    (void)window;
     [NSApp requestUserAttention:NSInformationalRequest];
     return MARU_SUCCESS;
 }
