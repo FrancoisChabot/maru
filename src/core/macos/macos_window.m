@@ -236,6 +236,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     _maru_cocoa_associate_window(nsWindow, win);
 
     [nsWindow setContentView:view];
+    [view release];
     [nsWindow makeKeyAndOrderFront:nil];
     [nsWindow center];
 
@@ -248,6 +249,14 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
 MARU_Status maru_destroyWindow_Cocoa(MARU_Window *window) {
     MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
     _maru_unregister_window(win->base.ctx_base, window);
+
+    if (win->base.title_storage) {
+        maru_context_free(win->base.ctx_base, win->base.title_storage);
+        win->base.title_storage = NULL;
+        win->base.attrs_requested.title = NULL;
+        win->base.attrs_effective.title = NULL;
+        win->base.pub.title = NULL;
+    }
     
     NSWindow *nsWindow = win->ns_window;
     _maru_cocoa_associate_window(nsWindow, NULL);
