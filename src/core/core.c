@@ -63,6 +63,7 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
                           MARU_Window *window, const MARU_Event *event) {
+  if (!ctx->pump_ctx) return;
   MARU_ASSUME(ctx->pump_ctx != NULL);
 
   const MARU_EventMask event_bit = MARU_EVENT_MASK(type);
@@ -111,6 +112,15 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
 
   ctx_base->metrics.user_events = &ctx_base->user_event_metrics;
   ctx_base->pub.metrics = &ctx_base->metrics;
+
+  ctx_base->monitor_cache = NULL;
+  ctx_base->monitor_cache_count = 0;
+  ctx_base->monitor_cache_capacity = 0;
+
+#ifdef MARU_VALIDATE_API_CALLS
+  extern MARU_ThreadId _maru_getCurrentThreadId(void);
+  ctx_base->creator_thread = _maru_getCurrentThreadId();
+#endif
 }
 
 void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {

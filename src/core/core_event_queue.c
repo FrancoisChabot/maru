@@ -12,9 +12,8 @@ static bool _maru_is_power_of_two_u32(uint32_t value) {
 }
 
 bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t capacity_power_of_2) {
-  fprintf(stderr, "_maru_event_queue_init(cap=%u)\n", capacity_power_of_2);
-  if (!q) { fprintf(stderr, "q is null\n"); return false; }
-  if (!_maru_is_power_of_two_u32(capacity_power_of_2)) { fprintf(stderr, "not power of two\n"); return false; }
+  if (!q) return false;
+  if (!_maru_is_power_of_two_u32(capacity_power_of_2)) return false;
   
   q->capacity = capacity_power_of_2;
   q->mask = capacity_power_of_2 - 1;
@@ -25,12 +24,13 @@ bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t
   atomic_init(&q->drop_count, 0);
 #endif
 
-  fprintf(stderr, "allocating buffer of size %zu\n", sizeof(MARU_QueuedEvent) * capacity_power_of_2);
   q->buffer = maru_context_alloc(ctx, sizeof(MARU_QueuedEvent) * capacity_power_of_2);
-  if (!q->buffer) { fprintf(stderr, "buffer allocation failed\n"); return false; }
+  if (!q->buffer) return false;
 
   memset(q->buffer, 0, sizeof(MARU_QueuedEvent) * capacity_power_of_2);
-  fprintf(stderr, "event queue init success\n");
+  for (uint32_t i = 0; i < capacity_power_of_2; ++i) {
+    atomic_init(&q->buffer[i].state, 0);
+  }
   return true;
 }
 

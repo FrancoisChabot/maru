@@ -48,6 +48,11 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   }
   ctx->base.tuning = create_info->tuning;
   _maru_init_context_base(&ctx->base);
+
+#ifdef MARU_INDIRECT_BACKEND
+  extern const MARU_Backend maru_backend_X11;
+  ctx->base.backend = &maru_backend_X11;
+#endif
 #ifdef MARU_GATHER_METRICS
   _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_X11));
 #endif
@@ -166,16 +171,6 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx->base.event_mask = create_info->attributes.event_mask;
   ctx->base.inhibit_idle = create_info->attributes.inhibit_idle;
-
-#ifdef MARU_INDIRECT_BACKEND
-  extern const MARU_Backend maru_backend_X11;
-  ctx->base.backend = &maru_backend_X11;
-#endif
-
-#ifdef MARU_VALIDATE_API_CALLS
-  extern MARU_ThreadId _maru_getCurrentThreadId(void);
-  ctx->base.creator_thread = _maru_getCurrentThreadId();
-#endif
 
   if (!_maru_linux_common_run(&ctx->linux_common)) {
     maru_destroyContext_X11((MARU_Context *)ctx);

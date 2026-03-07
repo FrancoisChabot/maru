@@ -567,6 +567,11 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   }
 
   _maru_init_context_base(&ctx->base);
+
+#ifdef MARU_INDIRECT_BACKEND
+  extern const MARU_Backend maru_backend_WL;
+  ctx->base.backend = &maru_backend_WL;
+#endif
 #ifdef MARU_GATHER_METRICS
   _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_WL));
 #endif
@@ -587,16 +592,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_INFO,
                          "Beginning Wayland initialization...");
-
-#ifdef MARU_INDIRECT_BACKEND
-  extern const MARU_Backend maru_backend_WL;
-  ctx->base.backend = &maru_backend_WL;
-#endif
-
-#ifdef MARU_VALIDATE_API_CALLS
-  extern MARU_ThreadId _maru_getCurrentThreadId(void);
-  ctx->base.creator_thread = _maru_getCurrentThreadId();
-#endif
 
   if (!maru_load_wayland_symbols(&ctx->base, &ctx->dlib.wl, &ctx->dlib.wlc,
                                  &ctx->linux_common.xkb_lib,
