@@ -79,9 +79,7 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
 }
 
 void _maru_init_context_base(MARU_Context_Base *ctx_base) {
-  fprintf(stderr, "_maru_init_context_base started\n");
   if (ctx_base->allocator.alloc_cb == NULL) {
-    fprintf(stderr, "Initializing default allocator in context base\n");
     ctx_base->allocator.alloc_cb = _maru_default_alloc;
     ctx_base->allocator.realloc_cb = _maru_default_realloc;
     ctx_base->allocator.free_cb = _maru_default_free;
@@ -233,7 +231,6 @@ void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
 
 
 void *_maru_default_alloc(size_t size, void *userdata) {
-  fprintf(stderr, "_maru_default_alloc(%zu)\n", size);
   (void)userdata;
   return malloc(size);
 }

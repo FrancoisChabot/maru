@@ -28,6 +28,19 @@ typedef struct MARU_WaylandDataRequestHandle {
   bool consumed;
 } MARU_WaylandDataRequestHandle;
 
+static MARU_DropAction _maru_wl_to_drop_action(uint32_t wl_action) {
+  switch (wl_action) {
+    case 1u:
+      return MARU_DROP_ACTION_COPY;
+    case 2u:
+      return MARU_DROP_ACTION_MOVE;
+    case 4u:
+      return MARU_DROP_ACTION_LINK;
+    default:
+      return MARU_DROP_ACTION_NONE;
+  }
+}
+
 static uint32_t _maru_wl_parse_uri_list(MARU_Context_WL *ctx, const char *data,
                                         size_t size, const char ***out_paths) {
   uint32_t count = 0;
@@ -488,13 +501,13 @@ static void _clipboard_source_dnd_finished(void *data,
   if (!ctx || ctx->clipboard.dnd_source != source) return;
 
   MARU_Event evt = {0};
-  // TODO: we should probably report the final action here.
-  evt.drag_finished.action = MARU_DROP_ACTION_NONE;
+  evt.drag_finished.action = ctx->clipboard.dnd_action;
 
   MARU_Window *event_window = ctx->linux_common.xkb.focused_window;
   if (!event_window) event_window = ctx->linux_common.pointer.focused_window;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DRAG_FINISHED, event_window, &evt);
 
+  ctx->clipboard.dnd_action = MARU_DROP_ACTION_NONE;
   ctx->clipboard.dnd_source = NULL;
   maru_wl_data_source_destroy(ctx, source);
   _maru_wl_clear_dnd_announced_mimes(ctx);
@@ -502,9 +515,9 @@ static void _clipboard_source_dnd_finished(void *data,
 
 static void _clipboard_source_action(void *data, struct wl_data_source *source,
                                      uint32_t dnd_action) {
-  (void)data;
-  (void)source;
-  (void)dnd_action;
+  MARU_Context_WL *ctx = (MARU_Context_WL *)data;
+  if (!ctx || ctx->clipboard.dnd_source != source) return;
+  ctx->clipboard.dnd_action = _maru_wl_to_drop_action(dnd_action);
 }
 
 static void _maru_wl_destroy_request_handle(MARU_Context_WL *ctx,
@@ -616,6 +629,7 @@ static void _clipboard_source_cancelled(void *data, struct wl_data_source *sourc
   } else if (ctx->clipboard.dnd_source && ctx->clipboard.dnd_source == source) {
     struct wl_data_source *current = ctx->clipboard.dnd_source;
     ctx->clipboard.dnd_source = NULL;
+    ctx->clipboard.dnd_action = MARU_DROP_ACTION_NONE;
     maru_wl_data_source_destroy(ctx, current);
     _maru_wl_clear_dnd_announced_mimes(ctx);
   }
@@ -980,6 +994,7 @@ void _maru_wayland_dataexchange_onSeatRemoved(MARU_Context_WL *ctx) {
   if (ctx->clipboard.dnd_source) {
     struct wl_data_source *source = ctx->clipboard.dnd_source;
     ctx->clipboard.dnd_source = NULL;
+    ctx->clipboard.dnd_action = MARU_DROP_ACTION_NONE;
     maru_wl_data_source_destroy(ctx, source);
   }
   _maru_wl_clear_offer_metas(ctx);
@@ -1101,6 +1116,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
       if (ctx->clipboard.dnd_source) {
         struct wl_data_source *source = ctx->clipboard.dnd_source;
         ctx->clipboard.dnd_source = NULL;
+        ctx->clipboard.dnd_action = MARU_DROP_ACTION_NONE;
         maru_wl_data_source_destroy(ctx, source);
       }
       _maru_wl_clear_dnd_announced_mimes(ctx);
@@ -1134,9 +1150,11 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
     if (ctx->clipboard.dnd_source) {
       struct wl_data_source *old_source = ctx->clipboard.dnd_source;
       ctx->clipboard.dnd_source = NULL;
+      ctx->clipboard.dnd_action = MARU_DROP_ACTION_NONE;
       maru_wl_data_source_destroy(ctx, old_source);
     }
     ctx->clipboard.dnd_source = source;
+    ctx->clipboard.dnd_action = MARU_DROP_ACTION_NONE;
 
     if (!_maru_wl_set_dnd_announced_mimes(ctx, mime_types, count)) {
       return MARU_FAILURE;

@@ -55,6 +55,7 @@ typedef struct MARU_WaylandClipboardState {
   struct wl_data_offer *dnd_offer;
   struct wl_data_source *dnd_source;
   uint32_t dnd_serial;
+  MARU_DropAction dnd_action;
   void *dnd_session_userdata;
   struct MARU_Window_WL *dnd_window;
 
