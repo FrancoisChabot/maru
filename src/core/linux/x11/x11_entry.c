@@ -93,6 +93,15 @@ maru_setControllerHapticLevels_X11(MARU_Controller *controller,
   return _maru_linux_common_set_haptic_levels(&ctx->linux_common, ctrl, first_haptic, count, intensities);
 }
 
+MARU_API bool maru_x11SupportsExtendedFrameSync(MARU_Context *context) {
+  if (!context) return false;
+  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (ctx_base->pub.backend_type != MARU_BACKEND_X11) {
+    return false;
+  }
+  return ((MARU_Context_X11 *)context)->compositor_supports_extended_frame_sync;
+}
+
 #ifdef MARU_INDIRECT_BACKEND
 static void *maru_getWindowNativeHandle_X11_internal(MARU_Window *window) {
   return maru_getWindowNativeHandle_X11(window);

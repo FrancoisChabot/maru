@@ -21,6 +21,10 @@ static inline MARU_Status _maru_stub_x11_window_handle_unsupported(
   return MARU_FAILURE;
 }
 
+static inline bool _maru_stub_x11_extended_frame_sync_unsupported(void) {
+  return false;
+}
+
 static inline MARU_Status _maru_stub_wayland_context_handle_unsupported(
     MARU_WaylandContextHandle *out_handle) {
   out_handle->display = NULL;

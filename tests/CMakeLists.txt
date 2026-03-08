@@ -27,6 +27,7 @@ add_executable(maru_integration_tests
   integration/test_desktop_smoke.cpp
   integration/test_window.cpp
   integration/test_queue.cpp
+  integration/test_x11_frame_sync.cpp
   integration/support/tracking_allocator.cpp
 )
 

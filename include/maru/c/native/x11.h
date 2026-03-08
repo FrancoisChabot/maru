@@ -5,6 +5,7 @@
 #define MARU_NATIVE_X11_H_INCLUDED
 
 #include "maru/c/core.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +30,7 @@ MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
                                               MARU_X11ContextHandle *out_handle);
 MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
                                              MARU_X11WindowHandle *out_handle);
+MARU_API bool maru_x11SupportsExtendedFrameSync(MARU_Context *context);
 
 #ifdef __cplusplus
 }

@@ -49,6 +49,7 @@ bool maru_load_x11_symbols(struct MARU_Context_Base *ctx, MARU_Lib_X11 *lib) {
   if (!_x11_load_lib_base(ctx, "libX11.so.6", &lib->base)) {
     return false;
   }
+
   bool functions_ok = true;
 
 #define MARU_LIB_FN(name)                                  \
@@ -62,12 +63,28 @@ bool maru_load_x11_symbols(struct MARU_Context_Base *ctx, MARU_Lib_X11 *lib) {
 
   if (!functions_ok) {
     _x11_unload_lib_base(&lib->base);
+    return false;
   }
+
+  // libXext is optional for core functionality
+  if (_x11_load_lib_base(ctx, "libXext.so.6", &lib->ext)) {
+#define MARU_LIB_FN(name)                                  \
+    lib->name = dlsym(lib->ext.handle, #name);
+    MARU_XEXT_FUNCTIONS_TABLE
+#undef MARU_LIB_FN
+  } else {
+    // Clear the XEXT functions if libXext is not available
+#define MARU_LIB_FN(name) lib->name = NULL;
+    MARU_XEXT_FUNCTIONS_TABLE
+#undef MARU_LIB_FN
+  }
+
   return lib->base.available;
 }
 
 void maru_unload_x11_symbols(MARU_Lib_X11 *lib) {
   _x11_unload_lib_base(&lib->base);
+  _x11_unload_lib_base(&lib->ext);
 }
 
 bool maru_load_xcursor_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xcursor *lib) {

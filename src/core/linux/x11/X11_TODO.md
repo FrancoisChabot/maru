@@ -18,7 +18,7 @@ This document tracks the remaining work and identified improvements for the Maru
 - [x] **Visibility Synchronization**:
   - `UnmapNotify` and `MapNotify` now reconcile `MARU_WINDOW_STATE_VISIBLE` in `x11_window.c`.
   - `MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED` is dispatched when visibility changes due to system-driven map/unmap transitions.
-- [ ] **Frame Timing (`_NET_WM_FRAME_DRAWN`)**:
+- [x] **Frame Timing (`_NET_WM_FRAME_DRAWN`)**:
   - Implement the EWMH frame synchronization protocol.
   - Allows `maru_requestWindowFrame()` to be throttled by the compositor, preventing over-rendering and providing smooth animations.
 

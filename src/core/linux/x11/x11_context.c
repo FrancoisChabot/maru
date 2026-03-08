@@ -168,6 +168,16 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
       ctx->display, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
   ctx->net_active_window =
       ctx->x11_lib.XInternAtom(ctx->display, "_NET_ACTIVE_WINDOW", False);
+  ctx->net_wm_frame_drawn =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_FRAME_DRAWN", False);
+  ctx->net_wm_frame_timings =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_FRAME_TIMINGS", False);
+  ctx->net_wm_sync_request =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_SYNC_REQUEST", False);
+  ctx->net_wm_sync_request_counter =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_SYNC_REQUEST_COUNTER", False);
+  ctx->net_supported =
+      ctx->x11_lib.XInternAtom(ctx->display, "_NET_SUPPORTED", False);
   ctx->motif_wm_hints =
       ctx->x11_lib.XInternAtom(ctx->display, "_MOTIF_WM_HINTS", False);
   ctx->selection_clipboard =
@@ -203,6 +213,34 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
       ctx->x11_lib.XInternAtom(ctx->display, "XdndActionMove", False);
   ctx->xdnd_action_link =
       ctx->x11_lib.XInternAtom(ctx->display, "XdndActionLink", False);
+  ctx->compositor_supports_extended_frame_sync = false;
+  if (ctx->net_supported != None && ctx->net_wm_frame_drawn != None &&
+      ctx->net_wm_frame_timings != None) {
+    Atom actual_type = None;
+    int actual_format = 0;
+    unsigned long item_count = 0;
+    unsigned long bytes_after = 0;
+    unsigned char *prop = NULL;
+    if (ctx->x11_lib.XGetWindowProperty(
+            ctx->display, ctx->root, ctx->net_supported, 0, 4096, False,
+            XA_ATOM, &actual_type, &actual_format, &item_count, &bytes_after,
+            &prop) == Success) {
+      if (prop && actual_type == XA_ATOM && actual_format == 32) {
+        const Atom *atoms = (const Atom *)prop;
+        bool has_drawn = false;
+        bool has_timings = false;
+        for (unsigned long i = 0; i < item_count; ++i) {
+          if (atoms[i] == ctx->net_wm_frame_drawn) {
+            has_drawn = true;
+          } else if (atoms[i] == ctx->net_wm_frame_timings) {
+            has_timings = true;
+          }
+        }
+        ctx->compositor_supports_extended_frame_sync = has_drawn && has_timings;
+      }
+      ctx->x11_lib.XFree(prop);
+    }
+  }
   (void)_maru_x11_enable_xi2_raw_motion(ctx);
   _maru_x11_detect_pointer_barrier_support(ctx);
 
@@ -621,6 +659,7 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_drain_queued_events(&ctx->base);
+  _maru_x11_dispatch_pending_frames(ctx);
 
   while (ctx->x11_lib.XPending(ctx->display)) {
     XEvent ev;
@@ -690,6 +729,7 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
   }
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
+  _maru_x11_dispatch_pending_frames(ctx);
   ctx->base.pump_ctx = NULL;
 
   const uint64_t pump_end_ns = _maru_x11_get_monotonic_time_ns();

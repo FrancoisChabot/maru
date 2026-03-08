@@ -8,6 +8,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
+#include <X11/extensions/sync.h>
 
 #define MARU_X11_FUNCTIONS_TABLE           \
   MARU_LIB_FN(XSetLocaleModifiers)         \
@@ -74,10 +75,18 @@
   MARU_LIB_FN(XSetInputFocus)              \
   MARU_LIB_FN(XFilterEvent)
 
+#define MARU_XEXT_FUNCTIONS_TABLE          \
+  MARU_LIB_FN(XSyncQueryExtension)         \
+  MARU_LIB_FN(XSyncCreateCounter)          \
+  MARU_LIB_FN(XSyncSetCounter)             \
+  MARU_LIB_FN(XSyncDestroyCounter)
+
 typedef struct MARU_Lib_X11 {
   MARU_External_Lib_Base base;
+  MARU_External_Lib_Base ext;
 #define MARU_LIB_FN(name) __typeof__(name) *name;
   MARU_X11_FUNCTIONS_TABLE
+  MARU_XEXT_FUNCTIONS_TABLE
 #undef MARU_LIB_FN
 } MARU_Lib_X11;
 

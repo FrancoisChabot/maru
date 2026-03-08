@@ -138,6 +138,11 @@ typedef struct MARU_Context_X11 {
   Atom net_wm_state_maximized_horz;
   Atom net_wm_state_demands_attention;
   Atom net_active_window;
+  Atom net_wm_frame_drawn;
+  Atom net_wm_frame_timings;
+  Atom net_wm_sync_request;
+  Atom net_wm_sync_request_counter;
+  Atom net_supported;
   Atom motif_wm_hints;
   Atom selection_clipboard;
   Atom selection_primary;
@@ -159,6 +164,7 @@ typedef struct MARU_Context_X11 {
   Atom xdnd_action_copy;
   Atom xdnd_action_move;
   Atom xdnd_action_link;
+  bool compositor_supports_extended_frame_sync;
 
   MARU_X11DataOffer clipboard_offer;
   MARU_X11DataOffer primary_offer;
@@ -199,6 +205,17 @@ struct MARU_Window_X11 {
   bool text_input_session_active;
   bool ime_preedit_active;
   char *ime_preedit_storage;
+
+  bool pending_frame_request;
+  bool awaiting_frame_drawn;
+  bool has_extended_frame_sync;
+
+  uint64_t last_frame_dispatch_ms;
+  uint64_t frame_id;
+  XSyncCounter basic_sync_counter;
+  XSyncCounter extended_sync_counter;
+  XSyncValue extended_frame_value;
+  XSyncValue sync_request_value;
 };
 
 struct MARU_Cursor_X11 {
@@ -265,9 +282,24 @@ void _maru_x11_update_dnd_source_target(MARU_Context_X11 *ctx, Time event_time, 
 void _maru_x11_send_xdnd_finished(MARU_Context_X11 *ctx, const MARU_X11DnDSession *session, bool accepted);
 void _maru_x11_recenter_locked_pointer(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
 void _maru_x11_clear_locked_raw_accum(MARU_Context_X11 *ctx);
+void _maru_x11_dispatch_pending_frames(MARU_Context_X11 *ctx);
 void _maru_x11_send_net_wm_state_local(MARU_Context_X11 *ctx, MARU_Window_X11 *win, long action, Atom atom1, Atom atom2);
 void _maru_x11_apply_size_hints_local(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
 void _maru_x11_process_selection_notify(MARU_Context_X11 *ctx, XEvent *ev);
+
+static inline void _maru_x11_sync_int_to_value(XSyncValue *v, int i) {
+  v->hi = (i < 0) ? -1 : 0;
+  v->lo = (unsigned int)i;
+}
+
+static inline void _maru_x11_sync_ints_to_value(XSyncValue *v, unsigned int lo, int hi) {
+  v->lo = lo;
+  v->hi = hi;
+}
+
+static inline bool _maru_x11_sync_value_is_zero(XSyncValue v) {
+  return v.lo == 0 && v.hi == 0;
+}
 
 // DnD internal helpers shared between modules
 void _maru_x11_send_xdnd_status(MARU_Context_X11 *ctx, const MARU_X11DnDSession *session, bool accept);

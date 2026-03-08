@@ -31,6 +31,22 @@ static int32_t _maru_x11_optional_dip_to_px(MARU_Scalar dip, MARU_Scalar scale) 
   return _maru_x11_dip_to_px(dip, scale);
 }
 
+static uint64_t _maru_x11_sync_value_to_u64(XSyncValue value) {
+  return ((uint64_t)(uint32_t)value.hi << 32u) | (uint32_t)value.lo;
+}
+
+static void _maru_x11_sync_value_from_u64(XSyncValue *value, uint64_t raw) {
+  value->hi = (int32_t)(raw >> 32u);
+  value->lo = (uint32_t)raw;
+}
+
+static bool _maru_x11_has_xsync_support(const MARU_Context_X11 *ctx) {
+  return ctx->x11_lib.XSyncQueryExtension != NULL &&
+         ctx->x11_lib.XSyncCreateCounter != NULL &&
+         ctx->x11_lib.XSyncSetCounter != NULL &&
+         ctx->x11_lib.XSyncDestroyCounter != NULL;
+}
+
 MARU_Window_X11 *_maru_x11_find_window(MARU_Context_X11 *ctx, Window handle) {
   for (MARU_Window_Base *it = ctx->base.window_list_head; it;
        it = it->ctx_next) {
@@ -823,8 +839,39 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
     return MARU_FAILURE;
   }
 
-  ctx->x11_lib.XSetWMProtocols(ctx->display, win->handle,
-                               &ctx->wm_delete_window, 1);
+  Atom protocols[2];
+  int protocol_count = 0;
+  protocols[protocol_count++] = ctx->wm_delete_window;
+
+  int sync_event, sync_error;
+  if (_maru_x11_has_xsync_support(ctx) &&
+      ctx->x11_lib.XSyncQueryExtension(ctx->display, &sync_event, &sync_error)) {
+    protocols[protocol_count++] = ctx->net_wm_sync_request;
+    XSyncValue zero_value;
+    _maru_x11_sync_int_to_value(&zero_value, 0);
+    win->basic_sync_counter =
+        ctx->x11_lib.XSyncCreateCounter(ctx->display, zero_value);
+    if (ctx->compositor_supports_extended_frame_sync) {
+      win->extended_sync_counter =
+          ctx->x11_lib.XSyncCreateCounter(ctx->display, zero_value);
+      win->has_extended_frame_sync = (win->extended_sync_counter != None);
+    }
+    if (win->basic_sync_counter != None) {
+      XSyncCounter counters[2];
+      int counter_count = 0;
+      counters[counter_count++] = win->basic_sync_counter;
+      if (win->extended_sync_counter != None) {
+        counters[counter_count++] = win->extended_sync_counter;
+      }
+      ctx->x11_lib.XChangeProperty(ctx->display, win->handle,
+                                   ctx->net_wm_sync_request_counter,
+                                   XA_CARDINAL, 32, PropModeReplace,
+                                   (unsigned char *)counters, counter_count);
+    }
+  }
+
+  ctx->x11_lib.XSetWMProtocols(ctx->display, win->handle, protocols,
+                               protocol_count);
 
   _maru_register_window(&ctx->base, (MARU_Window *)win);
 
@@ -876,6 +923,14 @@ MARU_Status maru_destroyWindow_X11(MARU_Window *window) {
   if (win->ime_preedit_storage) {
     maru_context_free(&ctx->base, win->ime_preedit_storage);
     win->ime_preedit_storage = NULL;
+  }
+  if (win->extended_sync_counter != None) {
+    ctx->x11_lib.XSyncDestroyCounter(ctx->display, win->extended_sync_counter);
+    win->extended_sync_counter = None;
+  }
+  if (win->basic_sync_counter != None) {
+    ctx->x11_lib.XSyncDestroyCounter(ctx->display, win->basic_sync_counter);
+    win->basic_sync_counter = None;
   }
   if (ctx->locked_window == win) {
     _maru_x11_release_pointer_lock(ctx, win);
@@ -929,10 +984,15 @@ MARU_Status maru_requestWindowFocus_X11(MARU_Window *window) {
 
 MARU_Status maru_requestWindowFrame_X11(MARU_Window *window) {
   MARU_Window_X11 *win = (MARU_Window_X11 *)window;
-  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
-  MARU_Event evt = {0};
-  evt.frame.timestamp_ms = (uint32_t)_maru_x11_get_monotonic_time_ms();
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME, window, &evt);
+
+  if (win->has_extended_frame_sync) {
+    if (win->awaiting_frame_drawn) {
+      win->pending_frame_request = true;
+      return MARU_SUCCESS;
+    }
+  }
+
+  win->pending_frame_request = true;
   return MARU_SUCCESS;
 }
 
@@ -997,9 +1057,13 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
   case Expose: {
     MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xexpose.window);
     if (win && ev->xexpose.count == 0) {
-      MARU_Event mevt = {0};
-      _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME,
-                           (MARU_Window *)win, &mevt);
+      if (win->has_extended_frame_sync) {
+        if (!win->awaiting_frame_drawn) {
+          win->pending_frame_request = true;
+        }
+      } else {
+        win->pending_frame_request = true;
+      }
     }
     return true;
   }
@@ -1093,13 +1157,37 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
   }
   case ClientMessage: {
     const Atom message_type = ev->xclient.message_type;
-    if (message_type == ctx->wm_protocols &&
-        (Atom)ev->xclient.data.l[0] == ctx->wm_delete_window) {
+    if (message_type == ctx->wm_protocols) {
+      const Atom protocol = (Atom)ev->xclient.data.l[0];
+      if (protocol == ctx->wm_delete_window) {
+        MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xclient.window);
+        if (win) {
+          MARU_Event mevt = {0};
+          _maru_dispatch_event(&ctx->base, MARU_EVENT_CLOSE_REQUESTED,
+                               (MARU_Window *)win, &mevt);
+        }
+        return true;
+      } else if (protocol == ctx->net_wm_sync_request) {
+        MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xclient.window);
+        if (win) {
+          _maru_x11_sync_ints_to_value(&win->sync_request_value,
+                                       (uint32_t)ev->xclient.data.l[2],
+                                       (int)ev->xclient.data.l[3]);
+        }
+        return true;
+      }
+    } else if (message_type == ctx->net_wm_frame_drawn ||
+               message_type == ctx->net_wm_frame_timings) {
       MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xclient.window);
-      if (win) {
-        MARU_Event mevt = {0};
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_CLOSE_REQUESTED,
-                             (MARU_Window *)win, &mevt);
+      if (!win) {
+        return false;
+      }
+      const uint64_t message_frame_id =
+          ((uint64_t)(uint32_t)ev->xclient.data.l[1] << 32u) |
+          (uint32_t)ev->xclient.data.l[0];
+      if (message_type == ctx->net_wm_frame_drawn &&
+          message_frame_id >= win->frame_id) {
+        win->awaiting_frame_drawn = false;
       }
       return true;
     }
@@ -1107,5 +1195,68 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
   }
   default:
     return false;
+  }
+}
+
+void _maru_x11_dispatch_pending_frames(MARU_Context_X11 *ctx) {
+  MARU_Window_Base *base = ctx->base.window_list_head;
+  const uint64_t now_ms = _maru_x11_get_monotonic_time_ms();
+
+  while (base) {
+    MARU_Window_X11 *win = (MARU_Window_X11 *)base;
+    if (win->pending_frame_request) {
+      bool can_dispatch = true;
+      if (win->has_extended_frame_sync && win->awaiting_frame_drawn) {
+        if (now_ms - win->last_frame_dispatch_ms > 500) {
+          // Stop using extended sync if the compositor stops responding.
+          win->has_extended_frame_sync = false;
+          win->awaiting_frame_drawn = false;
+        } else {
+          can_dispatch = false;
+        }
+      }
+
+      if (can_dispatch) {
+        win->pending_frame_request = false;
+        win->last_frame_dispatch_ms = now_ms;
+        win->frame_id++;
+
+        if (win->has_extended_frame_sync &&
+            win->extended_sync_counter != None) {
+          const uint64_t current_value =
+              _maru_x11_sync_value_to_u64(win->extended_frame_value);
+          const uint64_t begin_value = current_value + 1u;
+          _maru_x11_sync_value_from_u64(&win->extended_frame_value,
+                                        begin_value);
+          ctx->x11_lib.XSyncSetCounter(ctx->display, win->extended_sync_counter,
+                                       win->extended_frame_value);
+          ctx->x11_lib.XFlush(ctx->display);
+        }
+
+        MARU_Event evt = {0};
+        evt.frame.timestamp_ms = (uint32_t)now_ms;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME,
+                             (MARU_Window *)win, &evt);
+
+        if (win->has_extended_frame_sync &&
+            win->extended_sync_counter != None) {
+          const uint64_t end_value =
+              _maru_x11_sync_value_to_u64(win->extended_frame_value) + 1u;
+          _maru_x11_sync_value_from_u64(&win->extended_frame_value, end_value);
+          ctx->x11_lib.XSyncSetCounter(ctx->display, win->extended_sync_counter,
+                                       win->extended_frame_value);
+          win->awaiting_frame_drawn = true;
+        }
+
+        if (win->basic_sync_counter != None &&
+            !_maru_x11_sync_value_is_zero(win->sync_request_value)) {
+          ctx->x11_lib.XSyncSetCounter(ctx->display, win->basic_sync_counter,
+                                       win->sync_request_value);
+          _maru_x11_sync_int_to_value(&win->sync_request_value, 0);
+          ctx->x11_lib.XFlush(ctx->display);
+        }
+      }
+    }
+    base = base->ctx_next;
   }
 }
