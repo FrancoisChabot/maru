@@ -46,5 +46,8 @@
 #include "maru/c/tuning.h"
 #include "maru/c/vulkan.h"
 #include "maru/c/windows.h"
+#include "maru/maru_queue.h"
+
+#include "maru/c/details/maru_abi_checks.h"
 
 #endif

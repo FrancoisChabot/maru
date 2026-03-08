@@ -380,6 +380,41 @@ inline void Context::wake() {
     check(maru_wakeContext(m_handle), "Failed to wake context");
 }
 
+/* --- Queue Implementations --- */
+
+inline Queue::Queue(Context& ctx, uint32_t capacity_power_of_2) {
+    check(maru_queue_create(ctx.get(), capacity_power_of_2, &m_handle), "Failed to create queue");
+}
+
+inline Queue::~Queue() {
+    if (m_handle) maru_queue_destroy(m_handle);
+}
+
+inline Queue::Queue(Queue&& other) noexcept : m_handle(other.m_handle) {
+    other.m_handle = nullptr;
+}
+
+inline Queue& Queue::operator=(Queue&& other) noexcept {
+    if (this != &other) {
+        if (m_handle) maru_queue_destroy(m_handle);
+        m_handle = other.m_handle;
+        other.m_handle = nullptr;
+    }
+    return *this;
+}
+
+inline void Queue::pump(uint32_t timeout_ms) {
+    check(maru_queue_pump(m_handle, timeout_ms), "Failed to pump queue");
+}
+
+inline void Queue::commit() {
+    check(maru_queue_commit(m_handle), "Failed to commit queue");
+}
+
+inline void Queue::scan(MARU_EventMask mask, MARU_EventCallback callback, void* userdata) {
+    maru_queue_scan(m_handle, mask, callback, userdata);
+}
+
 } // namespace maru
 
 #endif // MARU_HPP_IMPL_HPP_INCLUDED

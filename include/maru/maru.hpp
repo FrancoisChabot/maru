@@ -15,6 +15,7 @@
 #include "maru/cpp/controller.hpp"
 #include "maru/cpp/window.hpp"
 #include "maru/cpp/context.hpp"
+#include "maru/cpp/queue.hpp"
 
 #include "maru/details/maru_hpp_impl.hpp"
 

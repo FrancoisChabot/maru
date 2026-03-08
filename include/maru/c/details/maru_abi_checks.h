@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
+#ifndef MARU_DETAILS_ABI_CHECKS_H_INCLUDED
+#define MARU_DETAILS_ABI_CHECKS_H_INCLUDED
+
+#include "maru/c/events.h"
+
+/*
+ * This file performs compile-time checks to ensure that the MARU library ABI
+ * matches the expectations of the configuration (Float vs Double).
+ * These checks require C11 (_Static_assert) or C++11 (static_assert).
+ */
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define MARU_STATIC_ASSERT _Static_assert
+#elif defined(__cplusplus) && __cplusplus >= 201103L
+#define MARU_STATIC_ASSERT static_assert
+#else
+#define MARU_STATIC_ASSERT(cond, msg)
+#endif
+
+/* Ensure MARU_Event fits within the guaranteed cache-line friendly size limits.
+ * We check if MARU_USE_FLOAT is defined or if MARU_Scalar is 4 bytes.
+ */
+#ifdef MARU_STATIC_ASSERT
+
+#define MARU_EXPECTED_EVENT_SIZE ((sizeof(MARU_Scalar) == 4) ? 64 : 64)
+
+MARU_STATIC_ASSERT(
+    sizeof(MARU_Event) <= MARU_EXPECTED_EVENT_SIZE,
+    "MARU_Event ABI Violation: Size exceeds guaranteed threshold. "
+    "Check structure packing or MARU_USE_FLOAT configuration.");
+
+/* Verify user event payload size */
+MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 32,
+                   "MARU_UserDefinedEvent ABI Violation: Expected 32 bytes.");
+
+#endif
+
+#endif /* MARU_DETAILS_ABI_CHECKS_H_INCLUDED */

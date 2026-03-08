@@ -24,7 +24,7 @@ bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t
   atomic_init(&q->drop_count, 0);
 #endif
 
-  q->buffer = maru_context_alloc(ctx, sizeof(MARU_QueuedEvent) * capacity_power_of_2);
+  q->buffer = maru_context_alloc_aligned64(ctx, sizeof(MARU_QueuedEvent) * capacity_power_of_2);
   if (!q->buffer) return false;
 
   memset(q->buffer, 0, sizeof(MARU_QueuedEvent) * capacity_power_of_2);
@@ -36,7 +36,7 @@ bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t
 
 void _maru_event_queue_cleanup(MARU_EventQueue *q, MARU_Context_Base *ctx) {
   if (q->buffer) {
-    maru_context_free(ctx, q->buffer);
+    maru_context_free_aligned64(ctx, q->buffer);
     q->buffer = NULL;
   }
 }

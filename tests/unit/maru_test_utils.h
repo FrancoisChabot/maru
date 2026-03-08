@@ -300,6 +300,16 @@ static inline MARU_Status _mock_updateContext(MARU_Context* context, uint64_t fi
     return MARU_SUCCESS;
 }
 
+static inline MARU_Status _mock_pumpEvents(MARU_Context* context, uint32_t timeout_ms, MARU_EventCallback callback, void* userdata) {
+    (void)timeout_ms;
+    MARU_Context_Base* ctx_base = (MARU_Context_Base*)context;
+    MARU_PumpContext pump_ctx = { .callback = callback, .userdata = userdata };
+    ctx_base->pump_ctx = &pump_ctx;
+    _maru_drain_queued_events(ctx_base);
+    ctx_base->pump_ctx = NULL;
+    return MARU_SUCCESS;
+}
+
 static inline MARU_Status _mock_wakeContext(MARU_Context* context) {
     (void)context;
     return MARU_SUCCESS;
@@ -310,7 +320,7 @@ static const MARU_Backend _maru_mock_backend = {
     .destroyContext = _mock_destroyContext,
     .updateContext = _mock_updateContext,
 
-    .pumpEvents = NULL,
+    .pumpEvents = _mock_pumpEvents,
     .wakeContext = _mock_wakeContext,
     
     .createWindow = NULL,
@@ -350,6 +360,8 @@ static inline MARU_Context* maru_test_createContext(const MARU_ContextCreateInfo
     ctx->tuning = create_info->tuning;
     ctx->diagnostic_cb = create_info->attributes.diagnostic_cb;
     ctx->diagnostic_userdata = create_info->attributes.diagnostic_userdata;
+    ctx->event_mask = create_info->attributes.event_mask;
+    ctx->inhibit_idle = create_info->attributes.inhibit_idle;
 
     _maru_init_context_base(ctx);
 #ifdef MARU_GATHER_METRICS

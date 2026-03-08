@@ -24,4 +24,5 @@ target_include_directories(maru_shared_renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DI
 # Add each example subfolder
 add_subdirectory(basic_c)
 add_subdirectory(basic_cpp)
+add_subdirectory(queue_cpp)
 add_subdirectory(testbed)

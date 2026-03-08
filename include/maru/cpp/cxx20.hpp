@@ -73,13 +73,28 @@ auto makeDispatcher(Fs &&...handlers) {
         overloads{std::forward<Fs>(handlers)...});
 }
 
-template <typename Visitor>
-inline void Context::pumpEvents(EventDispatcher<Visitor>& dispatcher, uint32_t timeout_ms) {
-    pumpEvents(timeout_ms, dispatcher.callback, &dispatcher);
-}
-
 }  // namespace maru
 
 #include "maru/details/maru_cxx20_impl.hpp"
+
+namespace maru {
+
+template <typename Visitor>
+inline void Context::pumpEvents(EventDispatcher<Visitor>& dispatcher, uint32_t timeout_ms) {
+  pumpEvents(timeout_ms, dispatcher.callback, &dispatcher);
+}
+
+template <typename Visitor>
+inline void Queue::scan(EventDispatcher<Visitor>& dispatcher, MARU_EventMask mask) {
+  scan(mask, dispatcher.callback, &dispatcher);
+}
+
+template <typename Visitor>
+inline void Queue::scan(Visitor&& visitor) {
+  EventDispatcher<std::remove_cvref_t<Visitor>> dispatcher(std::forward<Visitor>(visitor));
+  scan(dispatcher, details::generateMask<std::remove_cvref_t<Visitor>>());
+}
+
+}  // namespace maru
 
 #endif  // MARU_CPP_CXX20_HPP_INCLUDED

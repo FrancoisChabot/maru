@@ -1,6 +1,7 @@
 add_executable(maru_tests
   unit/test_allocator.c
   unit/test_diagnostics.c
+  unit/test_queue.c
 )
 
 if (UNIX AND NOT APPLE)
@@ -25,6 +26,7 @@ add_executable(maru_integration_tests
   integration/test_context.cpp
   integration/test_desktop_smoke.cpp
   integration/test_window.cpp
+  integration/test_queue.cpp
   integration/support/tracking_allocator.cpp
 )
 

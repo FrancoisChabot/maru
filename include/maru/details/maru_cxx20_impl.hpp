@@ -10,6 +10,38 @@ namespace maru {
 
 namespace details {
 
+template <typename F>
+consteval MARU_EventMask generateMask() {
+  MARU_EventMask mask = 0;
+  if constexpr (std::invocable<F, WindowReadyEvent>) mask |= MARU_MASK_WINDOW_READY;
+  if constexpr (std::invocable<F, WindowCloseEvent>) mask |= MARU_MASK_CLOSE_REQUESTED;
+  if constexpr (std::invocable<F, WindowResizedEvent>) mask |= MARU_MASK_WINDOW_RESIZED;
+  if constexpr (std::invocable<F, WindowPresentationStateEvent>) mask |= MARU_MASK_WINDOW_PRESENTATION_STATE_CHANGED;
+  if constexpr (std::invocable<F, KeyboardEvent>) mask |= MARU_MASK_KEY_STATE_CHANGED;
+  if constexpr (std::invocable<F, MouseMotionEvent>) mask |= MARU_MASK_MOUSE_MOVED;
+  if constexpr (std::invocable<F, MouseButtonEvent>) mask |= MARU_MASK_MOUSE_BUTTON_STATE_CHANGED;
+  if constexpr (std::invocable<F, MouseScrollEvent>) mask |= MARU_MASK_MOUSE_SCROLLED;
+  if constexpr (std::invocable<F, IdleEvent>) mask |= MARU_MASK_IDLE_STATE_CHANGED;
+  if constexpr (std::invocable<F, MonitorConnectionEvent>) mask |= MARU_MASK_MONITOR_CONNECTION_CHANGED;
+  if constexpr (std::invocable<F, MonitorModeEvent>) mask |= MARU_MASK_MONITOR_MODE_CHANGED;
+  if constexpr (std::invocable<F, DropEnterEvent>) mask |= MARU_MASK_DROP_ENTERED;
+  if constexpr (std::invocable<F, DropHoverEvent>) mask |= MARU_MASK_DROP_HOVERED;
+  if constexpr (std::invocable<F, DropLeaveEvent>) mask |= MARU_MASK_DROP_EXITED;
+  if constexpr (std::invocable<F, DropEvent>) mask |= MARU_MASK_DROP_DROPPED;
+  if constexpr (std::invocable<F, DataReceivedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_RECEIVED);
+  if constexpr (std::invocable<F, DataRequestEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_REQUESTED);
+  if constexpr (std::invocable<F, DataConsumedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_CONSUMED);
+  if constexpr (std::invocable<F, DragFinishedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DRAG_FINISHED);
+  if constexpr (std::invocable<F, ControllerConnectionEvent>) mask |= MARU_MASK_CONTROLLER_CONNECTION_CHANGED;
+  if constexpr (std::invocable<F, ControllerButtonStateChangedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED);
+  if constexpr (std::invocable<F, WindowFrameEvent>) mask |= MARU_MASK_WINDOW_FRAME;
+  if constexpr (std::invocable<F, TextEditStartEvent>) mask |= MARU_MASK_TEXT_EDIT_START;
+  if constexpr (std::invocable<F, TextEditUpdateEvent>) mask |= MARU_MASK_TEXT_EDIT_UPDATE;
+  if constexpr (std::invocable<F, TextEditCommitEvent>) mask |= MARU_MASK_TEXT_EDIT_COMMIT;
+  if constexpr (std::invocable<F, TextEditEndEvent>) mask |= MARU_MASK_TEXT_EDIT_END;
+  return mask;
+}
+
 template <typename Visitor>
 void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &evt, Visitor &&f) {
   using F_raw = std::remove_cvref_t<Visitor>;

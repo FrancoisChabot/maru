@@ -14,6 +14,7 @@ class Monitor;
 class Cursor;
 class Image;
 class Controller;
+class Queue;
 
 #if __cplusplus >= 202002L
 template <typename Visitor>
