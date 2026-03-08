@@ -44,13 +44,6 @@ MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
                                     VkSurfaceKHR *out_surface) {
   MARU_Context *ctx = maru_getWindowContext(window);
 
-  if (!vk_loader) {
-    MARU_REPORT_DIAGNOSTIC(
-        ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
-        "No Vulkan loader available. Pass vk_loader to maru_createVkSurface.");
-    return MARU_FAILURE;
-  }
-
   PFN_vkCreateWaylandSurfaceKHR create_surface_fn =
       (PFN_vkCreateWaylandSurfaceKHR)vk_loader(instance,
                                                "vkCreateWaylandSurfaceKHR");

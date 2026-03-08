@@ -1516,9 +1516,7 @@ MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   MARU_ASSUME(ctx != NULL);
-  if (!window->wl.surface) {
-    return MARU_FAILURE;
-  }
+  MARU_ASSUME(window->wl.surface != NULL);
 
   if (!ctx->protocols.opt.xdg_activation_v1) {
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
@@ -1559,9 +1557,7 @@ MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
 
 MARU_Status maru_requestWindowFrame_WL(MARU_Window *window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
-  if (!window->wl.surface) {
-    return MARU_FAILURE;
-  }
+  MARU_ASSUME(window->wl.surface != NULL);
 
   _maru_wayland_request_frame(window);
   return MARU_SUCCESS;
@@ -1570,5 +1566,4 @@ MARU_Status maru_requestWindowFrame_WL(MARU_Window *window_handle) {
 MARU_Status maru_requestWindowAttention_WL(MARU_Window *window_handle) {
   return maru_requestWindowFocus_WL(window_handle);
 }
-
 
