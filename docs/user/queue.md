@@ -1,6 +1,6 @@
 # Event Queues
 
-`MARU_Queue` provides an optional, thread-safe way to consume events. While `maru_pumpEvents()` uses a direct-dispatch callback model, `MARU_Queue` allows you to decouple event gathering from event processing.
+`MARU_Queue` provides an optional, double-buffered snapshot mechanism to consume events. While `maru_pumpEvents()` uses a direct-dispatch callback model, `MARU_Queue` allows you to decouple event gathering from event processing, making it safe to scan events from multiple threads simultaneously.
 
 ## The Pump-Commit-Scan Lifecycle
 
@@ -22,8 +22,8 @@ The stable snapshot can be iterated using `maru_queue_scan()`. This can be done 
 ## Threading and Synchronization
 
 - `maru_queue_pump()` and `maru_queue_commit()` **MUST** be called from the primary thread.
-- `maru_queue_scan()` is thread-safe and can be called from multiple threads simultaneously.
-- **Synchronization**: You must ensure that `maru_queue_scan()` does not run concurrently with `maru_queue_commit()`. A simple mutex or a Read-Write lock (where `commit` is the writer and `scan` is the reader) is recommended if scanning from a worker thread.
+- `maru_queue_scan()` is safe for concurrent readers and can be called from multiple threads simultaneously.
+- **Synchronization**: `MARU_Queue` is NOT a lock-free SPMC queue. You **must** ensure that `maru_queue_scan()` does not run concurrently with `maru_queue_commit()`. A Read-Write lock (where `commit` is the writer and `scan` is the reader) or a thread barrier is required if scanning from worker threads.
 
 ## C API Example
 

@@ -9,9 +9,9 @@
 
 /**
  * @file maru_queue.h
- * @brief User-facing SPMC event queue.
+ * @brief Double-buffered event snapshot queue.
  *
- * A MARU_Queue provides an optional, thread-safe way to consume events.
+ * A MARU_Queue provides an optional way to consume events with a thread-safe scanning phase.
  * It follows a pump -> commit -> scan lifecycle:
  *
  * 1. PUMP: On the primary thread, events are gathered from the OS and pushed
