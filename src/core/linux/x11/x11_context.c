@@ -16,13 +16,36 @@
 #include <time.h>
 #include <unistd.h>
 
+static void _maru_x11_apply_idle_inhibit(MARU_Context_X11 *ctx) {
+  if (!ctx->display || !ctx->xss_lib.base.available ||
+      !ctx->xss_lib.XScreenSaverSuspend ||
+      !ctx->xss_lib.XScreenSaverQueryExtension) {
+    return;
+  }
+  if (ctx->xss_idle_inhibit_active == ctx->base.inhibit_idle) {
+    return;
+  }
+
+  int event_base = 0;
+  int error_base = 0;
+  if (!ctx->xss_lib.XScreenSaverQueryExtension(ctx->display, &event_base,
+                                               &error_base)) {
+    return;
+  }
+
+  ctx->xss_lib.XScreenSaverSuspend(ctx->display,
+                                   ctx->base.inhibit_idle ? True : False);
+  ctx->x11_lib.XFlush(ctx->display);
+  ctx->xss_idle_inhibit_active = ctx->base.inhibit_idle;
+}
+
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
                                    const MARU_ContextAttributes *attributes) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   _maru_update_context_base(&ctx->base, field_mask, attributes);
 
   if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
-    // X11 idle inhibition plumbing is not implemented yet.
+    _maru_x11_apply_idle_inhibit(ctx);
   }
 
   return MARU_SUCCESS;
@@ -72,6 +95,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   (void)maru_load_xshape_symbols(&ctx->base, &ctx->xshape_lib);
   (void)maru_load_xrandr_symbols(&ctx->base, &ctx->xrandr_lib);
   (void)maru_load_xfixes_symbols(&ctx->base, &ctx->xfixes_lib);
+  (void)maru_load_xss_symbols(&ctx->base, &ctx->xss_lib);
 
   ctx->display = ctx->x11_lib.XOpenDisplay(NULL);
   if (!ctx->display) {
@@ -80,6 +104,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     maru_unload_xshape_symbols(&ctx->xshape_lib);
     maru_unload_xi2_symbols(&ctx->xi2_lib);
     maru_unload_xcursor_symbols(&ctx->xcursor_lib);
+    maru_unload_xss_symbols(&ctx->xss_lib);
     maru_unload_x11_symbols(&ctx->x11_lib);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
@@ -159,6 +184,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     maru_unload_xshape_symbols(&ctx->xshape_lib);
     maru_unload_xi2_symbols(&ctx->xi2_lib);
     maru_unload_xcursor_symbols(&ctx->xcursor_lib);
+    maru_unload_xss_symbols(&ctx->xss_lib);
     maru_unload_x11_symbols(&ctx->x11_lib);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
@@ -172,6 +198,8 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx->base.event_mask = create_info->attributes.event_mask;
   ctx->base.inhibit_idle = create_info->attributes.inhibit_idle;
+  ctx->xss_idle_inhibit_active = false;
+  _maru_x11_apply_idle_inhibit(ctx);
 
   if (!_maru_linux_common_run(&ctx->linux_common)) {
     maru_destroyContext_X11((MARU_Context *)ctx);
@@ -211,6 +239,12 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   _maru_x11_clear_dnd_source_session(ctx, false, MARU_DROP_ACTION_NONE);
 
   if (ctx->display) {
+    if (ctx->xss_idle_inhibit_active && ctx->xss_lib.base.available &&
+        ctx->xss_lib.XScreenSaverSuspend) {
+      ctx->xss_lib.XScreenSaverSuspend(ctx->display, False);
+      ctx->xss_idle_inhibit_active = false;
+      ctx->x11_lib.XFlush(ctx->display);
+    }
     if (ctx->xim) {
       ctx->x11_lib.XCloseIM(ctx->xim);
       ctx->xim = NULL;
@@ -237,6 +271,7 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   maru_unload_xshape_symbols(&ctx->xshape_lib);
   maru_unload_xcursor_symbols(&ctx->xcursor_lib);
   maru_unload_xi2_symbols(&ctx->xi2_lib);
+  maru_unload_xss_symbols(&ctx->xss_lib);
   maru_unload_x11_symbols(&ctx->x11_lib);
 
   _maru_cleanup_context_base(&ctx->base);

@@ -220,4 +220,34 @@ void maru_unload_xfixes_symbols(MARU_Lib_Xfixes *lib) {
   _x11_unload_lib_base(&lib->base);
 }
 
+bool maru_load_xss_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xss *lib) {
+  if (lib->base.available) return true;
+
+  lib->base.handle = dlopen("libXss.so.1", RTLD_LAZY | RTLD_LOCAL);
+  if (!lib->base.handle) {
+    lib->base.available = false;
+    return false;
+  }
+  lib->base.available = true;
+
+  bool functions_ok = true;
+#define MARU_LIB_FN(name)                                  \
+  lib->name = dlsym(lib->base.handle, #name);              \
+  if (!lib->name) {                                        \
+    _set_diagnostic(ctx, "dlsym(" #name ") failed");       \
+    functions_ok = false;                                  \
+  }
+  MARU_XSS_FUNCTIONS_TABLE
+#undef MARU_LIB_FN
+
+  if (!functions_ok) {
+    _x11_unload_lib_base(&lib->base);
+  }
+  return lib->base.available;
+}
+
+void maru_unload_xss_symbols(MARU_Lib_Xss *lib) {
+  _x11_unload_lib_base(&lib->base);
+}
+
 #pragma GCC diagnostic pop

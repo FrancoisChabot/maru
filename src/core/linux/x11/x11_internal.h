@@ -11,6 +11,7 @@
 #include "dlib/xshape.h"
 #include "dlib/xrandr.h"
 #include "dlib/xfixes.h"
+#include "dlib/xss.h"
 #include "maru/c/vulkan.h"
 
 typedef struct MARU_Cursor_X11 MARU_Cursor_X11;
@@ -88,6 +89,7 @@ typedef struct MARU_Context_X11 {
   MARU_Lib_Xshape xshape_lib;
   MARU_Lib_Xrandr xrandr_lib;
   MARU_Lib_Xfixes xfixes_lib;
+  MARU_Lib_Xss xss_lib;
   Display *display;
   int screen;
   Window root;
@@ -96,6 +98,7 @@ typedef struct MARU_Context_X11 {
   Cursor hidden_cursor;
   MARU_Window_X11 *locked_window;
   bool xi2_raw_motion_enabled;
+  bool xss_idle_inhibit_active;
   int xi2_opcode;
   MARU_Scalar locked_raw_dx_accum;
   MARU_Scalar locked_raw_dy_accum;

@@ -11,6 +11,7 @@
 #include "xshape.h"
 #include "xrandr.h"
 #include "xfixes.h"
+#include "xss.h"
 
 struct MARU_Context_Base;
 
@@ -26,5 +27,7 @@ bool maru_load_xrandr_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xrandr *xr
 void maru_unload_xrandr_symbols(MARU_Lib_Xrandr *xrandr);
 bool maru_load_xfixes_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xfixes *xfixes);
 void maru_unload_xfixes_symbols(MARU_Lib_Xfixes *xfixes);
+bool maru_load_xss_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xss *xss);
+void maru_unload_xss_symbols(MARU_Lib_Xss *xss);
 
 #endif

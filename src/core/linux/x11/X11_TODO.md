@@ -23,9 +23,9 @@ This document tracks the remaining work and identified improvements for the Maru
   - Implement DPI detection (via `Xft.dpi` X resource or physical screen dimensions).
   - Report correct scale factors in `maru_getWindowGeometry_X11()` and monitor info.
   - Support `_NET_WM_WINDOW_OPACITY` for per-window transparency.
-- [ ] **Idle Inhibition**:
-  - Replace the stub in `maru_updateContext_X11()` with a real implementation.
-  - Support the `MIT-SCREEN-SAVER` extension or D-Bus `org.freedesktop.ScreenSaver` integration.
+- [x] **Idle Inhibition**:
+  - Replaced the stub in `maru_updateContext_X11()` with a real implementation.
+  - Added `MIT-SCREEN-SAVER` integration via `XScreenSaverSuspend` (loaded from `libXss.so.1` when available) and context lifecycle handling to release inhibition on destroy.
 
 ## Priority 3: Enhanced Input & Polish
 
