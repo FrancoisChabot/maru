@@ -1,28 +1,32 @@
 #include "wayland_internal.h"
 #include <string.h>
-#include <stdio.h>
 
+#ifdef MARU_ENABLE_INTERNAL_CHECKS
 static void *(*_libdecor_get_userdata_fn)(struct libdecor *context) = NULL;
+#endif
 
 static void _libdecor_handle_error(struct libdecor *context,
                                    enum libdecor_error error,
                                    const char *message) {
   MARU_Context_WL *ctx = NULL;
+#ifdef MARU_ENABLE_INTERNAL_CHECKS
   if (_libdecor_get_userdata_fn && context) {
     ctx = (MARU_Context_WL *)_libdecor_get_userdata_fn(context);
   }
-
-  char detail[256];
-  snprintf(detail, sizeof(detail), "libdecor error (%d): %s", (int)error,
-           message ? message : "unknown");
+#else
+  (void)context;
+#endif
 
   if (ctx) {
+    char detail[256];
+    snprintf(detail, sizeof(detail), "libdecor error (%d): %s", (int)error,
+             message ? message : "unknown");
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE,
                            detail);
     return;
   }
-
-  fprintf(stderr, "MARU: %s\n", detail);
+  (void)error;
+  (void)message;
 }
 
 static struct libdecor_interface _libdecor_interface = {
@@ -39,10 +43,10 @@ bool _maru_wayland_init_libdecor(MARU_Context_WL *ctx) {
     return false;
   }
 
+#ifdef MARU_ENABLE_INTERNAL_CHECKS
   _libdecor_get_userdata_fn = ctx->dlib.opt.decor.opt.get_userdata;
-  if (ctx->dlib.opt.decor.opt.set_userdata) {
-    ctx->dlib.opt.decor.opt.set_userdata(ctx->libdecor_context, ctx);
-  }
+#endif
+  maru_libdecor_set_userdata(ctx, ctx->libdecor_context, ctx);
 
   return true;
 }

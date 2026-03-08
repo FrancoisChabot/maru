@@ -7,7 +7,7 @@ A vulkan-centric Platform Abstraction Layer that gets out of your way.
 What's neat about Maru?
 
 - It has no dynamic global state whatsoever unless OS-mandated and is completely inert until invoked.
-- It goes out of its way to provide fast and steady timing (< 0.1ms generally), even during unusual events like controller hot-plugs.
+- It goes out of its way to provide steady and predictable timing.
 - API use is aggressively validated by default, and all guardrails can be disabled for maximum performance.
 - It exposes clear and detailed metrics about its internal timing and resource usage.
 
@@ -19,7 +19,7 @@ Ready for use by early adopters on Linux.
 
 - Wayland: Feature complete for core functionality, with expected protocol/compositor-dependent limits on some advanced operations.
 - X11: Almost feature complete. There are a few holes left in Drag-and-drop, IME handling and idle inhibition.
-- Window: Minimally functional.
+- Windows: Minimally functional.
 - macOS: Stubbed in.
 
 ## Quickstart 
