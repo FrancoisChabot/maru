@@ -39,5 +39,5 @@ add_library(maru_linux${MARU_LIB_SUFFIX} ${MARU_LIB_TYPE}
 )
 target_link_libraries(maru_linux${MARU_LIB_SUFFIX} PUBLIC maru_iface${MARU_LIB_SUFFIX}_indirect)
 if(MARU_BUILD_SHARED)
-  target_compile_definitions(maru_linux${MARU_LIB_SUFFIX} PRIVATE MARU_BUILD_DLL)
+  target_compile_definitions(maru_linux${MARU_LIB_SUFFIX} PRIVATE MARU_BUILDING_DLL)
 endif()

@@ -1,6 +1,6 @@
 set(MARU_X11_SOURCES
     x11_entry.c
-    X11_context.c
+    x11_context.c
     x11_window.c
     x11_input.c
     x11_dataexchange.c

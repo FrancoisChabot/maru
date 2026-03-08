@@ -30,7 +30,7 @@ You first need:
   - A C/C++ compiler (gcc/clang/msvc)
   - [git](https://git-scm.com/)
   - [CMake](https://cmake.org/) (3.20 or above)
-  - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home). (N.B. only needed for the examples, the Maru library itslef doesn't require it)
+  - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home). (N.B. only needed for the examples, the Maru library itself doesn't require it)
 
 ```bash 
 # Linux/macOS: you may or may not have to do this depending on your environment.
@@ -177,10 +177,10 @@ Maru provides a few different options to control the validation behavior. These 
 
 Here are the rule of thumbs:
 
-- Each `MARU_Context` is its own little universe. They are **fully** independant from one-another, and you can instantiate different contexts in different threads.
+- Each `MARU_Context` is its own little universe. They are **fully** independent from one-another, and you can instantiate different contexts in different threads.
 - The thread that creates a `MARU_Context` is that context's owner thread.
 - `maru_postEvent()`, `maru_wakeContext()`, `maru_*retain()` and `maru_*release()` are the only functions that are truly thread-safe.
-- Any function that does not return a `MARU_Status` is a **pasive accessor**, and can be safely called from arbitrary threads; provided that you synchronize with the Context's thread with a R/W lock.
+- Any function that does not return a `MARU_Status` is a **passive accessor**, and can be safely called from arbitrary threads; provided that you synchronize with the Context's thread with a R/W lock.
 - Any other function has to be called from the context's owner thread.
 
 #### Aren't there mutations that Maru could flag as thread-safe-with-external-synchronization? 
@@ -195,7 +195,7 @@ Yes!
 
 You use either or both. The default is a one-size-fits-all mode that will try Wayland first and fall back to X11 if it cannot use it, but you can force it one way or another at runtime. Every system dependency is manually loaded and checked, so your game/app will work as long as either X11 or Wayland is available.
 
-If you want to exclusively support X11 or Wayland, that's also possible, and it eliminates every shred of overhead from the dynamic selection machinery (what little there is). See the [Integration guide](docs/user_guide/integration.md) for details.
+If you want to exclusively support X11 or Wayland, that's also possible, and it eliminates every shred of overhead from the dynamic selection machinery (what little there is).
 
 ### How does Maru handle high-frequency mouse input?
 
@@ -259,4 +259,4 @@ The examples' code are derived from [Vulkan Tutorial](https://github.com/Overv/V
 
 ## License
 
-Maru is licensed under the Zlib license. See [LICENSE.md](LICENSE.md) for details.
+Maru is licensed under the Zlib license. See [LICENSE.txt](LICENSE.txt) for details.
