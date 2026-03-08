@@ -92,6 +92,14 @@ void WindowModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Ev
     if (handling_window_teardown_) {
         return;
     }
+    if (type == MARU_EVENT_WINDOW_READY) {
+        for (auto& sw : secondary_windows_) {
+            if (sw->window == window) {
+                sw->ready = true;
+                return;
+            }
+        }
+    }
     if (type != MARU_EVENT_CLOSE_REQUESTED) {
         return;
     }
@@ -146,7 +154,13 @@ void WindowModule::update(MARU_Context* ctx, MARU_Window* window) {
     }
 
     for (auto& sw : secondary_windows_) {
-        if (!sw->window || !maru_isWindowReady(sw->window)) {
+        if (!sw->window) {
+            continue;
+        }
+        if (!sw->ready && maru_isWindowReady(sw->window)) {
+            sw->ready = true;
+        }
+        if (!sw->ready) {
             continue;
         }
         if (maru_isWindowLost(sw->window)) {
@@ -205,6 +219,7 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
 
     auto sw = std::make_unique<SecondaryWindow>();
     sw->window = created_window;
+    sw->ready = false;
     sw->title = std::move(title);
     sw->is_resizable = secondary_create_.resizable;
     sw->mouse_passthrough = secondary_create_.mouse_passthrough;
@@ -226,8 +241,6 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow& sw) {
         const VkFormat request_surface_image_format[] = {
             VK_FORMAT_B8G8R8A8_UNORM,
             VK_FORMAT_R8G8B8A8_UNORM,
-            VK_FORMAT_B8G8R8_UNORM,
-            VK_FORMAT_R8G8B8_UNORM,
         };
         const VkColorSpaceKHR request_surface_color_space = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
         sw.wd.SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(
@@ -470,6 +483,10 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
     ImGui::Text("Secondary Windows: %zu", secondary_windows_.size());
     for (size_t i = 0; i < secondary_windows_.size(); ++i) {
         auto& sw = *secondary_windows_[i];
+        const bool window_ready = sw.window && (sw.ready || maru_isWindowReady(sw.window));
+        if (window_ready) {
+            sw.ready = true;
+        }
         ImGui::PushID((int)i);
         if (ImGui::CollapsingHeader(sw.title.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
             char title_buf[256];
@@ -479,7 +496,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 sw.title = title_buf;
             }
 
-            if (sw.window) {
+            if (sw.window && window_ready) {
                 MARU_WindowGeometry geometry = {};
                 maru_getWindowGeometry(sw.window, &geometry);
                 ImGui::Text("Handle: %p", (void*)sw.window);
@@ -492,17 +509,20 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 ImGui::Text("Origin:  %.1f, %.1f", geometry.origin.x, geometry.origin.y);
                 ImGui::Text("Logical: %.1f x %.1f", geometry.logical_size.x, geometry.logical_size.y);
                 ImGui::Text("Pixel:   %d x %d", geometry.pixel_size.x, geometry.pixel_size.y);
+            } else if (sw.window) {
+                ImGui::Text("Handle: %p", (void*)sw.window);
+                ImGui::TextUnformatted("State: Waiting for WINDOW_READY");
             }
 
             bool is_max = sw.window ? maru_isWindowMaximized(sw.window) : false;
             bool is_fs = sw.window ? maru_isWindowFullscreen(sw.window) : false;
-            if (ImGui::Checkbox("Maximized", &is_max) && sw.window) {
+            if (ImGui::Checkbox("Maximized", &is_max) && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
                 attrs.maximized = is_max;
                 maru_updateWindow(sw.window, MARU_WINDOW_ATTR_MAXIMIZED, &attrs);
             }
             ImGui::SameLine();
-            if (ImGui::Checkbox("Fullscreen", &is_fs) && sw.window) {
+            if (ImGui::Checkbox("Fullscreen", &is_fs) && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
                 attrs.fullscreen = is_fs;
                 maru_updateWindow(sw.window, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
@@ -514,13 +534,13 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             }
 
             ImGui::Text("Decorated: %s", (sw.window && maru_isWindowDecorated(sw.window)) ? "Yes" : "No");
-            if (ImGui::Checkbox("Resizable", &sw.is_resizable) && sw.window) {
+            if (ImGui::Checkbox("Resizable", &sw.is_resizable) && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
                 attrs.resizable = sw.is_resizable;
                 maru_updateWindow(sw.window, MARU_WINDOW_ATTR_RESIZABLE, &attrs);
             }
             ImGui::SameLine();
-            if (ImGui::Checkbox("Mouse Passthrough", &sw.mouse_passthrough) && sw.window) {
+            if (ImGui::Checkbox("Mouse Passthrough", &sw.mouse_passthrough) && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
                 attrs.mouse_passthrough = sw.mouse_passthrough;
                 maru_updateWindow(sw.window, MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH, &attrs);
@@ -535,7 +555,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             ImGui::InputScalarN("Max Size", scalar_type, &sw.max_size.x, 2, nullptr, nullptr, "%.0f");
             ImGui::InputInt2("Aspect Fraction (num/den)", &sw.aspect_ratio.num);
 
-            if (ImGui::Button("Commit") && sw.window) {
+            if (ImGui::Button("Commit") && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
                 attrs.title = sw.title.c_str();
                 attrs.min_size = sw.min_size;
@@ -546,11 +566,11 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
 
             ImGui::ColorEdit4("Clear Color", (float*)&sw.clear_color);
 
-            if (ImGui::Button("Request Focus") && sw.window) {
+            if (ImGui::Button("Request Focus") && sw.window && window_ready) {
                 maru_requestWindowFocus(sw.window);
             }
             ImGui::SameLine();
-            if (ImGui::Button("Request Frame Callback") && sw.window) {
+            if (ImGui::Button("Request Frame Callback") && sw.window && window_ready) {
                 maru_requestWindowFrame(sw.window);
             }
             ImGui::SameLine();
@@ -558,7 +578,9 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 sw.should_close = true;
             }
 
-            renderWindowEventMaskControls("secondary_window_mask", sw.window);
+            if (window_ready) {
+                renderWindowEventMaskControls("secondary_window_mask", sw.window);
+            }
         }
         ImGui::PopID();
     }

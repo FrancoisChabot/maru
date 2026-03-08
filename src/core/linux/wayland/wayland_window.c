@@ -559,9 +559,7 @@ static const struct xdg_surface_listener _xdg_surface_listener = {
 static void _wl_frame_callback_done(void *data, struct wl_callback *callback,
                                     uint32_t callback_data) {
   MARU_Window_WL *window = (MARU_Window_WL *)data;
-  if (!window) {
-    return;
-  }
+  MARU_ASSUME(window != NULL);
 
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   window->wl.frame_callback = NULL;

@@ -8,9 +8,10 @@
 
 void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t changed_fields,
                                                bool icon_effective) {
-  if (!window || changed_fields == 0u) {
+  if (changed_fields == 0u) {
     return;
   }
+  MARU_ASSUME(window != NULL);
 
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   const uint64_t flags = window->base.pub.flags;
@@ -169,12 +170,10 @@ void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window) {
 }
 
 MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
-  if (!window_handle) {
-    return MARU_FAILURE;
-  }
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-  if (!ctx || !window->wl.surface) {
+  MARU_ASSUME(ctx != NULL);
+  if (!window->wl.surface) {
     return MARU_FAILURE;
   }
 
@@ -217,7 +216,7 @@ MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
 
 MARU_Status maru_requestWindowFrame_WL(MARU_Window *window_handle) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
-  if (!window || !window->wl.surface) {
+  if (!window->wl.surface) {
     return MARU_FAILURE;
   }
 
@@ -226,9 +225,5 @@ MARU_Status maru_requestWindowFrame_WL(MARU_Window *window_handle) {
 }
 
 MARU_Status maru_requestWindowAttention_WL(MARU_Window *window_handle) {
-  MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
-  if (!window) {
-    return MARU_FAILURE;
-  }
   return maru_requestWindowFocus_WL(window_handle);
 }

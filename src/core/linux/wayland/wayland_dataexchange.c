@@ -1089,12 +1089,6 @@ bool _maru_wayland_dataexchange_handle_internal_event(void *ctx_ptr,
 MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
                                  const char **mime_types, uint32_t count,
                                  MARU_DropActionMask allowed_actions) {
-  if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
-      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
-      target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
-    return MARU_FAILURE;
-  }
-
   MARU_Window_WL *wl_window = (MARU_Window_WL *)window;
   MARU_Context_WL *ctx = (MARU_Context_WL *)wl_window->base.ctx_base;
   if (!_maru_wl_dataexchange_target_supported(ctx, target)) {
@@ -1278,12 +1272,6 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
 
 MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
                                 const char *mime_type, void *user_tag) {
-  if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
-      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
-      target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
-    return MARU_FAILURE;
-  }
-
   MARU_Window_WL *wl_window = (MARU_Window_WL *)window;
   MARU_Context_WL *ctx = (MARU_Context_WL *)wl_window->base.ctx_base;
   if (!_maru_wl_dataexchange_target_supported(ctx, target)) {
@@ -1453,8 +1441,6 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
 MARU_Status maru_provideData_WL(const MARU_DataRequestEvent *request_event,
                                 const void *data, size_t size,
                                 MARU_DataProvideFlags flags) {
-  if (!request_event || !request_event->internal_handle) return MARU_FAILURE;
-
   MARU_WaylandDataRequestHandle *handle =
       (MARU_WaylandDataRequestHandle *)request_event->internal_handle;
   if (handle->magic != MARU_WL_DATA_REQUEST_MAGIC || handle->fd < 0 ||

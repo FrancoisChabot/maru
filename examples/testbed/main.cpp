@@ -106,7 +106,7 @@ static void handle_maru_diagnostic(const MARU_DiagnosticInfo *info,
 static void handle_maru_event(MARU_EventId type, MARU_Window *window,
                               const MARU_Event *event, void *userdata) {
   (void)userdata;
-  if (!window || window == g_PrimaryWindow) {
+  if (ImGui::GetCurrentContext() && (!window || window == g_PrimaryWindow)) {
     ImGui_ImplMaru_HandleEvent(type, event);
   }
 
@@ -299,8 +299,7 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window *wd,
   }
 
   const VkFormat requestSurfaceImageFormat[] = {
-      VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM,
-      VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM};
+      VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM};
   const VkColorSpaceKHR requestSurfaceColorSpace =
       VK_COLORSPACE_SRGB_NONLINEAR_KHR;
   wd->Surface = surface;
@@ -437,7 +436,6 @@ static void FramePresent(ImGui_ImplVulkanH_Window *wd) {
 
 int main(int, char **) {
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-  create_info.backend = MARU_BACKEND_X11;
   create_info.attributes.diagnostic_cb = handle_maru_diagnostic;
   create_info.tuning.wayland.decoration_mode = MARU_WAYLAND_DECORATION_MODE_CSD;
 
@@ -487,6 +485,28 @@ int main(int, char **) {
     return 1;
   }
   g_PrimaryWindow = window;
+
+  while (g_KeepRunning && !g_WindowReady) {
+    if (maru_pumpEvents(context, 16, handle_maru_event, NULL) != MARU_SUCCESS) {
+      fprintf(stderr, "Failed while waiting for window readiness.\n");
+      maru_destroyWindow(window);
+      if (window_icon) {
+        maru_destroyImage(window_icon);
+      }
+      CleanupVulkan();
+      maru_destroyContext(context);
+      return 1;
+    }
+  }
+  if (!g_WindowReady) {
+    maru_destroyWindow(window);
+    if (window_icon) {
+      maru_destroyImage(window_icon);
+    }
+    CleanupVulkan();
+    maru_destroyContext(context);
+    return 0;
+  }
 
   VkSurfaceKHR surface;
   if (maru_createVkSurface(window, g_Instance, vkGetInstanceProcAddr,

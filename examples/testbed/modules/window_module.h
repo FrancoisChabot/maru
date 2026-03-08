@@ -31,6 +31,7 @@ private:
         bool vk_window_initialized = false;
         bool should_close = false;
         bool swapchain_rebuild = false;
+        bool ready = false;
         std::string title;
         bool is_resizable = true;
         bool mouse_passthrough = false;

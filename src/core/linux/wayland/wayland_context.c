@@ -125,10 +125,12 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
 
   if ((caps & WL_SEAT_CAPABILITY_POINTER) && !ctx->wl.pointer) {
     ctx->wl.pointer = maru_wl_seat_get_pointer(ctx, wl_seat);
-    ctx->dlib.wl.proxy_add_listener((struct wl_proxy *)ctx->wl.pointer,
-                                    (void (**)(void))&_maru_wayland_pointer_listener, ctx);
-    _wl_update_cursor_shape_device(ctx);
-    _wl_refresh_locked_window_pointers(ctx);
+    if (ctx->wl.pointer) {
+      ctx->dlib.wl.proxy_add_listener((struct wl_proxy *)ctx->wl.pointer,
+                                      (void (**)(void))&_maru_wayland_pointer_listener, ctx);
+      _wl_update_cursor_shape_device(ctx);
+      _wl_refresh_locked_window_pointers(ctx);
+    }
   } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && ctx->wl.pointer) {
     _wl_clear_locked_window_pointers(ctx);
     _wl_update_cursor_shape_device(ctx);
@@ -140,8 +142,10 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
 
   if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !ctx->wl.keyboard) {
     ctx->wl.keyboard = maru_wl_seat_get_keyboard(ctx, wl_seat);
-    ctx->dlib.wl.proxy_add_listener((struct wl_proxy *)ctx->wl.keyboard,
-                                    (void (**)(void))&_maru_wayland_keyboard_listener, ctx);
+    if (ctx->wl.keyboard) {
+      ctx->dlib.wl.proxy_add_listener((struct wl_proxy *)ctx->wl.keyboard,
+                                      (void (**)(void))&_maru_wayland_keyboard_listener, ctx);
+    }
   } else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD) && ctx->wl.keyboard) {
     maru_wl_keyboard_destroy(ctx, ctx->wl.keyboard);
     ctx->wl.keyboard = NULL;
@@ -1097,9 +1101,7 @@ static void _maru_wayland_pump_dispatch_repeats(MARU_Context_WL *ctx) {
       while (ctx->repeat.repeat_key != 0 && now_ns >= ctx->repeat.next_repeat_ns &&
              dispatch_count < max_dispatch_per_pump) {
         MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.xkb.focused_window;
-        if (!window) {
-          break;
-        }
+        MARU_ASSUME(window != NULL);
         const bool text_input_active =
             (window->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
             (window->ext.text_input != NULL) &&
@@ -1155,9 +1157,6 @@ static void _maru_wayland_pump_post_tick(MARU_Context_WL *ctx) {
 MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
                                MARU_EventCallback callback, void *userdata) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  if (!callback) {
-    return MARU_FAILURE;
-  }
   if (maru_isContextLost(context)) {
     return MARU_ERROR_CONTEXT_LOST;
   }

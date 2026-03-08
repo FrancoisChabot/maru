@@ -28,13 +28,13 @@
 #define WL_POINTER_BUTTON_STATE_RELEASED 0
 #define WL_POINTER_AXIS_VERTICAL_SCROLL 0
 #define WL_POINTER_AXIS_HORIZONTAL_SCROLL 1
+#define MARU_WL_XKB_KEY_OFFSET 8
 
 
 static MARU_Window_WL *_maru_wayland_resolve_registered_window(
     MARU_Context_WL *ctx, const MARU_Window *candidate) {
-    if (!ctx || !candidate) {
-        return NULL;
-    }
+    MARU_ASSUME(ctx != NULL);
+    MARU_ASSUME(candidate != NULL);
 
     for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
         if ((const MARU_Window *)it == candidate) {
@@ -101,9 +101,6 @@ static void _maru_wayland_replace_pending_utf8(MARU_Window_WL *window, char **sl
 }
 
 void _maru_wayland_clear_text_input_pending(MARU_Window_WL *window) {
-    if (!window) {
-        return;
-    }
     _maru_wayland_replace_pending_utf8(window, &window->text_input_pending.preedit_utf8, NULL);
     _maru_wayland_replace_pending_utf8(window, &window->text_input_pending.commit_utf8, NULL);
     memset(&window->text_input_pending, 0, sizeof(window->text_input_pending));
@@ -211,8 +208,8 @@ static bool _maru_wayland_commit_cursor_buffer(MARU_Context_WL *ctx, uint32_t se
 }
 
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial) {
-    if (!ctx->wl.pointer) return;
-    if (!window) return;
+    MARU_ASSUME(ctx->wl.pointer != NULL);
+    MARU_ASSUME(window != NULL);
 
     MARU_Cursor *cursor_handle = (MARU_Cursor *)window->base.pub.current_cursor;
     MARU_CursorMode mode = window->base.pub.cursor_mode;
@@ -561,8 +558,6 @@ static void _relative_pointer_handle_relative_motion(void *data, struct zwp_rela
     MARU_Window_WL *window = (MARU_Window_WL *)data;
     MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
-    // printf("DEBUG: Relative motion: %f, %f\n", wl_fixed_to_double(dx), wl_fixed_to_double(dy));
-
     MARU_Event evt = {0};
     evt.mouse_motion.position.x = ctx->linux_common.pointer.x;
     evt.mouse_motion.position.y = ctx->linux_common.pointer.y;
@@ -805,7 +800,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     MARU_Window_WL *window = (MARU_Window_WL *)ctx->linux_common.xkb.focused_window;
     if (!window || !ctx->linux_common.xkb.state) return;
 
-    uint32_t keycode = key + 8;
+    uint32_t keycode = key + MARU_WL_XKB_KEY_OFFSET;
     MARU_Key maru_key = _linux_scancode_to_maru_key(key);
     MARU_ButtonState maru_state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
     if (maru_state == MARU_BUTTON_STATE_PRESSED) {
@@ -1131,7 +1126,8 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
   cursor->base.pub.userdata = create_info->userdata;
 
   if (system_cursor) {
-    if (create_info->system_shape <= 0 || create_info->system_shape >= 16) {
+    if (create_info->system_shape < MARU_CURSOR_SHAPE_DEFAULT ||
+        create_info->system_shape > MARU_CURSOR_SHAPE_NWSE_RESIZE) {
       maru_context_free(&ctx->base, cursor);
       return MARU_FAILURE;
     }
@@ -1147,10 +1143,6 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
     cursor->base.pub.flags = MARU_CURSOR_FLAG_SYSTEM;
     cursor->cursor_shape = create_info->system_shape;
   } else {
-    if (!create_info->frames || create_info->frame_count == 0) {
-      maru_context_free(&ctx->base, cursor);
-      return MARU_FAILURE;
-    }
     cursor->frames = (MARU_WaylandCursorFrame *)maru_context_alloc(
         &ctx->base, sizeof(MARU_WaylandCursorFrame) * create_info->frame_count);
     if (!cursor->frames) {
@@ -1160,11 +1152,6 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
     memset(cursor->frames, 0, sizeof(MARU_WaylandCursorFrame) * create_info->frame_count);
     for (uint32_t i = 0; i < create_info->frame_count; ++i) {
       const MARU_CursorFrame *frame = &create_info->frames[i];
-      if (!frame->image) {
-        _maru_wayland_destroy_cursor_frames(ctx, cursor);
-        maru_context_free(&ctx->base, cursor);
-        return MARU_FAILURE;
-      }
       const MARU_Image_Base *image = (const MARU_Image_Base *)frame->image;
       if (image->ctx_base != &ctx->base) {
         _maru_wayland_destroy_cursor_frames(ctx, cursor);
@@ -1231,17 +1218,11 @@ MARU_Status maru_createImage_WL(MARU_Context *context,
                                 const MARU_ImageCreateInfo *create_info,
                                 MARU_Image **out_image) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  if (!create_info->pixels || create_info->size.x <= 0 || create_info->size.y <= 0) {
-    return MARU_FAILURE;
-  }
 
   const uint32_t width = (uint32_t)create_info->size.x;
   const uint32_t height = (uint32_t)create_info->size.y;
   const uint32_t min_stride = width * 4u;
   const uint32_t stride = (create_info->stride_bytes == 0) ? min_stride : create_info->stride_bytes;
-  if (stride < min_stride) {
-    return MARU_FAILURE;
-  }
 
   MARU_Image_Base *image = (MARU_Image_Base *)maru_context_alloc(&ctx->base, sizeof(MARU_Image_Base));
   if (!image) {

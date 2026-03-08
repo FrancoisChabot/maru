@@ -8,12 +8,12 @@
             "name": "C/C++ Debug (lldb Launch)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/examples/basic_c/maru_basic_c",
+            "program": "${workspaceFolder}/build/examples/testbed/maru_testbed",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "MIMode": "lldb"
+            "MIMode": "gdb"
         }
     ]
 }

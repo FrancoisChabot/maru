@@ -117,7 +117,7 @@ install(TARGETS ${target_direct} ${target_indirect} EXPORT MaruTargets)
 add_library("maru_base_obj" OBJECT core/core.c core/core_event_queue.c)
 target_link_libraries("maru_base_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
 
-add_library("maru_base_indirect_obj" OBJECT core/core.c core/core_event_queue.c)
+add_library("maru_base_indirect_obj" OBJECT core/core.c core/core_event_queue.c core/core_indirect_entry.c)
 target_link_libraries("maru_base_indirect_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
 target_compile_definitions("maru_base_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
 
