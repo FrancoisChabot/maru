@@ -1197,7 +1197,3 @@ pump_exit:;
   return status;
 }
 
-void *maru_getContextNativeHandle_WL(MARU_Context *context) {
-  MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  return ctx->wl.display;
-}

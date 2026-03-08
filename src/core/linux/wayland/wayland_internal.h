@@ -498,6 +498,10 @@ void _maru_wayland_update_opaque_region(MARU_Window_WL *window);
 void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, uint32_t serial);
 bool _maru_wayland_update_cursor_mode(MARU_Window_WL *window);
 void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window);
+
+bool _maru_wayland_ensure_cursor_theme(MARU_Context_WL *ctx);
+const char *_maru_cursor_shape_to_name(MARU_CursorShape shape);
+void _maru_wayland_clear_cursor_animation(MARU_Context_WL *ctx);
 void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t changed_fields,
                                                bool icon_effective);
 void _maru_wayland_update_text_input(MARU_Window_WL *window);

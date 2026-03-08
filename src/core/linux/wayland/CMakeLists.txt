@@ -1,6 +1,9 @@
 set(MARU_WAYLAND_SOURCES 
-    wayland_entry.c
+    wayland.c
     wayland_context.c
+    wayland_cursor.c
+    wayland_image.c
+    wayland_controller.c
     wayland_input.c
     wayland_monitor.c
     wayland_window.c

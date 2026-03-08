@@ -2,11 +2,11 @@
 
 [![License](https://img.shields.io/badge/license-zlib-blue.svg)](LICENSE.md)
 
-A lightweight vulkan-centric Platform Abstraction Layer for the modern age.
+A vulkan-centric Platform Abstraction Layer that gets out of your way.
 
 What's neat about Maru?
 
-- It has no dynamic global state whatsoever, and is completely inert until invoked.
+- It has no dynamic global state whatsoever unless OS-mandated and is completely inert until invoked.
 - It goes out of its way to provide fast and steady timing (< 0.1ms generally), even during unusual events like controller hot-plugs.
 - API use is aggressively validated by default, and all guardrails can be disabled for maximum performance.
 - It exposes clear and detailed metrics about its internal timing and resource usage.
@@ -65,6 +65,15 @@ FetchContent_Declare(maru
 )
 FetchContent_MakeAvailable(maru)
 target_link_libraries(your_target PRIVATE maru::maru)
+```
+
+You can also build Maru by itself and use it as a regular library:
+
+```bash
+cd path/to/maru
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=path/to/where/to/install/maru ..
+make && make install
 ```
 
 ## Usage example
@@ -159,7 +168,7 @@ Maru provides a few different options to control the validation behavior. These 
 | **Production**     | `OFF`                     | `OFF`                     | `OFF`                 | `OFF`                         |
 | **Debugging Maru** | `ON`                      | `ON`                      | `ON`                  | `ON`                          |
 
-**N.B.** `MARU_ENABLE_INTERNAL_CHECKS` can have subtle implications beyond performance in some cases. See [Internal Checks Caveats](docs/dev_guide/internal_checks_caveats.md) for details.
+**N.B.** `MARU_ENABLE_INTERNAL_CHECKS` can have subtle implications beyond performance in some cases. See [Internal Checks Caveats](docs/dev/internal_checks_caveats.md) for details.
 
 
 ## FAQs
