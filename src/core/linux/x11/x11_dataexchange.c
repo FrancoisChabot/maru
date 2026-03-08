@@ -111,6 +111,14 @@ void _maru_x11_clear_pending_request(MARU_Context_X11 *ctx,
   request->pending = false;
   request->window = NULL;
   request->target_atom = None;
+  request->property_atom = None;
+  request->incr_active = false;
+  if (request->incr_data) {
+    maru_context_free(&ctx->base, request->incr_data);
+    request->incr_data = NULL;
+  }
+  request->incr_size = 0;
+  request->incr_capacity = 0;
   request->user_tag = NULL;
 }
 
@@ -677,6 +685,210 @@ static void _maru_x11_dispatch_data_received(MARU_Context_X11 *ctx,
                        (MARU_Window *)request->window, &evt);
 }
 
+static size_t _maru_x11_selection_property_size_bytes(int actual_format,
+                                                      unsigned long item_count) {
+  if (actual_format == 8) {
+    return (size_t)item_count;
+  }
+  if (actual_format == 16) {
+    return (size_t)item_count * 2u;
+  }
+  if (actual_format == 32) {
+    return (size_t)item_count * 4u;
+  }
+  return 0;
+}
+
+static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
+                                          MARU_X11DataRequestPending *request,
+                                          MARU_DataExchangeTarget target,
+                                          MARU_Status status,
+                                          const void *data, size_t size) {
+  const bool is_internal_dnd_prefetch =
+      (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) &&
+      (request->user_tag == (void *)1);
+
+  if (status == MARU_SUCCESS && is_internal_dnd_prefetch && ctx->dnd_session.active &&
+      ctx->dnd_session.drop_pending && ctx->dnd_session.target_window) {
+    const char **paths = NULL;
+    uint32_t path_count = 0;
+    if (data && size > 0) {
+      path_count =
+          _maru_x11_parse_uri_list(ctx, (const char *)data, size, &paths);
+    }
+
+    MARU_Event drop_evt = {0};
+    drop_evt.drop.position = ctx->dnd_session.position;
+    drop_evt.drop.session_userdata = &ctx->dnd_session.session_userdata;
+    drop_evt.drop.available_types.mime_types =
+        (const char *const *)ctx->dnd_session.offered_mimes;
+    drop_evt.drop.available_types.count = ctx->dnd_session.offered_count;
+    drop_evt.drop.modifiers = 0;
+    drop_evt.drop.paths = paths;
+    drop_evt.drop.path_count = (uint16_t)path_count;
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED,
+                         (MARU_Window *)ctx->dnd_session.target_window, &drop_evt);
+
+    if (paths) {
+      for (uint32_t i = 0; i < path_count; ++i) {
+        maru_context_free(&ctx->base, (void *)paths[i]);
+      }
+      maru_context_free(&ctx->base, (void *)paths);
+    }
+
+    _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, true);
+    _maru_x11_clear_dnd_session(ctx);
+    _maru_x11_clear_pending_request(ctx, request);
+    return;
+  }
+
+  if (status == MARU_SUCCESS) {
+    _maru_x11_dispatch_data_received(ctx, request, target, data, size, MARU_SUCCESS);
+    if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP && ctx->dnd_session.active) {
+      _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, true);
+      _maru_x11_clear_dnd_session(ctx);
+    }
+    _maru_x11_clear_pending_request(ctx, request);
+    return;
+  }
+
+  if (is_internal_dnd_prefetch && ctx->dnd_session.active &&
+      ctx->dnd_session.drop_pending && ctx->dnd_session.target_window) {
+    MARU_Event drop_evt = {0};
+    drop_evt.drop.position = ctx->dnd_session.position;
+    drop_evt.drop.session_userdata = &ctx->dnd_session.session_userdata;
+    drop_evt.drop.available_types.mime_types =
+        (const char *const *)ctx->dnd_session.offered_mimes;
+    drop_evt.drop.available_types.count = ctx->dnd_session.offered_count;
+    drop_evt.drop.modifiers = 0;
+    drop_evt.drop.paths = NULL;
+    drop_evt.drop.path_count = 0;
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED,
+                         (MARU_Window *)ctx->dnd_session.target_window,
+                         &drop_evt);
+    _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, true);
+    _maru_x11_clear_dnd_session(ctx);
+  } else {
+    _maru_x11_dispatch_data_received(ctx, request, target, NULL, 0, MARU_FAILURE);
+    if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP && ctx->dnd_session.active) {
+      _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, false);
+      _maru_x11_clear_dnd_session(ctx);
+    }
+  }
+  _maru_x11_clear_pending_request(ctx, request);
+}
+
+static bool _maru_x11_append_incr_data(MARU_Context_X11 *ctx,
+                                       MARU_X11DataRequestPending *request,
+                                       const unsigned char *chunk, size_t size) {
+  if (size == 0) {
+    return true;
+  }
+  if (!chunk) {
+    return false;
+  }
+  if (request->incr_size > SIZE_MAX - size) {
+    return false;
+  }
+
+  const size_t needed = request->incr_size + size;
+  if (needed > request->incr_capacity) {
+    size_t new_capacity = request->incr_capacity ? request->incr_capacity : 4096u;
+    while (new_capacity < needed) {
+      if (new_capacity > (SIZE_MAX / 2u)) {
+        new_capacity = needed;
+        break;
+      }
+      new_capacity *= 2u;
+    }
+    unsigned char *new_data = (unsigned char *)maru_context_realloc(
+        &ctx->base, request->incr_data, request->incr_capacity, new_capacity);
+    if (!new_data) {
+      return false;
+    }
+    request->incr_data = new_data;
+    request->incr_capacity = new_capacity;
+  }
+
+  memcpy(request->incr_data + request->incr_size, chunk, size);
+  request->incr_size += size;
+  return true;
+}
+
+static bool _maru_x11_process_incr_property_notify(MARU_Context_X11 *ctx,
+                                                   const XPropertyEvent *prop) {
+  if (!prop || prop->state != PropertyNewValue) {
+    return false;
+  }
+
+  static const MARU_DataExchangeTarget k_targets[] = {
+      MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+      MARU_DATA_EXCHANGE_TARGET_PRIMARY,
+      MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+  };
+
+  for (uint32_t i = 0; i < (uint32_t)(sizeof(k_targets) / sizeof(k_targets[0]));
+       ++i) {
+    const MARU_DataExchangeTarget target = k_targets[i];
+    MARU_X11DataRequestPending *request = _maru_x11_get_pending_request(ctx, target);
+    if (!request || !request->pending || !request->incr_active || !request->window) {
+      continue;
+    }
+    if (request->window->handle != prop->window ||
+        request->property_atom != prop->atom) {
+      continue;
+    }
+
+    Atom actual_type = None;
+    int actual_format = 0;
+    unsigned long item_count = 0;
+    unsigned long bytes_after = 0;
+    unsigned char *property_data = NULL;
+    const int xres = ctx->x11_lib.XGetWindowProperty(
+        ctx->display, request->window->handle, request->property_atom, 0,
+        0x1FFFFFFF, True, AnyPropertyType, &actual_type, &actual_format,
+        &item_count, &bytes_after, &property_data);
+    (void)bytes_after;
+    if (xres != Success || actual_type == None || actual_type == ctx->selection_incr) {
+      if (property_data) {
+        ctx->x11_lib.XFree(property_data);
+      }
+      _maru_x11_finish_data_request(ctx, request, target, MARU_FAILURE, NULL, 0);
+      return true;
+    }
+
+    const size_t chunk_size =
+        _maru_x11_selection_property_size_bytes(actual_format, item_count);
+    if (item_count > 0 && chunk_size == 0) {
+      if (property_data) {
+        ctx->x11_lib.XFree(property_data);
+      }
+      _maru_x11_finish_data_request(ctx, request, target, MARU_FAILURE, NULL, 0);
+      return true;
+    }
+    if (chunk_size == 0) {
+      _maru_x11_finish_data_request(ctx, request, target, MARU_SUCCESS,
+                                    request->incr_data, request->incr_size);
+      if (property_data) {
+        ctx->x11_lib.XFree(property_data);
+      }
+      return true;
+    }
+
+    const bool ok = _maru_x11_append_incr_data(ctx, request, property_data,
+                                               chunk_size);
+    if (property_data) {
+      ctx->x11_lib.XFree(property_data);
+    }
+    if (!ok) {
+      _maru_x11_finish_data_request(ctx, request, target, MARU_FAILURE, NULL, 0);
+    }
+    return true;
+  }
+
+  return false;
+}
+
 MARU_Status _maru_x11_announceData(MARU_Window *window,
                                    MARU_DataExchangeTarget target,
                                    const char **mime_types, uint32_t count,
@@ -797,6 +1009,8 @@ MARU_Status _maru_x11_requestData(MARU_Window *window,
   request->pending = true;
   request->window = win;
   request->target_atom = target_atom;
+  request->property_atom = None;
+  request->incr_active = false;
   request->user_tag = user_tag;
   Time request_time = CurrentTime;
   if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP &&
@@ -1021,37 +1235,8 @@ void _maru_x11_process_selection_notify(MARU_Context_X11 *ctx, XEvent *ev) {
       request->window->handle != notify->requestor) {
     return;
   }
-  const bool is_internal_dnd_prefetch =
-      (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) &&
-      (request->user_tag == (void *)1);
-
   if (notify->property == None) {
-    if (is_internal_dnd_prefetch && ctx->dnd_session.active &&
-        ctx->dnd_session.drop_pending && ctx->dnd_session.target_window) {
-      MARU_Event drop_evt = {0};
-      drop_evt.drop.position = ctx->dnd_session.position;
-      drop_evt.drop.session_userdata = &ctx->dnd_session.session_userdata;
-      drop_evt.drop.available_types.mime_types =
-          (const char *const *)ctx->dnd_session.offered_mimes;
-      drop_evt.drop.available_types.count = ctx->dnd_session.offered_count;
-      drop_evt.drop.modifiers = 0;
-      drop_evt.drop.paths = NULL;
-      drop_evt.drop.path_count = 0;
-      _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED,
-                           (MARU_Window *)ctx->dnd_session.target_window,
-                           &drop_evt);
-      _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, true);
-      _maru_x11_clear_dnd_session(ctx);
-    } else {
-      _maru_x11_dispatch_data_received(ctx, request, target, NULL, 0,
-                                       MARU_FAILURE);
-      if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP &&
-          ctx->dnd_session.active) {
-        _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, false);
-        _maru_x11_clear_dnd_session(ctx);
-      }
-    }
-    _maru_x11_clear_pending_request(ctx, request);
+    _maru_x11_finish_data_request(ctx, request, target, MARU_FAILURE, NULL, 0);
     return;
   }
 
@@ -1065,93 +1250,30 @@ void _maru_x11_process_selection_notify(MARU_Context_X11 *ctx, XEvent *ev) {
       0x1FFFFFFF, True, AnyPropertyType, &actual_type, &actual_format,
       &item_count, &bytes_after, &property_data);
   (void)bytes_after;
-  if (xres != Success || actual_type == None || actual_type == ctx->selection_incr) {
+  if (xres != Success || actual_type == None) {
     if (property_data) {
       ctx->x11_lib.XFree(property_data);
     }
-    if (is_internal_dnd_prefetch && ctx->dnd_session.active &&
-        ctx->dnd_session.drop_pending && ctx->dnd_session.target_window) {
-      MARU_Event drop_evt = {0};
-      drop_evt.drop.position = ctx->dnd_session.position;
-      drop_evt.drop.session_userdata = &ctx->dnd_session.session_userdata;
-      drop_evt.drop.available_types.mime_types =
-          (const char *const *)ctx->dnd_session.offered_mimes;
-      drop_evt.drop.available_types.count = ctx->dnd_session.offered_count;
-      drop_evt.drop.modifiers = 0;
-      drop_evt.drop.paths = NULL;
-      drop_evt.drop.path_count = 0;
-      _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED,
-                           (MARU_Window *)ctx->dnd_session.target_window,
-                           &drop_evt);
-      _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, true);
-      _maru_x11_clear_dnd_session(ctx);
-    } else {
-      _maru_x11_dispatch_data_received(ctx, request, target, NULL, 0,
-                                       MARU_FAILURE);
-      if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP &&
-          ctx->dnd_session.active) {
-        _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, false);
-        _maru_x11_clear_dnd_session(ctx);
-      }
-    }
-    _maru_x11_clear_pending_request(ctx, request);
+    _maru_x11_finish_data_request(ctx, request, target, MARU_FAILURE, NULL, 0);
     return;
   }
 
-  size_t size = 0;
-  if (actual_format == 8) {
-    size = (size_t)item_count;
-  } else if (actual_format == 16) {
-    size = (size_t)item_count * 2u;
-  } else if (actual_format == 32) {
-    size = (size_t)item_count * 4u;
-  } else {
-    size = 0;
+  if (actual_type == ctx->selection_incr) {
+    request->property_atom = notify->property;
+    request->incr_active = true;
+    if (property_data) {
+      ctx->x11_lib.XFree(property_data);
+    }
+    return;
   }
 
-  if (is_internal_dnd_prefetch && ctx->dnd_session.active &&
-      ctx->dnd_session.drop_pending && ctx->dnd_session.target_window) {
-    const char **paths = NULL;
-    uint32_t path_count = 0;
-    if (property_data && size > 0) {
-      path_count =
-          _maru_x11_parse_uri_list(ctx, (const char *)property_data, size, &paths);
-    }
-
-    MARU_Event drop_evt = {0};
-    drop_evt.drop.position = ctx->dnd_session.position;
-    drop_evt.drop.session_userdata = &ctx->dnd_session.session_userdata;
-    drop_evt.drop.available_types.mime_types =
-        (const char *const *)ctx->dnd_session.offered_mimes;
-    drop_evt.drop.available_types.count = ctx->dnd_session.offered_count;
-    drop_evt.drop.modifiers = 0;
-    drop_evt.drop.paths = paths;
-    drop_evt.drop.path_count = (uint16_t)path_count;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED,
-                         (MARU_Window *)ctx->dnd_session.target_window, &drop_evt);
-
-    if (paths) {
-      for (uint32_t i = 0; i < path_count; ++i) {
-        maru_context_free(&ctx->base, (void *)paths[i]);
-      }
-      maru_context_free(&ctx->base, (void *)paths);
-    }
-
-    _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, true);
-    _maru_x11_clear_dnd_session(ctx);
-  } else {
-    _maru_x11_dispatch_data_received(ctx, request, target, property_data, size,
-                                     MARU_SUCCESS);
-    if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP &&
-        ctx->dnd_session.active) {
-      _maru_x11_send_xdnd_finished(ctx, &ctx->dnd_session, true);
-      _maru_x11_clear_dnd_session(ctx);
-    }
-  }
+  const size_t size =
+      _maru_x11_selection_property_size_bytes(actual_format, item_count);
+  _maru_x11_finish_data_request(ctx, request, target, MARU_SUCCESS, property_data,
+                                size);
   if (property_data) {
     ctx->x11_lib.XFree(property_data);
   }
-  _maru_x11_clear_pending_request(ctx, request);
 }
 
 MARU_Status maru_announceData_X11(MARU_Window *window,
@@ -1266,6 +1388,9 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
     case SelectionNotify: {
       _maru_x11_process_selection_notify(ctx, ev);
       return true;
+    }
+    case PropertyNotify: {
+      return _maru_x11_process_incr_property_notify(ctx, &ev->xproperty);
     }
     case SelectionClear: {
       const XSelectionClearEvent *cleared = &ev->xselectionclear;

@@ -33,6 +33,11 @@ typedef struct MARU_X11DataRequestPending {
   MARU_Window_X11 *window;
   char *mime_type;
   Atom target_atom;
+  Atom property_atom;
+  bool incr_active;
+  unsigned char *incr_data;
+  size_t incr_size;
+  size_t incr_capacity;
   void *user_tag;
 } MARU_X11DataRequestPending;
 

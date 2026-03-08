@@ -5,8 +5,13 @@ This document tracks the remaining work and identified improvements for the Maru
 ## Priority 1: Correctness & Essential Features
 
 - [ ] **Incremental Selection Transfer (INCR)**:
-  - Implement the X11 `INCR` protocol in `x11_dataexchange.c`.
-  - Required for transferring data (clipboard/DnD) larger than the maximum request size supported by the X server.
+  - [x] Implemented **receive-side** INCR handling in `x11_dataexchange.c` for
+    `maru_requestData()` (`SelectionNotify` INCR handshake + `PropertyNotify`
+    chunk accumulation + zero-length termination).
+  - [ ] Implement **send-side** INCR in `maru_provideData_X11()` for payloads
+    larger than the X server request/property size limits.
+  - Required for transferring data (clipboard/DnD) larger than the maximum
+    request size supported by the X server.
 - [x] **Window State Synchronization**:
   - `PropertyNotify` for `_NET_WM_STATE`/`WM_STATE` now reconciles window-managed state in the event loop.
   - Internal flags (`MARU_WINDOW_STATE_MAXIMIZED`, `MARU_WINDOW_STATE_FULLSCREEN`, minimized via `WM_STATE`) are updated from WM properties and presentation state change events are dispatched when `maximized`/`minimized` bits change.
