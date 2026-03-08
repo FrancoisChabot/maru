@@ -298,8 +298,8 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_Window *wd,
     exit(-1);
   }
 
-  const VkFormat requestSurfaceImageFormat[] = {
-      VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM};
+  const VkFormat requestSurfaceImageFormat[] = {VK_FORMAT_B8G8R8A8_UNORM,
+                                                VK_FORMAT_R8G8B8A8_UNORM};
   const VkColorSpaceKHR requestSurfaceColorSpace =
       VK_COLORSPACE_SRGB_NONLINEAR_KHR;
   wd->Surface = surface;
@@ -439,7 +439,7 @@ int main(int, char **) {
   create_info.attributes.diagnostic_cb = handle_maru_diagnostic;
   create_info.backend = MARU_BACKEND_X11;
   create_info.tuning.wayland.decoration_mode = MARU_WAYLAND_DECORATION_MODE_CSD;
-  
+
   MARU_Context *context = NULL;
   if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {
     fprintf(stderr, "Failed to create context.\n");

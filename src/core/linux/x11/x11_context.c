@@ -660,6 +660,20 @@ void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
     return;
 }
 
+static bool _maru_x11_pop_next_event(MARU_Context_X11 *ctx, XEvent *out_ev) {
+  if (ctx->has_buffered_event) {
+    *out_ev = ctx->buffered_event;
+    ctx->has_buffered_event = false;
+    memset(&ctx->buffered_event, 0, sizeof(ctx->buffered_event));
+    return true;
+  }
+  if (!ctx->x11_lib.XPending(ctx->display)) {
+    return false;
+  }
+  ctx->x11_lib.XNextEvent(ctx->display, out_ev);
+  return true;
+}
+
 MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
                                 MARU_EventCallback callback, void *userdata) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
@@ -672,12 +686,13 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
   _maru_drain_queued_events(&ctx->base);
   _maru_x11_dispatch_pending_frames(ctx);
 
-  while (ctx->x11_lib.XPending(ctx->display)) {
+  {
     XEvent ev;
-    ctx->x11_lib.XNextEvent(ctx->display, &ev);
-    if (ctx->x11_lib.XFilterEvent(&ev, None))
-      continue;
-    _maru_x11_process_event(ctx, &ev);
+    while (_maru_x11_pop_next_event(ctx, &ev)) {
+      if (ctx->x11_lib.XFilterEvent(&ev, None))
+        continue;
+      _maru_x11_process_event(ctx, &ev);
+    }
   }
 
   {
@@ -724,12 +739,13 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
     }
   }
 
-  while (ctx->x11_lib.XPending(ctx->display)) {
+  {
     XEvent ev;
-    ctx->x11_lib.XNextEvent(ctx->display, &ev);
-    if (ctx->x11_lib.XFilterEvent(&ev, None))
-      continue;
-    _maru_x11_process_event(ctx, &ev);
+    while (_maru_x11_pop_next_event(ctx, &ev)) {
+      if (ctx->x11_lib.XFilterEvent(&ev, None))
+        continue;
+      _maru_x11_process_event(ctx, &ev);
+    }
   }
 
   {

@@ -125,6 +125,8 @@ typedef struct MARU_Context_X11 {
   MARU_Scalar locked_raw_dx_accum;
   MARU_Scalar locked_raw_dy_accum;
   bool locked_raw_pending;
+  bool has_buffered_event;
+  XEvent buffered_event;
   
   Atom wm_protocols;
   Atom wm_delete_window;

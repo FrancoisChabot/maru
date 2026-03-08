@@ -355,6 +355,24 @@ static bool _maru_x11_update_ic_spot(MARU_Context_X11 *ctx, MARU_Window_X11 *win
   return true;
 }
 
+static bool _maru_x11_consume_repeat_release(MARU_Context_X11 *ctx,
+                                             const XKeyEvent *release_ev) {
+  if (!ctx->x11_lib.XPending(ctx->display)) {
+    return false;
+  }
+
+  XEvent next_ev;
+  memset(&next_ev, 0, sizeof(next_ev));
+  ctx->x11_lib.XNextEvent(ctx->display, &next_ev);
+  ctx->has_buffered_event = true;
+  ctx->buffered_event = next_ev;
+
+  return next_ev.type == KeyPress &&
+         next_ev.xkey.window == release_ev->window &&
+         next_ev.xkey.keycode == release_ev->keycode &&
+         next_ev.xkey.time == release_ev->time;
+}
+
 static void _maru_x11_dispatch_preedit_update(MARU_Context_X11 *ctx,
                                               MARU_Window_X11 *win,
                                               int32_t caret_pos_hint) {
@@ -675,6 +693,10 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
       if (!win) return true;
 
       const bool is_press = (ev->type == KeyPress);
+      if (!is_press && _maru_x11_consume_repeat_release(ctx, &ev->xkey)) {
+        return true;
+      }
+
       KeySym keysym = NoSymbol;
       char text_buf[64];
       int text_len = 0;
