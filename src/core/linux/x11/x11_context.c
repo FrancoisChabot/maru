@@ -114,6 +114,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   }
 
   if (!maru_load_x11_symbols(&ctx->base, &ctx->x11_lib)) {
+    _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -133,6 +134,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     maru_unload_xcursor_symbols(&ctx->xcursor_lib);
     maru_unload_xss_symbols(&ctx->xss_lib);
     maru_unload_x11_symbols(&ctx->x11_lib);
+    _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }
@@ -249,6 +251,10 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   _maru_x11_detect_pointer_barrier_support(ctx);
 
   if (!_maru_linux_common_init(&ctx->linux_common, &ctx->base)) {
+    if (ctx->xim) {
+      ctx->x11_lib.XCloseIM(ctx->xim);
+      ctx->xim = NULL;
+    }
     ctx->x11_lib.XCloseDisplay(ctx->display);
     maru_unload_xfixes_symbols(&ctx->xfixes_lib);
     maru_unload_xrandr_symbols(&ctx->xrandr_lib);
@@ -257,6 +263,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     maru_unload_xcursor_symbols(&ctx->xcursor_lib);
     maru_unload_xss_symbols(&ctx->xss_lib);
     maru_unload_x11_symbols(&ctx->x11_lib);
+    _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
     return MARU_FAILURE;
   }

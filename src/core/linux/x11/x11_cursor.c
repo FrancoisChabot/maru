@@ -2,6 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "maru_internal.h"
+#include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "x11_internal.h"
 #include <string.h>
@@ -9,12 +10,14 @@
 
 static void _maru_x11_destroy_pointer_barriers(MARU_Context_X11 *ctx,
                                                MARU_Window_X11 *win) {
-  if (!ctx || !win || !ctx->display || !ctx->xfixes_lib.base.available ||
+  MARU_ASSUME(ctx != NULL);
+  MARU_ASSUME(win != NULL);
+  MARU_ASSUME(ctx->display != NULL);
+
+  if (!ctx->xfixes_lib.base.available ||
       !ctx->xfixes_lib.XFixesDestroyPointerBarrier) {
-    if (win) {
-      win->lock_pointer_barriers_active = false;
-      memset(win->lock_pointer_barriers, 0, sizeof(win->lock_pointer_barriers));
-    }
+    win->lock_pointer_barriers_active = false;
+    memset(win->lock_pointer_barriers, 0, sizeof(win->lock_pointer_barriers));
     return;
   }
 
@@ -30,8 +33,12 @@ static void _maru_x11_destroy_pointer_barriers(MARU_Context_X11 *ctx,
 
 static bool _maru_x11_create_pointer_barriers(MARU_Context_X11 *ctx,
                                               MARU_Window_X11 *win) {
-  if (!ctx || !win || !win->handle || !ctx->display ||
-      !ctx->xi2_pointer_barriers_available ||
+  MARU_ASSUME(ctx != NULL);
+  MARU_ASSUME(win != NULL);
+  MARU_ASSUME(win->handle != (Window)0);
+  MARU_ASSUME(ctx->display != NULL);
+
+  if (!ctx->xi2_pointer_barriers_available ||
       !ctx->xfixes_pointer_barriers_available ||
       !ctx->xfixes_lib.base.available ||
       !ctx->xfixes_lib.XFixesCreatePointerBarrier ||
@@ -125,18 +132,18 @@ void _maru_x11_release_pointer_lock(MARU_Context_X11 *ctx, MARU_Window_X11 *win)
 
 void _maru_x11_recenter_locked_pointer(MARU_Context_X11 *ctx,
                                               MARU_Window_X11 *win) {
-  if (!win->handle) {
-    return;
-  }
+  MARU_ASSUME(ctx != NULL);
+  MARU_ASSUME(win != NULL);
+  MARU_ASSUME(win->handle != (Window)0);
   win->suppress_lock_warp_event = true;
   ctx->x11_lib.XWarpPointer(ctx->display, None, win->handle, 0, 0, 0, 0,
                             win->lock_center_x, win->lock_center_y);
 }
 
 bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
-  if (!ctx || !win || !win->handle) {
-    return false;
-  }
+  MARU_ASSUME(ctx != NULL);
+  MARU_ASSUME(win != NULL);
+  MARU_ASSUME(win->handle != (Window)0);
 
   if (win->base.pub.cursor_mode == MARU_CURSOR_LOCKED) {
     if (!_maru_x11_ensure_hidden_cursor(ctx)) {

@@ -2,10 +2,12 @@
 // Copyright (c) 2026 François Chabot
 
 #include "maru_internal.h"
+#include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "x11_internal.h"
 #include <string.h>
 #include <linux/input-event-codes.h>
+#include <limits.h>
 #include <locale.h>
 #include <wchar.h>
 #include <stdlib.h>
@@ -278,22 +280,42 @@ static bool _maru_x11_copy_xim_text(MARU_Context_X11 *ctx, const XIMText *text,
 
   if (text->encoding_is_wchar) {
     const wchar_t *w = text->string.wide_char;
+    const size_t wlen = (size_t)text->length;
     if (!w) return true;
-    const size_t needed = wcstombs(NULL, w, 0);
-    if (needed == (size_t)-1) {
-      return false;
+
+    mbstate_t state;
+    memset(&state, 0, sizeof(state));
+
+    size_t needed = 0;
+    for (size_t i = 0; i < wlen; ++i) {
+      char scratch[MB_LEN_MAX];
+      const size_t written =
+          wcrtomb(scratch, w[i], &state);
+      if (written == (size_t)-1) {
+        return false;
+      }
+      needed += written;
     }
+
     char *buf = (char *)maru_context_alloc(&ctx->base, needed + 1u);
     if (!buf) {
       return false;
     }
-    const size_t written = wcstombs(buf, w, needed + 1u);
-    if (written == (size_t)-1) {
-      maru_context_free(&ctx->base, buf);
-      return false;
+
+    memset(&state, 0, sizeof(state));
+    size_t offset = 0;
+    for (size_t i = 0; i < wlen; ++i) {
+      const size_t written = wcrtomb(buf + offset, w[i], &state);
+      if (written == (size_t)-1) {
+        maru_context_free(&ctx->base, buf);
+        return false;
+      }
+      offset += written;
     }
+
+    buf[offset] = '\0';
     *out_utf8 = buf;
-    *out_len = written;
+    *out_len = offset;
     return true;
   }
 
@@ -379,7 +401,9 @@ void _maru_x11_xim_preedit_draw(XIC xic, XPointer client_data,
                                        XPointer call_data) {
   (void)xic;
   MARU_Window_X11 *win = (MARU_Window_X11 *)client_data;
-  if (!win || !win->base.ctx_base || !call_data) {
+  MARU_ASSUME(win != NULL);
+  MARU_ASSUME(win->base.ctx_base != NULL);
+  if (!call_data) {
     return;
   }
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
@@ -407,9 +431,8 @@ void _maru_x11_xim_preedit_done(XIC xic, XPointer client_data,
   (void)xic;
   (void)call_data;
   MARU_Window_X11 *win = (MARU_Window_X11 *)client_data;
-  if (!win || !win->base.ctx_base) {
-    return;
-  }
+  MARU_ASSUME(win != NULL);
+  MARU_ASSUME(win->base.ctx_base != NULL);
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
   (void)_maru_x11_replace_utf8_storage(ctx, &win->ime_preedit_storage, "", 0);
   win->ime_preedit_active = false;
