@@ -199,8 +199,9 @@ If you want to exclusively support X11 or Wayland, that's also possible, and it 
 
 ### How does Maru handle high-frequency mouse input?
 
-The short answer is that it doesn't. Every single mouse movement will be dispatched to your callback to ensure 
-zero-latency access to raw OS input and to accomodate engines that already provide their own event queues. There is optional tooling to make that easier in the works, but for now you have to deal with the flood yourself.
+By default, every single mouse movement is dispatched to your callback to ensure zero-latency access to raw OS input. However, Maru provides a `MARU_Queue` utility that supports opt-in **event coalescence**. This allows you to combine high-frequency events (like mouse motion or scrolling) into a single event with accumulated deltas, while strictly preserving temporal ordering with other events.
+
+See the [Event Queues documentation](docs/user/queue.md) for more details.
 
 ### Does Maru initialize Vulkan for me?
 

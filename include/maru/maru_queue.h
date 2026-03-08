@@ -90,6 +90,23 @@ MARU_API MARU_Status maru_queue_commit(MARU_Queue *queue);
 MARU_API void maru_queue_scan(MARU_Queue *queue, MARU_EventMask mask,
                               MARU_EventCallback callback, void *userdata);
 
+/**
+ * @brief Sets a bitmask of event types that should be coalesced.
+ *
+ * When an event type is in the coalesce mask, and the latest event in the
+ * active buffer is of the same type and for the same window, the new event
+ * will be combined into the existing one rather than being appended.
+ *
+ * Coalescing logic:
+ * - MARU_EVENT_MOUSE_MOVED: Updates position, accumulates delta and raw_delta.
+ * - MARU_EVENT_MOUSE_SCROLLED: Accumulates delta and steps.
+ * - MARU_EVENT_WINDOW_RESIZED: Updates geometry.
+ *
+ * @param queue The event queue.
+ * @param mask Bitmask of MARU_EventId bits to coalesce.
+ */
+MARU_API void maru_queue_set_coalesce_mask(MARU_Queue *queue, MARU_EventMask mask);
+
 #ifdef __cplusplus
 }
 #endif

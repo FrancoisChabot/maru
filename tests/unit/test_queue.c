@@ -121,3 +121,60 @@ UTEST(QueueTest, Masking) {
     maru_queue_destroy(queue);
     maru_destroyContext(context);
 }
+
+struct CoalesceResult {
+    int count;
+    MARU_Vec2Dip pos;
+    MARU_Vec2Dip delta;
+};
+
+static void on_coalesce_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
+    struct CoalesceResult *r = (struct CoalesceResult *)userdata;
+    r->count++;
+    if (type == MARU_EVENT_MOUSE_MOVED) {
+        r->pos = evt->mouse_motion.position;
+        r->delta = evt->mouse_motion.delta;
+    }
+}
+
+UTEST(QueueTest, Coalescence) {
+    MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+    MARU_Context *context = maru_test_createContext(&create_info);
+    MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+    
+    MARU_Queue *queue = NULL;
+    maru_queue_create(context, 16, &queue);
+
+    maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED);
+
+    // ev1
+    MARU_Event ev1 = {0};
+    ev1.mouse_motion.position.x = 10.0f;
+    ev1.mouse_motion.position.y = 10.0f;
+    ev1.mouse_motion.delta.x = 5.0f;
+    ev1.mouse_motion.delta.y = 5.0f;
+    _maru_post_event_internal(ctx_base, MARU_EVENT_MOUSE_MOVED, NULL, &ev1);
+
+    // ev2
+    MARU_Event ev2 = {0};
+    ev2.mouse_motion.position.x = 20.0f;
+    ev2.mouse_motion.position.y = 20.0f;
+    ev2.mouse_motion.delta.x = 10.0f;
+    ev2.mouse_motion.delta.y = 10.0f;
+    _maru_post_event_internal(ctx_base, MARU_EVENT_MOUSE_MOVED, NULL, &ev2);
+
+    maru_queue_pump(queue, 0);
+    maru_queue_commit(queue);
+
+    struct CoalesceResult result = {0};
+    maru_queue_scan(queue, MARU_ALL_EVENTS, on_coalesce_event, &result);
+
+    EXPECT_EQ(result.count, 1);
+    EXPECT_EQ(result.pos.x, 20.0f);
+    EXPECT_EQ(result.pos.y, 20.0f);
+    EXPECT_EQ(result.delta.x, 15.0f);
+    EXPECT_EQ(result.delta.y, 15.0f);
+
+    maru_queue_destroy(queue);
+    maru_destroyContext(context);
+}

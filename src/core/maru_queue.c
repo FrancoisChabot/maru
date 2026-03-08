@@ -24,11 +24,53 @@ typedef struct MARU_Queue {
     uint32_t stable_count;
     uint32_t capacity;
     
+    MARU_EventMask coalesce_mask;
+    
     MARU_QueueBuffer buffers[2];
 } MARU_Queue;
 
 static void _maru_queue_on_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
     MARU_Queue *q = (MARU_Queue *)userdata;
+    
+    if (q->active_count > 0 && maru_eventMaskHas(q->coalesce_mask, type)) {
+        uint32_t last_idx = q->active_count - 1;
+        if (q->active.types[last_idx] == type && q->active.windows[last_idx] == window) {
+            MARU_Event *last_evt = &q->active.events[last_idx];
+            bool coalesced = false;
+            
+            switch (type) {
+                case MARU_EVENT_MOUSE_MOVED:
+                    last_evt->mouse_motion.position = evt->mouse_motion.position;
+                    last_evt->mouse_motion.delta.x += evt->mouse_motion.delta.x;
+                    last_evt->mouse_motion.delta.y += evt->mouse_motion.delta.y;
+                    last_evt->mouse_motion.raw_delta.x += evt->mouse_motion.raw_delta.x;
+                    last_evt->mouse_motion.raw_delta.y += evt->mouse_motion.raw_delta.y;
+                    last_evt->mouse_motion.modifiers = evt->mouse_motion.modifiers;
+                    coalesced = true;
+                    break;
+                case MARU_EVENT_MOUSE_SCROLLED:
+                    last_evt->mouse_scroll.delta.x += evt->mouse_scroll.delta.x;
+                    last_evt->mouse_scroll.delta.y += evt->mouse_scroll.delta.y;
+                    last_evt->mouse_scroll.steps.x += evt->mouse_scroll.steps.x;
+                    last_evt->mouse_scroll.steps.y += evt->mouse_scroll.steps.y;
+                    last_evt->mouse_scroll.modifiers = evt->mouse_scroll.modifiers;
+                    coalesced = true;
+                    break;
+                case MARU_EVENT_WINDOW_RESIZED:
+                    last_evt->resized.geometry = evt->resized.geometry;
+                    coalesced = true;
+                    break;
+                default:
+                    // Generic overwrite for other opted-in event types
+                    *last_evt = *evt;
+                    coalesced = true;
+                    break;
+            }
+            
+            if (coalesced) return;
+        }
+    }
+
     if (q->active_count < q->capacity) {
         uint32_t idx = q->active_count++;
         q->active.types[idx] = type;
@@ -82,6 +124,7 @@ MARU_Status maru_queue_create(MARU_Context *ctx, uint32_t capacity, MARU_Queue *
     q->capacity = capacity;
     q->active_count = 0;
     q->stable_count = 0;
+    q->coalesce_mask = 0;
 
     if (!_maru_queue_buffer_init(ctx_base, &q->buffers[0], capacity)) {
         maru_context_free(ctx_base, q);
@@ -141,5 +184,11 @@ void maru_queue_scan(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback 
         if (maru_eventMaskHas(mask, stable.types[i])) {
             callback(stable.types[i], stable.windows[i], &stable.events[i], userdata);
         }
+    }
+}
+
+void maru_queue_set_coalesce_mask(MARU_Queue *queue, MARU_EventMask mask) {
+    if (queue) {
+        queue->coalesce_mask = mask;
     }
 }

@@ -39,6 +39,10 @@ public:
 
     void scan(MARU_EventMask mask, MARU_EventCallback callback, void* userdata = nullptr);
 
+    void setCoalesceMask(MARU_EventMask mask) {
+        maru_queue_set_coalesce_mask(m_handle, mask);
+    }
+
 #if __cplusplus >= 202002L
     template <typename Visitor>
     void scan(EventDispatcher<Visitor>& dispatcher, MARU_EventMask mask = MARU_ALL_EVENTS);

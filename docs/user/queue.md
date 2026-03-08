@@ -57,6 +57,29 @@ int main() {
 }
 ```
 
+## Event Coalescence
+
+`MARU_Queue` supports optional event coalescence to prevent high-frequency events (like mouse motion) from overwhelming your application. When enabled for a specific event type, if the latest event in the queue matches the type and window of a new incoming event, they are combined.
+
+Coalescence is opt-in per event type via a bitmask.
+
+### Supported Coalescence Logic:
+- **`MARU_EVENT_MOUSE_MOVED`**: Updates the absolute position to the latest, and accumulates both `delta` and `raw_delta`.
+- **`MARU_EVENT_MOUSE_SCROLLED`**: Accumulates both `delta` and `steps`.
+- **`MARU_EVENT_WINDOW_RESIZED`**: Updates the geometry to the latest.
+- **Other events**: If opted-in, the existing event is simply overwritten by the latest one.
+
+### Example (C)
+```c
+// Enable coalescence for mouse motion and scrolling
+maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_SCROLLED);
+```
+
+### Example (C++)
+```cpp
+queue.setCoalesceMask(MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_SCROLLED);
+```
+
 ## C++ API Example (RAII)
 
 The C++ wrapper `maru::Queue` provides a more idiomatic interface, especially when combined with C++20 visitors.
