@@ -9,11 +9,31 @@
 #include <cfloat>
 #include <cstring>
 
+static constexpr size_t kLargeClipboardPayloadBytes = 2u * 1024u * 1024u;
+
 static bool _is_text_mime(const char* mime_type) {
     if (!mime_type) return false;
     return (strcmp(mime_type, "text/plain") == 0) ||
            (strcmp(mime_type, "text/plain;charset=utf-8") == 0) ||
            (strcmp(mime_type, "text/plain; charset=utf-8") == 0);
+}
+
+static std::string _build_large_clipboard_payload() {
+    std::string payload;
+    payload.reserve(kLargeClipboardPayloadBytes + 256u);
+    payload += "Maru X11 INCR clipboard payload\n";
+    payload += "This buffer is intentionally large so clipboard reads exercise incremental transfer.\n\n";
+
+    size_t line_index = 0u;
+    while (payload.size() < kLargeClipboardPayloadBytes) {
+        payload += "Line ";
+        payload += std::to_string(line_index++);
+        payload += ": The quick brown fox jumps over the lazy dog. ";
+        payload += "0123456789 abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ\n";
+    }
+
+    payload.resize(kLargeClipboardPayloadBytes);
+    return payload;
 }
 
 void DataExchangeModule::onContextRecreated(MARU_Context* ctx, MARU_Window* window) {
@@ -24,6 +44,8 @@ void DataExchangeModule::onContextRecreated(MARU_Context* ctx, MARU_Window* wind
     is_dragging_ = false;
     last_status_ = MARU_SUCCESS;
     has_received_target_ = false;
+    clipboard_serves_large_payload_ = false;
+    large_clipboard_payload_.clear();
     clipboard_mime_types_.clear();
     primary_mime_types_.clear();
     dnd_mime_types_.clear();
@@ -115,6 +137,13 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
             req->target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
             req->target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) return;
         if (!_is_text_mime(req->mime_type)) return;
+        if (req->target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
+            clipboard_serves_large_payload_ && !large_clipboard_payload_.empty()) {
+            (void)maru_provideData(req, large_clipboard_payload_.data(),
+                                   large_clipboard_payload_.size(),
+                                   MARU_DATA_PROVIDE_FLAG_NONE);
+            return;
+        }
         const size_t text_size = strnlen(input_buffer_, sizeof(input_buffer_));
         (void)maru_provideData(req, input_buffer_, text_size, MARU_DATA_PROVIDE_FLAG_NONE);
         return;
@@ -152,17 +181,38 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         };
 
         if (ImGui::Button("Announce Clipboard Text")) {
+            clipboard_serves_large_payload_ = false;
+            large_clipboard_payload_.clear();
             last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
                                              clipboard_mimes, 2, 0);
             owns_clipboard_ = (last_status_ == MARU_SUCCESS);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Announce Large Clipboard Text")) {
+            large_clipboard_payload_ = _build_large_clipboard_payload();
+            clipboard_serves_large_payload_ = true;
+            last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                             clipboard_mimes, 2, 0);
+            owns_clipboard_ = (last_status_ == MARU_SUCCESS);
+            if (last_status_ != MARU_SUCCESS) {
+                clipboard_serves_large_payload_ = false;
+                large_clipboard_payload_.clear();
+            }
         }
         ImGui::SameLine();
         if (ImGui::Button("Clear Clipboard Ownership")) {
             last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
                                              NULL, 0, 0);
             owns_clipboard_ = false;
+            clipboard_serves_large_payload_ = false;
+            large_clipboard_payload_.clear();
         }
         ImGui::Text("Ownership: %s", owns_clipboard_ ? "announced" : "none");
+        ImGui::Text("Clipboard payload mode: %s",
+                    clipboard_serves_large_payload_ ? "large test payload" : "input buffer");
+        if (clipboard_serves_large_payload_) {
+            ImGui::Text("Large payload size: %zu bytes", large_clipboard_payload_.size());
+        }
 
         if (ImGui::Button("Request Clipboard Text")) {
             last_status_ = maru_requestData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,

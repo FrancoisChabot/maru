@@ -84,6 +84,21 @@ struct MARU_X11DataRequestHandle {
   MARU_Window_X11 *window;
 };
 
+typedef struct MARU_X11IncrementalSend {
+  bool active;
+  MARU_DataExchangeTarget target;
+  Window requestor;
+  Atom selection_atom;
+  Atom property_atom;
+  Atom target_atom;
+  MARU_Window_X11 *window;
+  char *mime_type;
+  unsigned char *data;
+  size_t size;
+  size_t offset;
+  size_t chunk_size;
+} MARU_X11IncrementalSend;
+
 typedef struct MARU_Context_X11 {
   MARU_Context_Base base;
   MARU_Context_Linux_Common linux_common;
@@ -146,6 +161,7 @@ typedef struct MARU_Context_X11 {
   MARU_X11DataOffer clipboard_offer;
   MARU_X11DataOffer primary_offer;
   MARU_X11DataOffer dnd_offer;
+  MARU_X11IncrementalSend incr_send;
   MARU_X11DataRequestPending clipboard_request;
   MARU_X11DataRequestPending primary_request;
   MARU_X11DataRequestPending dnd_request;

@@ -28,6 +28,8 @@
   MARU_LIB_FN(XGetEventData)               \
   MARU_LIB_FN(XFreeEventData)              \
   MARU_LIB_FN(XConnectionNumber)           \
+  MARU_LIB_FN(XMaxRequestSize)             \
+  MARU_LIB_FN(XExtendedMaxRequestSize)     \
   MARU_LIB_FN(XFlush)                      \
   MARU_LIB_FN(XCreateSimpleWindow)         \
   MARU_LIB_FN(XCreateWindow)               \

@@ -4,11 +4,11 @@ This document tracks the remaining work and identified improvements for the Maru
 
 ## Priority 1: Correctness & Essential Features
 
-- [ ] **Incremental Selection Transfer (INCR)**:
+- [x] **Incremental Selection Transfer (INCR)**:
   - [x] Implemented **receive-side** INCR handling in `x11_dataexchange.c` for
     `maru_requestData()` (`SelectionNotify` INCR handshake + `PropertyNotify`
     chunk accumulation + zero-length termination).
-  - [ ] Implement **send-side** INCR in `maru_provideData_X11()` for payloads
+  - [x] Implement **send-side** INCR in `maru_provideData_X11()` for payloads
     larger than the X server request/property size limits.
   - Required for transferring data (clipboard/DnD) larger than the maximum
     request size supported by the X server.

@@ -889,6 +889,156 @@ static bool _maru_x11_process_incr_property_notify(MARU_Context_X11 *ctx,
   return false;
 }
 
+static size_t _maru_x11_get_selection_max_payload_size(MARU_Context_X11 *ctx) {
+  long max_request_units_signed =
+      ctx->x11_lib.XExtendedMaxRequestSize(ctx->display);
+  if (max_request_units_signed == 0l) {
+    max_request_units_signed = ctx->x11_lib.XMaxRequestSize(ctx->display);
+  }
+  if (max_request_units_signed <= 24l) {
+    return 0;
+  }
+  const unsigned long max_request_units = (unsigned long)max_request_units_signed;
+  return (size_t)(max_request_units - 24ul) * 4u;
+}
+
+static void _maru_x11_clear_incr_send(MARU_Context_X11 *ctx) {
+  if (!ctx) {
+    return;
+  }
+  MARU_X11IncrementalSend *send = &ctx->incr_send;
+  if (send->mime_type) {
+    maru_context_free(&ctx->base, send->mime_type);
+    send->mime_type = NULL;
+  }
+  if (send->data) {
+    maru_context_free(&ctx->base, send->data);
+    send->data = NULL;
+  }
+  memset(send, 0, sizeof(*send));
+}
+
+static void _maru_x11_finish_incr_send(MARU_Context_X11 *ctx) {
+  if (!ctx || !ctx->incr_send.active) {
+    return;
+  }
+
+  MARU_X11IncrementalSend *send = &ctx->incr_send;
+  MARU_Event consumed_evt = {0};
+  consumed_evt.data_consumed.target = send->target;
+  consumed_evt.data_consumed.mime_type = send->mime_type ? send->mime_type : "";
+  consumed_evt.data_consumed.data = send->data;
+  consumed_evt.data_consumed.size = send->size;
+  consumed_evt.data_consumed.action = MARU_DROP_ACTION_NONE;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_CONSUMED,
+                       (MARU_Window *)send->window, &consumed_evt);
+  _maru_x11_clear_incr_send(ctx);
+}
+
+static bool _maru_x11_send_next_incr_chunk(MARU_Context_X11 *ctx) {
+  if (!ctx || !ctx->incr_send.active) {
+    return false;
+  }
+
+  MARU_X11IncrementalSend *send = &ctx->incr_send;
+  const size_t remaining = send->size - send->offset;
+  const size_t chunk_size =
+      (remaining < send->chunk_size) ? remaining : send->chunk_size;
+
+  ctx->x11_lib.XChangeProperty(
+      ctx->display, send->requestor, send->property_atom, send->target_atom, 8,
+      PropModeReplace, send->data + send->offset, (int)chunk_size);
+  send->offset += chunk_size;
+  if (send->offset >= send->size) {
+    send->size = send->offset;
+  }
+  ctx->x11_lib.XFlush(ctx->display);
+  return true;
+}
+
+static bool _maru_x11_begin_incr_send(
+    MARU_Context_X11 *ctx, MARU_X11DataRequestHandle *handle, const void *data,
+    size_t size) {
+  if (!ctx || !handle || !data || size == 0 || ctx->incr_send.active) {
+    return false;
+  }
+
+  const size_t max_payload = _maru_x11_get_selection_max_payload_size(ctx);
+  if (max_payload == 0 || max_payload > (size_t)INT_MAX) {
+    return false;
+  }
+
+  unsigned char *data_copy = (unsigned char *)maru_context_alloc(&ctx->base, size);
+  char *mime_copy = NULL;
+  if (!data_copy) {
+    return false;
+  }
+  memcpy(data_copy, data, size);
+  if (!_maru_x11_copy_string(ctx, handle->mime_type, &mime_copy)) {
+    maru_context_free(&ctx->base, data_copy);
+    return false;
+  }
+
+  unsigned long incr_size_hint =
+      (size > UINT32_MAX) ? UINT32_MAX : (unsigned long)size;
+  ctx->x11_lib.XSelectInput(ctx->display, handle->requestor, PropertyChangeMask);
+  ctx->x11_lib.XChangeProperty(
+      ctx->display, handle->requestor, handle->property_atom, ctx->selection_incr,
+      32, PropModeReplace, (const unsigned char *)&incr_size_hint, 1);
+
+  MARU_X11IncrementalSend *send = &ctx->incr_send;
+  memset(send, 0, sizeof(*send));
+  send->active = true;
+  send->target = handle->target;
+  send->requestor = handle->requestor;
+  send->selection_atom = handle->selection_atom;
+  send->property_atom = handle->property_atom;
+  send->target_atom = handle->target_atom;
+  send->window = handle->window;
+  send->mime_type = mime_copy;
+  send->data = data_copy;
+  send->size = size;
+  send->offset = 0;
+  send->chunk_size = max_payload;
+
+  XSelectionRequestEvent req;
+  memset(&req, 0, sizeof(req));
+  req.display = ctx->display;
+  req.requestor = handle->requestor;
+  req.selection = handle->selection_atom;
+  req.target = handle->target_atom;
+  req.property = handle->property_atom;
+  req.time = CurrentTime;
+  _maru_x11_send_selection_notify(ctx, &req, handle->property_atom);
+  ctx->x11_lib.XFlush(ctx->display);
+  return true;
+}
+
+static bool _maru_x11_process_incr_send_property_notify(MARU_Context_X11 *ctx,
+                                                        const XPropertyEvent *prop) {
+  if (!ctx || !prop || prop->state != PropertyDelete || !ctx->incr_send.active) {
+    return false;
+  }
+
+  MARU_X11IncrementalSend *send = &ctx->incr_send;
+  if (prop->window != send->requestor || prop->atom != send->property_atom) {
+    return false;
+  }
+
+  if (send->offset < send->size) {
+    if (!_maru_x11_send_next_incr_chunk(ctx)) {
+      _maru_x11_clear_incr_send(ctx);
+    }
+    return true;
+  }
+
+  ctx->x11_lib.XChangeProperty(ctx->display, send->requestor, send->property_atom,
+                               send->target_atom, 8, PropModeReplace, NULL, 0);
+  ctx->x11_lib.XFlush(ctx->display);
+  _maru_x11_finish_incr_send(ctx);
+  return true;
+}
+
 MARU_Status _maru_x11_announceData(MARU_Window *window,
                                    MARU_DataExchangeTarget target,
                                    const char **mime_types, uint32_t count,
@@ -1130,6 +1280,31 @@ MARU_Status _maru_x11_provideData(const MARU_DataRequestEvent *request_event,
   }
 
   if (size > (size_t)INT_MAX) {
+    const size_t max_payload = _maru_x11_get_selection_max_payload_size(ctx);
+    if (size > 0 && max_payload > 0 && max_payload <= (size_t)INT_MAX &&
+        _maru_x11_begin_incr_send(ctx, handle, data, size)) {
+      handle->consumed = true;
+      return MARU_SUCCESS;
+    }
+    handle->consumed = true;
+    XSelectionRequestEvent req;
+    memset(&req, 0, sizeof(req));
+    req.display = ctx->display;
+    req.requestor = handle->requestor;
+    req.selection = handle->selection_atom;
+    req.target = handle->target_atom;
+    req.property = handle->property_atom;
+    req.time = CurrentTime;
+    _maru_x11_send_selection_notify(ctx, &req, None);
+    return MARU_FAILURE;
+  }
+
+  const size_t max_payload = _maru_x11_get_selection_max_payload_size(ctx);
+  if (size > 0 && max_payload > 0 && size > max_payload) {
+    if (_maru_x11_begin_incr_send(ctx, handle, data, size)) {
+      handle->consumed = true;
+      return MARU_SUCCESS;
+    }
     handle->consumed = true;
     XSelectionRequestEvent req;
     memset(&req, 0, sizeof(req));
@@ -1190,6 +1365,9 @@ void _maru_x11_clear_window_dataexchange_refs(MARU_Context_X11 *ctx, MARU_Window
     ctx->x11_lib.XSetSelectionOwner(ctx->display, ctx->xdnd_selection, None,
                                     CurrentTime);
     _maru_x11_clear_offer(ctx, &ctx->dnd_offer);
+  }
+  if (ctx->incr_send.active && ctx->incr_send.window == win) {
+    _maru_x11_clear_incr_send(ctx);
   }
   if (ctx->clipboard_request.pending && ctx->clipboard_request.window == win) {
     _maru_x11_clear_pending_request(ctx, &ctx->clipboard_request);
@@ -1390,6 +1568,9 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
       return true;
     }
     case PropertyNotify: {
+      if (_maru_x11_process_incr_send_property_notify(ctx, &ev->xproperty)) {
+        return true;
+      }
       return _maru_x11_process_incr_property_notify(ctx, &ev->xproperty);
     }
     case SelectionClear: {
@@ -1398,14 +1579,32 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
           ctx->clipboard_offer.owner_window &&
           ctx->clipboard_offer.owner_window->handle == cleared->window) {
         _maru_x11_clear_offer(ctx, &ctx->clipboard_offer);
+        if (ctx->incr_send.active &&
+            ctx->incr_send.selection_atom == ctx->selection_clipboard &&
+            ctx->incr_send.window &&
+            ctx->incr_send.window->handle == cleared->window) {
+          _maru_x11_clear_incr_send(ctx);
+        }
       } else if (cleared->selection == ctx->selection_primary &&
                  ctx->primary_offer.owner_window &&
                  ctx->primary_offer.owner_window->handle == cleared->window) {
         _maru_x11_clear_offer(ctx, &ctx->primary_offer);
+        if (ctx->incr_send.active &&
+            ctx->incr_send.selection_atom == ctx->selection_primary &&
+            ctx->incr_send.window &&
+            ctx->incr_send.window->handle == cleared->window) {
+          _maru_x11_clear_incr_send(ctx);
+        }
       } else if (cleared->selection == ctx->xdnd_selection &&
                  ctx->dnd_offer.owner_window &&
                  ctx->dnd_offer.owner_window->handle == cleared->window) {
         _maru_x11_clear_offer(ctx, &ctx->dnd_offer);
+        if (ctx->incr_send.active &&
+            ctx->incr_send.selection_atom == ctx->xdnd_selection &&
+            ctx->incr_send.window &&
+            ctx->incr_send.window->handle == cleared->window) {
+          _maru_x11_clear_incr_send(ctx);
+        }
         if (ctx->dnd_source.active) {
           _maru_x11_clear_dnd_source_session(ctx, true, MARU_DROP_ACTION_NONE);
         }
