@@ -5,8 +5,8 @@
 #include "maru/maru.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <vulkan/vulkan.h>
 #include <time.h>
+#include <vulkan/vulkan.h>
 
 static bool keep_running = true;
 static bool window_ready = false;
@@ -15,9 +15,9 @@ static int frame_count = 0;
 static double last_stat_time = 0.0;
 
 static double get_time_sec() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
 }
 
 static void handle_event(MARU_EventId type, MARU_Window *window,
@@ -35,15 +35,15 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
     frame_count++;
     double now = get_time_sec();
     if (now - last_stat_time >= 1.0) {
-        printf("FPS: %d\n", frame_count);
-        frame_count = 0;
-        last_stat_time = now;
+      printf("FPS: %d\n", frame_count);
+      frame_count = 0;
+      last_stat_time = now;
     }
-    
+
     // Draw the frame
     vulkan_renderer_draw_frame(&renderer);
-    
-    // Request the NEXT frame. 
+
+    // Request the NEXT frame.
     // If _NET_WM_FRAME_DRAWN is working, this will be throttled.
     maru_requestWindowFrame(window);
   }
@@ -51,7 +51,6 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
 
 int main() {
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-  create_info.backend = MARU_BACKEND_X11; // Force X11 to test the protocol
   create_info.attributes.event_mask = MARU_ALL_EVENTS;
 
   MARU_Context *context = NULL;
@@ -63,11 +62,13 @@ int main() {
   }
 
   uint32_t vk_extension_count = 0;
-  const char **vk_extensions = maru_getVkExtensions(context, &vk_extension_count);
-  vulkan_renderer_init(&renderer, vk_extension_count, (const char **)vk_extensions);
+  const char **vk_extensions =
+      maru_getVkExtensions(context, &vk_extension_count);
+  vulkan_renderer_init(&renderer, vk_extension_count,
+                       (const char **)vk_extensions);
 
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
-  window_info.attributes.title = "Maru X11 Frame Sync Test";
+  window_info.attributes.title = "Maru Frame Sync Test";
   window_info.attributes.logical_size = (MARU_Vec2Dip){800, 600};
   window_info.attributes.visible = true;
 
@@ -90,7 +91,7 @@ int main() {
     maru_destroyContext(context);
     return 1;
   }
-  
+
   MARU_WindowGeometry geometry;
   maru_getWindowGeometry(window, &geometry);
   vulkan_renderer_setup_surface(&renderer, surface,
@@ -98,15 +99,18 @@ int main() {
                                 (uint32_t)geometry.pixel_size.y);
 
   last_stat_time = get_time_sec();
-  
+
   // Kick off the frame loop
   maru_requestWindowFrame(window);
 
-  printf("Frame loop started. If composited, FPS should be locked to refresh rate.\n");
+  printf("Frame loop started. If composited, FPS should be locked to refresh "
+         "rate.\n");
   while (keep_running) {
-    // We use a small timeout to avoid busy-waiting, but 0 is also fine 
+    // We use a small timeout to avoid busy-waiting, but 0 is also fine
     // if we are driven by frame events.
     maru_pumpEvents(context, 10, handle_event, NULL);
+
+    vulkan_renderer_draw_frame(&renderer);
   }
 
   vkDeviceWaitIdle(renderer.device);
