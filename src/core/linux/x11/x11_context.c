@@ -8,7 +8,6 @@
 #include "maru_mem_internal.h"
 #include "x11_internal.h"
 #include <limits.h>
-#include <locale.h>
 #include <poll.h>
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -138,9 +137,14 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     return MARU_FAILURE;
   }
 
-  (void)setlocale(LC_CTYPE, "");
   (void)ctx->x11_lib.XSetLocaleModifiers("");
   ctx->xim = ctx->x11_lib.XOpenIM(ctx->display, NULL, NULL, NULL);
+  if (!ctx->xim) {
+    MARU_REPORT_DIAGNOSTIC(
+        (MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+        "X11 IME support unavailable. Configure the process locale before "
+        "creating the context to enable XIM.");
+  }
 
   ctx->screen = DefaultScreen(ctx->display);
   ctx->root = RootWindow(ctx->display, ctx->screen);
