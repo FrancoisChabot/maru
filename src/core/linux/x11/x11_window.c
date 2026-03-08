@@ -150,6 +150,115 @@ static void _maru_x11_dispatch_presentation_state(MARU_Window_X11 *window,
                        (MARU_Window *)window, &evt);
 }
 
+static bool _maru_x11_window_has_state_atom(const Atom *atoms,
+                                            unsigned long count, Atom target) {
+  for (unsigned long i = 0; i < count; ++i) {
+    if (atoms[i] == target) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static void _maru_x11_reconcile_wm_presentation_state(MARU_Context_X11 *ctx,
+                                                       MARU_Window_X11 *win,
+                                                       uint32_t changed_seed) {
+  uint32_t changed = changed_seed;
+
+  const bool old_minimized =
+      (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+  const bool old_maximized =
+      (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+  const bool old_fullscreen =
+      (win->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
+
+  bool new_minimized = old_minimized;
+  bool have_wm_state = false;
+  if (ctx->wm_state != None) {
+    Atom actual_type = None;
+    int actual_format = 0;
+    unsigned long count = 0;
+    unsigned long bytes_after = 0;
+    unsigned char *prop = NULL;
+    if (ctx->x11_lib.XGetWindowProperty(ctx->display, win->handle, ctx->wm_state,
+                                        0, 2, False, AnyPropertyType,
+                                        &actual_type, &actual_format, &count,
+                                        &bytes_after, &prop) == Success) {
+      if (prop && actual_format == 32 && count >= 1) {
+        const long wm_state_value = ((const long *)prop)[0];
+        new_minimized = (wm_state_value == 3); // ICCCM IconicState
+        have_wm_state = true;
+      }
+      if (prop) {
+        ctx->x11_lib.XFree(prop);
+      }
+    }
+  }
+  if (!have_wm_state) {
+    // Fallback: if WM_STATE is unavailable, derive minimized from visibility.
+    new_minimized =
+        (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) == 0;
+  }
+
+  bool new_maximized = old_maximized;
+  bool new_fullscreen = old_fullscreen;
+  Atom actual_type = None;
+  int actual_format = 0;
+  unsigned long count = 0;
+  unsigned long bytes_after = 0;
+  unsigned char *prop = NULL;
+  if (ctx->x11_lib.XGetWindowProperty(ctx->display, win->handle,
+                                      ctx->net_wm_state, 0, 1024, False,
+                                      XA_ATOM, &actual_type, &actual_format,
+                                      &count, &bytes_after, &prop) == Success) {
+    if (prop && actual_type == XA_ATOM && actual_format == 32) {
+      const Atom *atoms = (const Atom *)prop;
+      const bool max_vert = _maru_x11_window_has_state_atom(
+          atoms, count, ctx->net_wm_state_maximized_vert);
+      const bool max_horz = _maru_x11_window_has_state_atom(
+          atoms, count, ctx->net_wm_state_maximized_horz);
+      // Some WMs only expose one maximize axis atom; treat either as maximized.
+      new_maximized = max_vert || max_horz;
+      new_fullscreen = _maru_x11_window_has_state_atom(
+          atoms, count, ctx->net_wm_state_fullscreen);
+    }
+    if (prop) {
+      ctx->x11_lib.XFree(prop);
+    }
+  }
+
+  if (new_minimized) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+  } else {
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+  }
+  if (new_maximized) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+  } else {
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+  }
+  if (new_fullscreen) {
+    win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+  } else {
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+  }
+
+  win->base.attrs_effective.minimized = new_minimized;
+  win->base.attrs_effective.maximized = new_maximized;
+  win->base.attrs_effective.fullscreen = new_fullscreen;
+
+  if (old_minimized != new_minimized) {
+    changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+  }
+  if (old_maximized != new_maximized) {
+    changed |= MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED;
+  }
+
+  if (changed != 0) {
+    _maru_x11_dispatch_presentation_state(win, changed, true);
+  }
+}
+
 static void _maru_x11_apply_decorations_local(MARU_Context_X11 *ctx,
                                               MARU_Window_X11 *win) {
   struct {
@@ -657,7 +766,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
       ctx->x11_lib.XCreateColormap(ctx->display, ctx->root, visual, AllocNone);
   swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask |
                    ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
-                   StructureNotifyMask | FocusChangeMask;
+                   StructureNotifyMask | FocusChangeMask | PropertyChangeMask;
   swa.border_pixel = 0;
   swa.background_pixel = 0;
 
@@ -801,6 +910,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
   case ConfigureNotify: {
     MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xconfigure.window);
     if (win) {
+      _maru_x11_reconcile_wm_presentation_state(ctx, win, 0);
       const MARU_Scalar new_w = (MARU_Scalar)ev->xconfigure.width;
       const MARU_Scalar new_h = (MARU_Scalar)ev->xconfigure.height;
       const bool changed = (win->server_logical_size.x != new_w) ||
@@ -846,14 +956,52 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
   }
   case MapNotify: {
     MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xmap.window);
-    if (win && win->pending_maximize_request &&
-        win->base.attrs_effective.maximized) {
-      win->pending_maximize_request = false;
-      _maru_x11_send_net_wm_state_local(ctx, win, 1,
-                                        ctx->net_wm_state_maximized_vert,
-                                        ctx->net_wm_state_maximized_horz);
+    if (win) {
+      uint32_t changed = 0;
+      const bool was_visible =
+          (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+      win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      win->base.attrs_effective.visible = true;
+      if (!was_visible) {
+        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+      }
+
+      if (win->pending_maximize_request && win->base.attrs_effective.maximized) {
+        win->pending_maximize_request = false;
+        _maru_x11_send_net_wm_state_local(ctx, win, 1,
+                                          ctx->net_wm_state_maximized_vert,
+                                          ctx->net_wm_state_maximized_horz);
+      }
+      _maru_x11_reconcile_wm_presentation_state(ctx, win, changed);
     }
     return true;
+  }
+  case UnmapNotify: {
+    MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xunmap.window);
+    if (win) {
+      uint32_t changed = 0;
+      const bool was_visible =
+          (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+      win->base.attrs_effective.visible = false;
+      if (was_visible) {
+        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+      }
+      _maru_x11_reconcile_wm_presentation_state(ctx, win, changed);
+    }
+    return true;
+  }
+  case PropertyNotify: {
+    MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xproperty.window);
+    if (!win) {
+      return false;
+    }
+    if (ev->xproperty.atom == ctx->net_wm_state ||
+        ev->xproperty.atom == ctx->wm_state) {
+      _maru_x11_reconcile_wm_presentation_state(ctx, win, 0);
+      return true;
+    }
+    return false;
   }
   case FocusIn: {
     MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xfocus.window);

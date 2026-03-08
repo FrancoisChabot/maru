@@ -107,6 +107,7 @@ typedef struct MARU_Context_X11 {
   Atom net_wm_icon_name;
   Atom net_wm_icon;
   Atom net_wm_state;
+  Atom wm_state;
   Atom net_wm_state_fullscreen;
   Atom net_wm_state_maximized_vert;
   Atom net_wm_state_maximized_horz;

@@ -473,12 +473,15 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
 
   bool is_maximized = false;
   bool is_fullscreen = false;
+  bool is_activated = false;
   const uint32_t *state = NULL;
   wl_array_for_each(state, states) {
     if (*state == XDG_TOPLEVEL_STATE_MAXIMIZED) {
       is_maximized = true;
     } else if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) {
       is_fullscreen = true;
+    } else if (*state == XDG_TOPLEVEL_STATE_ACTIVATED) {
+      is_activated = true;
     }
   }
 
@@ -498,6 +501,36 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
   }
 
   _maru_wayland_update_opaque_region(window);
+
+  // xdg-shell has no explicit minimized state; many compositors signal it via
+  // an inactive 0x0 configure.
+  const bool inferred_minimized =
+      (width == 0 && height == 0 && !is_activated && !is_maximized &&
+       !is_fullscreen);
+  if (effective->minimized != inferred_minimized) {
+    uint32_t changed = MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+    const bool was_visible =
+        (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+
+    effective->minimized = inferred_minimized;
+    if (inferred_minimized) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+      effective->visible = false;
+      if (was_visible) {
+        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+      }
+    } else {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      effective->visible = true;
+      if (!was_visible) {
+        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+      }
+    }
+
+    _maru_wayland_dispatch_presentation_state(window, changed, true);
+  }
 
   if (effective->maximized != is_maximized) {
     effective->maximized = is_maximized;
@@ -1566,4 +1599,3 @@ MARU_Status maru_requestWindowFrame_WL(MARU_Window *window_handle) {
 MARU_Status maru_requestWindowAttention_WL(MARU_Window *window_handle) {
   return maru_requestWindowFocus_WL(window_handle);
 }
-

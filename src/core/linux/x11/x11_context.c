@@ -104,6 +104,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
       ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_ICON", False);
   ctx->net_wm_state =
       ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE", False);
+  ctx->wm_state = ctx->x11_lib.XInternAtom(ctx->display, "WM_STATE", False);
   ctx->net_wm_state_fullscreen =
       ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_FULLSCREEN", False);
   ctx->net_wm_state_maximized_vert = ctx->x11_lib.XInternAtom(
