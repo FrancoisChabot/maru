@@ -12,6 +12,7 @@
 #include <poll.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -315,6 +316,129 @@ uint64_t _maru_x11_get_monotonic_time_ms(void) {
     return 0;
   }
   return ns / 1000000ull;
+}
+
+MARU_Scalar _maru_x11_scale_from_metrics(MARU_Scalar pixel_width,
+                                         MARU_Scalar pixel_height,
+                                         MARU_Scalar mm_width,
+                                         MARU_Scalar mm_height) {
+  if (pixel_width <= (MARU_Scalar)0.0 || pixel_height <= (MARU_Scalar)0.0) {
+    return (MARU_Scalar)0.0;
+  }
+  if (mm_width <= (MARU_Scalar)0.0 && mm_height <= (MARU_Scalar)0.0) {
+    return (MARU_Scalar)0.0;
+  }
+
+  MARU_Scalar dpi_x = (MARU_Scalar)0.0;
+  MARU_Scalar dpi_y = (MARU_Scalar)0.0;
+  if (mm_width > (MARU_Scalar)0.0) {
+    dpi_x = pixel_width * (MARU_Scalar)25.4 / mm_width;
+  }
+  if (mm_height > (MARU_Scalar)0.0) {
+    dpi_y = pixel_height * (MARU_Scalar)25.4 / mm_height;
+  }
+
+  MARU_Scalar dpi = dpi_x;
+  if (dpi <= (MARU_Scalar)0.0 || (dpi_y > (MARU_Scalar)0.0 && dpi_y > dpi)) {
+    dpi = dpi_y;
+  }
+  if (dpi <= (MARU_Scalar)0.0) {
+    return (MARU_Scalar)0.0;
+  }
+
+  const MARU_Scalar scale = dpi / (MARU_Scalar)96.0;
+  if (scale <= (MARU_Scalar)0.0) {
+    return (MARU_Scalar)0.0;
+  }
+  return scale;
+}
+
+static const char *_maru_x11_find_xft_dpi_value(const char *resource_text) {
+  if (!resource_text) {
+    return NULL;
+  }
+
+  const char *line = resource_text;
+  while (*line != '\0') {
+    while (*line == '\n' || *line == '\r') {
+      ++line;
+    }
+    if (*line == '\0') {
+      break;
+    }
+    const char *line_end = line;
+    while (*line_end != '\0' && *line_end != '\n' && *line_end != '\r') {
+      ++line_end;
+    }
+
+    const char *cursor = line;
+    while (cursor < line_end &&
+           (*cursor == ' ' || *cursor == '\t' || *cursor == '!')) {
+      ++cursor;
+    }
+    if ((line_end - cursor) >= 8 && strncmp(cursor, "Xft.dpi:", 8) == 0) {
+      cursor += 8;
+      while (cursor < line_end && isspace((unsigned char)*cursor)) {
+        ++cursor;
+      }
+      if (cursor < line_end) {
+        return cursor;
+      }
+    }
+    line = line_end;
+  }
+  return NULL;
+}
+
+MARU_Scalar _maru_x11_get_global_scale(MARU_Context_X11 *ctx) {
+  if (!ctx || !ctx->display) {
+    return (MARU_Scalar)1.0;
+  }
+
+  const Atom resource_manager =
+      ctx->x11_lib.XInternAtom(ctx->display, "RESOURCE_MANAGER", False);
+  if (resource_manager != None) {
+    Atom actual_type = None;
+    int actual_format = 0;
+    unsigned long item_count = 0;
+    unsigned long bytes_after = 0;
+    unsigned char *prop = NULL;
+    if (ctx->x11_lib.XGetWindowProperty(
+            ctx->display, ctx->root, resource_manager, 0, 1L << 20, False,
+            AnyPropertyType, &actual_type, &actual_format, &item_count,
+            &bytes_after, &prop) == Success) {
+      if (prop && actual_format == 8 && item_count > 0) {
+        char *resource_text =
+            (char *)maru_context_alloc(&ctx->base, (size_t)item_count + 1u);
+        if (resource_text) {
+          memcpy(resource_text, prop, item_count);
+          resource_text[item_count] = '\0';
+
+          const char *dpi_text = _maru_x11_find_xft_dpi_value(resource_text);
+          if (dpi_text) {
+            char *end = NULL;
+            const double dpi = strtod(dpi_text, &end);
+            if (end != dpi_text && dpi > 0.0) {
+              maru_context_free(&ctx->base, resource_text);
+              ctx->x11_lib.XFree(prop);
+              return (MARU_Scalar)(dpi / 96.0);
+            }
+          }
+          maru_context_free(&ctx->base, resource_text);
+        }
+      }
+      if (prop) {
+        ctx->x11_lib.XFree(prop);
+      }
+    }
+  }
+
+  const MARU_Scalar fallback = _maru_x11_scale_from_metrics(
+      (MARU_Scalar)DisplayWidth(ctx->display, ctx->screen),
+      (MARU_Scalar)DisplayHeight(ctx->display, ctx->screen),
+      (MARU_Scalar)DisplayWidthMM(ctx->display, ctx->screen),
+      (MARU_Scalar)DisplayHeightMM(ctx->display, ctx->screen));
+  return (fallback > (MARU_Scalar)0.0) ? fallback : (MARU_Scalar)1.0;
 }
 
 void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx,

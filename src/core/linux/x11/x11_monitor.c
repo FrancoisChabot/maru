@@ -122,10 +122,20 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
       monitor->base.is_active = true;
       monitor->base.pub.flags &= ~((uint64_t)MARU_MONITOR_STATE_LOST);
       monitor->base.pub.is_primary = (output == primary_output);
-      monitor->base.pub.logical_position.x = (MARU_Scalar)info->x;
-      monitor->base.pub.logical_position.y = (MARU_Scalar)info->y;
-      monitor->base.pub.logical_size.x = (MARU_Scalar)info->width;
-      monitor->base.pub.logical_size.y = (MARU_Scalar)info->height;
+      const MARU_Scalar global_scale = _maru_x11_get_global_scale(ctx);
+      const MARU_Scalar monitor_scale = _maru_x11_scale_from_metrics(
+          (MARU_Scalar)info->width, (MARU_Scalar)info->height,
+          (MARU_Scalar)info->mwidth, (MARU_Scalar)info->mheight);
+      const MARU_Scalar scale =
+          (global_scale > (MARU_Scalar)0.0) ? global_scale
+                                            : ((monitor_scale > (MARU_Scalar)0.0)
+                                                   ? monitor_scale
+                                                   : (MARU_Scalar)1.0);
+      monitor->base.pub.scale = scale;
+      monitor->base.pub.logical_position.x = (MARU_Scalar)info->x / scale;
+      monitor->base.pub.logical_position.y = (MARU_Scalar)info->y / scale;
+      monitor->base.pub.logical_size.x = (MARU_Scalar)info->width / scale;
+      monitor->base.pub.logical_size.y = (MARU_Scalar)info->height / scale;
       monitor->base.pub.physical_size.x = (MARU_Scalar)info->mwidth;
       monitor->base.pub.physical_size.y = (MARU_Scalar)info->mheight;
 

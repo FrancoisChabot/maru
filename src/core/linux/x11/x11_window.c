@@ -6,6 +6,31 @@
 #include "x11_internal.h"
 #include <string.h>
 
+static int32_t _maru_x11_dip_to_px(MARU_Scalar dip, MARU_Scalar scale) {
+  if (scale <= (MARU_Scalar)0.0) {
+    scale = (MARU_Scalar)1.0;
+  }
+  const MARU_Scalar px = dip * scale;
+  if (px <= (MARU_Scalar)0.0) {
+    return 1;
+  }
+  return (int32_t)(px + (MARU_Scalar)0.5);
+}
+
+static MARU_Scalar _maru_x11_px_to_dip(MARU_Scalar px, MARU_Scalar scale) {
+  if (scale <= (MARU_Scalar)0.0) {
+    scale = (MARU_Scalar)1.0;
+  }
+  return px / scale;
+}
+
+static int32_t _maru_x11_optional_dip_to_px(MARU_Scalar dip, MARU_Scalar scale) {
+  if (dip <= (MARU_Scalar)0.0) {
+    return 0;
+  }
+  return _maru_x11_dip_to_px(dip, scale);
+}
+
 MARU_Window_X11 *_maru_x11_find_window(MARU_Context_X11 *ctx, Window handle) {
   for (MARU_Window_Base *it = ctx->base.window_list_head; it;
        it = it->ctx_next) {
@@ -94,17 +119,22 @@ void _maru_x11_send_net_wm_state_local(MARU_Context_X11 *ctx,
 
 void _maru_x11_apply_size_hints_local(MARU_Context_X11 *ctx,
                                       MARU_Window_X11 *win) {
+  const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
   XSizeHints hints;
   memset(&hints, 0, sizeof(hints));
 
-  int32_t min_w = (int32_t)win->base.attrs_effective.min_size.x;
-  int32_t min_h = (int32_t)win->base.attrs_effective.min_size.y;
-  int32_t max_w = (int32_t)win->base.attrs_effective.max_size.x;
-  int32_t max_h = (int32_t)win->base.attrs_effective.max_size.y;
+  int32_t min_w =
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.min_size.x, scale);
+  int32_t min_h =
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.min_size.y, scale);
+  int32_t max_w =
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.max_size.x, scale);
+  int32_t max_h =
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.max_size.y, scale);
 
   if ((win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) == 0) {
-    min_w = (int32_t)win->base.attrs_effective.logical_size.x;
-    min_h = (int32_t)win->base.attrs_effective.logical_size.y;
+    min_w = _maru_x11_dip_to_px(win->base.attrs_effective.logical_size.x, scale);
+    min_h = _maru_x11_dip_to_px(win->base.attrs_effective.logical_size.y, scale);
     max_w = min_w;
     max_h = min_h;
   }
@@ -390,9 +420,11 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
   if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
     requested->logical_size = attributes->logical_size;
     effective->logical_size = attributes->logical_size;
-    ctx->x11_lib.XResizeWindow(ctx->display, win->handle,
-                               (unsigned int)effective->logical_size.x,
-                               (unsigned int)effective->logical_size.y);
+    const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
+    const int32_t px_w = _maru_x11_dip_to_px(effective->logical_size.x, scale);
+    const int32_t px_h = _maru_x11_dip_to_px(effective->logical_size.y, scale);
+    ctx->x11_lib.XResizeWindow(ctx->display, win->handle, (unsigned int)px_w,
+                               (unsigned int)px_h);
   }
 
   if (field_mask & MARU_WINDOW_ATTR_POSITION) {
@@ -620,7 +652,11 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
         (effective->viewport_size.y <= (MARU_Scalar)0.0);
     if (viewport_disabled) {
       // When viewport override is disabled, consume the latest server size.
-      effective->logical_size = win->server_logical_size;
+      const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
+      effective->logical_size.x =
+          _maru_x11_px_to_dip(win->server_logical_size.x, scale);
+      effective->logical_size.y =
+          _maru_x11_px_to_dip(win->server_logical_size.y, scale);
     }
   }
 
@@ -700,14 +736,14 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
 void maru_getWindowGeometry_X11(MARU_Window *window,
                                 MARU_WindowGeometry *out_geometry) {
   MARU_Window_X11 *win = (MARU_Window_X11 *)window;
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
+  const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
   memset(out_geometry, 0, sizeof(*out_geometry));
 
   out_geometry->logical_size = win->base.attrs_effective.logical_size;
-  out_geometry->pixel_size.x =
-      (int32_t)win->base.attrs_effective.logical_size.x;
-  out_geometry->pixel_size.y =
-      (int32_t)win->base.attrs_effective.logical_size.y;
-  out_geometry->scale = (MARU_Scalar)1.0;
+  out_geometry->pixel_size.x = (int32_t)win->server_logical_size.x;
+  out_geometry->pixel_size.y = (int32_t)win->server_logical_size.y;
+  out_geometry->scale = scale;
   out_geometry->buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
 }
 
@@ -751,12 +787,17 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->base.backend = ctx->base.backend;
 #endif
 
-  int32_t width = (int32_t)create_info->attributes.logical_size.x;
-  int32_t height = (int32_t)create_info->attributes.logical_size.y;
-  if (width <= 0)
-    width = 640;
-  if (height <= 0)
-    height = 480;
+  MARU_Scalar create_logical_w = create_info->attributes.logical_size.x;
+  MARU_Scalar create_logical_h = create_info->attributes.logical_size.y;
+  if (create_logical_w <= (MARU_Scalar)0.0) {
+    create_logical_w = (MARU_Scalar)640.0;
+  }
+  if (create_logical_h <= (MARU_Scalar)0.0) {
+    create_logical_h = (MARU_Scalar)480.0;
+  }
+  const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
+  const int32_t width = _maru_x11_dip_to_px(create_logical_w, scale);
+  const int32_t height = _maru_x11_dip_to_px(create_logical_h, scale);
 
   Visual *visual = DefaultVisual(ctx->display, ctx->screen);
   int depth = DefaultDepth(ctx->display, ctx->screen);
@@ -795,6 +836,10 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
 
   win->server_logical_size.x = (MARU_Scalar)width;
   win->server_logical_size.y = (MARU_Scalar)height;
+  win->base.attrs_effective.logical_size.x =
+      _maru_x11_px_to_dip(win->server_logical_size.x, scale);
+  win->base.attrs_effective.logical_size.y =
+      _maru_x11_px_to_dip(win->server_logical_size.y, scale);
 
   MARU_Status status = _maru_x11_apply_attributes(win, MARU_WINDOW_ATTR_ALL,
                                                   &create_info->attributes);
@@ -917,6 +962,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
                            (win->server_logical_size.y != new_h);
 
       if (changed) {
+        const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
         win->server_logical_size.x = new_w;
         win->server_logical_size.y = new_h;
         if (win->base.pub.cursor_mode == MARU_CURSOR_LOCKED &&
@@ -930,14 +976,17 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
             (win->base.attrs_effective.viewport_size.x > (MARU_Scalar)0.0) &&
             (win->base.attrs_effective.viewport_size.y > (MARU_Scalar)0.0);
         if (!viewport_active) {
-          win->base.attrs_effective.logical_size = win->server_logical_size;
+          win->base.attrs_effective.logical_size.x =
+              _maru_x11_px_to_dip(win->server_logical_size.x, scale);
+          win->base.attrs_effective.logical_size.y =
+              _maru_x11_px_to_dip(win->server_logical_size.y, scale);
         }
 
         MARU_Event mevt = {0};
-        mevt.resized.geometry.logical_size = win->server_logical_size;
+        mevt.resized.geometry.logical_size = win->base.attrs_effective.logical_size;
         mevt.resized.geometry.pixel_size.x = ev->xconfigure.width;
         mevt.resized.geometry.pixel_size.y = ev->xconfigure.height;
-        mevt.resized.geometry.scale = (MARU_Scalar)1.0;
+        mevt.resized.geometry.scale = scale;
         mevt.resized.geometry.buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED,
                              (MARU_Window *)win, &mevt);

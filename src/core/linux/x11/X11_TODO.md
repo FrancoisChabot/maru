@@ -19,10 +19,10 @@ This document tracks the remaining work and identified improvements for the Maru
 
 ## Priority 2: Modern Desktop Experience
 
-- [ ] **High-DPI and Scaling Support**:
-  - Implement DPI detection (via `Xft.dpi` X resource or physical screen dimensions).
-  - Report correct scale factors in `maru_getWindowGeometry_X11()` and monitor info.
-  - Support `_NET_WM_WINDOW_OPACITY` for per-window transparency.
+- [x] **High-DPI and Scaling Support**:
+  - Added DPI detection in X11 via `Xft.dpi` from `RESOURCE_MANAGER`, with physical-dimension fallback.
+  - `maru_getWindowGeometry_X11()` now reports DPI-aware `scale`, `logical_size` (DIP), and `pixel_size`.
+  - Monitor refresh now reports DPI-aware `scale` and DIP-based logical monitor position/size.
 - [x] **Idle Inhibition**:
   - Replaced the stub in `maru_updateContext_X11()` with a real implementation.
   - Added `MIT-SCREEN-SAVER` integration via `XScreenSaverSuspend` (loaded from `libXss.so.1` when available) and context lifecycle handling to release inhibition on destroy.
@@ -32,8 +32,6 @@ This document tracks the remaining work and identified improvements for the Maru
 - [ ] **XI2 Pointer Barriers**:
   - Utilize `XI_Barrier` (XInput 2.3+) for the `MARU_CURSOR_LOCKED` mode.
   - Provides a more robust alternative to the current `XWarpPointer` approach, which can be jittery or bypassable in some compositors.
-- [ ] **Multi-touch and Gestures**:
-  - Add support for XInput2 touch events (`XI_TouchBegin`, `XI_TouchUpdate`, etc.) if Maru adds a generic touch API.
 - [ ] **Input Consolidation**:
   - Migrate all mouse and keyboard event processing to XInput2 for better consistency and high-precision data (e.g., sub-pixel scrolling).
 - [x] **File Naming Consistency**:

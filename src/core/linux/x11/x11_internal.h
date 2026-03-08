@@ -209,6 +209,11 @@ bool _maru_x11_advance_animated_cursors(MARU_Context_X11 *ctx, uint64_t now_ms);
 uint64_t _maru_x11_get_monotonic_time_ms(void);
 uint64_t _maru_x11_get_monotonic_time_ns(void);
 void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx, uint64_t duration_ns);
+MARU_Scalar _maru_x11_get_global_scale(MARU_Context_X11 *ctx);
+MARU_Scalar _maru_x11_scale_from_metrics(MARU_Scalar pixel_width,
+                                         MARU_Scalar pixel_height,
+                                         MARU_Scalar mm_width,
+                                         MARU_Scalar mm_height);
 void _maru_x11_clear_mime_query_cache(MARU_Context_X11 *ctx);
 void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev);
 bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev);
