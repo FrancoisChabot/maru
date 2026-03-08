@@ -116,6 +116,10 @@ static inline void _maru_validate_attributes(const MARU_Context_Base *ctx_base, 
         MARU_CONSTRAINT_CHECK(_maru_validate_non_negative_vec2(attributes->viewport_size));
     }
 
+    if (field_mask & MARU_WINDOW_ATTR_TITLE) {
+        MARU_CONSTRAINT_CHECK(attributes->title != NULL);
+    }
+
     if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
         if (attributes->monitor != NULL) {
             MARU_CONSTRAINT_CHECK(((const MARU_Monitor_Base *)attributes->monitor)->ctx_base == ctx_base);
@@ -534,9 +538,9 @@ static inline void _maru_validate_createVkSurface(MARU_Window *window,
     _maru_validate_window_ready(window);
     _maru_validate_window_not_lost(window);
     MARU_CONSTRAINT_CHECK(instance != NULL);
+    MARU_CONSTRAINT_CHECK(vk_loader != NULL);
     MARU_CONSTRAINT_CHECK(out_surface != NULL);
     _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
-    (void)vk_loader;
 }
 
 #define MARU_API_VALIDATE(fn, ...) \

@@ -111,6 +111,14 @@ static inline void *maru_context_alloc(MARU_Context_Base *ctx_base, size_t size)
 #endif
 }
 
+static inline void *maru_context_zalloc(MARU_Context_Base *ctx_base, size_t size) {
+  void *ptr = maru_context_alloc(ctx_base, size);
+  if (ptr) {
+    memset(ptr, 0, size);
+  }
+  return ptr;
+}
+
 static inline void maru_context_free(MARU_Context_Base *ctx_base, void *ptr) {
   if (!ptr) return;
   MARU_Allocator alloc = ctx_base->allocator;

@@ -18,32 +18,30 @@ target_link_libraries(maru_tests
     ${MARU_ACTIVE_CORE_IFACE}
 )
 
-option(MARU_BUILD_INTEGRATION_TESTS "Build the integration tests" ON)
+add_test(NAME maru_tests COMMAND maru_tests)
 
-if (MARU_BUILD_INTEGRATION_TESTS)
-  add_executable(maru_integration_tests
-    integration/doctest_main.cpp
-    integration/test_context.cpp
-    integration/test_desktop_smoke.cpp
-    integration/test_window.cpp
-    integration/support/tracking_allocator.cpp
-  )
+add_executable(maru_integration_tests
+  integration/doctest_main.cpp
+  integration/test_context.cpp
+  integration/test_desktop_smoke.cpp
+  integration/test_window.cpp
+  integration/support/tracking_allocator.cpp
+)
 
-  target_include_directories(maru_integration_tests PRIVATE
-    ${PROJECT_SOURCE_DIR}/src/core
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/vendor
-  )
+target_include_directories(maru_integration_tests PRIVATE
+  ${PROJECT_SOURCE_DIR}/src/core
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/vendor
+)
 
-  target_link_libraries(maru_integration_tests
-    PRIVATE
-      maru::maru
-      ${MARU_ACTIVE_CORE_IFACE}
-  )
+target_link_libraries(maru_integration_tests
+  PRIVATE
+    maru::maru
+    ${MARU_ACTIVE_CORE_IFACE}
+)
 
-  set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD 17)
-  set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD 17)
+set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
-  add_test(NAME maru_integration_tests COMMAND maru_integration_tests)
-  set_tests_properties(maru_integration_tests PROPERTIES LABELS "desktop_integration")
-endif()
+add_test(NAME maru_integration_tests COMMAND maru_integration_tests)
+set_tests_properties(maru_integration_tests PROPERTIES LABELS "desktop_integration")

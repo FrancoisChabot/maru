@@ -8,7 +8,6 @@ else()
     set(MARU_IS_ROOT_CMAKE_PROJECT OFF)
 endif()
 
-# Optional modules you can disable if you so chose.
 option(MARU_USE_FLOAT "Use float instead of double for logical coordinates" OFF)
 
 if(MARU_USE_FLOAT)

@@ -11,9 +11,8 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window);
 
 static MARU_Monitor_WL *_maru_wayland_find_monitor_by_output(MARU_Context_WL *ctx,
                                                              struct wl_output *output) {
-  if (!ctx || !output) {
-    return NULL;
-  }
+  MARU_ASSUME(ctx != NULL);
+  MARU_ASSUME(output != NULL);
   for (uint32_t i = 0; i < ctx->base.monitor_cache_count; ++i) {
     MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)ctx->base.monitor_cache[i];
     if (monitor && monitor->output == output) {
@@ -24,9 +23,8 @@ static MARU_Monitor_WL *_maru_wayland_find_monitor_by_output(MARU_Context_WL *ct
 }
 
 static bool _maru_wayland_window_add_monitor(MARU_Window_WL *window, MARU_Monitor_WL *monitor) {
-  if (!window || !monitor) {
-    return false;
-  }
+  MARU_ASSUME(window != NULL);
+  MARU_ASSUME(monitor != NULL);
 
   for (uint32_t i = 0; i < window->monitor_count; ++i) {
     if (window->monitors[i] == (MARU_Monitor *)monitor) {
@@ -193,8 +191,8 @@ static uint32_t _maru_wayland_clamp_size(uint32_t value, uint32_t min_value, uin
 
 void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
                                         const MARU_Window_WL *window) {
-  const MARU_WindowAttributes *attrs = &window->base.attrs_effective;
   if (!width || !height || !window) return;
+  const MARU_WindowAttributes *attrs = &window->base.attrs_effective;
   if (*width == 0 || *height == 0) return;
   if (attrs->aspect_ratio.num == 0 || attrs->aspect_ratio.denom == 0) return;
 
@@ -648,12 +646,11 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
                                 MARU_Window **out_window) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
-  MARU_Window_WL *window = (MARU_Window_WL *)maru_context_alloc(&ctx->base, sizeof(MARU_Window_WL));
+  MARU_Window_WL *window = (MARU_Window_WL *)maru_context_zalloc(&ctx->base, sizeof(MARU_Window_WL));
   if (!window) {
     return MARU_FAILURE;
   }
 
-  memset(window, 0, sizeof(MARU_Window_WL));
   window->base.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
   window->base.pub.context = context;
@@ -828,10 +825,10 @@ cleanup_surface:
     window->wl.surface = NULL;
   }
 cleanup_window:
-  if (window->base.mouse_button_states) maru_context_free(&ctx->base, window->base.mouse_button_states);
-  if (window->base.mouse_button_channels) maru_context_free(&ctx->base, window->base.mouse_button_channels);
-  if (window->base.title_storage) maru_context_free(&ctx->base, window->base.title_storage);
-  if (window->base.surrounding_text_storage) maru_context_free(&ctx->base, window->base.surrounding_text_storage);
+  maru_context_free(&ctx->base, window->base.mouse_button_states);
+  maru_context_free(&ctx->base, window->base.mouse_button_channels);
+  maru_context_free(&ctx->base, window->base.title_storage);
+  maru_context_free(&ctx->base, window->base.surrounding_text_storage);
   maru_context_free(&ctx->base, window);
   return MARU_FAILURE;
 }
@@ -927,10 +924,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   window->base.attrs_dirty_mask |= field_mask;
 
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
-      if (window->base.title_storage) {
-          maru_context_free(&ctx->base, window->base.title_storage);
-          window->base.title_storage = NULL;
-      }
+      maru_context_free(&ctx->base, window->base.title_storage);
+      window->base.title_storage = NULL;
       requested->title = NULL;
       effective->title = NULL;
       window->base.pub.title = NULL;
@@ -1085,10 +1080,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
-      if (window->base.surrounding_text_storage) {
-          maru_context_free(&ctx->base, window->base.surrounding_text_storage);
-          window->base.surrounding_text_storage = NULL;
-      }
+      maru_context_free(&ctx->base, window->base.surrounding_text_storage);
+      window->base.surrounding_text_storage = NULL;
       requested->surrounding_text = NULL;
       effective->surrounding_text = NULL;
       if (attributes->surrounding_text) {
@@ -1375,14 +1368,10 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
     window->ext.text_input = NULL;
   }
   _maru_wayland_clear_text_input_pending(window);
-  if (window->base.mouse_button_states) {
-    maru_context_free(&ctx->base, window->base.mouse_button_states);
-    window->base.mouse_button_states = NULL;
-  }
-  if (window->base.mouse_button_channels) {
-    maru_context_free(&ctx->base, window->base.mouse_button_channels);
-    window->base.mouse_button_channels = NULL;
-  }
+  maru_context_free(&ctx->base, window->base.mouse_button_states);
+  window->base.mouse_button_states = NULL;
+  maru_context_free(&ctx->base, window->base.mouse_button_channels);
+  window->base.mouse_button_channels = NULL;
   if (window->ext.content_type) {
     maru_wp_content_type_v1_destroy(ctx, window->ext.content_type);
     window->ext.content_type = NULL;
@@ -1415,15 +1404,13 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
   for (uint32_t i = 0; i < window->monitor_count; ++i) {
     maru_releaseMonitor(window->monitors[i]);
   }
-  if (window->monitors) {
-    maru_context_free(&ctx->base, window->monitors);
-    window->monitors = NULL;
-  }
+  maru_context_free(&ctx->base, window->monitors);
+  window->monitors = NULL;
   window->monitor_count = 0;
   window->monitor_capacity = 0;
 
-  if (window->base.title_storage) maru_context_free(&ctx->base, window->base.title_storage);
-  if (window->base.surrounding_text_storage) maru_context_free(&ctx->base, window->base.surrounding_text_storage);
+  maru_context_free(&ctx->base, window->base.title_storage);
+  maru_context_free(&ctx->base, window->base.surrounding_text_storage);
   maru_context_free(&ctx->base, window);
 
   return MARU_SUCCESS;

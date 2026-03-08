@@ -3,6 +3,7 @@
 
 #define _GNU_SOURCE
 #include "wayland_internal.h"
+#include "maru_api_constraints.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -125,26 +126,20 @@ static const char *_maru_wl_copy_string(MARU_Context_Base *ctx_base,
 }
 
 static void _maru_wl_clear_mime_query(MARU_Context_WL *ctx) {
-  if (ctx->clipboard.mime_query_ptr) {
-    maru_context_free(&ctx->base, (void *)ctx->clipboard.mime_query_ptr);
-    ctx->clipboard.mime_query_ptr = NULL;
-  }
+  maru_context_free(&ctx->base, (void *)ctx->clipboard.mime_query_ptr);
+  ctx->clipboard.mime_query_ptr = NULL;
   ctx->clipboard.mime_query_count = 0;
 }
 
 static void _maru_wl_clear_primary_mime_query(MARU_Context_WL *ctx) {
-  if (ctx->primary_selection.mime_query_ptr) {
-    maru_context_free(&ctx->base, (void *)ctx->primary_selection.mime_query_ptr);
-    ctx->primary_selection.mime_query_ptr = NULL;
-  }
+  maru_context_free(&ctx->base, (void *)ctx->primary_selection.mime_query_ptr);
+  ctx->primary_selection.mime_query_ptr = NULL;
   ctx->primary_selection.mime_query_count = 0;
 }
 
 static void _maru_wl_clear_dnd_mime_query(MARU_Context_WL *ctx) {
-  if (ctx->clipboard.dnd_mime_query_ptr) {
-    maru_context_free(&ctx->base, (void *)ctx->clipboard.dnd_mime_query_ptr);
-    ctx->clipboard.dnd_mime_query_ptr = NULL;
-  }
+  maru_context_free(&ctx->base, (void *)ctx->clipboard.dnd_mime_query_ptr);
+  ctx->clipboard.dnd_mime_query_ptr = NULL;
   ctx->clipboard.dnd_mime_query_count = 0;
 }
 
@@ -620,7 +615,7 @@ static void _primary_selection_source_send(
 
 static void _clipboard_source_cancelled(void *data, struct wl_data_source *source) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-  if (!ctx) return;
+  MARU_ASSUME(ctx != NULL);
   if (ctx->clipboard.source && ctx->clipboard.source == source) {
     struct wl_data_source *current = ctx->clipboard.source;
     ctx->clipboard.source = NULL;
@@ -638,7 +633,7 @@ static void _clipboard_source_cancelled(void *data, struct wl_data_source *sourc
 static void _primary_selection_source_cancelled(
     void *data, struct zwp_primary_selection_source_v1 *source) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-  if (!ctx) return;
+  MARU_ASSUME(ctx != NULL);
   if (ctx->primary_selection.source && ctx->primary_selection.source == source) {
     struct zwp_primary_selection_source_v1 *current = ctx->primary_selection.source;
     ctx->primary_selection.source = NULL;
@@ -782,7 +777,7 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
 static void _clipboard_data_device_leave(void *data, struct wl_data_device *data_device) {
   (void)data_device;
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-  if (!ctx) return;
+  MARU_ASSUME(ctx != NULL);
 
   MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (window) {
@@ -802,7 +797,8 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   (void)data_device;
   (void)time;
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-  if (!ctx || !ctx->clipboard.dnd_offer) return;
+  MARU_ASSUME(ctx != NULL);
+  if (!ctx->clipboard.dnd_offer) return;
 
   MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (!window || !window->base.attrs_effective.accept_drop) return;
@@ -893,7 +889,7 @@ static void _clipboard_data_device_selection(void *data,
                                              struct wl_data_offer *offer) {
   (void)data_device;
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-  if (!ctx) return;
+  MARU_ASSUME(ctx != NULL);
 
   if (ctx->clipboard.offer && ctx->clipboard.offer != offer) {
     _maru_wl_remove_offer_meta(ctx, ctx->clipboard.offer);
@@ -917,7 +913,8 @@ static void _primary_selection_device_data_offer(
     struct zwp_primary_selection_offer_v1 *offer) {
   (void)selection_device;
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-  if (!ctx || !offer) return;
+  MARU_ASSUME(ctx != NULL);
+  if (!offer) return;
 
   MARU_WaylandPrimaryOfferMeta *meta =
       (MARU_WaylandPrimaryOfferMeta *)maru_context_alloc(&ctx->base, sizeof(*meta));
@@ -939,7 +936,7 @@ static void _primary_selection_device_selection(
     struct zwp_primary_selection_offer_v1 *offer) {
   (void)selection_device;
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
-  if (!ctx) return;
+  MARU_ASSUME(ctx != NULL);
 
   if (ctx->primary_selection.offer && ctx->primary_selection.offer != offer) {
     _maru_wl_remove_primary_offer_meta(ctx, ctx->primary_selection.offer);
@@ -1337,14 +1334,6 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
 MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
                                           MARU_DataExchangeTarget target,
                                           MARU_MIMETypeList *out_list) {
-  if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
-      target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
-      target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
-    out_list->mime_types = NULL;
-    out_list->count = 0;
-    return MARU_FAILURE;
-  }
-
   MARU_Window_WL *wl_window = (MARU_Window_WL *)window;
   MARU_Context_WL *ctx = (MARU_Context_WL *)wl_window->base.ctx_base;
   if (!_maru_wl_dataexchange_target_supported(ctx, target)) {

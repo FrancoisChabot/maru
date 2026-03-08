@@ -28,18 +28,14 @@ void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t 
 }
 
 void _maru_wayland_cancel_activation(MARU_Context_WL *ctx) {
-  if (!ctx) {
-    return;
-  }
+  MARU_ASSUME(ctx != NULL);
 
   if (ctx->activation.token_obj) {
     maru_xdg_activation_token_v1_destroy(ctx, ctx->activation.token_obj);
     ctx->activation.token_obj = NULL;
   }
-  if (ctx->activation.token_copy) {
-    maru_context_free(&ctx->base, ctx->activation.token_copy);
-    ctx->activation.token_copy = NULL;
-  }
+  maru_context_free(&ctx->base, ctx->activation.token_copy);
+  ctx->activation.token_copy = NULL;
 
   ctx->activation.target_window = NULL;
   ctx->activation.pending = false;
@@ -65,10 +61,8 @@ static void _maru_wayland_activation_token_done(void *data,
     return;
   }
 
-  if (ctx->activation.token_copy) {
-    maru_context_free(&ctx->base, ctx->activation.token_copy);
-    ctx->activation.token_copy = NULL;
-  }
+  maru_context_free(&ctx->base, ctx->activation.token_copy);
+  ctx->activation.token_copy = NULL;
 
   size_t len = token ? strlen(token) : 0;
   char *copy = (char *)maru_context_alloc(&ctx->base, len + 1);
@@ -118,7 +112,8 @@ void _maru_wayland_check_activation(MARU_Context_WL *ctx) {
 }
 
 void _maru_wayland_update_opaque_region(MARU_Window_WL *window) {
-  if (!window || !window->wl.surface) {
+  MARU_ASSUME(window != NULL);
+  if (!window->wl.surface) {
     return;
   }
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "maru_internal.h"
+#include "../linux_native_stubs.h"
 #include "maru_backend.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
@@ -349,17 +350,14 @@ MARU_API MARU_Status maru_getWaylandContextHandle(
     MARU_Context *context, MARU_WaylandContextHandle *out_handle) {
   (void)context;
   if (!out_handle) return MARU_FAILURE;
-  out_handle->display = NULL;
-  return MARU_FAILURE;
+  return _maru_stub_wayland_context_handle_unsupported(out_handle);
 }
 
 MARU_API MARU_Status maru_getWaylandWindowHandle(
     MARU_Window *window, MARU_WaylandWindowHandle *out_handle) {
   (void)window;
   if (!out_handle) return MARU_FAILURE;
-  out_handle->display = NULL;
-  out_handle->surface = NULL;
-  return MARU_FAILURE;
+  return _maru_stub_wayland_window_handle_unsupported(out_handle);
 }
 
 MARU_API MARU_Status maru_getLinuxContextHandle(

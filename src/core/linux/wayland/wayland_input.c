@@ -62,6 +62,7 @@ static bool _maru_wayland_map_native_mouse_button(uint32_t native_code,
 
 static void _maru_wayland_report_unknown_mouse_button_once(MARU_Context_WL *ctx,
                                                            uint32_t native_code) {
+#ifdef MARU_ENABLE_INTERNAL_CHECKS
     for (uint32_t i = 0; i < ctx->unknown_mouse_buttons.count; ++i) {
         if (ctx->unknown_mouse_buttons.codes[i] == native_code) {
             return;
@@ -77,15 +78,17 @@ static void _maru_wayland_report_unknown_mouse_button_once(MARU_Context_WL *ctx,
     snprintf(msg, sizeof(msg), "Unknown Wayland mouse button code dropped: %u",
              native_code);
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED, msg);
+#else
+    (void)ctx;
+    (void)native_code;
+#endif
 }
 
 static void _maru_wayland_replace_pending_utf8(MARU_Window_WL *window, char **slot,
                                                const char *value) {
     MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-    if (*slot) {
-        maru_context_free(&ctx->base, *slot);
-        *slot = NULL;
-    }
+    maru_context_free(&ctx->base, *slot);
+    *slot = NULL;
 
     if (!value) {
         return;
@@ -752,6 +755,9 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
 
     MARU_Window_WL *window = (MARU_Window_WL *)ctx->dlib.wl.proxy_get_user_data((struct wl_proxy *)surface);
     if (window) {
+        window = _maru_wayland_resolve_registered_window(ctx, (MARU_Window *)window);
+    }
+    if (window) {
         ctx->linux_common.xkb.focused_window = (MARU_Window *)window;
         window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
 
@@ -1262,10 +1268,8 @@ MARU_Status maru_createImage_WL(MARU_Context *context,
 MARU_Status maru_destroyImage_WL(MARU_Image *image_handle) {
   MARU_Image_Base *image = (MARU_Image_Base *)image_handle;
   MARU_Context_Base *ctx_base = image->ctx_base;
-  if (image->pixels) {
-    maru_context_free(ctx_base, image->pixels);
-    image->pixels = NULL;
-  }
+  maru_context_free(ctx_base, image->pixels);
+  image->pixels = NULL;
   maru_context_free(ctx_base, image);
   return MARU_SUCCESS;
 }

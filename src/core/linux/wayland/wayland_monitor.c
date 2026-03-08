@@ -21,9 +21,7 @@ static void _maru_wayland_set_monitor_name(MARU_Monitor_WL *monitor,
   }
   memcpy(copy, name, len + 1);
 
-  if (monitor->name_storage) {
-    maru_context_free(&ctx->base, monitor->name_storage);
-  }
+  maru_context_free(&ctx->base, monitor->name_storage);
 
   monitor->name_storage = copy;
   monitor->base.pub.name = monitor->name_storage;
@@ -243,14 +241,10 @@ static void _maru_wayland_destroy_monitor(MARU_Monitor_WL *monitor) {
     _maru_wayland_release_output_proxy(ctx, monitor->output);
     monitor->output = NULL;
   }
-  if (monitor->modes) {
-    maru_context_free(&ctx->base, monitor->modes);
-    monitor->modes = NULL;
-  }
-  if (monitor->name_storage) {
-    maru_context_free(&ctx->base, monitor->name_storage);
-    monitor->name_storage = NULL;
-  }
+  maru_context_free(&ctx->base, monitor->modes);
+  monitor->modes = NULL;
+  maru_context_free(&ctx->base, monitor->name_storage);
+  monitor->name_storage = NULL;
 
   maru_context_free(&ctx->base, monitor);
 }

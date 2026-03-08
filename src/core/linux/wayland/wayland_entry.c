@@ -1,4 +1,5 @@
 #include "wayland_internal.h"
+#include "../linux_native_stubs.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "maru/c/cursors.h"
@@ -355,19 +356,16 @@ MARU_API MARU_Status maru_getWaylandWindowHandle(
 
 MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
                                               MARU_X11ContextHandle *out_handle) {
+  MARU_API_VALIDATE(getX11ContextHandle, context, out_handle);
   (void)context;
-  if (!out_handle) return MARU_FAILURE;
-  out_handle->display = NULL;
-  return MARU_FAILURE;
+  return _maru_stub_x11_context_handle_unsupported(out_handle);
 }
 
 MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
                                              MARU_X11WindowHandle *out_handle) {
+  MARU_API_VALIDATE(getX11WindowHandle, window, out_handle);
   (void)window;
-  if (!out_handle) return MARU_FAILURE;
-  out_handle->display = NULL;
-  out_handle->window = 0;
-  return MARU_FAILURE;
+  return _maru_stub_x11_window_handle_unsupported(out_handle);
 }
 
 MARU_API MARU_Status maru_getLinuxContextHandle(

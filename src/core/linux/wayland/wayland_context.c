@@ -554,8 +554,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     return MARU_FAILURE;
   }
 
-  memset(((uint8_t *)ctx) + sizeof(MARU_Context_Base), 0,
-         sizeof(MARU_Context_WL) - sizeof(MARU_Context_Base));
   ctx->wake_fd = -1;
  
   ctx->base.pub.backend_type = MARU_BACKEND_WAYLAND;
@@ -563,11 +561,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   if (create_info->allocator.alloc_cb) {
     ctx->base.allocator = create_info->allocator;
-  } else {
-    ctx->base.allocator.alloc_cb = _maru_default_alloc;
-    ctx->base.allocator.realloc_cb = _maru_default_realloc;
-    ctx->base.allocator.free_cb = _maru_default_free;
-    ctx->base.allocator.userdata = NULL;
   }
 
   _maru_init_context_base(&ctx->base);
@@ -593,9 +586,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   ctx->base.event_mask = ctx->base.attrs_effective.event_mask;
   ctx->base.inhibit_idle = ctx->base.attrs_effective.inhibit_idle;
   ctx->base.tuning.idle_timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
-
-  MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_INFO,
-                         "Beginning Wayland initialization...");
 
   if (!maru_load_wayland_symbols(&ctx->base, &ctx->dlib.wl, &ctx->dlib.wlc,
                                  &ctx->linux_common.xkb_lib,
@@ -711,6 +701,18 @@ cleanup_symbols:
     close(ctx->wake_fd);
     ctx->wake_fd = -1;
   }
+  if (ctx->linux_common.xkb.state) {
+    maru_xkb_state_unref(ctx, ctx->linux_common.xkb.state);
+    ctx->linux_common.xkb.state = NULL;
+  }
+  if (ctx->linux_common.xkb.keymap) {
+    maru_xkb_keymap_unref(ctx, ctx->linux_common.xkb.keymap);
+    ctx->linux_common.xkb.keymap = NULL;
+  }
+  if (ctx->linux_common.xkb.ctx) {
+    maru_xkb_context_unref(ctx, ctx->linux_common.xkb.ctx);
+    ctx->linux_common.xkb.ctx = NULL;
+  }
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_linux_common_cleanup(&ctx->linux_common);
   _maru_cleanup_context_base(&ctx->base);
@@ -728,11 +730,9 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   }
 
   _maru_wayland_cancel_activation(ctx);
-  if (ctx->pump_pollfds.fds) {
-    maru_context_free(&ctx->base, ctx->pump_pollfds.fds);
-    ctx->pump_pollfds.fds = NULL;
-    ctx->pump_pollfds.capacity = 0;
-  }
+  maru_context_free(&ctx->base, ctx->pump_pollfds.fds);
+  ctx->pump_pollfds.fds = NULL;
+  ctx->pump_pollfds.capacity = 0;
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_linux_common_cleanup(&ctx->linux_common);
@@ -748,7 +748,7 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
       maru_wp_cursor_shape_device_v1_destroy(ctx, ctx->wl.cursor_shape_device);
       ctx->wl.cursor_shape_device = NULL;
     }
-    if (ctx->wl.pointer) maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
+    maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
     ctx->wl.pointer = NULL;
   }
   if (ctx->wl.keyboard) {
