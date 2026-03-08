@@ -11,6 +11,8 @@
 #define MARU_XFIXES_FUNCTIONS_TABLE   \
   MARU_LIB_FN(XFixesQueryExtension)   \
   MARU_LIB_FN(XFixesQueryVersion)     \
+  MARU_LIB_FN(XFixesCreatePointerBarrier) \
+  MARU_LIB_FN(XFixesDestroyPointerBarrier) \
   MARU_LIB_FN(XFixesSetWindowShapeRegion)
 
 typedef struct MARU_Lib_Xfixes {

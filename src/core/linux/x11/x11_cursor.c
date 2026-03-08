@@ -7,6 +7,79 @@
 #include <string.h>
 #include <X11/cursorfont.h>
 
+static void _maru_x11_destroy_pointer_barriers(MARU_Context_X11 *ctx,
+                                               MARU_Window_X11 *win) {
+  if (!ctx || !win || !ctx->display || !ctx->xfixes_lib.base.available ||
+      !ctx->xfixes_lib.XFixesDestroyPointerBarrier) {
+    if (win) {
+      win->lock_pointer_barriers_active = false;
+      memset(win->lock_pointer_barriers, 0, sizeof(win->lock_pointer_barriers));
+    }
+    return;
+  }
+
+  for (size_t i = 0; i < 4; ++i) {
+    if (win->lock_pointer_barriers[i] != (PointerBarrier)0) {
+      ctx->xfixes_lib.XFixesDestroyPointerBarrier(ctx->display,
+                                                  win->lock_pointer_barriers[i]);
+      win->lock_pointer_barriers[i] = (PointerBarrier)0;
+    }
+  }
+  win->lock_pointer_barriers_active = false;
+}
+
+static bool _maru_x11_create_pointer_barriers(MARU_Context_X11 *ctx,
+                                              MARU_Window_X11 *win) {
+  if (!ctx || !win || !win->handle || !ctx->display ||
+      !ctx->xi2_pointer_barriers_available ||
+      !ctx->xfixes_pointer_barriers_available ||
+      !ctx->xfixes_lib.base.available ||
+      !ctx->xfixes_lib.XFixesCreatePointerBarrier ||
+      !ctx->xfixes_lib.XFixesDestroyPointerBarrier) {
+    return false;
+  }
+
+  const int32_t width = (int32_t)win->server_logical_size.x;
+  const int32_t height = (int32_t)win->server_logical_size.y;
+  if (width < 3 || height < 3) {
+    return false;
+  }
+
+  const int left = (win->lock_center_x > 0) ? (win->lock_center_x - 1) : 0;
+  const int top = (win->lock_center_y > 0) ? (win->lock_center_y - 1) : 0;
+  const int right =
+      (win->lock_center_x + 1 < width) ? (win->lock_center_x + 1) : (width - 1);
+  const int bottom =
+      (win->lock_center_y + 1 < height) ? (win->lock_center_y + 1) : (height - 1);
+  if (left >= right || top >= bottom) {
+    return false;
+  }
+
+  _maru_x11_destroy_pointer_barriers(ctx, win);
+  win->lock_pointer_barriers[0] = ctx->xfixes_lib.XFixesCreatePointerBarrier(
+      ctx->display, win->handle, left, top, left, bottom, BarrierNegativeX, 0,
+      NULL);
+  win->lock_pointer_barriers[1] = ctx->xfixes_lib.XFixesCreatePointerBarrier(
+      ctx->display, win->handle, right, top, right, bottom, BarrierPositiveX, 0,
+      NULL);
+  win->lock_pointer_barriers[2] = ctx->xfixes_lib.XFixesCreatePointerBarrier(
+      ctx->display, win->handle, left, top, right, top, BarrierNegativeY, 0,
+      NULL);
+  win->lock_pointer_barriers[3] = ctx->xfixes_lib.XFixesCreatePointerBarrier(
+      ctx->display, win->handle, left, bottom, right, bottom, BarrierPositiveY,
+      0, NULL);
+
+  for (size_t i = 0; i < 4; ++i) {
+    if (win->lock_pointer_barriers[i] == (PointerBarrier)0) {
+      _maru_x11_destroy_pointer_barriers(ctx, win);
+      return false;
+    }
+  }
+
+  win->lock_pointer_barriers_active = true;
+  return true;
+}
+
 void _maru_x11_clear_locked_raw_accum(MARU_Context_X11 *ctx) {
   ctx->locked_raw_dx_accum = (MARU_Scalar)0.0;
   ctx->locked_raw_dy_accum = (MARU_Scalar)0.0;
@@ -40,6 +113,7 @@ bool _maru_x11_ensure_hidden_cursor(MARU_Context_X11 *ctx) {
 
 void _maru_x11_release_pointer_lock(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
   if (ctx->locked_window && (!win || ctx->locked_window == win)) {
+    _maru_x11_destroy_pointer_barriers(ctx, ctx->locked_window);
     ctx->x11_lib.XUngrabPointer(ctx->display, CurrentTime);
     if (ctx->locked_window) {
       ctx->locked_window->suppress_lock_warp_event = false;
@@ -89,6 +163,9 @@ bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *
         ctx->locked_window = win;
         _maru_x11_clear_locked_raw_accum(ctx);
       }
+      (void)_maru_x11_create_pointer_barriers(ctx, win);
+    } else {
+      _maru_x11_destroy_pointer_barriers(ctx, win);
     }
 
     ctx->x11_lib.XDefineCursor(ctx->display, win->handle, ctx->hidden_cursor);

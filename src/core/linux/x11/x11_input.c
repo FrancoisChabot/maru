@@ -75,9 +75,18 @@ bool _maru_x11_enable_xi2_raw_motion(MARU_Context_X11 *ctx) {
   }
 
   int xi_major = 2;
-  int xi_minor = 0;
-  if (ctx->xi2_lib.XIQueryVersion(ctx->display, &xi_major, &xi_minor) != Success) {
-    return false;
+  int xi_minor = 3;
+  if (ctx->xi2_lib.XIQueryVersion(ctx->display, &xi_major, &xi_minor) ==
+      Success) {
+    ctx->xi2_pointer_barriers_available = true;
+  } else {
+    xi_major = 2;
+    xi_minor = 0;
+    if (ctx->xi2_lib.XIQueryVersion(ctx->display, &xi_major, &xi_minor) !=
+        Success) {
+      return false;
+    }
+    ctx->xi2_pointer_barriers_available = false;
   }
 
   unsigned char mask[(XI_LASTEVENT + 7) / 8];
@@ -506,6 +515,18 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
         if (win->base.pub.cursor_mode == MARU_CURSOR_LOCKED &&
             ctx->locked_window == win) {
           ctx->linux_common.pointer.focused_window = (MARU_Window *)win;
+          if (win->lock_pointer_barriers_active) {
+            if (win->suppress_lock_warp_event &&
+                ev->xmotion.x == win->lock_center_x &&
+                ev->xmotion.y == win->lock_center_y) {
+              win->suppress_lock_warp_event = false;
+            } else if (ev->xmotion.x != win->lock_center_x ||
+                       ev->xmotion.y != win->lock_center_y) {
+              _maru_x11_recenter_locked_pointer(ctx, win);
+            }
+            return true;
+          }
+
           if (win->suppress_lock_warp_event &&
               ev->xmotion.x == win->lock_center_x &&
               ev->xmotion.y == win->lock_center_y) {

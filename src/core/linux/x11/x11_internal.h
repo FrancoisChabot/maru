@@ -118,6 +118,8 @@ typedef struct MARU_Context_X11 {
   Cursor hidden_cursor;
   MARU_Window_X11 *locked_window;
   bool xi2_raw_motion_enabled;
+  bool xi2_pointer_barriers_available;
+  bool xfixes_pointer_barriers_available;
   bool xss_idle_inhibit_active;
   int xi2_opcode;
   MARU_Scalar locked_raw_dx_accum;
@@ -190,6 +192,8 @@ struct MARU_Window_X11 {
   int lock_center_x;
   int lock_center_y;
   bool suppress_lock_warp_event;
+  bool lock_pointer_barriers_active;
+  PointerBarrier lock_pointer_barriers[4];
   XIC xic;
   uint64_t text_input_session_id;
   bool text_input_session_active;

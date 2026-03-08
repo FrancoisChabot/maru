@@ -34,9 +34,9 @@ This document tracks the remaining work and identified improvements for the Maru
 
 ## Priority 3: Enhanced Input & Polish
 
-- [ ] **XI2 Pointer Barriers**:
-  - Utilize `XI_Barrier` (XInput 2.3+) for the `MARU_CURSOR_LOCKED` mode.
-  - Provides a more robust alternative to the current `XWarpPointer` approach, which can be jittery or bypassable in some compositors.
+- [x] **XI2 Pointer Barriers**:
+  - `MARU_CURSOR_LOCKED` now uses XFixes pointer barriers when XInput 2.3+ and XFixes 5+ are available, constraining the pointer to a tiny center box while motion is driven from XI2 raw events.
+  - The previous `XWarpPointer` path remains as a compatibility fallback when pointer barriers are unavailable, and is still used for the initial recenter / resize recenter operations.
 - [ ] **Input Consolidation**:
   - Migrate all mouse and keyboard event processing to XInput2 for better consistency and high-precision data (e.g., sub-pixel scrolling).
 - [x] **File Naming Consistency**:

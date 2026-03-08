@@ -40,6 +40,33 @@ static void _maru_x11_apply_idle_inhibit(MARU_Context_X11 *ctx) {
   ctx->xss_idle_inhibit_active = ctx->base.inhibit_idle;
 }
 
+static void _maru_x11_detect_pointer_barrier_support(MARU_Context_X11 *ctx) {
+  ctx->xfixes_pointer_barriers_available = false;
+  if (!ctx->display || !ctx->xfixes_lib.base.available ||
+      !ctx->xfixes_lib.XFixesQueryExtension ||
+      !ctx->xfixes_lib.XFixesQueryVersion ||
+      !ctx->xfixes_lib.XFixesCreatePointerBarrier ||
+      !ctx->xfixes_lib.XFixesDestroyPointerBarrier) {
+    return;
+  }
+
+  int event_base = 0;
+  int error_base = 0;
+  if (!ctx->xfixes_lib.XFixesQueryExtension(ctx->display, &event_base,
+                                            &error_base)) {
+    return;
+  }
+
+  int major = 5;
+  int minor = 0;
+  if (!ctx->xfixes_lib.XFixesQueryVersion(ctx->display, &major, &minor)) {
+    return;
+  }
+
+  ctx->xfixes_pointer_barriers_available =
+      (major > 5) || (major == 5 && minor >= 0);
+}
+
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask,
                                    const MARU_ContextAttributes *attributes) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
@@ -177,6 +204,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->xdnd_action_link =
       ctx->x11_lib.XInternAtom(ctx->display, "XdndActionLink", False);
   (void)_maru_x11_enable_xi2_raw_motion(ctx);
+  _maru_x11_detect_pointer_barrier_support(ctx);
 
   if (!_maru_linux_common_init(&ctx->linux_common, &ctx->base)) {
     ctx->x11_lib.XCloseDisplay(ctx->display);
@@ -517,6 +545,7 @@ void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
       ctx->x11_lib.XGetEventData(ctx->display, &ev->xcookie)) {
     if (ev->xcookie.evtype == XI_RawMotion && ctx->locked_window &&
         (ctx->locked_window->base.pub.cursor_mode == MARU_CURSOR_LOCKED)) {
+      MARU_Window_X11 *locked_window = ctx->locked_window;
       const XIRawEvent *raw = (const XIRawEvent *)ev->xcookie.data;
       if (raw && raw->raw_values && raw->valuators.mask &&
           raw->valuators.mask_len > 0) {
@@ -536,9 +565,38 @@ void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
           }
         }
         if (raw_dx != (MARU_Scalar)0.0 || raw_dy != (MARU_Scalar)0.0) {
-          ctx->locked_raw_dx_accum += raw_dx;
-          ctx->locked_raw_dy_accum += raw_dy;
-          ctx->locked_raw_pending = true;
+          if (locked_window->lock_pointer_barriers_active) {
+            unsigned int state = 0u;
+            Window root_ret = 0;
+            Window child_ret = 0;
+            int root_x = 0;
+            int root_y = 0;
+            int win_x = 0;
+            int win_y = 0;
+            (void)ctx->x11_lib.XQueryPointer(
+                ctx->display, locked_window->handle, &root_ret, &child_ret,
+                &root_x, &root_y, &win_x, &win_y, &state);
+
+            MARU_Event mevt = {0};
+            mevt.mouse_motion.position.x =
+                (MARU_Scalar)ctx->linux_common.pointer.x;
+            mevt.mouse_motion.position.y =
+                (MARU_Scalar)ctx->linux_common.pointer.y;
+            mevt.mouse_motion.delta.x = raw_dx;
+            mevt.mouse_motion.delta.y = raw_dy;
+            mevt.mouse_motion.raw_delta.x = raw_dx;
+            mevt.mouse_motion.raw_delta.y = raw_dy;
+            mevt.mouse_motion.modifiers = _maru_x11_get_modifiers(state);
+            ctx->linux_common.pointer.focused_window =
+                (MARU_Window *)locked_window;
+            _maru_x11_clear_locked_raw_accum(ctx);
+            _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED,
+                                 (MARU_Window *)locked_window, &mevt);
+          } else {
+            ctx->locked_raw_dx_accum += raw_dx;
+            ctx->locked_raw_dy_accum += raw_dy;
+            ctx->locked_raw_pending = true;
+          }
         }
       }
     }

@@ -969,7 +969,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
             ctx->locked_window == win) {
           win->lock_center_x = ev->xconfigure.width / 2;
           win->lock_center_y = ev->xconfigure.height / 2;
-          _maru_x11_recenter_locked_pointer(ctx, win);
+          (void)_maru_x11_apply_window_cursor_mode(ctx, win);
         }
 
         const bool viewport_active =
