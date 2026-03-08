@@ -17,7 +17,7 @@ Ready for use by early adopters on Linux.
 
 ### Backend statuses
 
-- Wayland: Feature complete.
+- Wayland: Feature complete for core functionality, with expected protocol/compositor-dependent limits on some advanced operations.
 - X11: Almost feature complete. There are a few holes left in Drag-and-drop, IME handling and idle inhibition.
 - Window: Minimally functional.
 - macOS: Stubbed in.
