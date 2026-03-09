@@ -65,13 +65,17 @@ static BOOL CALLBACK _maru_windows_monitor_enum_proc(HMONITOR hmonitor, HDC hdc,
   int32_t width = info.rcMonitor.right - info.rcMonitor.left;
   int32_t height = info.rcMonitor.bottom - info.rcMonitor.top;
 
-  // Logical size and scale (basic implementation for now)
-  // TODO: Better DPI handling
-  monitor->base.pub.logical_position.x = (MARU_Scalar)info.rcMonitor.left;
-  monitor->base.pub.logical_position.y = (MARU_Scalar)info.rcMonitor.top;
-  monitor->base.pub.logical_size.x = (MARU_Scalar)width;
-  monitor->base.pub.logical_size.y = (MARU_Scalar)height;
-  monitor->base.pub.scale = (MARU_Scalar)1.0;
+  UINT dpi_x = 96, dpi_y = 96;
+  if (ctx->GetDpiForMonitor) {
+    ctx->GetDpiForMonitor(hmonitor, MDT_EFFECTIVE_DPI, &dpi_x, &dpi_y);
+  }
+  MARU_Scalar scale = (MARU_Scalar)dpi_x / 96.0;
+
+  monitor->base.pub.logical_position.x = (MARU_Scalar)info.rcMonitor.left / scale;
+  monitor->base.pub.logical_position.y = (MARU_Scalar)info.rcMonitor.top / scale;
+  monitor->base.pub.logical_size.x = (MARU_Scalar)width / scale;
+  monitor->base.pub.logical_size.y = (MARU_Scalar)height / scale;
+  monitor->base.pub.scale = scale;
 
   // Windows doesn't easily give physical size in mm via GetMonitorInfo.
   // We could use GetDeviceCaps with the monitor's DC, but it's often unreliable.

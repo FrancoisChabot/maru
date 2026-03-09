@@ -85,6 +85,22 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
 
   _maru_windows_init_mouse_button_channels(ctx);
 
+  ctx->user32_module = GetModuleHandleW(L"user32.dll");
+  if (ctx->user32_module) {
+    ctx->SetProcessDpiAwarenessContext = (BOOL(WINAPI *)(HANDLE))GetProcAddress(ctx->user32_module, "SetProcessDpiAwarenessContext");
+    ctx->GetDpiForWindow = (UINT(WINAPI *)(HWND))GetProcAddress(ctx->user32_module, "GetDpiForWindow");
+    ctx->EnableNonClientDpiScaling = (BOOL(WINAPI *)(HWND))GetProcAddress(ctx->user32_module, "EnableNonClientDpiScaling");
+  }
+
+  ctx->shcore_module = LoadLibraryW(L"shcore.dll");
+  if (ctx->shcore_module) {
+    ctx->GetDpiForMonitor = (HRESULT(WINAPI *)(HMONITOR, int, UINT*, UINT*))GetProcAddress(ctx->shcore_module, "GetDpiForMonitor");
+  }
+
+  if (ctx->SetProcessDpiAwarenessContext) {
+    ctx->SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  }
+
   ctx->instance = GetModuleHandleW(NULL);
   ctx->owner_thread_id = GetCurrentThreadId();
   ctx->wake_event = CreateEventW(NULL, FALSE, FALSE, NULL);
@@ -135,6 +151,10 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
 
   if (ctx->wake_event) {
     CloseHandle(ctx->wake_event);
+  }
+
+  if (ctx->shcore_module) {
+    FreeLibrary(ctx->shcore_module);
   }
 
   _maru_windows_cleanup_controllers(ctx);

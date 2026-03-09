@@ -11,6 +11,10 @@ What's neat about Maru?
 - API use is aggressively validated by default, and all guardrails can be disabled for maximum performance.
 - It exposes clear and detailed metrics about its internal timing and resource usage.
 
+Why is it called Maru?
+
+- This library was built to support a bird-centric game, so it's named after my pet parrot: Marula.
+
 ## Status
 
 Ready for use by early adopters on Linux.

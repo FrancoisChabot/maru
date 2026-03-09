@@ -18,6 +18,7 @@ typedef struct MARU_Context_Windows {
   HANDLE wake_event;
 
   HMODULE user32_module;
+  HMODULE shcore_module;
   bool event_loop_started;
   bool cursor_animation_fallback_reported;
   DWORD owner_thread_id;
@@ -40,7 +41,21 @@ typedef struct MARU_Context_Windows {
   HRESULT (WINAPI *RoGetActivationFactory)(void*, REFIID, void**);
   HRESULT (WINAPI *WindowsCreateString)(LPCWSTR, UINT32, void**);
   HRESULT (WINAPI *WindowsDeleteString)(void*);
+
+  // DPI Awareness
+  BOOL (WINAPI *SetProcessDpiAwarenessContext)(HANDLE);
+  UINT (WINAPI *GetDpiForWindow)(HWND);
+  HRESULT (WINAPI *GetDpiForMonitor)(HMONITOR, int, UINT*, UINT*);
+  BOOL (WINAPI *EnableNonClientDpiScaling)(HWND);
 } MARU_Context_Windows;
+
+#ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+#define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((HANDLE)-4)
+#endif
+
+#ifndef MDT_EFFECTIVE_DPI
+#define MDT_EFFECTIVE_DPI 0
+#endif
 
 typedef enum MARU_WindowsHidControllerKind {
   MARU_WINDOWS_HID_KIND_GENERIC = 0,

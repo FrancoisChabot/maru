@@ -90,18 +90,41 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                   LPARAM lParam) {
   MARU_Window_Windows *win = (MARU_Window_Windows *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
   if (!win) {
-    if (uMsg == WM_CREATE) {
+    if (uMsg == WM_NCCREATE) {
         LPCREATESTRUCTW cs = (LPCREATESTRUCTW)lParam;
         win = (MARU_Window_Windows *)cs->lpCreateParams;
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)win);
         win->hwnd = hwnd;
+    } else {
+        return DefWindowProcW(hwnd, uMsg, wParam, lParam);
     }
-    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
   }
 
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
 
   switch (uMsg) {
+    case WM_NCCREATE: {
+      if (ctx->EnableNonClientDpiScaling) {
+        ctx->EnableNonClientDpiScaling(hwnd);
+      }
+      break;
+    }
+    case WM_DPICHANGED: {
+      RECT *suggested_rect = (RECT *)lParam;
+
+      SetWindowPos(hwnd,
+                   NULL,
+                   suggested_rect->left,
+                   suggested_rect->top,
+                   suggested_rect->right - suggested_rect->left,
+                   suggested_rect->bottom - suggested_rect->top,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+
+      MARU_Event evt = {0};
+      maru_getWindowGeometry_Windows((MARU_Window *)win, &evt.resized.geometry);
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &evt);
+      return 0;
+    }
     case WM_INPUT_DEVICE_CHANGE: {
       _maru_windows_resync_controllers(ctx);
       break;
@@ -274,9 +297,12 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
     }
 
     case WM_MOUSEMOVE: {
+      UINT dpi = ctx->GetDpiForWindow ? ctx->GetDpiForWindow(win->hwnd) : 96;
+      MARU_Scalar scale = (MARU_Scalar)dpi / 96.0;
+
       MARU_Vec2Dip pos;
-      pos.x = (MARU_Scalar)(short)LOWORD(lParam);
-      pos.y = (MARU_Scalar)(short)HIWORD(lParam);
+      pos.x = (MARU_Scalar)(short)LOWORD(lParam) / scale;
+      pos.y = (MARU_Scalar)(short)HIWORD(lParam) / scale;
 
       if (!win->is_cursor_in_client_area) {
         TRACKMOUSEEVENT tme = {sizeof(tme), TME_LEAVE, hwnd, 0};
@@ -482,19 +508,38 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
 
   DWORD ex_style = WS_EX_APPWINDOW;
 
+  UINT system_dpi = 96;
+  typedef UINT (WINAPI *GetDpiForSystemFunc)(void);
+  GetDpiForSystemFunc GetDpiForSystem_ptr = (GetDpiForSystemFunc)GetProcAddress(ctx->user32_module, "GetDpiForSystem");
+  if (GetDpiForSystem_ptr) system_dpi = GetDpiForSystem_ptr();
+  
+  MARU_Scalar scale = (MARU_Scalar)system_dpi / 96.0;
+
   int x = CW_USEDEFAULT;
   int y = CW_USEDEFAULT;
-  int w = (int)create_info->attributes.logical_size.x;
-  int h = (int)create_info->attributes.logical_size.y;
+  int w = (int)(create_info->attributes.logical_size.x * scale);
+  int h = (int)(create_info->attributes.logical_size.y * scale);
 
   if (w == 0 || h == 0) {
-      w = 800;
-      h = 600;
+      w = (int)(800.0 * scale);
+      h = (int)(600.0 * scale);
   }
 
   if (create_info->attributes.position.x != 0 || create_info->attributes.position.y != 0) {
       x = (int)create_info->attributes.position.x;
       y = (int)create_info->attributes.position.y;
+      
+      POINT pt = {x, y};
+      HMONITOR hmon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+      UINT dpi_x, dpi_y;
+      if (ctx->GetDpiForMonitor && ctx->GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &dpi_x, &dpi_y) == S_OK) {
+          scale = (MARU_Scalar)dpi_x / 96.0;
+      }
+
+      x = (int)(create_info->attributes.position.x * scale);
+      y = (int)(create_info->attributes.position.y * scale);
+      w = (int)(create_info->attributes.logical_size.x * scale);
+      h = (int)(create_info->attributes.logical_size.y * scale);
       
       RECT rect = {x, y, x + w, y + h};
       AdjustWindowRectEx(&rect, style, FALSE, ex_style);
@@ -567,6 +612,7 @@ MARU_Status maru_destroyWindow_Windows(MARU_Window *window) {
 
 void maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
   MARU_Window_Windows *win = (MARU_Window_Windows *)window_handle;
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
   if (!win->hwnd || !out_geometry) return;
 
   RECT rect;
@@ -577,17 +623,16 @@ void maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeome
   out_geometry->pixel_size.x = (int32_t)w;
   out_geometry->pixel_size.y = (int32_t)h;
   
-  // For now, scale is 1.0. 
-  // TODO: Add DPI support
-  out_geometry->scale = (MARU_Scalar)1.0;
+  UINT dpi = ctx->GetDpiForWindow ? ctx->GetDpiForWindow(win->hwnd) : 96;
+  out_geometry->scale = (MARU_Scalar)dpi / 96.0;
   
-  out_geometry->logical_size.x = (MARU_Scalar)w;
-  out_geometry->logical_size.y = (MARU_Scalar)h;
+  out_geometry->logical_size.x = (MARU_Scalar)w / out_geometry->scale;
+  out_geometry->logical_size.y = (MARU_Scalar)h / out_geometry->scale;
 
   POINT pt = {0, 0};
   ClientToScreen(win->hwnd, &pt);
-  out_geometry->origin.x = (MARU_Scalar)pt.x;
-  out_geometry->origin.y = (MARU_Scalar)pt.y;
+  out_geometry->origin.x = (MARU_Scalar)pt.x / out_geometry->scale;
+  out_geometry->origin.y = (MARU_Scalar)pt.y / out_geometry->scale;
   
   out_geometry->buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
 }
@@ -595,6 +640,7 @@ void maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeome
 MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes) {
   MARU_Window_Windows *win = (MARU_Window_Windows *)window;
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
   
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
     if (attributes->title) {
@@ -651,6 +697,9 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
   }
 
   if (field_mask & (MARU_WINDOW_ATTR_LOGICAL_SIZE | MARU_WINDOW_ATTR_POSITION)) {
+      UINT dpi = ctx->GetDpiForWindow ? ctx->GetDpiForWindow(win->hwnd) : 96;
+      MARU_Scalar scale = (MARU_Scalar)dpi / 96.0;
+
       MARU_Scalar new_w = (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) ? attributes->logical_size.x : win->base.attrs_effective.logical_size.x;
       MARU_Scalar new_h = (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) ? attributes->logical_size.y : win->base.attrs_effective.logical_size.y;
       
@@ -667,7 +716,12 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
 
       DWORD style = GetWindowLongW(win->hwnd, GWL_STYLE);
       DWORD ex_style = GetWindowLongW(win->hwnd, GWL_EXSTYLE);
-      RECT rect = {(int)new_x, (int)new_y, (int)new_x + (int)new_w, (int)new_y + (int)new_h};
+      RECT rect = {
+          (int)(new_x * scale), 
+          (int)(new_y * scale), 
+          (int)((new_x + new_w) * scale), 
+          (int)((new_y + new_h) * scale)
+      };
       AdjustWindowRectEx(&rect, style, FALSE, ex_style);
       
       if (!(field_mask & MARU_WINDOW_ATTR_POSITION) && (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE)) {
