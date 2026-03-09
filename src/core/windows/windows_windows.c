@@ -5,6 +5,24 @@
 #include "maru_mem_internal.h"
 #include <string.h>
 
+static void _maru_update_cursor_mode_windows(MARU_Window_Windows *win) {
+  if (win->cursor_mode == MARU_CURSOR_LOCKED) {
+    RECT rect;
+    GetClientRect(win->hwnd, &rect);
+    ClientToScreen(win->hwnd, (POINT *)&rect.left);
+    ClientToScreen(win->hwnd, (POINT *)&rect.right);
+    ClipCursor(&rect);
+  } else {
+    ClipCursor(NULL);
+  }
+
+  if (win->cursor_mode != MARU_CURSOR_NORMAL && win->is_cursor_in_client_area) {
+    while (ShowCursor(FALSE) >= 0);
+  } else {
+    while (ShowCursor(TRUE) < 0);
+  }
+}
+
 LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                   LPARAM lParam) {
   MARU_Window_Windows *win = (MARU_Window_Windows *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
@@ -21,6 +39,15 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
 
   switch (uMsg) {
+    case WM_SETCURSOR: {
+      if (LOWORD(lParam) == HTCLIENT) {
+        if (win->cursor_mode != MARU_CURSOR_NORMAL) {
+          SetCursor(NULL);
+          return TRUE;
+        }
+      }
+      break;
+    }
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
     case WM_KEYUP:
@@ -154,20 +181,48 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       pos.x = (MARU_Scalar)(short)LOWORD(lParam);
       pos.y = (MARU_Scalar)(short)HIWORD(lParam);
 
-      MARU_Event evt = {0};
-      evt.mouse_motion.position = pos;
-      if (win->last_mouse_pos_valid) {
-        evt.mouse_motion.delta.x = pos.x - win->last_mouse_pos.x;
-        evt.mouse_motion.delta.y = pos.y - win->last_mouse_pos.y;
-      } else {
-        evt.mouse_motion.delta.x = 0;
-        evt.mouse_motion.delta.y = 0;
+      if (!win->is_cursor_in_client_area) {
+        TRACKMOUSEEVENT tme = {sizeof(tme), TME_LEAVE, hwnd, 0};
+        TrackMouseEvent(&tme);
+        win->is_cursor_in_client_area = true;
+        _maru_update_cursor_mode_windows(win);
       }
+
+      MARU_Event evt = {0};
+
+      if (win->cursor_mode == MARU_CURSOR_LOCKED) {
+        RECT rect;
+        GetClientRect(win->hwnd, &rect);
+        MARU_Scalar centerX = (MARU_Scalar)(rect.right - rect.left) / 2.0f;
+        MARU_Scalar centerY = (MARU_Scalar)(rect.bottom - rect.top) / 2.0f;
+
+        evt.mouse_motion.delta.x = pos.x - centerX;
+        evt.mouse_motion.delta.y = pos.y - centerY;
+
+        if (evt.mouse_motion.delta.x != 0 || evt.mouse_motion.delta.y != 0) {
+          win->virtual_cursor_pos.x += evt.mouse_motion.delta.x;
+          win->virtual_cursor_pos.y += evt.mouse_motion.delta.y;
+
+          POINT pt = {(int)centerX, (int)centerY};
+          ClientToScreen(win->hwnd, &pt);
+          SetCursorPos(pt.x, pt.y);
+        }
+        evt.mouse_motion.position = win->virtual_cursor_pos;
+      } else {
+        evt.mouse_motion.position = pos;
+        if (win->last_mouse_pos_valid) {
+          evt.mouse_motion.delta.x = pos.x - win->last_mouse_pos.x;
+          evt.mouse_motion.delta.y = pos.y - win->last_mouse_pos.y;
+        } else {
+          evt.mouse_motion.delta.x = 0;
+          evt.mouse_motion.delta.y = 0;
+        }
+        win->last_mouse_pos = pos;
+        win->last_mouse_pos_valid = true;
+      }
+
       evt.mouse_motion.raw_delta = evt.mouse_motion.delta; // TODO: handle raw input
       evt.mouse_motion.modifiers = _maru_get_modifiers_windows();
-
-      win->last_mouse_pos = pos;
-      win->last_mouse_pos_valid = true;
 
       _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)win, &evt);
       return 0;
@@ -175,6 +230,8 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
     case WM_MOUSELEAVE: {
         win->last_mouse_pos_valid = false;
+        win->is_cursor_in_client_area = false;
+        _maru_update_cursor_mode_windows(win);
         return 0;
     }
 
@@ -198,6 +255,9 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
     }
 
     case WM_SIZE: {
+      if (win->cursor_mode == MARU_CURSOR_LOCKED && GetActiveWindow() == win->hwnd) {
+        _maru_update_cursor_mode_windows(win);
+      }
       MARU_Event evt = {0};
       maru_getWindowGeometry_Windows((MARU_Window *)win, &evt.resized.geometry);
       _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &evt);
@@ -213,6 +273,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
             win->base.pub.flags &= ~MARU_WINDOW_STATE_FOCUSED;
             win->high_surrogate = 0;
         }
+        _maru_update_cursor_mode_windows(win);
 
         MARU_Event evt = {0};
         evt.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
@@ -395,6 +456,14 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
         win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
     } else {
         win->base.pub.flags &= ~MARU_WINDOW_STATE_VISIBLE;
+    }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
+    if (win->cursor_mode != attributes->cursor_mode) {
+      win->cursor_mode = attributes->cursor_mode;
+      win->base.pub.cursor_mode = attributes->cursor_mode;
+      _maru_update_cursor_mode_windows(win);
     }
   }
 

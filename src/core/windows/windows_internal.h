@@ -49,12 +49,6 @@ typedef struct MARU_Window_Windows {
   DWORD saved_ex_style;
   RECT saved_rect;
 
-  MARU_Cursor_Windows *current_cursor;
-  MARU_CursorMode cursor_mode;
-
-  MARU_Vec2Dip min_size;
-  MARU_Vec2Dip max_size;
-  MARU_Fraction aspect_ratio;
   HICON icon_small;
   HICON icon_big;
 
@@ -63,6 +57,10 @@ typedef struct MARU_Window_Windows {
   bool last_mouse_pos_valid;
 
   wchar_t high_surrogate;
+
+  MARU_CursorMode cursor_mode;
+  bool is_cursor_in_client_area;
+  MARU_Vec2Dip virtual_cursor_pos;
 } MARU_Window_Windows;
 
 // contexts.h
