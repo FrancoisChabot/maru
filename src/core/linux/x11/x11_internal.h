@@ -150,10 +150,14 @@ typedef struct MARU_Context_X11 {
   Atom selection_primary;
   Atom selection_targets;
   Atom selection_incr;
+  Atom selection_timestamp;
+  Atom selection_multiple;
+  Atom selection_save_targets;
   Atom utf8_string;
   Atom text_atom;
   Atom compound_text;
   Atom maru_selection_property;
+  Atom maru_selection_targets_property;
   Atom xdnd_aware;
   Atom xdnd_enter;
   Atom xdnd_position;
@@ -177,10 +181,13 @@ typedef struct MARU_Context_X11 {
   MARU_X11DataRequestPending dnd_request;
   MARU_X11DnDSession dnd_session;
   MARU_X11DnDSourceSession dnd_source;
+  void *clipboard_mime_query_storage;
   const char **clipboard_mime_query_ptr;
   uint32_t clipboard_mime_query_count;
+  void *primary_mime_query_storage;
   const char **primary_mime_query_ptr;
   uint32_t primary_mime_query_count;
+  void *dnd_mime_query_storage;
   const char **dnd_mime_query_ptr;
   uint32_t dnd_mime_query_count;
 

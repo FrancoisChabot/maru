@@ -26,6 +26,7 @@
   MARU_LIB_FN(XCloseDisplay)               \
   MARU_LIB_FN(XPending)                    \
   MARU_LIB_FN(XNextEvent)                  \
+  MARU_LIB_FN(XCheckIfEvent)               \
   MARU_LIB_FN(XGetEventData)               \
   MARU_LIB_FN(XFreeEventData)              \
   MARU_LIB_FN(XConnectionNumber)           \

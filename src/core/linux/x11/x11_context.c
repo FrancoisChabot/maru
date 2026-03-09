@@ -192,6 +192,12 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->selection_targets =
       ctx->x11_lib.XInternAtom(ctx->display, "TARGETS", False);
   ctx->selection_incr = ctx->x11_lib.XInternAtom(ctx->display, "INCR", False);
+  ctx->selection_timestamp =
+      ctx->x11_lib.XInternAtom(ctx->display, "TIMESTAMP", False);
+  ctx->selection_multiple =
+      ctx->x11_lib.XInternAtom(ctx->display, "MULTIPLE", False);
+  ctx->selection_save_targets =
+      ctx->x11_lib.XInternAtom(ctx->display, "SAVE_TARGETS", False);
   ctx->utf8_string =
       ctx->x11_lib.XInternAtom(ctx->display, "UTF8_STRING", False);
   ctx->text_atom = ctx->x11_lib.XInternAtom(ctx->display, "TEXT", False);
@@ -199,6 +205,8 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
       ctx->x11_lib.XInternAtom(ctx->display, "COMPOUND_TEXT", False);
   ctx->maru_selection_property =
       ctx->x11_lib.XInternAtom(ctx->display, "MARU_SELECTION", False);
+  ctx->maru_selection_targets_property =
+      ctx->x11_lib.XInternAtom(ctx->display, "MARU_SELECTION_TARGETS", False);
   ctx->xdnd_aware = ctx->x11_lib.XInternAtom(ctx->display, "XdndAware", False);
   ctx->xdnd_enter = ctx->x11_lib.XInternAtom(ctx->display, "XdndEnter", False);
   ctx->xdnd_position =

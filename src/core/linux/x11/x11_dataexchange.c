@@ -5,8 +5,10 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "x11_internal.h"
-#include <string.h>
+#include <errno.h>
 #include <limits.h>
+#include <poll.h>
+#include <string.h>
 
 Atom _maru_x11_target_to_selection_atom(const MARU_Context_X11 *ctx,
                                         MARU_DataExchangeTarget target) {
@@ -75,21 +77,280 @@ MARU_X11DataRequestPending *_maru_x11_get_pending_request(
 }
 
 void _maru_x11_clear_mime_query_cache(MARU_Context_X11 *ctx) {
+  if (ctx->clipboard_mime_query_storage) {
+    maru_context_free(&ctx->base, ctx->clipboard_mime_query_storage);
+    ctx->clipboard_mime_query_storage = NULL;
+  }
   if (ctx->clipboard_mime_query_ptr) {
     maru_context_free(&ctx->base, (void *)ctx->clipboard_mime_query_ptr);
     ctx->clipboard_mime_query_ptr = NULL;
     ctx->clipboard_mime_query_count = 0;
+  }
+  if (ctx->primary_mime_query_storage) {
+    maru_context_free(&ctx->base, ctx->primary_mime_query_storage);
+    ctx->primary_mime_query_storage = NULL;
   }
   if (ctx->primary_mime_query_ptr) {
     maru_context_free(&ctx->base, (void *)ctx->primary_mime_query_ptr);
     ctx->primary_mime_query_ptr = NULL;
     ctx->primary_mime_query_count = 0;
   }
+  if (ctx->dnd_mime_query_storage) {
+    maru_context_free(&ctx->base, ctx->dnd_mime_query_storage);
+    ctx->dnd_mime_query_storage = NULL;
+  }
   if (ctx->dnd_mime_query_ptr) {
     maru_context_free(&ctx->base, (void *)ctx->dnd_mime_query_ptr);
     ctx->dnd_mime_query_ptr = NULL;
     ctx->dnd_mime_query_count = 0;
   }
+}
+
+typedef struct MARU_X11SelectionNotifyMatch {
+  Window requestor;
+  Atom selection;
+  Atom property;
+} MARU_X11SelectionNotifyMatch;
+
+static int _maru_x11_selection_notify_matches(Display *display, XEvent *ev,
+                                              XPointer arg) {
+  (void)display;
+  const MARU_X11SelectionNotifyMatch *match =
+      (const MARU_X11SelectionNotifyMatch *)arg;
+  if (!ev || !match || ev->type != SelectionNotify) {
+    return False;
+  }
+  return ev->xselection.requestor == match->requestor &&
+         ev->xselection.selection == match->selection &&
+         (ev->xselection.property == match->property ||
+          ev->xselection.property == None);
+}
+
+static bool _maru_x11_wait_for_selection_notify(MARU_Context_X11 *ctx,
+                                                Window requestor,
+                                                Atom selection_atom,
+                                                Atom property_atom,
+                                                uint32_t timeout_ms,
+                                                XEvent *out_event) {
+  MARU_X11SelectionNotifyMatch match = {
+      .requestor = requestor,
+      .selection = selection_atom,
+      .property = property_atom,
+  };
+
+  for (;;) {
+    if (!ctx->x11_lib.XCheckIfEvent) {
+      return false;
+    }
+    if (ctx->x11_lib.XCheckIfEvent &&
+        ctx->x11_lib.XCheckIfEvent(ctx->display, out_event,
+                                   _maru_x11_selection_notify_matches,
+                                   (XPointer)&match)) {
+      return true;
+    }
+
+    if (timeout_ms == 0) {
+      return false;
+    }
+
+    int poll_timeout = -1;
+    if (timeout_ms != MARU_NEVER) {
+      poll_timeout = (timeout_ms > (uint32_t)INT_MAX) ? INT_MAX : (int)timeout_ms;
+    }
+    if (!ctx->x11_lib.XConnectionNumber) {
+      return false;
+    }
+
+    struct pollfd pfd = {
+        .fd = ctx->x11_lib.XConnectionNumber(ctx->display),
+        .events = POLLIN,
+        .revents = 0,
+    };
+
+    const int poll_result = poll(&pfd, 1, poll_timeout);
+    if (poll_result > 0) {
+      continue;
+    }
+    if (poll_result == 0) {
+      return false;
+    }
+    if (errno == EINTR) {
+      continue;
+    }
+    return false;
+  }
+}
+
+static bool _maru_x11_is_selection_meta_atom(const MARU_Context_X11 *ctx,
+                                             Atom atom) {
+  return atom == ctx->selection_targets || atom == ctx->selection_timestamp ||
+         atom == ctx->selection_multiple || atom == ctx->selection_save_targets ||
+         atom == ctx->selection_incr;
+}
+
+static MARU_Status _maru_x11_store_external_mime_query(
+    MARU_Context_X11 *ctx, MARU_DataExchangeTarget target, const Atom *atoms,
+    uint32_t count, MARU_MIMETypeList *out_list) {
+  uint32_t kept_count = 0;
+  size_t storage_size = 0;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    if (_maru_x11_is_selection_meta_atom(ctx, atoms[i])) {
+      continue;
+    }
+
+    char *atom_name = ctx->x11_lib.XGetAtomName(ctx->display, atoms[i]);
+    if (!atom_name) {
+      continue;
+    }
+
+    bool duplicate = false;
+    for (uint32_t j = 0; j < i; ++j) {
+      if (atoms[j] == atoms[i]) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (!duplicate) {
+      kept_count++;
+      storage_size += strlen(atom_name) + 1u;
+    }
+    ctx->x11_lib.XFree(atom_name);
+  }
+
+  if (kept_count == 0) {
+    out_list->mime_types = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+
+  const char **query =
+      (const char **)maru_context_alloc(&ctx->base, kept_count * sizeof(char *));
+  char *storage = (char *)maru_context_alloc(&ctx->base, storage_size);
+  if (!query || !storage) {
+    if (query) {
+      maru_context_free(&ctx->base, (void *)query);
+    }
+    if (storage) {
+      maru_context_free(&ctx->base, storage);
+    }
+    out_list->mime_types = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+
+  uint32_t out_count = 0;
+  char *storage_cursor = storage;
+  for (uint32_t i = 0; i < count; ++i) {
+    if (_maru_x11_is_selection_meta_atom(ctx, atoms[i])) {
+      continue;
+    }
+
+    bool duplicate = false;
+    for (uint32_t j = 0; j < i; ++j) {
+      if (atoms[j] == atoms[i]) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (duplicate) {
+      continue;
+    }
+
+    char *atom_name = ctx->x11_lib.XGetAtomName(ctx->display, atoms[i]);
+    if (!atom_name) {
+      continue;
+    }
+
+    const size_t name_len = strlen(atom_name);
+    memcpy(storage_cursor, atom_name, name_len + 1u);
+    query[out_count++] = storage_cursor;
+    storage_cursor += name_len + 1u;
+    ctx->x11_lib.XFree(atom_name);
+  }
+
+  if (out_count == 0) {
+    maru_context_free(&ctx->base, storage);
+    maru_context_free(&ctx->base, (void *)query);
+    out_list->mime_types = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+
+  if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
+    ctx->clipboard_mime_query_storage = storage;
+    ctx->clipboard_mime_query_ptr = query;
+    ctx->clipboard_mime_query_count = out_count;
+    out_list->mime_types = ctx->clipboard_mime_query_ptr;
+    out_list->count = ctx->clipboard_mime_query_count;
+  } else {
+    ctx->primary_mime_query_storage = storage;
+    ctx->primary_mime_query_ptr = query;
+    ctx->primary_mime_query_count = out_count;
+    out_list->mime_types = ctx->primary_mime_query_ptr;
+    out_list->count = ctx->primary_mime_query_count;
+  }
+
+  return MARU_SUCCESS;
+}
+
+static MARU_Status _maru_x11_query_external_selection_mime_types(
+    MARU_Context_X11 *ctx, MARU_Window_X11 *win, MARU_DataExchangeTarget target,
+    Atom selection_atom, MARU_MIMETypeList *out_list) {
+  MARU_ASSUME(selection_atom != None);
+  const Atom property_atom = ctx->maru_selection_targets_property != None
+                                 ? ctx->maru_selection_targets_property
+                                 : ctx->maru_selection_property;
+  XEvent notify = {0};
+
+  ctx->x11_lib.XDeleteProperty(ctx->display, win->handle, property_atom);
+  ctx->x11_lib.XConvertSelection(ctx->display, selection_atom, ctx->selection_targets,
+                                 property_atom, win->handle, CurrentTime);
+  ctx->x11_lib.XFlush(ctx->display);
+
+  if (!_maru_x11_wait_for_selection_notify(
+          ctx, win->handle, selection_atom, property_atom,
+          ctx->base.tuning.x11.selection_query_timeout_ms, &notify)) {
+    MARU_REPORT_DIAGNOSTIC(
+        (MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE,
+        "X11 clipboard MIME query timed out while waiting for TARGETS.");
+    out_list->mime_types = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+
+  if (notify.xselection.property == None) {
+    out_list->mime_types = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+
+  Atom actual_type = None;
+  int actual_format = 0;
+  unsigned long item_count = 0;
+  unsigned long bytes_after = 0;
+  unsigned char *property_data = NULL;
+  const int xres = ctx->x11_lib.XGetWindowProperty(
+      ctx->display, win->handle, property_atom, 0, 0x1FFFFFFF, True, XA_ATOM,
+      &actual_type, &actual_format, &item_count, &bytes_after, &property_data);
+  (void)bytes_after;
+  if (xres != Success || actual_type != XA_ATOM || actual_format != 32 ||
+      item_count == 0 || !property_data) {
+    if (property_data) {
+      ctx->x11_lib.XFree(property_data);
+    }
+    MARU_REPORT_DIAGNOSTIC(
+        (MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE,
+        "X11 clipboard MIME query received an invalid TARGETS reply.");
+    out_list->mime_types = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+
+  const MARU_Status status = _maru_x11_store_external_mime_query(
+      ctx, target, (const Atom *)property_data, (uint32_t)item_count, out_list);
+  ctx->x11_lib.XFree(property_data);
+  return status;
 }
 
 void _maru_x11_clear_offer(MARU_Context_X11 *ctx, MARU_X11DataOffer *offer) {
@@ -1264,6 +1525,11 @@ MARU_Status _maru_x11_getAvailableMIMETypes(MARU_Window *window,
       out_list->count = ctx->primary_mime_query_count;
     }
     return MARU_SUCCESS;
+  }
+
+  if (owner != None) {
+    return _maru_x11_query_external_selection_mime_types(ctx, win, target,
+                                                         selection_atom, out_list);
   }
 
   out_list->mime_types = NULL;

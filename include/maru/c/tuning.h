@@ -54,6 +54,7 @@ typedef struct MARU_ContextTuning {
 
   struct {
     uint32_t idle_poll_interval_ms;
+    uint32_t selection_query_timeout_ms;
   } x11;
 } MARU_ContextTuning;
 
@@ -66,7 +67,8 @@ typedef struct MARU_ContextTuning {
       .decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO \
     }, \
     .x11 = { \
-      .idle_poll_interval_ms = 250 \
+      .idle_poll_interval_ms = 250, \
+      .selection_query_timeout_ms = 50 \
     }, \
   }
 
