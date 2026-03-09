@@ -2,6 +2,7 @@ add_executable(maru_tests
   unit/test_allocator.c
   unit/test_diagnostics.c
   unit/test_queue.c
+  unit/test_x11_dataexchange.c
 )
 
 if (UNIX AND NOT APPLE)
@@ -10,6 +11,7 @@ endif()
 
 target_include_directories(maru_tests PRIVATE
   ${PROJECT_SOURCE_DIR}/src/core
+  ${PROJECT_SOURCE_DIR}/src/core/linux
   ${CMAKE_CURRENT_SOURCE_DIR}/unit
 )
 

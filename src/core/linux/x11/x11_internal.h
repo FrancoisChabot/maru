@@ -263,7 +263,6 @@ void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev);
 bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev);
 bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev);
 bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev);
-MARU_DataExchangeTarget _maru_x11_selection_atom_to_target(const MARU_Context_X11 *ctx, Atom selection_atom);
 MARU_X11DataOffer *_maru_x11_get_offer(MARU_Context_X11 *ctx, MARU_DataExchangeTarget target);
 MARU_X11DataRequestPending *_maru_x11_get_pending_request(MARU_Context_X11 *ctx, MARU_DataExchangeTarget target);
 void _maru_x11_send_selection_notify(MARU_Context_X11 *ctx, const XSelectionRequestEvent *request, Atom property_atom);

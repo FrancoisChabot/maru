@@ -8,7 +8,7 @@
 #include <limits.h>
 
 Atom _maru_x11_target_to_selection_atom(const MARU_Context_X11 *ctx,
-                                               MARU_DataExchangeTarget target) {
+                                        MARU_DataExchangeTarget target) {
   if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     return ctx->selection_clipboard;
   }
@@ -21,15 +21,28 @@ Atom _maru_x11_target_to_selection_atom(const MARU_Context_X11 *ctx,
   return None;
 }
 
-MARU_DataExchangeTarget
-_maru_x11_selection_atom_to_target(const MARU_Context_X11 *ctx, Atom selection_atom) {
+static bool _maru_x11_selection_atom_to_target(const MARU_Context_X11 *ctx,
+                                               Atom selection_atom,
+                                               MARU_DataExchangeTarget *out_target) {
   if (selection_atom == ctx->selection_clipboard) {
-    return MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+    if (out_target) {
+      *out_target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+    }
+    return true;
   }
   if (selection_atom == ctx->selection_primary) {
-    return MARU_DATA_EXCHANGE_TARGET_PRIMARY;
+    if (out_target) {
+      *out_target = MARU_DATA_EXCHANGE_TARGET_PRIMARY;
+    }
+    return true;
   }
-  return MARU_DATA_EXCHANGE_TARGET_DRAG_DROP;
+  if (selection_atom == ctx->xdnd_selection) {
+    if (out_target) {
+      *out_target = MARU_DATA_EXCHANGE_TARGET_DRAG_DROP;
+    }
+    return true;
+  }
+  return false;
 }
 
 MARU_X11DataOffer *_maru_x11_get_offer(MARU_Context_X11 *ctx,
@@ -1405,8 +1418,10 @@ bool _maru_x11_apply_window_drop_target(MARU_Context_X11 *ctx, MARU_Window_X11 *
 
 void _maru_x11_process_selection_notify(MARU_Context_X11 *ctx, XEvent *ev) {
   const XSelectionEvent *notify = &ev->xselection;
-  MARU_DataExchangeTarget target =
-      _maru_x11_selection_atom_to_target(ctx, notify->selection);
+  MARU_DataExchangeTarget target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+  if (!_maru_x11_selection_atom_to_target(ctx, notify->selection, &target)) {
+    return;
+  }
   MARU_X11DataRequestPending *request =
       _maru_x11_get_pending_request(ctx, target);
   if (!request || !request->pending || !request->window ||
@@ -1484,8 +1499,11 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
   switch (ev->type) {
     case SelectionRequest: {
       const XSelectionRequestEvent *req = &ev->xselectionrequest;
-      MARU_DataExchangeTarget target =
-          _maru_x11_selection_atom_to_target(ctx, req->selection);
+      MARU_DataExchangeTarget target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+      if (!_maru_x11_selection_atom_to_target(ctx, req->selection, &target)) {
+        _maru_x11_send_selection_notify(ctx, req, None);
+        return true;
+      }
       MARU_X11DataOffer *offer = _maru_x11_get_offer(ctx, target);
       if (!offer || !offer->owner_window || offer->owner_window->handle != req->owner) {
         _maru_x11_send_selection_notify(ctx, req, None);
