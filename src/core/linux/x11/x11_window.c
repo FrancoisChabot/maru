@@ -2,6 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "maru_internal.h"
+#include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "x11_internal.h"
 #include <string.h>
@@ -327,9 +328,9 @@ static void _maru_x11_apply_decorations_local(MARU_Context_X11 *ctx,
 
 static bool _maru_x11_apply_mouse_passthrough(MARU_Context_X11 *ctx,
                                               MARU_Window_X11 *win) {
-  if (!win->handle) {
-    return false;
-  }
+  MARU_ASSUME(ctx != NULL);
+  MARU_ASSUME(win != NULL);
+  MARU_ASSUME(win->handle != (Window)0);
 
   const bool enable = win->base.attrs_effective.mouse_passthrough;
 
