@@ -19,8 +19,8 @@ Ready for use by early adopters on Linux.
 
 - Wayland: Feature complete, with expected protocol/compositor-dependent limits on some advanced operations.
 - X11: Effectively complete for most uses. IME handling is still subpar, but that's it.
-- Windows: Stubbed-in (WIP)
-- macOS: Broadly functional, but still incomplete (WIP)
+- Windows: Broadly functional for gaming applcations, but still incomplete (WIP)
+- macOS: Broadly functional for gaming applcations, but still incomplete (WIP)
 
 ## Quickstart 
 
