@@ -1,6 +1,6 @@
 # MARU
 
-[![License](https://img.shields.io/badge/license-zlib-blue.svg)](LICENSE.md)
+[![License](https://img.shields.io/badge/license-zlib-blue.svg)](LICENSE.txt)
 
 A vulkan-centric Platform Abstraction Layer that gets out of your way.
 
