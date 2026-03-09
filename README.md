@@ -17,10 +17,10 @@ Ready for use by early adopters on Linux.
 
 ### Backend statuses
 
-- Wayland: Feature complete for core functionality, with expected protocol/compositor-dependent limits on some advanced operations.
-- X11: Almost feature complete. IME handling is still subpar.
-- Windows: Minimally functional.
-- macOS: Stubbed in.
+- Wayland: Feature complete, with expected protocol/compositor-dependent limits on some advanced operations.
+- X11: Effectively complete for most uses. IME handling is still subpar, but that's it.
+- Windows: Functional for basic uses (Window + KB/M).
+- macOS: Functional for basic uses (Window + KB/M).
 
 ## Quickstart 
 
