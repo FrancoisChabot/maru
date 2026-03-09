@@ -94,9 +94,9 @@ static bool _maru_queue_buffer_init(MARU_Context_Base *ctx_base, MARU_QueueBuffe
         return false;
     }
 
-    buf->types = (MARU_EventId *)((uint8_t *)ptr + types_offset);
-    buf->windows = (MARU_Window **)((uint8_t *)ptr + windows_offset);
-    buf->events = (MARU_Event *)((uint8_t *)ptr + events_offset);
+    buf->types = (MARU_EventId *)(void *)((uint8_t *)ptr + types_offset);
+    buf->windows = (MARU_Window **)(void *)((uint8_t *)ptr + windows_offset);
+    buf->events = (MARU_Event *)(void *)((uint8_t *)ptr + events_offset);
     buf->bulk_ptr = ptr;
     
     return true;
