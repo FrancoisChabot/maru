@@ -20,7 +20,7 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Sizing and Positioning (`MARU_WINDOW_ATTR_LOGICAL_SIZE`, `MARU_WINDOW_ATTR_POSITION`)
 - [x] Min/Max/Fullscreen States (`MARU_WINDOW_ATTR_MINIMIZED`, `MARU_WINDOW_ATTR_MAXIMIZED`, `MARU_WINDOW_ATTR_FULLSCREEN`)
 - [x] Focus Requests (`maru_requestWindowFocus_Windows`)
-- [ ] **TODO:** Frame Request (`maru_requestWindowFrame_Windows` - currently stub)
+- [x] **DONE:** Frame Request (`maru_requestWindowFrame_Windows`)
 - [x] Attention Requests (`maru_requestWindowAttention_Windows` via `FlashWindow`)
 - [x] Window Icon Support
 

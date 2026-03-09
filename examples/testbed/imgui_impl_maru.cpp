@@ -9,10 +9,11 @@
 #include <maru/c/details/windows.h>
 #include <maru/c/windows.h>
 #include <maru/maru.h>
+#include <chrono>
 
 struct ImGui_ImplMaru_Data {
     MARU_Window* Window;
-    uint32_t TimeMs;
+    double Time;
     MARU_Cursor* MouseCursors[ImGuiMouseCursor_COUNT];
 
     ImGui_ImplMaru_Data() { memset(this, 0, sizeof(*this)); }
@@ -269,7 +270,15 @@ void ImGui_ImplMaru_NewFrame() {
     if (geometry.logical_size.x > 0 && geometry.logical_size.y > 0)
         io.DisplayFramebufferScale = ImVec2((float)geometry.pixel_size.x / (float)geometry.logical_size.x, (float)geometry.pixel_size.y / (float)geometry.logical_size.y);
 
-    // TODO: delta time
+    // Setup delta time
+    auto now = std::chrono::steady_clock::now().time_since_epoch();
+    double current_time = std::chrono::duration<double>(now).count();
+    if (bd->Time > 0.0) {
+        io.DeltaTime = (float)(current_time - bd->Time);
+    } else {
+        io.DeltaTime = 1.0f / 60.0f;
+    }
+    bd->Time = current_time;
 
     ImGui_ImplMaru_UpdateMouseCursor();
 }

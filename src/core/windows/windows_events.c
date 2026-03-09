@@ -164,6 +164,36 @@ uint64_t _maru_windows_get_time_ms(void) {
   return _maru_windows_get_time_ns() / 1000000;
 }
 
+static void _maru_windows_dispatch_pending_frames(MARU_Context_Windows *ctx) {
+  MARU_Window_Base *base = ctx->base.window_list_head;
+  const uint64_t now_ms = _maru_windows_get_time_ms();
+
+  while (base) {
+    MARU_Window_Windows *win = (MARU_Window_Windows *)base;
+    if (win->pending_frame_request) {
+      win->pending_frame_request = false;
+
+      MARU_Event evt = {0};
+      evt.frame.timestamp_ms = (uint32_t)now_ms;
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME,
+                           (MARU_Window *)win, &evt);
+    }
+    base = base->ctx_next;
+  }
+}
+
+static bool _maru_windows_has_pending_frames(MARU_Context_Windows *ctx) {
+  MARU_Window_Base *base = ctx->base.window_list_head;
+  while (base) {
+    MARU_Window_Windows *win = (MARU_Window_Windows *)base;
+    if (win->pending_frame_request) {
+      return true;
+    }
+    base = base->ctx_next;
+  }
+  return false;
+}
+
 MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
                                     MARU_EventCallback callback,
                                     void *userdata) {
@@ -200,8 +230,10 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
     }
   }
 
-  // If we have a timeout and no messages were processed, or we just want to wait
-  if (timeout_ms != 0) {
+  const bool had_pending_frames = _maru_windows_has_pending_frames(ctx);
+
+  // If we have a timeout and no frame request is already pending, wait for work.
+  if (timeout_ms != 0 && !had_pending_frames) {
     uint64_t now_ms = _maru_windows_get_time_ms();
     uint32_t remaining_timeout = _maru_adjust_timeout_for_cursor_animation(&ctx->base, timeout_ms, now_ms);
 
@@ -218,6 +250,8 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
       }
     }
   }
+
+  _maru_windows_dispatch_pending_frames(ctx);
 
   {
     const uint64_t now_ms = _maru_windows_get_time_ms();

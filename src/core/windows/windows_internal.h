@@ -140,6 +140,8 @@ typedef struct MARU_Window_Windows {
   MARU_CursorMode cursor_mode;
   bool is_cursor_in_client_area;
   MARU_Vec2Dip virtual_cursor_pos;
+
+  bool pending_frame_request;
 } MARU_Window_Windows;
 
 // contexts.h

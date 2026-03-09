@@ -124,8 +124,6 @@ int main() {
     // We use a small timeout to avoid busy-waiting, but 0 is also fine
     // if we are driven by frame events.
     maru_pumpEvents(context, 10, handle_event, NULL);
-
-    vulkan_renderer_draw_frame(&renderer);
   }
 
   vkDeviceWaitIdle(renderer.device);

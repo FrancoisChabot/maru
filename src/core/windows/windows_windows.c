@@ -775,7 +775,8 @@ MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window) {
 }
 
 MARU_Status maru_requestWindowFrame_Windows(MARU_Window *window) {
-  (void)window;
+  MARU_Window_Windows *win = (MARU_Window_Windows *)window;
+  win->pending_frame_request = true;
   return MARU_SUCCESS;
 }
 
