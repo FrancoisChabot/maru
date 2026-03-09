@@ -21,6 +21,208 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
 
   switch (uMsg) {
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYUP: {
+      MARU_Key key = _maru_translate_key_windows(wParam, lParam);
+      if (key != MARU_KEY_UNKNOWN) {
+        MARU_ButtonState state = (uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN) 
+                                 ? MARU_BUTTON_STATE_PRESSED 
+                                 : MARU_BUTTON_STATE_RELEASED;
+        
+        // Update internal state
+        win->base.keyboard_state[key] = (MARU_ButtonState8)state;
+
+        // Skip repeats for state changed events
+        if (state == MARU_BUTTON_STATE_PRESSED && (lParam & (1 << 30))) {
+          return 0;
+        }
+
+        MARU_Event evt = {0};
+        evt.key.raw_key = key;
+        evt.key.state = state;
+        evt.key.modifiers = _maru_get_modifiers_windows();
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)win, &evt);
+      }
+      return 0;
+    }
+
+    case WM_CHAR:
+    case WM_SYSCHAR: {
+      wchar_t codepoint = (wchar_t)wParam;
+      if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
+        win->high_surrogate = codepoint;
+        return 0;
+      }
+      
+      wchar_t utf16[3] = {0};
+      int utf16_len = 0;
+      if (win->high_surrogate && codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
+        utf16[0] = win->high_surrogate;
+        utf16[1] = codepoint;
+        utf16_len = 2;
+      } else {
+        utf16[0] = codepoint;
+        utf16_len = 1;
+      }
+      win->high_surrogate = 0;
+
+      char utf8[8];
+      int n = WideCharToMultiByte(CP_UTF8, 0, utf16, utf16_len, utf8, sizeof(utf8), NULL, NULL);
+      if (n > 0) {
+        MARU_Event evt = {0};
+        evt.text_edit_commit.committed_utf8 = utf8;
+        evt.text_edit_commit.committed_length = (uint32_t)n;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win, &evt);
+      }
+      return 0;
+    }
+
+    case WM_UNICHAR: {
+      if (wParam == UNICODE_NOCHAR) {
+        return TRUE;
+      }
+
+      uint32_t codepoint = (uint32_t)wParam;
+      wchar_t utf16[3] = {0};
+      int utf16_len = 0;
+
+      if (codepoint > 0xFFFF) {
+        utf16[0] = (wchar_t)(0xD800 + ((codepoint - 0x10000) >> 10));
+        utf16[1] = (wchar_t)(0xDC00 + ((codepoint - 0x10000) & 0x3FF));
+        utf16_len = 2;
+      } else {
+        utf16[0] = (wchar_t)codepoint;
+        utf16_len = 1;
+      }
+
+      char utf8[8];
+      int n = WideCharToMultiByte(CP_UTF8, 0, utf16, utf16_len, utf8, sizeof(utf8), NULL, NULL);
+      if (n > 0) {
+        MARU_Event evt = {0};
+        evt.text_edit_commit.committed_utf8 = utf8;
+        evt.text_edit_commit.committed_length = (uint32_t)n;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win, &evt);
+      }
+      return 0;
+    }
+
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+    case WM_XBUTTONDOWN:
+    case WM_XBUTTONUP: {
+      uint32_t button_id = 0;
+      MARU_ButtonState state = MARU_BUTTON_STATE_RELEASED;
+
+      switch (uMsg) {
+        case WM_LBUTTONDOWN: state = MARU_BUTTON_STATE_PRESSED; // fallthrough
+        case WM_LBUTTONUP:   button_id = 0; break;
+        case WM_RBUTTONDOWN: state = MARU_BUTTON_STATE_PRESSED; // fallthrough
+        case WM_RBUTTONUP:   button_id = 1; break;
+        case WM_MBUTTONDOWN: state = MARU_BUTTON_STATE_PRESSED; // fallthrough
+        case WM_MBUTTONUP:   button_id = 2; break;
+        case WM_XBUTTONDOWN: state = MARU_BUTTON_STATE_PRESSED; // fallthrough
+        case WM_XBUTTONUP:   button_id = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; break;
+      }
+
+      if (ctx->base.mouse_button_states) {
+        ctx->base.mouse_button_states[button_id] = (MARU_ButtonState8)state;
+      }
+
+      MARU_Event evt = {0};
+      evt.mouse_button.button_id = button_id;
+      evt.mouse_button.state = state;
+      evt.mouse_button.modifiers = _maru_get_modifiers_windows();
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)win, &evt);
+
+      if (uMsg == WM_LBUTTONDOWN || uMsg == WM_RBUTTONDOWN || uMsg == WM_MBUTTONDOWN || uMsg == WM_XBUTTONDOWN) {
+          SetCapture(hwnd);
+      } else {
+          ReleaseCapture();
+      }
+
+      return 0;
+    }
+
+    case WM_MOUSEMOVE: {
+      MARU_Vec2Dip pos;
+      pos.x = (MARU_Scalar)(short)LOWORD(lParam);
+      pos.y = (MARU_Scalar)(short)HIWORD(lParam);
+
+      MARU_Event evt = {0};
+      evt.mouse_motion.position = pos;
+      if (win->last_mouse_pos_valid) {
+        evt.mouse_motion.delta.x = pos.x - win->last_mouse_pos.x;
+        evt.mouse_motion.delta.y = pos.y - win->last_mouse_pos.y;
+      } else {
+        evt.mouse_motion.delta.x = 0;
+        evt.mouse_motion.delta.y = 0;
+      }
+      evt.mouse_motion.raw_delta = evt.mouse_motion.delta; // TODO: handle raw input
+      evt.mouse_motion.modifiers = _maru_get_modifiers_windows();
+
+      win->last_mouse_pos = pos;
+      win->last_mouse_pos_valid = true;
+
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)win, &evt);
+      return 0;
+    }
+
+    case WM_MOUSELEAVE: {
+        win->last_mouse_pos_valid = false;
+        return 0;
+    }
+
+    case WM_MOUSEWHEEL:
+    case WM_MOUSEHWHEEL: {
+      MARU_Event evt = {0};
+      short delta = GET_WHEEL_DELTA_WPARAM(wParam);
+      MARU_Scalar value = (MARU_Scalar)delta / (MARU_Scalar)WHEEL_DELTA;
+
+      if (uMsg == WM_MOUSEWHEEL) {
+        evt.mouse_scroll.steps.y = (int32_t)value;
+        evt.mouse_scroll.delta.y = value * 10.0f; // TODO: use system settings
+      } else {
+        evt.mouse_scroll.steps.x = (int32_t)value;
+        evt.mouse_scroll.delta.x = value * 10.0f; // TODO: use system settings
+      }
+      evt.mouse_scroll.modifiers = _maru_get_modifiers_windows();
+
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)win, &evt);
+      return 0;
+    }
+
+    case WM_SIZE: {
+      MARU_Event evt = {0};
+      maru_getWindowGeometry_Windows((MARU_Window *)win, &evt.resized.geometry);
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &evt);
+      return 0;
+    }
+
+    case WM_SETFOCUS:
+    case WM_KILLFOCUS: {
+        bool focused = (uMsg == WM_SETFOCUS);
+        if (focused) {
+            win->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
+        } else {
+            win->base.pub.flags &= ~MARU_WINDOW_STATE_FOCUSED;
+            win->high_surrogate = 0;
+        }
+
+        MARU_Event evt = {0};
+        evt.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
+        evt.presentation.focused = focused;
+        evt.presentation.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+        // TODO: fill in other fields
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)win, &evt);
+        return 0;
+    }
+
     case WM_CLOSE: {
       MARU_Event evt = {0};
       _maru_dispatch_event(&ctx->base, MARU_EVENT_CLOSE_REQUESTED, (MARU_Window *)win, &evt);

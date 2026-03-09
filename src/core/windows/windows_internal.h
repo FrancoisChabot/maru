@@ -59,6 +59,10 @@ typedef struct MARU_Window_Windows {
   HICON icon_big;
 
   bool show_on_first_pump;
+  MARU_Vec2Dip last_mouse_pos;
+  bool last_mouse_pos_valid;
+
+  wchar_t high_surrogate;
 } MARU_Window_Windows;
 
 // contexts.h
@@ -126,6 +130,9 @@ MARU_Status maru_createVkSurface_Windows(MARU_Window *window, VkInstance instanc
 // Native handles
 void *_maru_getContextNativeHandle_Windows(MARU_Context *context);
 void *_maru_getWindowNativeHandle_Windows(MARU_Window *window);
+
+MARU_Key _maru_translate_key_windows(WPARAM wParam, LPARAM lParam);
+MARU_ModifierFlags _maru_get_modifiers_windows(void);
 
 LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                   LPARAM lParam);
