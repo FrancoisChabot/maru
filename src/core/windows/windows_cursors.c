@@ -6,50 +6,7 @@
 #include <string.h>
 
 static HCURSOR _maru_create_custom_cursor_windows(const MARU_Image_Windows *img, int hot_x, int hot_y) {
-  HBITMAP hbmColor = NULL;
-  HBITMAP hbmMask = NULL;
-  HCURSOR hCursor = NULL;
-
-  BITMAPV5HEADER bi;
-  memset(&bi, 0, sizeof(bi));
-  bi.bV5Size = sizeof(bi);
-  bi.bV5Width = (LONG)img->base.width;
-  bi.bV5Height = -(LONG)img->base.height;
-  bi.bV5Planes = 1;
-  bi.bV5BitCount = 32;
-  bi.bV5Compression = BI_BITFIELDS;
-  bi.bV5RedMask = 0x00FF0000;
-  bi.bV5GreenMask = 0x0000FF00;
-  bi.bV5BlueMask = 0x000000FF;
-  bi.bV5AlphaMask = 0xFF000000;
-
-  void *lpBits = NULL;
-  HDC hdc = GetDC(NULL);
-  hbmColor = CreateDIBSection(hdc, (BITMAPINFO *)&bi, DIB_RGB_COLORS, &lpBits, NULL, 0);
-  ReleaseDC(NULL, hdc);
-
-  if (!hbmColor || !lpBits) {
-    return NULL;
-  }
-
-  memcpy(lpBits, img->base.pixels, img->base.width * img->base.height * 4);
-
-  hbmMask = CreateBitmap((int)img->base.width, (int)img->base.height, 1, 1, NULL);
-
-  ICONINFO ii;
-  memset(&ii, 0, sizeof(ii));
-  ii.fIcon = FALSE; // Cursor
-  ii.xHotspot = (DWORD)hot_x;
-  ii.yHotspot = (DWORD)hot_y;
-  ii.hbmMask = hbmMask;
-  ii.hbmColor = hbmColor;
-
-  hCursor = CreateIconIndirect(&ii);
-
-  DeleteObject(hbmColor);
-  DeleteObject(hbmMask);
-
-  return hCursor;
+  return (HCURSOR)_maru_windows_create_hicon_from_image((const MARU_Image *)img, FALSE, hot_x, hot_y);
 }
 
 static void _maru_windows_select_animated_cursor_frame(MARU_Cursor_Base *cursor_base, uint32_t frame_index) {

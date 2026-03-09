@@ -4,6 +4,7 @@
 #include "window_module.h"
 #include "imgui.h"
 #include "maru/c/vulkan.h"
+#include "maru/c/images.h"
 #include <algorithm>
 #include <cstdlib>
 #include <cstdio>
@@ -33,6 +34,10 @@ WindowModule::~WindowModule() {
         cleanupSecondaryWindow(*sw);
     }
     handling_window_teardown_ = false;
+
+    if (test_icon_) {
+        maru_destroyImage(test_icon_);
+    }
 }
 
 static void check_vk_result(VkResult err) {
@@ -344,6 +349,10 @@ void WindowModule::cleanupSecondaryWindow(SecondaryWindow& sw) {
         }
         sw.surface = VK_NULL_HANDLE;
     }
+    if (sw.icon) {
+        maru_destroyImage(sw.icon);
+        sw.icon = nullptr;
+    }
     if (sw.window) {
         maru_destroyWindow(sw.window);
         sw.window = nullptr;
@@ -459,6 +468,26 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             ImGui::SameLine();
             if (ImGui::Button("Request Frame Callback")) {
                 maru_requestWindowFrame(target);
+            }
+
+            if (ImGui::Button("Toggle Test Icon")) {
+                if (!test_icon_) {
+                    uint32_t pixels[32 * 32];
+                    for (int i = 0; i < 32 * 32; ++i) pixels[i] = 0xFFFF0000; // Red
+                    
+                    MARU_ImageCreateInfo img_info = {};
+                    img_info.size = {32, 32};
+                    img_info.pixels = pixels;
+                    maru_createImage(maru_getWindowContext(target), &img_info, &test_icon_);
+                }
+
+                MARU_WindowAttributes attrs = {};
+                if (maru_getWindowIcon(target)) {
+                    attrs.icon = nullptr;
+                } else {
+                    attrs.icon = test_icon_;
+                }
+                maru_updateWindow(target, MARU_WINDOW_ATTR_ICON, &attrs);
             }
 
             renderWindowEventMaskControls("primary_window_mask", target);

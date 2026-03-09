@@ -22,7 +22,7 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Focus Requests (`maru_requestWindowFocus_Windows`)
 - [ ] **TODO:** Frame Request (`maru_requestWindowFrame_Windows` - currently stub)
 - [x] Attention Requests (`maru_requestWindowAttention_Windows` via `FlashWindow`)
-- [ ] **TODO:** Window Icon Support
+- [x] Window Icon Support
 
 ## 3. Input & Events
 - [x] Keyboard Events (`MARU_EVENT_KEY_STATE_CHANGED` / `WM_KEYDOWN`, `WM_KEYUP`)

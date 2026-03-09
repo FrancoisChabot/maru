@@ -1,11 +1,12 @@
 # Miscellaneous Behaviors
 
-This document tracks implementation-specific behaviors that are not explicitly part of the core API but are essential for a consistent user experience.
+This document tracks cross-platform behavioral requirements and invariants that are not explicitly part of the core API definitions but are expected of all backends.
 
-## 1. Cursor Lifecycle
+## 1. Window Management
 
-### Automatic Reversion on Destruction
-When a custom `MARU_Cursor` is destroyed via `maru_destroyCursor()`, any `MARU_Window` currently using that cursor MUST automatically revert its cursor to the system default (`MARU_CURSOR_SHAPE_DEFAULT`).
-
-**Rationale:**
-Allowing a window to maintain a handle to a destroyed resource is unsafe and can lead to unpredictable OS-level behavior or dangling pointers in the library's internal state. Reverting to a known-safe state (the system arrow) ensures stability and visual consistency.
+### 1.1 Cursor Destruction
+When a `MARU_Cursor` is destroyed, any window currently using it as its `current_cursor` MUST:
+1. Set its `current_cursor` to `NULL`.
+2. Revert to the system default cursor.
+3. Update its `attrs_requested.cursor` and `attrs_effective.cursor` to `NULL`.
+4. If the cursor is currently active (e.g., the pointer is over the window in `MARU_CURSOR_NORMAL` mode), the change should be reflected immediately.

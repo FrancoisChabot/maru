@@ -26,6 +26,7 @@ public:
 private:
     struct SecondaryWindow {
         MARU_Window* window = nullptr;
+        MARU_Image* icon = nullptr;
         ImGui_ImplVulkanH_Window wd = {};
         VkSurfaceKHR surface = VK_NULL_HANDLE;
         bool vk_window_initialized = false;
@@ -43,6 +44,7 @@ private:
 
     bool enabled_ = false;
     MARU_Window* primary_window_ = nullptr;
+    MARU_Image* test_icon_ = nullptr;
     VkInstance instance_ = VK_NULL_HANDLE;
     VkPhysicalDevice physical_device_ = VK_NULL_HANDLE;
     VkDevice device_ = VK_NULL_HANDLE;

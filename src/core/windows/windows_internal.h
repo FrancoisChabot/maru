@@ -170,6 +170,7 @@ MARU_Status maru_createImage_Windows(MARU_Context *context,
                                      const MARU_ImageCreateInfo *create_info,
                                      MARU_Image **out_image);
 MARU_Status maru_destroyImage_Windows(MARU_Image *image);
+HICON _maru_windows_create_hicon_from_image(const MARU_Image *image, bool is_icon, int hot_x, int hot_y);
 
 // cursors.h
 MARU_Status maru_createCursor_Windows(MARU_Context *context,

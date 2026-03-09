@@ -5,6 +5,35 @@
 #include "maru_mem_internal.h"
 #include <string.h>
 
+static void _maru_windows_set_window_icon(MARU_Window_Windows *win, const MARU_Image *icon) {
+  if (win->icon_big) {
+    DestroyIcon(win->icon_big);
+    win->icon_big = NULL;
+  }
+  if (win->icon_small) {
+    DestroyIcon(win->icon_small);
+    win->icon_small = NULL;
+  }
+
+  if (icon) {
+    // Windows expects the icon to be resized to SM_CXICON/SM_CYICON for the taskbar (big)
+    // and SM_CXSMICON/SM_CYSMICON for the title bar (small).
+    // For now we just create them from the provided image and let Windows handle scaling if needed,
+    // though ideally we would resize them ourselves if we had a resizer.
+    
+    // Create big icon
+    win->icon_big = _maru_windows_create_hicon_from_image(icon, true, 0, 0);
+    // Create small icon
+    win->icon_small = _maru_windows_create_hicon_from_image(icon, true, 0, 0);
+
+    SendMessageW(win->hwnd, WM_SETICON, ICON_BIG, (LPARAM)win->icon_big);
+    SendMessageW(win->hwnd, WM_SETICON, ICON_SMALL, (LPARAM)win->icon_small);
+  } else {
+    SendMessageW(win->hwnd, WM_SETICON, ICON_BIG, (LPARAM)NULL);
+    SendMessageW(win->hwnd, WM_SETICON, ICON_SMALL, (LPARAM)NULL);
+  }
+}
+
 static void _maru_update_cursor_mode_windows(MARU_Window_Windows *win) {
   if (win->cursor_mode == MARU_CURSOR_LOCKED) {
     RECT rect;
@@ -442,6 +471,11 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   _maru_register_rawinput_window(win->hwnd);
   _maru_windows_resync_controllers(ctx);
   
+  if (create_info->attributes.icon) {
+      _maru_windows_set_window_icon(win, create_info->attributes.icon);
+      win->base.pub.icon = create_info->attributes.icon;
+  }
+
   _maru_register_window(&ctx->base, (MARU_Window *)win);
 
   // If visible was requested, we'll show it, but we delay it
@@ -460,6 +494,7 @@ MARU_Status maru_destroyWindow_Windows(MARU_Window *window) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
 
   if (win->hwnd) {
+    _maru_windows_set_window_icon(win, NULL); // This will destroy the icons
     ReleaseDC(win->hwnd, win->hdc);
     DestroyWindow(win->hwnd);
   }
@@ -546,6 +581,12 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
             PostMessageW(win->hwnd, WM_SETCURSOR, (WPARAM)win->hwnd, MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
         }
     }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_ICON) {
+      _maru_windows_set_window_icon(win, attributes->icon);
+      win->base.attrs_effective.icon = attributes->icon;
+      win->base.pub.icon = attributes->icon;
   }
 
   if (field_mask & (MARU_WINDOW_ATTR_LOGICAL_SIZE | MARU_WINDOW_ATTR_POSITION)) {

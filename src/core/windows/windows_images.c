@@ -57,3 +57,51 @@ MARU_Status maru_destroyImage_Windows(MARU_Image *image) {
   maru_context_free(&ctx->base, img);
   return MARU_SUCCESS;
 }
+
+HICON _maru_windows_create_hicon_from_image(const MARU_Image *image, bool is_icon, int hot_x, int hot_y) {
+  const MARU_Image_Windows *img = (const MARU_Image_Windows *)image;
+  HBITMAP hbmColor = NULL;
+  HBITMAP hbmMask = NULL;
+  HICON hIcon = NULL;
+
+  BITMAPV5HEADER bi;
+  memset(&bi, 0, sizeof(bi));
+  bi.bV5Size = sizeof(bi);
+  bi.bV5Width = (LONG)img->base.width;
+  bi.bV5Height = -(LONG)img->base.height;
+  bi.bV5Planes = 1;
+  bi.bV5BitCount = 32;
+  bi.bV5Compression = BI_BITFIELDS;
+  bi.bV5RedMask = 0x00FF0000;
+  bi.bV5GreenMask = 0x0000FF00;
+  bi.bV5BlueMask = 0x000000FF;
+  bi.bV5AlphaMask = 0xFF000000;
+
+  void *lpBits = NULL;
+  HDC hdc = GetDC(NULL);
+  hbmColor = CreateDIBSection(hdc, (BITMAPINFO *)&bi, DIB_RGB_COLORS, &lpBits, NULL, 0);
+  ReleaseDC(NULL, hdc);
+
+  if (!hbmColor || !lpBits) {
+    return NULL;
+  }
+
+  memcpy(lpBits, img->base.pixels, img->base.width * img->base.height * 4);
+
+  hbmMask = CreateBitmap((int)img->base.width, (int)img->base.height, 1, 1, NULL);
+
+  ICONINFO ii;
+  memset(&ii, 0, sizeof(ii));
+  ii.fIcon = is_icon;
+  ii.xHotspot = (DWORD)hot_x;
+  ii.yHotspot = (DWORD)hot_y;
+  ii.hbmMask = hbmMask;
+  ii.hbmColor = hbmColor;
+
+  hIcon = CreateIconIndirect(&ii);
+
+  DeleteObject(hbmColor);
+  DeleteObject(hbmMask);
+
+  return hIcon;
+}
