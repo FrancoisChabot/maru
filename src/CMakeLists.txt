@@ -81,7 +81,7 @@ target_include_directories(maru_core_iface INTERFACE
 
 find_program(MARU_PYTHON3_EXECUTABLE NAMES python3 REQUIRED)
 
-set(MARU_CURSOR_ASSET_DIR "${PROJECT_SOURCE_DIR}/assets/cursors/macos")
+set(MARU_CURSOR_ASSET_DIR "${PROJECT_SOURCE_DIR}/assets/cursors/maru")
 set(MARU_CURSOR_ASSETS
     "${MARU_CURSOR_ASSET_DIR}/default.png"
     "${MARU_CURSOR_ASSET_DIR}/help.png"
