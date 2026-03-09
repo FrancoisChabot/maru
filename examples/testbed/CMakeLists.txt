@@ -15,4 +15,4 @@ add_executable(maru_testbed
     modules/dataexchange_module.cpp
 )
 target_link_libraries(maru_testbed PRIVATE maru::maru imgui)
-set_target_properties(maru_testbed PROPERTIES CXX_STANDARD 20)
+target_compile_features(maru_testbed PRIVATE cxx_std_20)

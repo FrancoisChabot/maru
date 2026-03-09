@@ -56,8 +56,7 @@ target_link_libraries(maru_integration_tests
     ${MARU_ACTIVE_CORE_IFACE}
 )
 
-set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD 20)
-set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD_REQUIRED ON)
+target_compile_features(maru_integration_tests PRIVATE cxx_std_20)
 
 add_test(NAME maru_integration_tests COMMAND maru_integration_tests)
 set_tests_properties(maru_integration_tests PROPERTIES LABELS "desktop_integration")

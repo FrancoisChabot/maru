@@ -11,6 +11,10 @@
 typedef struct MARU_Context_Windows {
   MARU_Context_Base base;
 
+  HINSTANCE instance;
+  ATOM window_class;
+  HANDLE wake_event;
+
   HMODULE user32_module;
   bool event_loop_started;
   bool cursor_animation_fallback_reported;
@@ -53,6 +57,8 @@ typedef struct MARU_Window_Windows {
   MARU_Fraction aspect_ratio;
   HICON icon_small;
   HICON icon_big;
+
+  bool show_on_first_pump;
 } MARU_Window_Windows;
 
 // contexts.h
@@ -120,5 +126,8 @@ MARU_Status maru_createVkSurface_Windows(MARU_Window *window, VkInstance instanc
 // Native handles
 void *_maru_getContextNativeHandle_Windows(MARU_Context *context);
 void *_maru_getWindowNativeHandle_Windows(MARU_Window *window);
+
+LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
+                                  LPARAM lParam);
 
 #endif

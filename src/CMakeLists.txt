@@ -23,6 +23,10 @@ configure_file(
 # Common settings: aggressive warnings
 add_library(maru_common_settings INTERFACE)
 
+if(WIN32)
+  target_compile_definitions(maru_common_settings INTERFACE UNICODE _UNICODE)
+endif()
+
 option(MARU_WERROR "Treat warnings as errors" ON)
 
 if(MSVC)

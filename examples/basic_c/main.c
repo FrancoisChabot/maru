@@ -84,7 +84,7 @@ int main() {
   }
 
   printf("Waiting for window to be ready...\n");
-  while (keep_running && !window_ready) {
+  while (keep_running && !maru_isWindowReady(window)) {
     maru_pumpEvents(context, 16, handle_event, NULL);
   }
 
