@@ -33,6 +33,18 @@ typedef struct MARU_WindowsHidValueMapping {
 } MARU_WindowsHidValueMapping;
 
 static const uint64_t MARU_CONTROLLER_FLAG_PENDING_REMOVAL = 1ULL << 63;
+static const uint16_t MARU_SONY_VENDOR_ID = 0x054Cu;
+static const char *MARU_STANDARD_BUTTON_NAMES[] = {
+    "South", "East",      "West",  "North", "LB",
+    "RB",    "Back",      "Start", "Guide", "LThumb",
+    "RThumb","DpadUp",    "DpadRight", "DpadDown", "DpadLeft"};
+static const char *MARU_STANDARD_ANALOG_NAMES[] = {
+    "LeftX", "LeftY", "RightX", "RightY", "LTrigger", "RTrigger"};
+static const char *MARU_STANDARD_HAPTIC_NAMES[] = {"LowFreq", "HighFreq"};
+
+static void _maru_windows_emit_controller_button_event(
+    MARU_Context_Windows *ctx, MARU_Controller_Windows *ctrl,
+    uint32_t button_id, MARU_ButtonState8 new_state);
 
 static bool _maru_windows_is_game_controller_usage(USHORT usage_page,
                                                    USHORT usage) {
@@ -46,6 +58,47 @@ static bool _maru_windows_is_game_controller_usage(USHORT usage_page,
 
 static bool _maru_windows_is_xinput_hid_path(const wchar_t *path) {
   return path && wcsstr(path, L"IG_") != NULL;
+}
+
+static bool _maru_windows_is_dualshock4_product(uint16_t vendor_id,
+                                                uint16_t product_id) {
+  if (vendor_id != MARU_SONY_VENDOR_ID) {
+    return false;
+  }
+
+  switch (product_id) {
+  case 0x05C4:
+  case 0x09CC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool _maru_windows_is_dualsense_product(uint16_t vendor_id,
+                                               uint16_t product_id) {
+  if (vendor_id != MARU_SONY_VENDOR_ID) {
+    return false;
+  }
+
+  switch (product_id) {
+  case 0x0CE6:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static MARU_WindowsHidControllerKind
+_maru_windows_detect_hid_controller_kind(uint16_t vendor_id,
+                                         uint16_t product_id) {
+  if (_maru_windows_is_dualshock4_product(vendor_id, product_id)) {
+    return MARU_WINDOWS_HID_KIND_DUALSHOCK4;
+  }
+  if (_maru_windows_is_dualsense_product(vendor_id, product_id)) {
+    return MARU_WINDOWS_HID_KIND_DUALSENSE;
+  }
+  return MARU_WINDOWS_HID_KIND_GENERIC;
 }
 
 static const char *_maru_windows_generic_usage_name(USAGE usage) {
@@ -102,6 +155,108 @@ static char *_maru_windows_dup_utf8(MARU_Context_Base *ctx_base,
   }
   memcpy(dst, src, len + 1u);
   return dst;
+}
+
+static void _maru_windows_fill_standard_controller_layout(
+    MARU_Controller_Windows *ctrl) {
+  uint32_t i;
+
+  for (i = 0u; i < ctrl->button_count && i < MARU_CONTROLLER_BUTTON_STANDARD_COUNT;
+       ++i) {
+    ctrl->button_channels[i].name = MARU_STANDARD_BUTTON_NAMES[i];
+  }
+  for (i = 0u; i < ctrl->analog_count && i < MARU_CONTROLLER_ANALOG_STANDARD_COUNT;
+       ++i) {
+    ctrl->analog_channels[i].name = MARU_STANDARD_ANALOG_NAMES[i];
+  }
+  for (i = 0u; i < ctrl->haptic_count && i < MARU_CONTROLLER_HAPTIC_STANDARD_COUNT;
+       ++i) {
+    ctrl->haptic_channels[i].name = MARU_STANDARD_HAPTIC_NAMES[i];
+  }
+}
+
+static MARU_Scalar _maru_windows_normalize_u8_centered(uint8_t value,
+                                                       bool invert) {
+  MARU_Scalar normalized =
+      (MARU_Scalar)(((double)value / 255.0) * 2.0 - 1.0);
+  if (invert) {
+    normalized = -normalized;
+  }
+  if (normalized < -1.0f) {
+    return -1.0f;
+  }
+  if (normalized > 1.0f) {
+    return 1.0f;
+  }
+  return normalized;
+}
+
+static MARU_Scalar _maru_windows_normalize_u8_trigger(uint8_t value) {
+  return (MARU_Scalar)((double)value / 255.0);
+}
+
+static void _maru_windows_set_button_state(MARU_Context_Windows *ctx,
+                                           MARU_Controller_Windows *ctrl,
+                                           uint32_t button_id,
+                                           bool pressed) {
+  MARU_ButtonState8 new_state = pressed ? MARU_BUTTON_STATE_PRESSED
+                                        : MARU_BUTTON_STATE_RELEASED;
+  if (button_id >= ctrl->button_count ||
+      ctrl->button_states[button_id] == new_state) {
+    return;
+  }
+  ctrl->button_states[button_id] = new_state;
+  _maru_windows_emit_controller_button_event(ctx, ctrl, button_id, new_state);
+}
+
+static void _maru_windows_update_standard_dpad(MARU_Context_Windows *ctx,
+                                               MARU_Controller_Windows *ctrl,
+                                               uint8_t dpad_value) {
+  bool up = false;
+  bool right = false;
+  bool down = false;
+  bool left = false;
+
+  switch (dpad_value & 0x0Fu) {
+  case 0:
+    up = true;
+    break;
+  case 1:
+    up = true;
+    right = true;
+    break;
+  case 2:
+    right = true;
+    break;
+  case 3:
+    right = true;
+    down = true;
+    break;
+  case 4:
+    down = true;
+    break;
+  case 5:
+    down = true;
+    left = true;
+    break;
+  case 6:
+    left = true;
+    break;
+  case 7:
+    left = true;
+    up = true;
+    break;
+  default:
+    break;
+  }
+
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_DPAD_UP, up);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_DPAD_RIGHT,
+                                 right);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_DPAD_DOWN,
+                                 down);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_DPAD_LEFT,
+                                 left);
 }
 
 static char *_maru_windows_utf8_from_wide(MARU_Context_Base *ctx_base,
@@ -377,16 +532,8 @@ static MARU_Controller_Windows *_maru_windows_controller_create_common(
 
 static MARU_Controller_Windows *_maru_windows_controller_create_xinput(
     MARU_Context_Windows *ctx, uint32_t index) {
-  static const char *std_button_names[] = {"South",  "East",   "West",  "North",
-                                           "LB",     "RB",     "Back",  "Start",
-                                           "Guide",  "LThumb", "RThumb","DpadUp",
-                                           "DpadRight", "DpadDown", "DpadLeft"};
-  static const char *std_analog_names[] = {"LeftX", "LeftY", "RightX",
-                                           "RightY", "LTrigger", "RTrigger"};
-  static const char *std_haptic_names[] = {"LowFreq", "HighFreq"};
   MARU_Controller_Windows *ctrl;
   char name_buf[64];
-  size_t i;
 
   ctrl = _maru_windows_controller_create_common(
       ctx, MARU_CONTROLLER_BUTTON_STANDARD_COUNT,
@@ -404,16 +551,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_xinput(
     return NULL;
   }
 
-  for (i = 0; i < ctrl->button_count; ++i) {
-    ctrl->button_channels[i].name = std_button_names[i];
-  }
-  for (i = 0; i < ctrl->analog_count; ++i) {
-    ctrl->analog_channels[i].name = std_analog_names[i];
-  }
-  for (i = 0; i < ctrl->haptic_count; ++i) {
-    ctrl->haptic_channels[i].name = std_haptic_names[i];
-  }
-
+  _maru_windows_fill_standard_controller_layout(ctrl);
   ctrl->is_standardized = true;
   ctrl->vendor_id = 0x045E;
   ctrl->product_id = 0x028E;
@@ -425,15 +563,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_xinput(
 
 static MARU_Controller_Windows *_maru_windows_controller_create_wgi(
     MARU_Context_Windows *ctx, IGamepad *gamepad) {
-  static const char *std_button_names[] = {"South",  "East",   "West",  "North",
-                                           "LB",     "RB",     "Back",  "Start",
-                                           "Guide",  "LThumb", "RThumb","DpadUp",
-                                           "DpadRight", "DpadDown", "DpadLeft"};
-  static const char *std_analog_names[] = {"LeftX", "LeftY", "RightX",
-                                           "RightY", "LTrigger", "RTrigger"};
-  static const char *std_haptic_names[] = {"LowFreq", "HighFreq"};
   MARU_Controller_Windows *ctrl;
-  size_t i;
 
   ctrl = _maru_windows_controller_create_common(
       ctx, MARU_CONTROLLER_BUTTON_STANDARD_COUNT,
@@ -451,19 +581,96 @@ static MARU_Controller_Windows *_maru_windows_controller_create_wgi(
     return NULL;
   }
 
-  for (i = 0; i < ctrl->button_count; ++i) {
-    ctrl->button_channels[i].name = std_button_names[i];
-  }
-  for (i = 0; i < ctrl->analog_count; ++i) {
-    ctrl->analog_channels[i].name = std_analog_names[i];
-  }
-  for (i = 0; i < ctrl->haptic_count; ++i) {
-    ctrl->haptic_channels[i].name = std_haptic_names[i];
-  }
-
+  _maru_windows_fill_standard_controller_layout(ctrl);
   ctrl->is_standardized = true;
   memset(ctrl->guid, 0, sizeof(ctrl->guid));
   memcpy(ctrl->guid, "WGI", 3u);
+  return ctrl;
+}
+
+static MARU_Controller_Windows *_maru_windows_controller_create_dualshock4(
+    MARU_Context_Windows *ctx, HANDLE raw_device, HANDLE hid_handle,
+    PHIDP_PREPARSED_DATA preparsed, const HIDD_ATTRIBUTES *attributes,
+    const wchar_t *raw_path, const wchar_t *product_name) {
+  MARU_Controller_Windows *ctrl;
+  char fallback_name[96];
+
+  ctrl = _maru_windows_controller_create_common(
+      ctx, MARU_CONTROLLER_BUTTON_STANDARD_COUNT,
+      MARU_CONTROLLER_ANALOG_STANDARD_COUNT, 0u);
+  if (!ctrl) {
+    return NULL;
+  }
+
+  ctrl->raw_input_device = raw_device;
+  ctrl->hid_handle = hid_handle;
+  ctrl->hid_preparsed_data = preparsed;
+  ctrl->hid_kind = MARU_WINDOWS_HID_KIND_DUALSHOCK4;
+  ctrl->raw_device_path = _maru_windows_dup_wide(&ctx->base, raw_path);
+  ctrl->vendor_id = attributes->VendorID;
+  ctrl->product_id = attributes->ProductID;
+  ctrl->version = attributes->VersionNumber;
+  ctrl->is_standardized = true;
+  memset(ctrl->guid, 0, sizeof(ctrl->guid));
+  memcpy(ctrl->guid, "DS4HID", 6u);
+
+  if (product_name) {
+    ctrl->name = _maru_windows_utf8_from_wide(&ctx->base, product_name);
+  }
+  if (!ctrl->name) {
+    snprintf(fallback_name, sizeof(fallback_name), "DualShock 4 %04X:%04X",
+             (unsigned)ctrl->vendor_id, (unsigned)ctrl->product_id);
+    ctrl->name = _maru_windows_dup_utf8(&ctx->base, fallback_name);
+  }
+  if (!ctrl->name || !ctrl->raw_device_path) {
+    _maru_windows_controller_free(&ctx->base, ctrl);
+    return NULL;
+  }
+
+  _maru_windows_fill_standard_controller_layout(ctrl);
+  return ctrl;
+}
+
+static MARU_Controller_Windows *_maru_windows_controller_create_dualsense(
+    MARU_Context_Windows *ctx, HANDLE raw_device, HANDLE hid_handle,
+    PHIDP_PREPARSED_DATA preparsed, const HIDD_ATTRIBUTES *attributes,
+    const wchar_t *raw_path, const wchar_t *product_name) {
+  MARU_Controller_Windows *ctrl;
+  char fallback_name[96];
+
+  ctrl = _maru_windows_controller_create_common(
+      ctx, MARU_CONTROLLER_BUTTON_STANDARD_COUNT,
+      MARU_CONTROLLER_ANALOG_STANDARD_COUNT, 0u);
+  if (!ctrl) {
+    return NULL;
+  }
+
+  ctrl->raw_input_device = raw_device;
+  ctrl->hid_handle = hid_handle;
+  ctrl->hid_preparsed_data = preparsed;
+  ctrl->hid_kind = MARU_WINDOWS_HID_KIND_DUALSENSE;
+  ctrl->raw_device_path = _maru_windows_dup_wide(&ctx->base, raw_path);
+  ctrl->vendor_id = attributes->VendorID;
+  ctrl->product_id = attributes->ProductID;
+  ctrl->version = attributes->VersionNumber;
+  ctrl->is_standardized = true;
+  memset(ctrl->guid, 0, sizeof(ctrl->guid));
+  memcpy(ctrl->guid, "DS5HID", 6u);
+
+  if (product_name) {
+    ctrl->name = _maru_windows_utf8_from_wide(&ctx->base, product_name);
+  }
+  if (!ctrl->name) {
+    snprintf(fallback_name, sizeof(fallback_name), "DualSense %04X:%04X",
+             (unsigned)ctrl->vendor_id, (unsigned)ctrl->product_id);
+    ctrl->name = _maru_windows_dup_utf8(&ctx->base, fallback_name);
+  }
+  if (!ctrl->name || !ctrl->raw_device_path) {
+    _maru_windows_controller_free(&ctx->base, ctrl);
+    return NULL;
+  }
+
+  _maru_windows_fill_standard_controller_layout(ctrl);
   return ctrl;
 }
 
@@ -532,6 +739,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_raw_hid(
   uint32_t i;
   MARU_Controller_Windows *ctrl = NULL;
   char fallback_name[96];
+  MARU_WindowsHidControllerKind hid_kind;
 
   hid_handle = CreateFileW(raw_path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
                            NULL, OPEN_EXISTING, 0, NULL);
@@ -554,6 +762,33 @@ static MARU_Controller_Windows *_maru_windows_controller_create_raw_hid(
     HidD_FreePreparsedData(preparsed);
     CloseHandle(hid_handle);
     return NULL;
+  }
+
+  hid_kind = _maru_windows_detect_hid_controller_kind(attributes.VendorID,
+                                                      attributes.ProductID);
+  if (hid_kind == MARU_WINDOWS_HID_KIND_DUALSHOCK4) {
+    ctrl = _maru_windows_controller_create_dualshock4(
+        ctx, raw_device, hid_handle, preparsed, &attributes, raw_path,
+        HidD_GetProductString(hid_handle, product_name, sizeof(product_name))
+            ? product_name
+            : NULL);
+    if (!ctrl) {
+      HidD_FreePreparsedData(preparsed);
+      CloseHandle(hid_handle);
+    }
+    return ctrl;
+  }
+  if (hid_kind == MARU_WINDOWS_HID_KIND_DUALSENSE) {
+    ctrl = _maru_windows_controller_create_dualsense(
+        ctx, raw_device, hid_handle, preparsed, &attributes, raw_path,
+        HidD_GetProductString(hid_handle, product_name, sizeof(product_name))
+            ? product_name
+            : NULL);
+    if (!ctrl) {
+      HidD_FreePreparsedData(preparsed);
+      CloseHandle(hid_handle);
+    }
+    return ctrl;
   }
 
   button_caps_len = caps.NumberInputButtonCaps;
@@ -641,6 +876,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_raw_hid(
   ctrl->raw_input_device = raw_device;
   ctrl->hid_handle = hid_handle;
   ctrl->hid_preparsed_data = preparsed;
+  ctrl->hid_kind = MARU_WINDOWS_HID_KIND_GENERIC;
   ctrl->raw_device_path = _maru_windows_dup_wide(&ctx->base, raw_path);
   ctrl->vendor_id = attributes.VendorID;
   ctrl->product_id = attributes.ProductID;
@@ -1185,6 +1421,142 @@ static bool _maru_windows_usage_is_pressed(const USAGE_AND_PAGE *usages,
   return false;
 }
 
+static bool _maru_windows_process_dualshock4_report(
+    MARU_Context_Windows *ctx, MARU_Controller_Windows *ctrl,
+    const BYTE *report, UINT report_size) {
+  size_t base = 0u;
+  uint8_t buttons1;
+  uint8_t buttons2;
+  uint8_t buttons3;
+
+  if (!report || report_size < 10u) {
+    return false;
+  }
+
+  if (report[0] == 0x01u) {
+    if (report_size < 10u) {
+      return false;
+    }
+    base = 1u;
+  } else if (report[0] == 0x11u) {
+    if (report_size < 12u) {
+      return false;
+    }
+    base = 3u;
+  }
+
+  buttons1 = report[base + 4u];
+  buttons2 = report[base + 5u];
+  buttons3 = report[base + 6u];
+
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_LEFT_X].value =
+      _maru_windows_normalize_u8_centered(report[base + 0u], false);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_LEFT_Y].value =
+      _maru_windows_normalize_u8_centered(report[base + 1u], true);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_X].value =
+      _maru_windows_normalize_u8_centered(report[base + 2u], false);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_Y].value =
+      _maru_windows_normalize_u8_centered(report[base + 3u], true);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_LEFT_TRIGGER].value =
+      _maru_windows_normalize_u8_trigger(report[base + 7u]);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_TRIGGER].value =
+      _maru_windows_normalize_u8_trigger(report[base + 8u]);
+
+  _maru_windows_update_standard_dpad(ctx, ctrl, buttons1 & 0x0Fu);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_WEST,
+                                 (buttons1 & 0x10u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_SOUTH,
+                                 (buttons1 & 0x20u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_EAST,
+                                 (buttons1 & 0x40u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_NORTH,
+                                 (buttons1 & 0x80u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_LB,
+                                 (buttons2 & 0x01u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_RB,
+                                 (buttons2 & 0x02u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_BACK,
+                                 (buttons2 & 0x10u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_START,
+                                 (buttons2 & 0x20u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_L_THUMB,
+                                 (buttons2 & 0x40u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_R_THUMB,
+                                 (buttons2 & 0x80u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_GUIDE,
+                                 (buttons3 & 0x01u) != 0u);
+  return true;
+}
+
+static bool _maru_windows_process_dualsense_report(
+    MARU_Context_Windows *ctx, MARU_Controller_Windows *ctrl,
+    const BYTE *report, UINT report_size) {
+  size_t base = 0u;
+  uint8_t buttons1;
+  uint8_t buttons2;
+  uint8_t buttons3;
+
+  if (!report || report_size < 11u) {
+    return false;
+  }
+
+  if (report[0] == 0x01u) {
+    if (report_size < 11u) {
+      return false;
+    }
+    base = 0u;
+  } else if (report[0] == 0x31u) {
+    if (report_size < 13u) {
+      return false;
+    }
+    base = 2u;
+  } else {
+    return false;
+  }
+
+  buttons1 = report[base + 8u];
+  buttons2 = report[base + 9u];
+  buttons3 = report[base + 10u];
+
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_LEFT_X].value =
+      _maru_windows_normalize_u8_centered(report[base + 1u], false);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_LEFT_Y].value =
+      _maru_windows_normalize_u8_centered(report[base + 2u], true);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_X].value =
+      _maru_windows_normalize_u8_centered(report[base + 3u], false);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_Y].value =
+      _maru_windows_normalize_u8_centered(report[base + 4u], true);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_LEFT_TRIGGER].value =
+      _maru_windows_normalize_u8_trigger(report[base + 5u]);
+  ctrl->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_TRIGGER].value =
+      _maru_windows_normalize_u8_trigger(report[base + 6u]);
+
+  _maru_windows_update_standard_dpad(ctx, ctrl, buttons1 & 0x0Fu);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_WEST,
+                                 (buttons1 & 0x10u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_SOUTH,
+                                 (buttons1 & 0x20u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_EAST,
+                                 (buttons1 & 0x40u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_NORTH,
+                                 (buttons1 & 0x80u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_LB,
+                                 (buttons2 & 0x01u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_RB,
+                                 (buttons2 & 0x02u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_BACK,
+                                 (buttons2 & 0x10u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_START,
+                                 (buttons2 & 0x20u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_L_THUMB,
+                                 (buttons2 & 0x40u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_R_THUMB,
+                                 (buttons2 & 0x80u) != 0u);
+  _maru_windows_set_button_state(ctx, ctrl, MARU_CONTROLLER_BUTTON_GUIDE,
+                                 (buttons3 & 0x01u) != 0u);
+  return true;
+}
+
 static void _maru_windows_update_hat_buttons(MARU_Context_Windows *ctx,
                                              MARU_Controller_Windows *ctrl,
                                              LONG hat_value) {
@@ -1221,6 +1593,15 @@ static void _maru_windows_process_hid_report(MARU_Context_Windows *ctx,
                                              UINT report_size) {
   ULONG pressed_count = ctrl->hid_pressed_usage_capacity;
   ULONG i;
+
+  if (ctrl->hid_kind == MARU_WINDOWS_HID_KIND_DUALSHOCK4) {
+    (void)_maru_windows_process_dualshock4_report(ctx, ctrl, report, report_size);
+    return;
+  }
+  if (ctrl->hid_kind == MARU_WINDOWS_HID_KIND_DUALSENSE) {
+    (void)_maru_windows_process_dualsense_report(ctx, ctrl, report, report_size);
+    return;
+  }
 
   if (ctrl->hid_button_mapping_count > 0u && ctrl->hid_pressed_usages) {
     NTSTATUS status = HidP_GetUsagesEx(

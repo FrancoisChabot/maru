@@ -42,6 +42,12 @@ typedef struct MARU_Context_Windows {
   HRESULT (WINAPI *WindowsDeleteString)(void*);
 } MARU_Context_Windows;
 
+typedef enum MARU_WindowsHidControllerKind {
+  MARU_WINDOWS_HID_KIND_GENERIC = 0,
+  MARU_WINDOWS_HID_KIND_DUALSHOCK4 = 1,
+  MARU_WINDOWS_HID_KIND_DUALSENSE = 2,
+} MARU_WindowsHidControllerKind;
+
 typedef struct MARU_Controller_Windows {
   MARU_Controller_Base base;
   struct MARU_Controller_Windows *next;
@@ -52,6 +58,7 @@ typedef struct MARU_Controller_Windows {
   HANDLE hid_handle;
   wchar_t *raw_device_path;
   PHIDP_PREPARSED_DATA hid_preparsed_data;
+  MARU_WindowsHidControllerKind hid_kind;
 
   char *name;
   uint16_t vendor_id;
