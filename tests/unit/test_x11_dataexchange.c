@@ -104,3 +104,80 @@ UTEST(X11DataExchange, SelectionRequestRejectsUnknownSelectionAtomsWithoutDndDis
   EXPECT_EQ(g_last_xsend_event.xselection.property, None);
   EXPECT_EQ(g_data_requested_count, 0);
 }
+
+UTEST(X11DataExchange, DropActionNoneMapsToNoneAtom) {
+  MARU_Context_X11 ctx;
+
+  memset(&ctx, 0, sizeof(ctx));
+  ctx.xdnd_action_copy = 21;
+  ctx.xdnd_action_move = 22;
+  ctx.xdnd_action_link = 23;
+
+  EXPECT_EQ(_maru_x11_drop_action_to_atom(&ctx, MARU_DROP_ACTION_NONE), None);
+  EXPECT_EQ(_maru_x11_drop_action_to_atom(&ctx, MARU_DROP_ACTION_COPY),
+            ctx.xdnd_action_copy);
+  EXPECT_EQ(_maru_x11_drop_action_to_atom(&ctx, MARU_DROP_ACTION_MOVE),
+            ctx.xdnd_action_move);
+  EXPECT_EQ(_maru_x11_drop_action_to_atom(&ctx, MARU_DROP_ACTION_LINK),
+            ctx.xdnd_action_link);
+}
+
+UTEST(X11DataExchange, RejectedXdndStatusAdvertisesNoAction) {
+  MARU_Context_X11 ctx;
+  MARU_Window_X11 target_window;
+  MARU_X11DnDSession session;
+
+  memset(&ctx, 0, sizeof(ctx));
+  memset(&target_window, 0, sizeof(target_window));
+  memset(&session, 0, sizeof(session));
+  memset(&g_last_xsend_event, 0, sizeof(g_last_xsend_event));
+  g_xsend_event_count = 0;
+
+  ctx.x11_lib.XSendEvent = test_xsend_event;
+  ctx.xdnd_status = 101;
+  ctx.xdnd_action_copy = 201;
+  ctx.xdnd_action_move = 202;
+  ctx.xdnd_action_link = 203;
+
+  target_window.handle = 77;
+  session.source_window = 88;
+  session.target_window = &target_window;
+  session.selected_action = MARU_DROP_ACTION_COPY;
+
+  _maru_x11_send_xdnd_status(&ctx, &session, false);
+
+  EXPECT_EQ(g_xsend_event_count, 1);
+  EXPECT_EQ(g_last_xsend_event.xclient.message_type, ctx.xdnd_status);
+  EXPECT_EQ(g_last_xsend_event.xclient.data.l[1], 0);
+  EXPECT_EQ(g_last_xsend_event.xclient.data.l[4], (long)None);
+}
+
+UTEST(X11DataExchange, RejectedXdndFinishedAdvertisesNoAction) {
+  MARU_Context_X11 ctx;
+  MARU_Window_X11 target_window;
+  MARU_X11DnDSession session;
+
+  memset(&ctx, 0, sizeof(ctx));
+  memset(&target_window, 0, sizeof(target_window));
+  memset(&session, 0, sizeof(session));
+  memset(&g_last_xsend_event, 0, sizeof(g_last_xsend_event));
+  g_xsend_event_count = 0;
+
+  ctx.x11_lib.XSendEvent = test_xsend_event;
+  ctx.xdnd_finished = 102;
+  ctx.xdnd_action_copy = 201;
+  ctx.xdnd_action_move = 202;
+  ctx.xdnd_action_link = 203;
+
+  target_window.handle = 77;
+  session.source_window = 88;
+  session.target_window = &target_window;
+  session.selected_action = MARU_DROP_ACTION_MOVE;
+
+  _maru_x11_send_xdnd_finished(&ctx, &session, false);
+
+  EXPECT_EQ(g_xsend_event_count, 1);
+  EXPECT_EQ(g_last_xsend_event.xclient.message_type, ctx.xdnd_finished);
+  EXPECT_EQ(g_last_xsend_event.xclient.data.l[1], 0);
+  EXPECT_EQ(g_last_xsend_event.xclient.data.l[2], (long)None);
+}

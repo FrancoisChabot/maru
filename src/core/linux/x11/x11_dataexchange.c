@@ -273,6 +273,9 @@ MARU_DropAction _maru_x11_atom_to_drop_action(const MARU_Context_X11 *ctx,
 
 Atom _maru_x11_drop_action_to_atom(const MARU_Context_X11 *ctx,
                                           MARU_DropAction action) {
+  if (action == MARU_DROP_ACTION_NONE) {
+    return None;
+  }
   if (action == MARU_DROP_ACTION_MOVE) {
     return ctx->xdnd_action_move;
   }
@@ -427,7 +430,9 @@ void _maru_x11_send_xdnd_status(MARU_Context_X11 *ctx,
   ev.xclient.data.l[1] = accept ? 1L : 0L;
   ev.xclient.data.l[2] = 0;
   ev.xclient.data.l[3] = 0;
-  ev.xclient.data.l[4] = (long)_maru_x11_drop_action_to_atom(ctx, session->selected_action);
+  ev.xclient.data.l[4] =
+      (long)_maru_x11_drop_action_to_atom(
+          ctx, accept ? session->selected_action : MARU_DROP_ACTION_NONE);
   ctx->x11_lib.XSendEvent(ctx->display, session->source_window, False, NoEventMask,
                           &ev);
 }
@@ -446,7 +451,9 @@ void _maru_x11_send_xdnd_finished(MARU_Context_X11 *ctx,
   ev.xclient.format = 32;
   ev.xclient.data.l[0] = (long)session->target_window->handle;
   ev.xclient.data.l[1] = accepted ? 1L : 0L;
-  ev.xclient.data.l[2] = (long)_maru_x11_drop_action_to_atom(ctx, session->selected_action);
+  ev.xclient.data.l[2] =
+      (long)_maru_x11_drop_action_to_atom(
+          ctx, accepted ? session->selected_action : MARU_DROP_ACTION_NONE);
   ctx->x11_lib.XSendEvent(ctx->display, session->source_window, False, NoEventMask,
                           &ev);
 }
