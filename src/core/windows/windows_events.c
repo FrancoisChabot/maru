@@ -150,7 +150,7 @@ MARU_ModifierFlags _maru_get_modifiers_windows(void) {
   return modifiers;
 }
 
-static uint64_t _maru_windows_get_time_ns(void) {
+uint64_t _maru_windows_get_time_ns(void) {
   static LARGE_INTEGER frequency;
   if (frequency.QuadPart == 0) {
     QueryPerformanceFrequency(&frequency);
@@ -160,7 +160,7 @@ static uint64_t _maru_windows_get_time_ns(void) {
   return (uint64_t)((counter.QuadPart * 1000000000) / frequency.QuadPart);
 }
 
-static uint64_t _maru_windows_get_time_ms(void) {
+uint64_t _maru_windows_get_time_ms(void) {
   return _maru_windows_get_time_ns() / 1000000;
 }
 

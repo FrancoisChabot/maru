@@ -17,7 +17,7 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Geometry Reporting (`maru_getWindowGeometry_Windows`)
 - [x] Title Management (`MARU_WINDOW_ATTR_TITLE`)
 - [x] Visibility Control (`MARU_WINDOW_ATTR_VISIBLE` with white-flash mitigation)
-- [ ] **TODO:** Sizing and Positioning (`MARU_WINDOW_ATTR_LOGICAL_SIZE`, `MARU_WINDOW_ATTR_POSITION`)
+- [x] Sizing and Positioning (`MARU_WINDOW_ATTR_LOGICAL_SIZE`, `MARU_WINDOW_ATTR_POSITION`)
 - [ ] **TODO:** Min/Max/Fullscreen States (`MARU_WINDOW_ATTR_MINIMIZED`, `MARU_WINDOW_ATTR_MAXIMIZED`, `MARU_WINDOW_ATTR_FULLSCREEN`)
 - [x] Focus Requests (`maru_requestWindowFocus_Windows`)
 - [ ] **TODO:** Frame Request (`maru_requestWindowFrame_Windows` - currently stub)
@@ -46,10 +46,10 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [ ] **TODO:** Setting Video Modes (`ChangeDisplaySettingsEx`)
 - [ ] **TODO:** Monitor Change Notifications (`WM_DISPLAYCHANGE`)
 
-## 6. Cursors & Images (STUBBED)
-- [ ] **TODO:** Standard Cursor Shapes (`LoadCursor`)
-- [ ] **TODO:** Custom Cursor Creation (`CreateIconIndirect`)
-- [ ] **TODO:** Image Resource Management (`maru_createImage_Windows`)
+## 6. Cursors & Images
+- [x] Standard Cursor Shapes (`LoadCursor`)
+- [x] Custom Cursor Creation (`CreateIconIndirect`)
+- [x] Image Resource Management (`maru_createImage_Windows`)
 
 ## 7. Controllers / Gamepads (STUBBED)
 - [ ] **TODO:** Controller Enumeration (XInput / Raw Input / WinRT Gamepad)

@@ -95,9 +95,16 @@ typedef struct MARU_Controller_Windows {
 
 typedef struct MARU_Cursor_Windows {
   MARU_Cursor_Base base;
-  HCURSOR hcursor;
+  HCURSOR hcursor; // Active frame handle
+  HCURSOR *hcursors; // All frame handles (for animation)
+  uint32_t *anim_frame_delays_ms;
+  uint32_t anim_frame_count;
   bool is_system;
 } MARU_Cursor_Windows;
+
+typedef struct MARU_Image_Windows {
+  MARU_Image_Base base;
+} MARU_Image_Windows;
 
 typedef struct MARU_Monitor_Windows {
   MARU_Monitor_Base base;
@@ -212,5 +219,8 @@ MARU_ModifierFlags _maru_get_modifiers_windows(void);
 
 LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                   LPARAM lParam);
+
+uint64_t _maru_windows_get_time_ms(void);
+uint64_t _maru_windows_get_time_ns(void);
 
 #endif

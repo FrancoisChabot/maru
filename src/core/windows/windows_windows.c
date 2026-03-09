@@ -90,6 +90,9 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         if (win->cursor_mode != MARU_CURSOR_NORMAL) {
           SetCursor(NULL);
           return TRUE;
+        } else if (win->base.pub.current_cursor) {
+          SetCursor(((MARU_Cursor_Windows *)win->base.pub.current_cursor)->hcursor);
+          return TRUE;
         }
       }
       break;
@@ -408,10 +411,22 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
       h = 600;
   }
 
-  RECT rect = {0, 0, w, h};
-  AdjustWindowRectEx(&rect, style, FALSE, ex_style);
-  w = rect.right - rect.left;
-  h = rect.bottom - rect.top;
+  if (create_info->attributes.position.x != 0 || create_info->attributes.position.y != 0) {
+      x = (int)create_info->attributes.position.x;
+      y = (int)create_info->attributes.position.y;
+      
+      RECT rect = {x, y, x + w, y + h};
+      AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+      x = rect.left;
+      y = rect.top;
+      w = rect.right - rect.left;
+      h = rect.bottom - rect.top;
+  } else {
+      RECT rect = {0, 0, w, h};
+      AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+      w = rect.right - rect.left;
+      h = rect.bottom - rect.top;
+  }
 
   win->hwnd = CreateWindowExW(
       ex_style, L"MARU_WindowClass", title_w, style,
@@ -491,20 +506,19 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       MultiByteToWideChar(CP_UTF8, 0, attributes->title, -1, title_w, 256);
       SetWindowTextW(win->hwnd, title_w);
       win->base.pub.title = attributes->title; // Note: this is a shallow copy, user must keep it alive or we need storage
+      win->base.attrs_effective.title = attributes->title;
     }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
     if (attributes->visible) {
       ShowWindow(win->hwnd, SW_SHOW);
+      win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
     } else {
       ShowWindow(win->hwnd, SW_HIDE);
+      win->base.pub.flags &= ~MARU_WINDOW_STATE_VISIBLE;
     }
-    if (attributes->visible) {
-        win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-    } else {
-        win->base.pub.flags &= ~MARU_WINDOW_STATE_VISIBLE;
-    }
+    win->base.attrs_effective.visible = attributes->visible;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
@@ -512,11 +526,65 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       win->cursor_mode = attributes->cursor_mode;
       win->base.pub.cursor_mode = attributes->cursor_mode;
       _maru_update_cursor_mode_windows(win);
+      win->base.attrs_effective.cursor_mode = attributes->cursor_mode;
     }
   }
 
+  if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
+    win->base.pub.current_cursor = (MARU_Cursor *)attributes->cursor;
+    win->base.attrs_effective.cursor = attributes->cursor;
+    
+    // Trigger cursor update if we are in normal mode and the cursor is over the client area.
+    if (win->cursor_mode == MARU_CURSOR_NORMAL && win->is_cursor_in_client_area) {
+        POINT pt;
+        GetCursorPos(&pt);
+        ScreenToClient(win->hwnd, &pt);
+        RECT client_rect;
+        GetClientRect(win->hwnd, &client_rect);
+        if (PtInRect(&client_rect, pt)) {
+            // Send a dummy WM_SETCURSOR to trigger the change
+            PostMessageW(win->hwnd, WM_SETCURSOR, (WPARAM)win->hwnd, MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+        }
+    }
+  }
+
+  if (field_mask & (MARU_WINDOW_ATTR_LOGICAL_SIZE | MARU_WINDOW_ATTR_POSITION)) {
+      MARU_Scalar new_w = (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) ? attributes->logical_size.x : win->base.attrs_effective.logical_size.x;
+      MARU_Scalar new_h = (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) ? attributes->logical_size.y : win->base.attrs_effective.logical_size.y;
+      
+      MARU_Scalar new_x, new_y;
+      if (field_mask & MARU_WINDOW_ATTR_POSITION) {
+          new_x = attributes->position.x;
+          new_y = attributes->position.y;
+      } else {
+          MARU_WindowGeometry geo;
+          maru_getWindowGeometry_Windows(window, &geo);
+          new_x = geo.origin.x;
+          new_y = geo.origin.y;
+      }
+
+      DWORD style = GetWindowLongW(win->hwnd, GWL_STYLE);
+      DWORD ex_style = GetWindowLongW(win->hwnd, GWL_EXSTYLE);
+      RECT rect = {(int)new_x, (int)new_y, (int)new_x + (int)new_w, (int)new_y + (int)new_h};
+      AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+      
+      if (!(field_mask & MARU_WINDOW_ATTR_POSITION) && (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE)) {
+          SetWindowPos(win->hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOMOVE);
+      } else if ((field_mask & MARU_WINDOW_ATTR_POSITION) && !(field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE)) {
+          SetWindowPos(win->hwnd, NULL, rect.left, rect.top, 0, 0, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSIZE);
+      } else {
+          SetWindowPos(win->hwnd, NULL, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE);
+      }
+      
+      if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
+          win->base.attrs_effective.logical_size = attributes->logical_size;
+      }
+      if (field_mask & MARU_WINDOW_ATTR_POSITION) {
+          win->base.attrs_effective.position = attributes->position;
+      }
+  }
+
   // TODO: Implement other attributes (resize, fullscreen, etc)
-  win->base.attrs_effective = *attributes;
 
   return MARU_SUCCESS;
 }
