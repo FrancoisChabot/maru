@@ -178,10 +178,6 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     if (create_info->decorated) {
       win->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
     }
-    if (win->base.attrs_effective.mouse_passthrough) {
-      win->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
-    }
-
     if (create_info->attributes.title) {
       size_t len = strlen(create_info->attributes.title);
       win->base.title_storage = maru_context_alloc(&ctx_cocoa->base, len + 1);
@@ -217,10 +213,6 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
                                                          defer:NO];
     [nsWindow setTitle:[NSString stringWithUTF8String:create_info->attributes.title]];
     [nsWindow setReleasedWhenClosed:NO];
-    if (win->base.attrs_effective.mouse_passthrough) {
-        [nsWindow setIgnoresMouseEvents:YES];
-    }
-
     MARU_WindowDelegate *delegate = [[MARU_WindowDelegate alloc] init];
     delegate.window = win;
     [nsWindow setDelegate:delegate];
@@ -405,18 +397,6 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         effective->cursor_mode = attributes->cursor_mode;
         win->base.pub.cursor_mode = effective->cursor_mode;
         [nsWindow invalidateCursorRectsForView:win->ns_view];
-    }
-
-    if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
-        requested->mouse_passthrough = attributes->mouse_passthrough;
-        effective->mouse_passthrough = attributes->mouse_passthrough;
-        if (effective->mouse_passthrough) {
-            win->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
-            [nsWindow setIgnoresMouseEvents:YES];
-        } else {
-            win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
-            [nsWindow setIgnoresMouseEvents:NO];
-        }
     }
 
     if (field_mask & MARU_WINDOW_ATTR_ICON) {

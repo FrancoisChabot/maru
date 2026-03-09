@@ -34,7 +34,6 @@ private:
         bool ready = false;
         std::string title;
         bool is_resizable = true;
-        bool mouse_passthrough = false;
         bool primary_selection = true;
         MARU_Vec2Dip min_size = {0, 0};
         MARU_Vec2Dip max_size = {0, 0};
@@ -66,11 +65,9 @@ private:
         char app_id[128] = "org.birdsafe.maru.testbed";
         int logical_size[2] = {640, 480};
         bool decorated = true;
-        bool transparent = false;
         bool fullscreen = false;
         bool maximized = false;
         bool resizable = true;
-        bool mouse_passthrough = false;
         int content_type = 0;
     } secondary_create_;
 

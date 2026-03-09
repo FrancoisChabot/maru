@@ -20,7 +20,6 @@ This checklist tracks the implementation status of the Maru macOS (Cocoa) backen
 - [x] Min/Max/Fullscreen States (`MARU_WINDOW_ATTR_MINIMIZED`, `MARU_WINDOW_ATTR_MAXIMIZED`, `MARU_WINDOW_ATTR_FULLSCREEN`)
 - [x] Focus Requests (`maru_requestWindowFocus_Cocoa`)
 - [x] Attention Requests (`maru_requestWindowAttention_Cocoa`)
-- [x] Mouse Passthrough Implementation (`MARU_WINDOW_STATE_MOUSE_PASSTHROUGH`)
 - [ ] **TODO:** Implement Frame Request (`maru_requestWindowFrame_Cocoa`)
 - [x] Window Icon Support
 

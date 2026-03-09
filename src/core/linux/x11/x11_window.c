@@ -326,45 +326,6 @@ static void _maru_x11_apply_decorations_local(MARU_Context_X11 *ctx,
                                (unsigned char *)&hints, 5);
 }
 
-static bool _maru_x11_apply_mouse_passthrough(MARU_Context_X11 *ctx,
-                                              MARU_Window_X11 *win) {
-  MARU_ASSUME(ctx != NULL);
-  MARU_ASSUME(win != NULL);
-  MARU_ASSUME(win->handle != (Window)0);
-
-  const bool enable = win->base.attrs_effective.mouse_passthrough;
-
-  if (ctx->xshape_lib.base.available) {
-    int shape_event, shape_error;
-    if (ctx->xshape_lib.XShapeQueryExtension(ctx->display, &shape_event,
-                                             &shape_error)) {
-      int major, minor;
-      if (ctx->xshape_lib.XShapeQueryVersion(ctx->display, &major, &minor) &&
-          (major > 1 || (major == 1 && minor >= 1))) {
-        if (enable) {
-          // Set input shape to an empty region to enable passthrough.
-          ctx->xshape_lib.XShapeCombineRectangles(ctx->display, win->handle,
-                                                  ShapeInput, 0, 0, NULL, 0,
-                                                  ShapeSet, YXBanded);
-        } else {
-          // Reset input shape to follow bounding shape (default behavior).
-          // We only do this if the window is already mapped or if we know we
-          // previously set a custom shape. For initial creation of
-          // non-passthrough windows, we MUST NOT call this as it can break some
-          // compositors.
-          if ((win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0) {
-            ctx->xshape_lib.XShapeCombineMask(ctx->display, win->handle,
-                                              ShapeInput, 0, 0, None, ShapeSet);
-          }
-        }
-        return true;
-      }
-    }
-  }
-
-  return !enable;
-}
-
 static bool _maru_x11_apply_icon(MARU_Context_X11 *ctx, MARU_Window_X11 *win,
                                  const MARU_Image *icon) {
   if (!icon) {
@@ -561,31 +522,6 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
                              MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "X11 cursor mode transition failed");
       status = MARU_FAILURE;
-    }
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
-    const bool was_passthrough =
-        (win->base.pub.flags & MARU_WINDOW_STATE_MOUSE_PASSTHROUGH) != 0;
-    const bool should_be_passthrough = attributes->mouse_passthrough;
-
-    if (should_be_passthrough != was_passthrough || should_be_passthrough) {
-      requested->mouse_passthrough = should_be_passthrough;
-      effective->mouse_passthrough = should_be_passthrough;
-      if (effective->mouse_passthrough) {
-        win->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
-      } else {
-        win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
-      }
-      if (!_maru_x11_apply_mouse_passthrough(ctx, win)) {
-        MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
-                               MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                               "X11 mouse passthrough requires XShape support");
-        effective->mouse_passthrough = false;
-        requested->mouse_passthrough = false;
-        win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
-        status = MARU_FAILURE;
-      }
     }
   }
 

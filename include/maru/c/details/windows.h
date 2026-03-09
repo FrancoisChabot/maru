@@ -73,10 +73,6 @@ static inline bool maru_isWindowFullscreen(const MARU_Window *window) {
   return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
 }
 
-static inline bool maru_isWindowMousePassthrough(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_MOUSE_PASSTHROUGH) != 0;
-}
-
 static inline bool maru_isWindowVisible(const MARU_Window *window) {
   return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_VISIBLE) != 0;
 }

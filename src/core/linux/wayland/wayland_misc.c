@@ -35,11 +35,6 @@ void _maru_wayland_update_opaque_region(MARU_Window_WL *window) {
   }
 
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-  if (window->is_transparent) {
-    maru_wl_surface_set_opaque_region(ctx, window->wl.surface, NULL);
-    return;
-  }
-
   const int32_t width = (int32_t)window->base.attrs_effective.logical_size.x;
   const int32_t height = (int32_t)window->base.attrs_effective.logical_size.y;
   if (width <= 0 || height <= 0) {

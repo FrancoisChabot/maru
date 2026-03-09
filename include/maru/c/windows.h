@@ -39,11 +39,10 @@ typedef struct MARU_Monitor MARU_Monitor;
 #define MARU_WINDOW_STATE_FOCUSED ((MARU_Flags)1 << 2)
 #define MARU_WINDOW_STATE_MAXIMIZED ((MARU_Flags)1 << 3)
 #define MARU_WINDOW_STATE_FULLSCREEN ((MARU_Flags)1 << 4)
-#define MARU_WINDOW_STATE_MOUSE_PASSTHROUGH ((MARU_Flags)1 << 5)
-#define MARU_WINDOW_STATE_RESIZABLE ((MARU_Flags)1 << 6)
-#define MARU_WINDOW_STATE_DECORATED ((MARU_Flags)1 << 7)
-#define MARU_WINDOW_STATE_VISIBLE ((MARU_Flags)1 << 8)
-#define MARU_WINDOW_STATE_MINIMIZED ((MARU_Flags)1 << 9)
+#define MARU_WINDOW_STATE_RESIZABLE ((MARU_Flags)1 << 5)
+#define MARU_WINDOW_STATE_DECORATED ((MARU_Flags)1 << 6)
+#define MARU_WINDOW_STATE_VISIBLE ((MARU_Flags)1 << 7)
+#define MARU_WINDOW_STATE_MINIMIZED ((MARU_Flags)1 << 8)
 
 /** @brief Cursor visibility and constraint modes. */
 typedef enum MARU_CursorMode {
@@ -87,8 +86,6 @@ static inline bool maru_isWindowMaximized(const MARU_Window *window);
 /** @brief Checks if the window is currently in fullscreen mode. */
 static inline bool maru_isWindowFullscreen(const MARU_Window *window);
 
-/** @brief Checks if the window currently has mouse passthrough enabled. */
-static inline bool maru_isWindowMousePassthrough(const MARU_Window *window);
 /** @brief Checks if the window is currently visible. */
 static inline bool maru_isWindowVisible(const MARU_Window *window);
 /** @brief Checks if the window is currently minimized. */
@@ -133,18 +130,17 @@ typedef uint32_t MARU_WindowAttributesField;
 #define MARU_WINDOW_ATTR_POSITION (1u << 9)
 #define MARU_WINDOW_ATTR_ASPECT_RATIO (1u << 10)
 #define MARU_WINDOW_ATTR_RESIZABLE (1u << 11)
-#define MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH (1u << 12)
-#define MARU_WINDOW_ATTR_ACCEPT_DROP (1u << 13)
-#define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE (1u << 14)
-#define MARU_WINDOW_ATTR_TEXT_INPUT_RECT (1u << 15)
-#define MARU_WINDOW_ATTR_PRIMARY_SELECTION (1u << 16)
-#define MARU_WINDOW_ATTR_EVENT_MASK (1u << 17)
-#define MARU_WINDOW_ATTR_VIEWPORT_SIZE (1u << 18)
-#define MARU_WINDOW_ATTR_SURROUNDING_TEXT (1u << 19)
-#define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET (1u << 20)
-#define MARU_WINDOW_ATTR_VISIBLE (1u << 21)
-#define MARU_WINDOW_ATTR_MINIMIZED (1u << 22)
-#define MARU_WINDOW_ATTR_ICON (1u << 23)
+#define MARU_WINDOW_ATTR_ACCEPT_DROP (1u << 12)
+#define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE (1u << 13)
+#define MARU_WINDOW_ATTR_TEXT_INPUT_RECT (1u << 14)
+#define MARU_WINDOW_ATTR_PRIMARY_SELECTION (1u << 15)
+#define MARU_WINDOW_ATTR_EVENT_MASK (1u << 16)
+#define MARU_WINDOW_ATTR_VIEWPORT_SIZE (1u << 17)
+#define MARU_WINDOW_ATTR_SURROUNDING_TEXT (1u << 18)
+#define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET (1u << 19)
+#define MARU_WINDOW_ATTR_VISIBLE (1u << 20)
+#define MARU_WINDOW_ATTR_MINIMIZED (1u << 21)
+#define MARU_WINDOW_ATTR_ICON (1u << 22)
 
 #define MARU_WINDOW_ATTR_ALL 0xFFFFFFFFu
 
@@ -162,7 +158,6 @@ typedef struct MARU_WindowAttributes {
   MARU_Vec2Dip position;
   MARU_Fraction aspect_ratio;
   bool resizable;
-  bool mouse_passthrough;
   bool accept_drop;
   MARU_TextInputType text_input_type;
   MARU_RectDip text_input_rect;
@@ -183,7 +178,6 @@ typedef struct MARU_WindowCreateInfo {
   const char *app_id;
   MARU_ContentType content_type;
   bool decorated;
-  bool transparent;
   void *userdata;
 } MARU_WindowCreateInfo;
 
@@ -201,7 +195,6 @@ typedef struct MARU_WindowCreateInfo {
                   .position = {0, 0},                                          \
                   .aspect_ratio = {0, 0},                                      \
                   .resizable = true,                                           \
-                  .mouse_passthrough = false,                                  \
                   .accept_drop = false,                                        \
                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE,                \
                   .text_input_rect = {{0, 0}, {0, 0}},                         \
@@ -217,7 +210,6 @@ typedef struct MARU_WindowCreateInfo {
    .app_id = "maru.app",                                                       \
    .content_type = MARU_CONTENT_TYPE_NONE,                                     \
    .decorated = true,                                                          \
-   .transparent = false,                                                       \
    .userdata = NULL}
 
 /** @brief Creates a new window. */

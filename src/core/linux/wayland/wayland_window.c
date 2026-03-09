@@ -300,25 +300,6 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
   maru_wl_surface_commit(ctx, window->wl.surface);
 }
 
-static void _maru_wayland_apply_mouse_passthrough(MARU_Window_WL *window) {
-  if (!window || !window->wl.surface) {
-    return;
-  }
-
-  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-  if ((window->base.pub.flags & MARU_WINDOW_STATE_MOUSE_PASSTHROUGH) != 0) {
-    struct wl_region *empty_region = maru_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
-    if (empty_region) {
-      maru_wl_surface_set_input_region(ctx, window->wl.surface, empty_region);
-      maru_wl_region_destroy(ctx, empty_region);
-    }
-  } else {
-    maru_wl_surface_set_input_region(ctx, window->wl.surface, NULL);
-  }
-
-  maru_wl_surface_commit(ctx, window->wl.surface);
-}
-
 static uint32_t _maru_wayland_map_content_type(MARU_ContentType type) {
   switch (type) {
     case MARU_CONTENT_TYPE_PHOTO:
@@ -710,7 +691,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
     window->decor_mode = MARU_WAYLAND_DECORATION_MODE_NONE;
   }
   window->pending_resized_event = true;
-  window->is_transparent = create_info->transparent;
   window->preferred_buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
 
   if (window->base.attrs_effective.maximized) {
@@ -731,9 +711,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   }
   if (create_info->decorated) {
     window->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
-  }
-  if (window->base.attrs_effective.mouse_passthrough) {
-    window->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
   }
   
   #ifdef MARU_INDIRECT_BACKEND
@@ -814,7 +791,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
 
   _maru_wayland_apply_size_constraints(window);
   _maru_wayland_update_idle_inhibitor(window);
-  _maru_wayland_apply_mouse_passthrough(window);
   _maru_wayland_update_text_input(window);
   window->base.attrs_dirty_mask = 0;
 
@@ -1061,17 +1037,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
       }
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
-      requested->mouse_passthrough = attributes->mouse_passthrough;
-      effective->mouse_passthrough = attributes->mouse_passthrough;
-      if (requested->mouse_passthrough) {
-          window->base.pub.flags |= MARU_WINDOW_STATE_MOUSE_PASSTHROUGH;
-      } else {
-          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MOUSE_PASSTHROUGH);
-      }
-      _maru_wayland_apply_mouse_passthrough(window);
   }
 
   if (field_mask & MARU_WINDOW_ATTR_POSITION) {

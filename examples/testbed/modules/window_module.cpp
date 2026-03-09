@@ -205,11 +205,9 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
     win_info.attributes.fullscreen = secondary_create_.fullscreen;
     win_info.attributes.maximized = secondary_create_.maximized;
     win_info.attributes.resizable = secondary_create_.resizable;
-    win_info.attributes.mouse_passthrough = secondary_create_.mouse_passthrough;
     win_info.app_id = secondary_create_.app_id[0] != '\0' ? secondary_create_.app_id : nullptr;
     win_info.content_type = (MARU_ContentType)secondary_create_.content_type;
     win_info.decorated = secondary_create_.decorated;
-    win_info.transparent = secondary_create_.transparent;
 
     MARU_Window* created_window = nullptr;
     if (maru_createWindow(ctx, &win_info, &created_window) != MARU_SUCCESS) {
@@ -222,7 +220,6 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
     sw->ready = false;
     sw->title = std::move(title);
     sw->is_resizable = secondary_create_.resizable;
-    sw->mouse_passthrough = secondary_create_.mouse_passthrough;
     sw->primary_selection = true;
     secondary_windows_.push_back(std::move(sw));
 }
@@ -367,14 +364,10 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
         ImGui::InputText("Create App ID", secondary_create_.app_id, sizeof(secondary_create_.app_id));
         ImGui::InputInt2("Create Logical Size", secondary_create_.logical_size);
         ImGui::Checkbox("Create Decorated", &secondary_create_.decorated);
-        ImGui::SameLine();
-        ImGui::Checkbox("Create Transparent", &secondary_create_.transparent);
         ImGui::Checkbox("Create Maximized", &secondary_create_.maximized);
         ImGui::SameLine();
         ImGui::Checkbox("Create Fullscreen", &secondary_create_.fullscreen);
         ImGui::Checkbox("Create Resizable", &secondary_create_.resizable);
-        ImGui::SameLine();
-        ImGui::Checkbox("Create Mouse Passthrough", &secondary_create_.mouse_passthrough);
 
         const char* content_items[] = {"None", "Photo", "Video", "Game"};
         ImGui::Combo("Create Content Type", &secondary_create_.content_type, content_items, IM_ARRAYSIZE(content_items));
@@ -437,18 +430,11 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             }
 
             bool is_resizable = maru_isWindowResizable(target);
-            bool mouse_passthrough = maru_isWindowMousePassthrough(target);
             ImGui::Text("Decorated: %s", maru_isWindowDecorated(target) ? "Yes" : "No");
             if (ImGui::Checkbox("Resizable", &is_resizable)) {
                 MARU_WindowAttributes attrs = {};
                 attrs.resizable = is_resizable;
                 maru_updateWindow(target, MARU_WINDOW_ATTR_RESIZABLE, &attrs);
-            }
-            ImGui::SameLine();
-            if (ImGui::Checkbox("Mouse Passthrough", &mouse_passthrough)) {
-                MARU_WindowAttributes attrs = {};
-                attrs.mouse_passthrough = mouse_passthrough;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH, &attrs);
             }
 
 #ifdef MARU_USE_FLOAT
@@ -530,7 +516,6 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
 
             if (sw.window) {
                 sw.is_resizable = maru_isWindowResizable(sw.window);
-                sw.mouse_passthrough = maru_isWindowMousePassthrough(sw.window);
             }
 
             ImGui::Text("Decorated: %s", (sw.window && maru_isWindowDecorated(sw.window)) ? "Yes" : "No");
@@ -538,12 +523,6 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 MARU_WindowAttributes attrs = {};
                 attrs.resizable = sw.is_resizable;
                 maru_updateWindow(sw.window, MARU_WINDOW_ATTR_RESIZABLE, &attrs);
-            }
-            ImGui::SameLine();
-            if (ImGui::Checkbox("Mouse Passthrough", &sw.mouse_passthrough) && sw.window && window_ready) {
-                MARU_WindowAttributes attrs = {};
-                attrs.mouse_passthrough = sw.mouse_passthrough;
-                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH, &attrs);
             }
 
 #ifdef MARU_USE_FLOAT

@@ -214,7 +214,6 @@ static inline void _maru_validate_updateWindow(MARU_Window *window, uint64_t fie
         MARU_WINDOW_ATTR_POSITION |
         MARU_WINDOW_ATTR_ASPECT_RATIO |
         MARU_WINDOW_ATTR_RESIZABLE |
-        MARU_WINDOW_ATTR_MOUSE_PASSTHROUGH |
         MARU_WINDOW_ATTR_ACCEPT_DROP |
         MARU_WINDOW_ATTR_TEXT_INPUT_TYPE |
         MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
