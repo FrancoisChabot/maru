@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef MARU_INTERNAL_H_INCLUDED
 #define MARU_INTERNAL_H_INCLUDED
 

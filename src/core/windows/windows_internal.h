@@ -55,36 +55,70 @@ typedef struct MARU_Window_Windows {
   HICON icon_big;
 } MARU_Window_Windows;
 
+// contexts.h
 MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info,
                                         MARU_Context **out_context);
 MARU_Status maru_destroyContext_Windows(MARU_Context *context);
-MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
 MARU_Status maru_updateContext_Windows(MARU_Context *context, uint64_t field_mask,
                                           const MARU_ContextAttributes *attributes);
 
+// events.h
+MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
+MARU_Status maru_wakeContext_Windows(MARU_Context *context);
+
+// windows.h
 MARU_Status maru_createWindow_Windows(MARU_Context *context,
                                        const MARU_WindowCreateInfo *create_info,
                                        MARU_Window **out_window);
 MARU_Status maru_destroyWindow_Windows(MARU_Window *window);
-MARU_Status maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
+void maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes);
 MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window);
+MARU_Status maru_requestWindowFrame_Windows(MARU_Window *window);
 MARU_Status maru_requestWindowAttention_Windows(MARU_Window *window);
-MARU_Status maru_createCursor_Windows(MARU_Context *context,
-                                       const MARU_CursorCreateInfo *create_info,
-                                       MARU_Cursor **out_cursor);
-MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor);
+
+// images.h
 MARU_Status maru_createImage_Windows(MARU_Context *context,
                                      const MARU_ImageCreateInfo *create_info,
                                      MARU_Image **out_image);
 MARU_Status maru_destroyImage_Windows(MARU_Image *image);
-MARU_Status maru_wakeContext_Windows(MARU_Context *context);
 
+// cursors.h
+MARU_Status maru_createCursor_Windows(MARU_Context *context,
+                                       const MARU_CursorCreateInfo *create_info,
+                                       MARU_Cursor **out_cursor);
+MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor);
+MARU_Status maru_resetCursorMetrics_Windows(MARU_Cursor *cursor);
+
+// monitors.h
 MARU_Status maru_updateMonitors_Windows(MARU_Context *context);
 const MARU_VideoMode *maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
                                          uint32_t *out_count);
 MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
                                         MARU_VideoMode mode);
+void maru_resetMonitorMetrics_Windows(MARU_Monitor *monitor);
+
+// controllers.h
+MARU_Status maru_getControllers_Windows(MARU_Context *context, MARU_ControllerList *out_list);
+MARU_Status maru_retainController_Windows(MARU_Controller *controller);
+MARU_Status maru_releaseController_Windows(MARU_Controller *controller);
+MARU_Status maru_resetControllerMetrics_Windows(MARU_Controller *controller);
+MARU_Status maru_getControllerInfo_Windows(MARU_Controller *controller, MARU_ControllerInfo *out_info);
+MARU_Status maru_setControllerHapticLevels_Windows(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
+
+// data_exchange.h
+MARU_Status maru_announceData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);
+MARU_Status maru_provideData_Windows(const MARU_DataRequestEvent *request_event, const void *data, size_t size, MARU_DataProvideFlags flags);
+MARU_Status maru_requestData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag);
+MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
+
+// vulkan.h
+const char **maru_getVkExtensions_Windows(const MARU_Context *context, uint32_t *out_count);
+MARU_Status maru_createVkSurface_Windows(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
+
+// Native handles
+void *_maru_getContextNativeHandle_Windows(MARU_Context *context);
+void *_maru_getWindowNativeHandle_Windows(MARU_Window *window);
 
 #endif

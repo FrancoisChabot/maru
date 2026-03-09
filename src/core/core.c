@@ -25,11 +25,19 @@ typedef struct MARU_Context_Linux {
 #include "core_event_queue.h"
 
 #ifdef MARU_VALIDATE_API_CALLS
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 #include <stdio.h>
 
 MARU_ThreadId _maru_getCurrentThreadId(void) {
+#ifdef _WIN32
+  return (MARU_ThreadId)GetCurrentThreadId();
+#else
   return (MARU_ThreadId)pthread_self();
+#endif
 }
 #endif
 

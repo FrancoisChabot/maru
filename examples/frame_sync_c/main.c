@@ -14,11 +14,26 @@ static VulkanRenderer renderer;
 static int frame_count = 0;
 static double last_stat_time = 0.0;
 
+#ifdef _WIN32
+#include <windows.h>
+static double get_time_sec() {
+  static LARGE_INTEGER frequency;
+  static BOOL frequency_initialized = FALSE;
+  if (!frequency_initialized) {
+    QueryPerformanceFrequency(&frequency);
+    frequency_initialized = TRUE;
+  }
+  LARGE_INTEGER counter;
+  QueryPerformanceCounter(&counter);
+  return (double)counter.QuadPart / (double)frequency.QuadPart;
+}
+#else
 static double get_time_sec() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
 }
+#endif
 
 static void handle_event(MARU_EventId type, MARU_Window *window,
                          const MARU_Event *event, void *userdata) {

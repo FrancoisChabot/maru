@@ -1,7 +1,13 @@
 add_library(maru_windows${MARU_LIB_SUFFIX} ${MARU_LIB_TYPE} 
     windows_entry.c 
-    windows_context.c 
-    windows_window.c 
+    windows_contexts.c 
+    windows_windows.c 
+    windows_images.c
+    windows_events.c
+    windows_controllers.c
+    windows_data_exchange.c
+    windows_cursors.c
+    windows_monitors.c
     windows_vulkan.c
     $<TARGET_OBJECTS:maru_base_obj> 
 )

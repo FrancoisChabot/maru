@@ -11,12 +11,14 @@ TEST_CASE("Queue C++ API - Basic") {
     REQUIRE(queue_res.has_value());
     maru::Queue& queue = *queue_res;
 
-    maru_postEvent(ctx.get(), MARU_EVENT_USER_0, nullptr, (MARU_UserDefinedEvent){0});
+    MARU_UserDefinedEvent user_evt = {0};
+    maru_postEvent(ctx.get(), MARU_EVENT_USER_0, nullptr, user_evt);
     queue.pump();
     queue.commit();
 
     int count = 0;
     queue.scan(MARU_ALL_EVENTS, [](MARU_EventId type, MARU_Window* window, const MARU_Event* evt, void* userdata) {
+        (void)type; (void)window; (void)evt;
         (*(int*)userdata)++;
     }, &count);
 
@@ -33,13 +35,18 @@ TEST_CASE("Queue C++ API - C++20 Visitor Scan") {
     REQUIRE(queue_res.has_value());
     maru::Queue& queue = *queue_res;
 
-    // Post some events
-    maru_postEvent(ctx.get(), MARU_EVENT_WINDOW_READY, nullptr, (MARU_Event){.window_ready = {0}});
-    maru_postEvent(ctx.get(), MARU_EVENT_CLOSE_REQUESTED, nullptr, (MARU_Event){.close_requested = {0}});
+    // Post some events. 
+    MARU_UserDefinedEvent user_evt = {0};
+    maru_postEvent(ctx.get(), MARU_EVENT_USER_0, nullptr, user_evt);
+    maru_postEvent(ctx.get(), MARU_EVENT_USER_1, nullptr, user_evt);
 
     queue.pump();
     queue.commit();
 
+    int user0_count = 0;
+    int user1_count = 0;
+
+    // Scan with visitor, implicit mask should be generated
     int ready_count = 0;
     int close_count = 0;
 

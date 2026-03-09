@@ -24,6 +24,7 @@ endif()
 target_link_libraries(maru_tests
   PRIVATE
     maru::maru
+    maru_common_settings
     ${MARU_ACTIVE_CORE_IFACE}
 )
 
@@ -51,10 +52,11 @@ target_include_directories(maru_integration_tests PRIVATE
 target_link_libraries(maru_integration_tests
   PRIVATE
     maru::maru
+    maru_common_settings
     ${MARU_ACTIVE_CORE_IFACE}
 )
 
-set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD 17)
+set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD 20)
 set_property(TARGET maru_integration_tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
 add_test(NAME maru_integration_tests COMMAND maru_integration_tests)

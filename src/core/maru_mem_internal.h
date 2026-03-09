@@ -9,6 +9,10 @@
 #include <string.h>
 #include <stdio.h>
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#define max_align_t double
+#endif
+
 #include "maru/maru.h"
 #include "maru_internal.h"
 #include "maru/c/details/maru_config.h"

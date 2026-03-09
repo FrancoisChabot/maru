@@ -26,7 +26,11 @@ add_library(maru_common_settings INTERFACE)
 option(MARU_WERROR "Treat warnings as errors" ON)
 
 if(MSVC)
-  target_compile_options(maru_common_settings INTERFACE /W4 /wd4100 /wd4189 /wd5105)
+  target_compile_options(maru_common_settings INTERFACE 
+    /W4 /wd4100 /wd4189 /wd5105 /wd4324 /wd4210 /wd4244 /Zc:__cplusplus
+    $<$<COMPILE_LANGUAGE:C>:/std:c11 /experimental:c11atomics>
+  )
+  target_compile_definitions(maru_common_settings INTERFACE _CRT_SECURE_NO_WARNINGS)
   if(MARU_WERROR)
     target_compile_options(maru_common_settings INTERFACE /WX)
   endif()
@@ -53,6 +57,7 @@ endif()
 
 # Public interface: only public headers
 add_library(maru_iface INTERFACE)
+target_link_libraries(maru_iface INTERFACE maru_common_settings)
 target_compile_features(maru_iface INTERFACE c_std_11)
 target_include_directories(maru_iface INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
