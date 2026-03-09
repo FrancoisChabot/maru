@@ -11,8 +11,11 @@
  * @file maru_queue.h
  * @brief Double-buffered event snapshot queue.
  *
- * A MARU_Queue provides an optional way to consume events with a thread-safe scanning phase.
- * It follows a pump -> commit -> scan lifecycle:
+ * A MARU_Queue provides an OPTIONAL way to consume events with a thread-safe
+ * scanning phase, and event coalescence.
+ * You don't have to use it, but if you are not bringing in your own event
+ * queue, it makes dealing with events a lot smoother. It follows a pump ->
+ * commit -> scan lifecycle:
  *
  * 1. PUMP: On the primary thread, events are gathered from the OS and pushed
  *    into the queue's internal buffer.
@@ -21,7 +24,8 @@
  * 3. SCAN: From any thread, the stable snapshot can be iterated.
  *
  * Threading Rules:
- * - maru_queue_pump() and maru_queue_commit() MUST be called from the primary thread.
+ * - maru_queue_pump() and maru_queue_commit() MUST be called from the primary
+ * thread.
  * - maru_queue_scan() can be called from any thread.
  * - External synchronization (e.g., an RW lock) MUST be used to ensure that
  *   maru_queue_scan() does not run concurrently with maru_queue_commit().
@@ -43,7 +47,8 @@ typedef struct MARU_Queue MARU_Queue;
  * @param out_queue Pointer to receive the created queue handle.
  * @return MARU_SUCCESS on success, or an error code.
  */
-MARU_API MARU_Status maru_queue_create(MARU_Context *ctx, uint32_t capacity_power_of_2,
+MARU_API MARU_Status maru_queue_create(MARU_Context *ctx,
+                                       uint32_t capacity_power_of_2,
                                        MARU_Queue **out_queue);
 
 /**
@@ -105,10 +110,11 @@ MARU_API void maru_queue_scan(MARU_Queue *queue, MARU_EventMask mask,
  * @param queue The event queue.
  * @param mask Bitmask of MARU_EventId bits to coalesce.
  */
-MARU_API void maru_queue_set_coalesce_mask(MARU_Queue *queue, MARU_EventMask mask);
+MARU_API void maru_queue_set_coalesce_mask(MARU_Queue *queue,
+                                           MARU_EventMask mask);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // MARU_QUEUE_H_INCLUDED
+#endif // MARU_QUEUE_H_INCLUDED
