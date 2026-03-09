@@ -7,6 +7,8 @@
 #include "maru_internal.h"
 
 #include <windows.h>
+#include <hidusage.h>
+#include <hidpi.h>
 
 typedef struct MARU_Context_Windows {
   MARU_Context_Base base;
@@ -19,7 +21,70 @@ typedef struct MARU_Context_Windows {
   bool event_loop_started;
   bool cursor_animation_fallback_reported;
   DWORD owner_thread_id;
+
+  struct MARU_Controller_Windows *controller_list_head;
+  uint32_t controller_count;
+  
+  MARU_Controller **controller_list_storage;
+  uint32_t controller_list_capacity;
+
+  HMODULE xinput_module;
+  HMODULE runtime_object_module;
+
+  // Dynamic function pointers
+  DWORD (WINAPI *XInputGetState)(DWORD, void*); // Using void* for XINPUT_STATE to avoid including it here
+  DWORD (WINAPI *XInputSetState)(DWORD, void*); // Using void* for XINPUT_VIBRATION
+  
+  HRESULT (WINAPI *RoInitialize)(int);
+  void (WINAPI *RoUninitialize)(void);
+  HRESULT (WINAPI *RoGetActivationFactory)(void*, REFIID, void**);
+  HRESULT (WINAPI *WindowsCreateString)(LPCWSTR, UINT32, void**);
+  HRESULT (WINAPI *WindowsDeleteString)(void*);
 } MARU_Context_Windows;
+
+typedef struct MARU_Controller_Windows {
+  MARU_Controller_Base base;
+  struct MARU_Controller_Windows *next;
+
+  uint32_t xinput_index; // 0-3 for XInput, 0xFFFFFFFF for others
+  void *wgi_gamepad; // IGamepad* (WinRT)
+  HANDLE raw_input_device;
+  HANDLE hid_handle;
+  wchar_t *raw_device_path;
+  PHIDP_PREPARSED_DATA hid_preparsed_data;
+
+  char *name;
+  uint16_t vendor_id;
+  uint16_t product_id;
+  uint16_t version;
+  uint8_t guid[16];
+  bool is_standardized;
+
+  MARU_ButtonState8 *button_states;
+  MARU_ButtonChannelInfo *button_channels;
+  uint32_t button_count;
+
+  MARU_AnalogInputState *analog_states;
+  MARU_AnalogChannelInfo *analog_channels;
+  uint32_t analog_count;
+
+  MARU_HapticChannelInfo *haptic_channels;
+  uint32_t haptic_count;
+  MARU_Scalar last_haptic_levels[MARU_CONTROLLER_HAPTIC_STANDARD_COUNT];
+  bool haptics_dirty;
+
+  struct MARU_WindowsHidButtonMapping *hid_button_mappings;
+  uint32_t hid_button_mapping_count;
+  struct MARU_WindowsHidValueMapping *hid_value_mappings;
+  uint32_t hid_value_mapping_count;
+  USAGE_AND_PAGE *hid_pressed_usages;
+  ULONG hid_pressed_usage_capacity;
+  bool hid_has_hat_switch;
+  USAGE hid_hat_usage;
+  LONG hid_hat_logical_min;
+  LONG hid_hat_logical_max;
+  uint32_t hid_hat_button_base;
+} MARU_Controller_Windows;
 
 typedef struct MARU_Cursor_Windows {
   MARU_Cursor_Base base;
@@ -114,6 +179,12 @@ MARU_Status maru_releaseController_Windows(MARU_Controller *controller);
 MARU_Status maru_resetControllerMetrics_Windows(MARU_Controller *controller);
 MARU_Status maru_getControllerInfo_Windows(MARU_Controller *controller, MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_Windows(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
+
+void _maru_windows_cleanup_controllers(MARU_Context_Windows *ctx);
+void _maru_windows_update_controllers(MARU_Context_Windows *ctx);
+void _maru_windows_resync_controllers(MARU_Context_Windows *ctx);
+void _maru_windows_process_raw_input(MARU_Context_Windows *ctx,
+                                     const RAWINPUT *raw);
 
 // data_exchange.h
 MARU_Status maru_announceData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);

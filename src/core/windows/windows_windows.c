@@ -23,6 +23,28 @@ static void _maru_update_cursor_mode_windows(MARU_Window_Windows *win) {
   }
 }
 
+static void _maru_register_rawinput_window(HWND hwnd) {
+  RAWINPUTDEVICE devices[3];
+
+  memset(devices, 0, sizeof(devices));
+  devices[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+  devices[0].usUsage = HID_USAGE_GENERIC_JOYSTICK;
+  devices[0].dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
+  devices[0].hwndTarget = hwnd;
+
+  devices[1].usUsagePage = HID_USAGE_PAGE_GENERIC;
+  devices[1].usUsage = HID_USAGE_GENERIC_GAMEPAD;
+  devices[1].dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
+  devices[1].hwndTarget = hwnd;
+
+  devices[2].usUsagePage = HID_USAGE_PAGE_GENERIC;
+  devices[2].usUsage = HID_USAGE_GENERIC_MULTI_AXIS_CONTROLLER;
+  devices[2].dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
+  devices[2].hwndTarget = hwnd;
+
+  RegisterRawInputDevices(devices, 3u, sizeof(RAWINPUTDEVICE));
+}
+
 LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                   LPARAM lParam) {
   MARU_Window_Windows *win = (MARU_Window_Windows *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
@@ -39,6 +61,30 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
 
   switch (uMsg) {
+    case WM_INPUT_DEVICE_CHANGE: {
+      _maru_windows_resync_controllers(ctx);
+      break;
+    }
+    case WM_DEVICECHANGE: {
+      _maru_windows_resync_controllers(ctx);
+      break;
+    }
+    case WM_INPUT: {
+      UINT raw_size = 0u;
+      RAWINPUT *raw = NULL;
+      if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &raw_size,
+                          sizeof(RAWINPUTHEADER)) == 0u &&
+          raw_size >= sizeof(RAWINPUT)) {
+        raw = (RAWINPUT *)maru_context_alloc(&ctx->base, raw_size);
+        if (raw &&
+            GetRawInputData((HRAWINPUT)lParam, RID_INPUT, raw, &raw_size,
+                            sizeof(RAWINPUTHEADER)) == raw_size) {
+          _maru_windows_process_raw_input(ctx, raw);
+        }
+        maru_context_free(&ctx->base, raw);
+      }
+      return 0;
+    }
     case WM_SETCURSOR: {
       if (LOWORD(lParam) == HTCLIENT) {
         if (win->cursor_mode != MARU_CURSOR_NORMAL) {
@@ -378,6 +424,8 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   }
 
   win->hdc = GetDC(win->hwnd);
+  _maru_register_rawinput_window(win->hwnd);
+  _maru_windows_resync_controllers(ctx);
   
   _maru_register_window(&ctx->base, (MARU_Window *)win);
 

@@ -125,6 +125,8 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
     CloseHandle(ctx->wake_event);
   }
 
+  _maru_windows_cleanup_controllers(ctx);
+
   _maru_cleanup_context_base(&ctx->base);
   maru_context_free(&ctx->base, context);
   return MARU_SUCCESS;

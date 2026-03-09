@@ -175,6 +175,9 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
 
   _maru_drain_queued_events(&ctx->base);
 
+  void _maru_windows_update_controllers(MARU_Context_Windows *ctx);
+  _maru_windows_update_controllers(ctx);
+
   {
     const uint64_t now_ms = _maru_windows_get_time_ms();
     _maru_advance_animated_cursors(&ctx->base, now_ms);
