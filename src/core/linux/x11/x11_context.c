@@ -468,9 +468,8 @@ static const char *_maru_x11_find_xft_dpi_value(const char *resource_text) {
 }
 
 MARU_Scalar _maru_x11_get_global_scale(MARU_Context_X11 *ctx) {
-  if (!ctx || !ctx->display) {
-    return (MARU_Scalar)1.0;
-  }
+  MARU_ASSUME(ctx != NULL);
+  MARU_ASSUME(ctx->display != NULL);
 
   const Atom resource_manager =
       ctx->x11_lib.XInternAtom(ctx->display, "RESOURCE_MANAGER", False);

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "maru_internal.h"
+#include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "x11_internal.h"
 #include <string.h>
@@ -1408,7 +1409,11 @@ void _maru_x11_clear_window_dataexchange_refs(MARU_Context_X11 *ctx, MARU_Window
 }
 
 bool _maru_x11_apply_window_drop_target(MARU_Context_X11 *ctx, MARU_Window_X11 *win) {
-  if (!ctx || !win || !win->handle || ctx->xdnd_aware == None) {
+  MARU_ASSUME(ctx != NULL);
+  MARU_ASSUME(win != NULL);
+  MARU_ASSUME(win->handle != (Window)0);
+
+  if (ctx->xdnd_aware == None) {
     return false;
   }
 
