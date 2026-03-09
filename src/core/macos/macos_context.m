@@ -214,6 +214,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
 
 MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
                                       MARU_Context **out_context) {
+    // Note: See docs/user/macos_backend.md for more details on threading and context limitations on macOS.
     if (![NSThread isMainThread]) {
         fprintf(stderr, "Error: Maru context on macOS must be created on the main thread.\n");
         return MARU_FAILURE;
