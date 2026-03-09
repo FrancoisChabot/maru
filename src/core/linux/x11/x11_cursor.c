@@ -5,6 +5,7 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "x11_internal.h"
+#include "maru_cursor_assets.h"
 #include <string.h>
 #include <X11/cursorfont.h>
 
@@ -288,6 +289,78 @@ static bool _maru_x11_create_custom_cursor_frame(MARU_Context_X11 *ctx,
   return *out_handle != (Cursor)0;
 }
 
+static bool _maru_x11_create_builtin_cursor_frame(MARU_Context_X11 *ctx,
+                                                  MARU_CursorShape shape,
+                                                  Cursor *out_handle) {
+  if (shape > MARU_CURSOR_SHAPE_NWSE_RESIZE || !ctx->xcursor_lib.base.available) {
+    return false;
+  }
+  const MARU_CursorBitmapAsset *bitmap = &g_maru_cursor_bitmap_assets[shape];
+  if (!bitmap->pixels_argb || bitmap->width == 0u || bitmap->height == 0u) {
+    return false;
+  }
+
+  XcursorImage *xc_img =
+      ctx->xcursor_lib.XcursorImageCreate((int)bitmap->width, (int)bitmap->height);
+  if (!xc_img || !xc_img->pixels) {
+    if (xc_img) {
+      ctx->xcursor_lib.XcursorImageDestroy(xc_img);
+    }
+    return false;
+  }
+
+  xc_img->xhot = (XcursorDim)bitmap->hot_x;
+  xc_img->yhot = (XcursorDim)bitmap->hot_y;
+  const size_t pixel_count = (size_t)bitmap->width * (size_t)bitmap->height;
+  memcpy(xc_img->pixels, bitmap->pixels_argb, pixel_count * sizeof(uint32_t));
+
+  *out_handle = ctx->xcursor_lib.XcursorImageLoadCursor(ctx->display, xc_img);
+  ctx->xcursor_lib.XcursorImageDestroy(xc_img);
+  return *out_handle != (Cursor)0;
+}
+
+static bool _maru_x11_resolve_system_cursor(MARU_Context_X11 *ctx,
+                                            MARU_CursorShape shape,
+                                            Cursor *out_handle) {
+  const MARU_CursorPolicy policy = ctx->base.tuning.cursor_policy;
+
+  if (policy != MARU_CURSOR_POLICY_MARU_ONLY) {
+    unsigned int x11_shape = XC_left_ptr;
+    switch (shape) {
+      case MARU_CURSOR_SHAPE_DEFAULT: x11_shape = XC_left_ptr; break;
+      case MARU_CURSOR_SHAPE_HELP: x11_shape = XC_question_arrow; break;
+      case MARU_CURSOR_SHAPE_HAND: x11_shape = XC_hand2; break;
+      case MARU_CURSOR_SHAPE_WAIT: x11_shape = XC_watch; break;
+      case MARU_CURSOR_SHAPE_CROSSHAIR: x11_shape = XC_crosshair; break;
+      case MARU_CURSOR_SHAPE_TEXT: x11_shape = XC_xterm; break;
+      case MARU_CURSOR_SHAPE_MOVE: x11_shape = XC_fleur; break;
+      case MARU_CURSOR_SHAPE_NOT_ALLOWED: x11_shape = XC_X_cursor; break;
+      case MARU_CURSOR_SHAPE_EW_RESIZE: x11_shape = XC_sb_h_double_arrow; break;
+      case MARU_CURSOR_SHAPE_NS_RESIZE: x11_shape = XC_sb_v_double_arrow; break;
+      case MARU_CURSOR_SHAPE_NESW_RESIZE: x11_shape = XC_bottom_left_corner; break;
+      case MARU_CURSOR_SHAPE_NWSE_RESIZE: x11_shape = XC_bottom_right_corner; break;
+      default: return false;
+    }
+    *out_handle = ctx->x11_lib.XCreateFontCursor(ctx->display, x11_shape);
+    if (*out_handle) {
+      return true;
+    }
+  }
+
+  if (policy != MARU_CURSOR_POLICY_SYSTEM_ONLY) {
+    if (_maru_x11_create_builtin_cursor_frame(ctx, shape, out_handle)) {
+      return true;
+    }
+    if (shape != MARU_CURSOR_SHAPE_DEFAULT &&
+        _maru_x11_create_builtin_cursor_frame(ctx, MARU_CURSOR_SHAPE_DEFAULT, out_handle)) {
+      return true;
+    }
+  }
+
+  *out_handle = ctx->x11_lib.XCreateFontCursor(ctx->display, XC_left_ptr);
+  return *out_handle != (Cursor)0;
+}
+
 MARU_Status maru_createCursor_X11(MARU_Context *context,
                                          const MARU_CursorCreateInfo *create_info,
                                          MARU_Cursor **out_cursor) {
@@ -299,24 +372,7 @@ MARU_Status maru_createCursor_X11(MARU_Context *context,
   uint32_t anim_frame_count = 0;
 
   if (create_info->source == MARU_CURSOR_SOURCE_SYSTEM) {
-    unsigned int shape = XC_left_ptr;
-    switch (create_info->system_shape) {
-      case MARU_CURSOR_SHAPE_DEFAULT: shape = XC_left_ptr; break;
-      case MARU_CURSOR_SHAPE_HELP: shape = XC_question_arrow; break;
-      case MARU_CURSOR_SHAPE_HAND: shape = XC_hand2; break;
-      case MARU_CURSOR_SHAPE_WAIT: shape = XC_watch; break;
-      case MARU_CURSOR_SHAPE_CROSSHAIR: shape = XC_crosshair; break;
-      case MARU_CURSOR_SHAPE_TEXT: shape = XC_xterm; break;
-      case MARU_CURSOR_SHAPE_MOVE: shape = XC_fleur; break;
-      case MARU_CURSOR_SHAPE_NOT_ALLOWED: shape = XC_X_cursor; break;
-      case MARU_CURSOR_SHAPE_EW_RESIZE: shape = XC_sb_h_double_arrow; break;
-      case MARU_CURSOR_SHAPE_NS_RESIZE: shape = XC_sb_v_double_arrow; break;
-      case MARU_CURSOR_SHAPE_NESW_RESIZE: shape = XC_bottom_left_corner; break;
-      case MARU_CURSOR_SHAPE_NWSE_RESIZE: shape = XC_bottom_right_corner; break;
-      default: return MARU_FAILURE;
-    }
-    cursor_handle = ctx->x11_lib.XCreateFontCursor(ctx->display, shape);
-    if (!cursor_handle) {
+    if (!_maru_x11_resolve_system_cursor(ctx, create_info->system_shape, &cursor_handle)) {
       return MARU_FAILURE;
     }
     is_system = true;

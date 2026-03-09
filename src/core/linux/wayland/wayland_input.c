@@ -200,6 +200,7 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
         system_shape = cursor->cursor_shape;
     }
 
+    const MARU_CursorPolicy policy = ctx->base.tuning.cursor_policy;
     if (cursor && cursor->frame_count > 0) {
         const MARU_WaylandCursorFrame *frame = &cursor->frames[0];
         if (_maru_wayland_commit_cursor_buffer(ctx, serial, frame->buffer, frame->hotspot_x,
@@ -223,7 +224,7 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
         return;
     }
 
-    if (ctx->wl.cursor_shape_device && system_cursor) {
+    if (policy != MARU_CURSOR_POLICY_MARU_ONLY && ctx->wl.cursor_shape_device && system_cursor) {
         uint32_t shape = 0;
         if (_maru_cursor_shape_to_protocol_shape(system_shape, &shape)) {
             maru_wp_cursor_shape_device_v1_set_shape(ctx, ctx->wl.cursor_shape_device, serial, shape);
@@ -232,7 +233,7 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
         }
     }
 
-    if (!wl_cursor && _maru_wayland_ensure_cursor_theme(ctx)) {
+    if (policy != MARU_CURSOR_POLICY_MARU_ONLY && !wl_cursor && _maru_wayland_ensure_cursor_theme(ctx)) {
         const char *shape_name = _maru_cursor_shape_to_name(system_shape);
         wl_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, shape_name);
     }

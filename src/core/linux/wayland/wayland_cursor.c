@@ -5,6 +5,7 @@
 #include "wayland_internal.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
+#include "maru_cursor_assets.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -50,17 +51,14 @@ void _maru_wayland_clear_cursor_animation(MARU_Context_WL *ctx) {
     memset(&ctx->cursor_animation, 0, sizeof(ctx->cursor_animation));
 }
 
-static bool _maru_wayland_create_owned_cursor_frame(MARU_Context_WL *ctx,
-                                                    const MARU_Image_Base *image,
-                                                    MARU_Vec2Px hot_spot,
-                                                    uint32_t delay_ms,
-                                                    MARU_WaylandCursorFrame *out_frame) {
+static bool _maru_wayland_create_owned_cursor_frame_from_pixels(
+    MARU_Context_WL *ctx, const void *pixels, int32_t width, int32_t height,
+    int32_t hotspot_x, int32_t hotspot_y, uint32_t delay_ms,
+    MARU_WaylandCursorFrame *out_frame) {
   memset(out_frame, 0, sizeof(*out_frame));
   out_frame->shm_fd = -1;
 
-  const int32_t width = (int32_t)image->width;
-  const int32_t height = (int32_t)image->height;
-  if (width <= 0 || height <= 0 || !image->pixels || !ctx->protocols.wl_shm) {
+  if (width <= 0 || height <= 0 || !pixels || !ctx->protocols.wl_shm) {
     return false;
   }
 
@@ -80,7 +78,7 @@ static bool _maru_wayland_create_owned_cursor_frame(MARU_Context_WL *ctx,
     close(fd);
     return false;
   }
-  memcpy(data, image->pixels, data_size);
+  memcpy(data, pixels, data_size);
 
   struct wl_shm_pool *pool =
       maru_wl_shm_create_pool(ctx, ctx->protocols.wl_shm, fd, (int32_t)data_size);
@@ -103,13 +101,23 @@ static bool _maru_wayland_create_owned_cursor_frame(MARU_Context_WL *ctx,
   out_frame->shm_data = data;
   out_frame->shm_size = data_size;
   out_frame->shm_fd = fd;
-  out_frame->hotspot_x = hot_spot.x;
-  out_frame->hotspot_y = hot_spot.y;
-  out_frame->width = image->width;
-  out_frame->height = image->height;
+  out_frame->hotspot_x = hotspot_x;
+  out_frame->hotspot_y = hotspot_y;
+  out_frame->width = (uint32_t)width;
+  out_frame->height = (uint32_t)height;
   out_frame->delay_ms = (delay_ms == 0) ? 1u : delay_ms;
   out_frame->owns_buffer = true;
   return true;
+}
+
+static bool _maru_wayland_create_owned_cursor_frame(MARU_Context_WL *ctx,
+                                                    const MARU_Image_Base *image,
+                                                    MARU_Vec2Px hot_spot,
+                                                    uint32_t delay_ms,
+                                                    MARU_WaylandCursorFrame *out_frame) {
+  return _maru_wayland_create_owned_cursor_frame_from_pixels(
+      ctx, image->pixels, (int32_t)image->width, (int32_t)image->height,
+      hot_spot.x, hot_spot.y, delay_ms, out_frame);
 }
 
 static void _maru_wayland_destroy_cursor_frames(MARU_Context_WL *ctx, MARU_Cursor_WL *cursor) {
@@ -137,6 +145,51 @@ static void _maru_wayland_destroy_cursor_frames(MARU_Context_WL *ctx, MARU_Curso
   cursor->frame_count = 0;
 }
 
+static bool _maru_wayland_resolve_system_cursor(MARU_Context_WL *ctx,
+                                                MARU_Cursor_WL *cursor,
+                                                MARU_CursorShape shape) {
+  const MARU_CursorPolicy policy = ctx->base.tuning.cursor_policy;
+
+  if (policy != MARU_CURSOR_POLICY_MARU_ONLY) {
+    if (_maru_wayland_ensure_cursor_theme(ctx)) {
+      cursor->wl_cursor = maru_wl_cursor_theme_get_cursor(
+          ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(shape));
+      if (cursor->wl_cursor) {
+        return true;
+      }
+    }
+    if (ctx->protocols.opt.wp_cursor_shape_manager_v1 != NULL) {
+      // If we have the protocol, we don't strictly need a wl_cursor here,
+      // wayland_input.c will handle it.
+      return true;
+    }
+  }
+
+  if (policy != MARU_CURSOR_POLICY_SYSTEM_ONLY) {
+    const MARU_CursorBitmapAsset *bitmap = &g_maru_cursor_bitmap_assets[shape];
+    if (bitmap->pixels_argb) {
+      cursor->frames = (MARU_WaylandCursorFrame *)maru_context_alloc(
+          &ctx->base, sizeof(MARU_WaylandCursorFrame));
+      if (cursor->frames) {
+        if (_maru_wayland_create_owned_cursor_frame_from_pixels(
+                ctx, bitmap->pixels_argb, (int32_t)bitmap->width, (int32_t)bitmap->height,
+                bitmap->hot_x, bitmap->hot_y, 0, &cursor->frames[0])) {
+          cursor->frame_count = 1;
+          return true;
+        }
+        maru_context_free(&ctx->base, cursor->frames);
+        cursor->frames = NULL;
+      }
+    }
+
+    if (shape != MARU_CURSOR_SHAPE_DEFAULT) {
+      return _maru_wayland_resolve_system_cursor(ctx, cursor, MARU_CURSOR_SHAPE_DEFAULT);
+    }
+  }
+
+  return false;
+}
+
 MARU_Status maru_createCursor_WL(MARU_Context *context,
                                 const MARU_CursorCreateInfo *create_info,
                                 MARU_Cursor **out_cursor) {
@@ -161,12 +214,7 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
       maru_context_free(&ctx->base, cursor);
       return MARU_FAILURE;
     }
-    const bool has_shape_protocol = ctx->protocols.opt.wp_cursor_shape_manager_v1 != NULL;
-    if (_maru_wayland_ensure_cursor_theme(ctx)) {
-      cursor->wl_cursor = maru_wl_cursor_theme_get_cursor(
-          ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(create_info->system_shape));
-    }
-    if (!has_shape_protocol && !cursor->wl_cursor) {
+    if (!_maru_wayland_resolve_system_cursor(ctx, cursor, create_info->system_shape)) {
       maru_context_free(&ctx->base, cursor);
       return MARU_FAILURE;
     }
