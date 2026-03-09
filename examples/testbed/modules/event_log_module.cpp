@@ -58,9 +58,14 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
            << " Caret: " << e.text_edit_update.caret.start_byte 
            << " Sel: [" << e.text_edit_update.selection.start_byte << ", " << e.text_edit_update.selection.length_byte << "]";
     } else if (type == MARU_EVENT_TEXT_EDIT_COMMIT) {
+        const std::string committed =
+            (e.text_edit_commit.committed_utf8 && e.text_edit_commit.committed_length > 0)
+                ? std::string(e.text_edit_commit.committed_utf8,
+                              e.text_edit_commit.committed_length)
+                : std::string();
         ss << "IME Commit: Session=" << e.text_edit_commit.session_id
            << " Del: (" << e.text_edit_commit.delete_before_bytes << ", " << e.text_edit_commit.delete_after_bytes << ")"
-           << " Text: '" << (e.text_edit_commit.committed_utf8 ? e.text_edit_commit.committed_utf8 : "") << "'";
+           << " Text: '" << committed << "'";
     } else if (type == MARU_EVENT_TEXT_EDIT_END) {
         ss << "IME End: Session=" << e.text_edit_end.session_id << " Canceled: " << (e.text_edit_end.canceled ? "YES" : "NO");
     } else if (type == MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED) {

@@ -10,6 +10,7 @@
 #include <maru/c/windows.h>
 #include <maru/maru.h>
 #include <chrono>
+#include <string>
 
 struct ImGui_ImplMaru_Data {
     MARU_Window* Window;
@@ -310,7 +311,12 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
             io.AddKeyEvent(ImGuiMod_Super, (event->key.modifiers & MARU_MODIFIER_META) != 0);
         }
     } else if (type == MARU_EVENT_TEXT_EDIT_COMMIT) {
-        io.AddInputCharactersUTF8(event->text_edit_commit.committed_utf8);
+        if (event->text_edit_commit.committed_utf8 &&
+            event->text_edit_commit.committed_length > 0) {
+            const std::string committed(event->text_edit_commit.committed_utf8,
+                                        event->text_edit_commit.committed_length);
+            io.AddInputCharactersUTF8(committed.c_str());
+        }
     } else if (type == MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED) {
         if ((event->presentation.changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED) != 0u) {
             io.AddFocusEvent(event->presentation.focused);

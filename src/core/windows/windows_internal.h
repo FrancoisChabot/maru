@@ -47,7 +47,54 @@ typedef struct MARU_Context_Windows {
   UINT (WINAPI *GetDpiForWindow)(HWND);
   HRESULT (WINAPI *GetDpiForMonitor)(HMONITOR, int, UINT*, UINT*);
   BOOL (WINAPI *EnableNonClientDpiScaling)(HWND);
+
+  // Data Exchange
+  void *clipboard_mime_query_storage;
+  const char **clipboard_mime_query_ptr;
+  uint32_t clipboard_mime_query_count;
+  struct MARU_WindowsDeferredEvent *deferred_event_head;
+  struct MARU_WindowsDeferredEvent *deferred_event_tail;
 } MARU_Context_Windows;
+
+typedef enum MARU_WindowsDataRequestKind {
+  MARU_WINDOWS_DATA_REQUEST_RENDER_CLIPBOARD = 1,
+  MARU_WINDOWS_DATA_REQUEST_CAPTURE_LOCAL = 2,
+} MARU_WindowsDataRequestKind;
+
+typedef struct MARU_WindowsDataRequestHandle {
+  MARU_DataRequestHandleBase base;
+  MARU_WindowsDataRequestKind kind;
+  UINT format;
+  struct MARU_Window *window;
+  MARU_DataExchangeTarget target;
+  char *mime_type;
+  void *user_tag;
+  void *provided_data;
+  size_t provided_size;
+  MARU_Status status;
+} MARU_WindowsDataRequestHandle;
+
+typedef enum MARU_WindowsDeferredEventKind {
+  MARU_WINDOWS_DEFERRED_EVENT_DATA_REQUESTED = 1,
+  MARU_WINDOWS_DEFERRED_EVENT_DATA_RECEIVED = 2,
+} MARU_WindowsDeferredEventKind;
+
+typedef struct MARU_WindowsDeferredEvent {
+  struct MARU_WindowsDeferredEvent *next;
+  MARU_WindowsDeferredEventKind kind;
+  MARU_Window *window;
+  union {
+    MARU_WindowsDataRequestHandle *request_handle;
+    struct {
+      MARU_DataExchangeTarget target;
+      char *mime_type;
+      void *user_tag;
+      const void *data;
+      size_t size;
+      MARU_Status status;
+    } received;
+  };
+} MARU_WindowsDeferredEvent;
 
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((HANDLE)-4)
@@ -223,6 +270,7 @@ MARU_Status maru_announceData_Windows(MARU_Window *window, MARU_DataExchangeTarg
 MARU_Status maru_provideData_Windows(const MARU_DataRequestEvent *request_event, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag);
 MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
+void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx);
 
 // vulkan.h
 const char **maru_getVkExtensions_Windows(const MARU_Context *context, uint32_t *out_count);
@@ -240,5 +288,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
 uint64_t _maru_windows_get_time_ms(void);
 uint64_t _maru_windows_get_time_ns(void);
+
+const char *_maru_clipboard_format_to_mime(UINT format);
 
 #endif

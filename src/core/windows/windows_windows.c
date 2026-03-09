@@ -215,9 +215,11 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       }
       win->high_surrogate = 0;
 
-      char utf8[8];
-      int n = WideCharToMultiByte(CP_UTF8, 0, utf16, utf16_len, utf8, sizeof(utf8), NULL, NULL);
+      char utf8[8] = {0};
+      int n = WideCharToMultiByte(CP_UTF8, 0, utf16, utf16_len, utf8,
+                                  (int)sizeof(utf8) - 1, NULL, NULL);
       if (n > 0) {
+        utf8[n] = '\0';
         MARU_Event evt = {0};
         evt.text_edit_commit.committed_utf8 = utf8;
         evt.text_edit_commit.committed_length = (uint32_t)n;
@@ -244,9 +246,11 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         utf16_len = 1;
       }
 
-      char utf8[8];
-      int n = WideCharToMultiByte(CP_UTF8, 0, utf16, utf16_len, utf8, sizeof(utf8), NULL, NULL);
+      char utf8[8] = {0};
+      int n = WideCharToMultiByte(CP_UTF8, 0, utf16, utf16_len, utf8,
+                                  (int)sizeof(utf8) - 1, NULL, NULL);
       if (n > 0) {
+        utf8[n] = '\0';
         MARU_Event evt = {0};
         evt.text_edit_commit.committed_utf8 = utf8;
         evt.text_edit_commit.committed_length = (uint32_t)n;
@@ -446,6 +450,30 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
     case WM_ERASEBKGND:
       return 1;
+
+    case WM_RENDERFORMAT: {
+      MARU_WindowsDataRequestHandle handle = {
+          .base = {.ctx_base = &ctx->base},
+          .kind = MARU_WINDOWS_DATA_REQUEST_RENDER_CLIPBOARD,
+          .format = (UINT)wParam,
+          .provided_data = NULL,
+          .provided_size = 0,
+          .status = MARU_FAILURE,
+      };
+      MARU_Event evt = {0};
+      evt.data_requested.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+      evt.data_requested.internal_handle = &handle;
+      evt.data_requested.mime_type = _maru_clipboard_format_to_mime((UINT)wParam);
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED, (MARU_Window *)win, &evt);
+      return 0;
+    }
+
+    case WM_RENDERALLFORMATS: {
+      // Typically we don't need to do much here if we handle WM_RENDERFORMAT,
+      // but some apps might want to provide everything before closing.
+      // For now, we can just let DefWindowProc handle it or ignore it.
+      break;
+    }
   }
 
   return DefWindowProcW(hwnd, uMsg, wParam, lParam);

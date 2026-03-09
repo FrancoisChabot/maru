@@ -24,8 +24,11 @@ void CompositionModule::onEvent(MARU_EventId type, MARU_Window* window, const MA
             current_session_.sel_len = event.text_edit_update.selection.length_byte;
         }
     } else if (type == MARU_EVENT_TEXT_EDIT_COMMIT) {
-        if (event.text_edit_commit.committed_length > 0) {
-            commit_history_.push_back(event.text_edit_commit.committed_utf8);
+        if (event.text_edit_commit.committed_length > 0 &&
+            event.text_edit_commit.committed_utf8) {
+            commit_history_.push_back(std::string(
+                event.text_edit_commit.committed_utf8,
+                event.text_edit_commit.committed_length));
             if (commit_history_.size() > 20) commit_history_.erase(commit_history_.begin());
         }
         

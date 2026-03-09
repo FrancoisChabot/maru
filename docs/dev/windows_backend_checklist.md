@@ -56,5 +56,5 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [ ] **TODO:** Haptic Feedback Support
 
 ## 8. Data Exchange / Clipboard / DnD (STUBBED)
-- [ ] **TODO:** Clipboard Access (`OpenClipboard`, `GetClipboardData`, etc.)
+- [x] **DONE:** Clipboard Access (`OpenClipboard`, `GetClipboardData`, etc.)
 - [ ] **TODO:** Drag and Drop Implementation (`IDropTarget`, `IDropSource`)

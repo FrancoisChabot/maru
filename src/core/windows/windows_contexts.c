@@ -159,6 +159,15 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
 
   _maru_windows_cleanup_controllers(ctx);
 
+  _maru_windows_drain_deferred_events(ctx);
+
+  if (ctx->clipboard_mime_query_storage) {
+    maru_context_free(&ctx->base, ctx->clipboard_mime_query_storage);
+  }
+  if (ctx->clipboard_mime_query_ptr) {
+    maru_context_free(&ctx->base, (void *)ctx->clipboard_mime_query_ptr);
+  }
+
   // Reset idle inhibition
   ctx->base.inhibit_idle = false;
   _maru_windows_apply_idle_inhibit(ctx);

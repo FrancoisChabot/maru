@@ -2,6 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "windows_internal.h"
+#include "maru_mem_internal.h"
 #include <stdbool.h>
 
 static const MARU_Key _maru_key_table[256] = {
@@ -200,10 +201,21 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
   const uint64_t pump_start_ns = _maru_windows_get_time_ns();
 
+  if (ctx->clipboard_mime_query_storage) {
+    maru_context_free(&ctx->base, ctx->clipboard_mime_query_storage);
+    ctx->clipboard_mime_query_storage = NULL;
+  }
+  if (ctx->clipboard_mime_query_ptr) {
+    maru_context_free(&ctx->base, (void *)ctx->clipboard_mime_query_ptr);
+    ctx->clipboard_mime_query_ptr = NULL;
+    ctx->clipboard_mime_query_count = 0;
+  }
+
   MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
 
   _maru_drain_queued_events(&ctx->base);
+  _maru_windows_drain_deferred_events(ctx);
 
   void _maru_windows_update_controllers(MARU_Context_Windows *ctx);
   _maru_windows_update_controllers(ctx);
@@ -259,6 +271,7 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
   }
 
   _maru_drain_queued_events(&ctx->base);
+  _maru_windows_drain_deferred_events(ctx);
   ctx->base.pump_ctx = NULL;
 
   const uint64_t pump_end_ns = _maru_windows_get_time_ns();
