@@ -54,6 +54,14 @@ static void _maru_windows_init_mouse_button_channels(MARU_Context_Windows *ctx) 
   ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_FORWARD] = 4;
 }
 
+static void _maru_windows_apply_idle_inhibit(MARU_Context_Windows *ctx) {
+  if (ctx->base.inhibit_idle) {
+    SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+  } else {
+    SetThreadExecutionState(ES_CONTINUOUS);
+  }
+}
+
 MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info,
                                         MARU_Context **out_context) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)maru_context_alloc_bootstrap(
@@ -106,6 +114,10 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.event_mask = create_info->attributes.event_mask;
   ctx->base.inhibit_idle = create_info->attributes.inhibit_idle;
 
+  _maru_windows_apply_idle_inhibit(ctx);
+
+  maru_updateMonitors_Windows((MARU_Context *)ctx);
+
   *out_context = (MARU_Context *)ctx;
   return MARU_SUCCESS;
 }
@@ -127,6 +139,10 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
 
   _maru_windows_cleanup_controllers(ctx);
 
+  // Reset idle inhibition
+  ctx->base.inhibit_idle = false;
+  _maru_windows_apply_idle_inhibit(ctx);
+
   _maru_cleanup_context_base(&ctx->base);
   maru_context_free(&ctx->base, context);
   return MARU_SUCCESS;
@@ -136,6 +152,11 @@ MARU_Status maru_updateContext_Windows(MARU_Context *context, uint64_t field_mas
                                           const MARU_ContextAttributes *attributes) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
   _maru_update_context_base(&ctx->base, field_mask, attributes);
+
+  if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
+    _maru_windows_apply_idle_inhibit(ctx);
+  }
+
   return MARU_SUCCESS;
 }
 

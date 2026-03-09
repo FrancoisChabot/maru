@@ -109,7 +109,7 @@ typedef struct MARU_Image_Windows {
 typedef struct MARU_Monitor_Windows {
   MARU_Monitor_Base base;
   HMONITOR hmonitor;
-  char device_name[32]; // From MONITORINFOEX
+  WCHAR device_name[32]; // From MONITORINFOEX
 
   MARU_VideoMode *modes;
   uint32_t mode_count;

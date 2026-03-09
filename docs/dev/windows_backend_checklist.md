@@ -8,7 +8,7 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Context Waking (`maru_wakeContext_Windows`)
 - [x] Context Attribute Updates (`maru_updateContext_Windows`)
 - [x] Native Handle Access (`_maru_getContextNativeHandle_Windows`)
-- [ ] **TODO:** Implement System Idle Inhibition (`MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE` via `SetThreadExecutionState`)
+- [x] **DONE:** Implement System Idle Inhibition (`MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE` via `SetThreadExecutionState`)
 - [x] Unicode Support (`UNICODE` / `_UNICODE` defined)
 - [ ] **TODO:** High-DPI Awareness (Per-monitor V2)
 
@@ -18,7 +18,7 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Title Management (`MARU_WINDOW_ATTR_TITLE`)
 - [x] Visibility Control (`MARU_WINDOW_ATTR_VISIBLE` with white-flash mitigation)
 - [x] Sizing and Positioning (`MARU_WINDOW_ATTR_LOGICAL_SIZE`, `MARU_WINDOW_ATTR_POSITION`)
-- [ ] **TODO:** Min/Max/Fullscreen States (`MARU_WINDOW_ATTR_MINIMIZED`, `MARU_WINDOW_ATTR_MAXIMIZED`, `MARU_WINDOW_ATTR_FULLSCREEN`)
+- [x] Min/Max/Fullscreen States (`MARU_WINDOW_ATTR_MINIMIZED`, `MARU_WINDOW_ATTR_MAXIMIZED`, `MARU_WINDOW_ATTR_FULLSCREEN`)
 - [x] Focus Requests (`maru_requestWindowFocus_Windows`)
 - [ ] **TODO:** Frame Request (`maru_requestWindowFrame_Windows` - currently stub)
 - [x] Attention Requests (`maru_requestWindowAttention_Windows` via `FlashWindow`)
@@ -40,11 +40,11 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Extension Reporting (`VK_KHR_surface`, `VK_KHR_win32_surface`)
 - [x] Surface Creation (`maru_createVkSurface_Windows` via `vkCreateWin32SurfaceKHR`)
 
-## 5. Monitors (STUBBED)
-- [ ] **TODO:** Monitor Enumeration (`EnumDisplayMonitors`)
-- [ ] **TODO:** Video Mode Enumeration (`EnumDisplaySettings`)
-- [ ] **TODO:** Setting Video Modes (`ChangeDisplaySettingsEx`)
-- [ ] **TODO:** Monitor Change Notifications (`WM_DISPLAYCHANGE`)
+## 5. Monitors
+- [x] **DONE:** Monitor Enumeration (`EnumDisplayMonitors`)
+- [x] **DONE:** Video Mode Enumeration (`EnumDisplaySettings`)
+- [x] **DONE:** Setting Video Modes (`ChangeDisplaySettingsEx`)
+- [x] **DONE:** Monitor Change Notifications (`WM_DISPLAYCHANGE`)
 
 ## 6. Cursors & Images
 - [x] Standard Cursor Shapes (`LoadCursor`)

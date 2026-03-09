@@ -106,6 +106,13 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       _maru_windows_resync_controllers(ctx);
       break;
     }
+    case WM_DISPLAYCHANGE: {
+      maru_updateMonitors_Windows((MARU_Context *)ctx);
+      
+      MARU_Event evt = {0};
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_MONITOR_CONNECTION_CHANGED, NULL, &evt);
+      break;
+    }
     case WM_DEVICECHANGE: {
       _maru_windows_resync_controllers(ctx);
       break;
