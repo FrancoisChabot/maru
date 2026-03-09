@@ -5,6 +5,18 @@
 #include "maru_mem_internal.h"
 #include <string.h>
 
+static void _maru_windows_dispatch_presentation_event(MARU_Window_Windows *win, uint32_t changed_fields) {
+    MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
+    MARU_Event evt = {0};
+    evt.presentation.changed_fields = changed_fields;
+    evt.presentation.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+    evt.presentation.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+    evt.presentation.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+    evt.presentation.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    evt.presentation.icon_effective = (win->base.pub.icon != NULL);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)win, &evt);
+}
+
 static void _maru_windows_set_window_icon(MARU_Window_Windows *win, const MARU_Image *icon) {
   if (win->icon_big) {
     DestroyIcon(win->icon_big);
@@ -336,6 +348,31 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       if (win->cursor_mode == MARU_CURSOR_LOCKED && GetActiveWindow() == win->hwnd) {
         _maru_update_cursor_mode_windows(win);
       }
+
+      uint32_t changed_fields = 0;
+      if (wParam == SIZE_MAXIMIZED) {
+          if (!(win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED)) {
+              win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+              win->base.pub.flags &= ~MARU_WINDOW_STATE_MINIMIZED;
+              changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED | MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+          }
+      } else if (wParam == SIZE_MINIMIZED) {
+          if (!(win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED)) {
+              win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+              win->base.pub.flags &= ~MARU_WINDOW_STATE_MAXIMIZED;
+              changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED | MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+          }
+      } else if (wParam == SIZE_RESTORED) {
+          if ((win->base.pub.flags & (MARU_WINDOW_STATE_MAXIMIZED | MARU_WINDOW_STATE_MINIMIZED))) {
+              win->base.pub.flags &= ~(MARU_WINDOW_STATE_MAXIMIZED | MARU_WINDOW_STATE_MINIMIZED);
+              changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED | MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+          }
+      }
+
+      if (changed_fields) {
+          _maru_windows_dispatch_presentation_event(win, changed_fields);
+      }
+
       MARU_Event evt = {0};
       maru_getWindowGeometry_Windows((MARU_Window *)win, &evt.resized.geometry);
       _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &evt);
@@ -353,12 +390,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         }
         _maru_update_cursor_mode_windows(win);
 
-        MARU_Event evt = {0};
-        evt.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
-        evt.presentation.focused = focused;
-        evt.presentation.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-        // TODO: fill in other fields
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)win, &evt);
+        _maru_windows_dispatch_presentation_event(win, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
         return 0;
     }
 
@@ -420,6 +452,13 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   win->base.pub.current_cursor = (MARU_Cursor *)create_info->attributes.cursor;
   win->base.pub.title = NULL; // Updated when title is changed or requested
 
+  if (create_info->decorated) {
+      win->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
+  }
+  if (create_info->attributes.resizable) {
+      win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+  }
+
   wchar_t title_w[256];
   if (create_info->attributes.title && create_info->attributes.title[0] != '\0') {
     MultiByteToWideChar(CP_UTF8, 0, create_info->attributes.title, -1, title_w, 256);
@@ -428,6 +467,12 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   }
 
   DWORD style = WS_OVERLAPPEDWINDOW;
+  if (!create_info->decorated) {
+      style = WS_POPUP;
+  } else if (!create_info->attributes.resizable) {
+      style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+  }
+
   DWORD ex_style = WS_EX_APPWINDOW;
 
   int x = CW_USEDEFAULT;
@@ -475,6 +520,15 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
       _maru_windows_set_window_icon(win, create_info->attributes.icon);
       win->base.pub.icon = create_info->attributes.icon;
   }
+
+  // Initial attribute application
+  uint64_t initial_mask = MARU_WINDOW_ATTR_CURSOR_MODE | 
+                          MARU_WINDOW_ATTR_CURSOR | 
+                          MARU_WINDOW_ATTR_RESIZABLE | 
+                          MARU_WINDOW_ATTR_MAXIMIZED | 
+                          MARU_WINDOW_ATTR_MINIMIZED | 
+                          MARU_WINDOW_ATTR_FULLSCREEN;
+  maru_updateWindow_Windows((MARU_Window *)win, initial_mask, &create_info->attributes);
 
   _maru_register_window(&ctx->base, (MARU_Window *)win);
 
@@ -625,7 +679,81 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       }
   }
 
-  // TODO: Implement other attributes (resize, fullscreen, etc)
+  if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
+      DWORD style = GetWindowLongW(win->hwnd, GWL_STYLE);
+      if (attributes->resizable) {
+          style |= (WS_THICKFRAME | WS_MAXIMIZEBOX);
+      } else {
+          style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+      }
+      SetWindowLongW(win->hwnd, GWL_STYLE, style);
+      SetWindowPos(win->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+      win->base.attrs_effective.resizable = attributes->resizable;
+      if (attributes->resizable) {
+          win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+      } else {
+          win->base.pub.flags &= ~MARU_WINDOW_STATE_RESIZABLE;
+      }
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
+      if (attributes->fullscreen && !win->is_fullscreen) {
+          // Enter fullscreen
+          win->saved_style = GetWindowLongW(win->hwnd, GWL_STYLE);
+          win->saved_ex_style = GetWindowLongW(win->hwnd, GWL_EXSTYLE);
+          GetWindowRect(win->hwnd, &win->saved_rect);
+
+          MONITORINFO mi = { sizeof(mi) };
+          if (GetMonitorInfoW(MonitorFromWindow(win->hwnd, MONITOR_DEFAULTTONEAREST), &mi)) {
+              SetWindowLongW(win->hwnd, GWL_STYLE, win->saved_style & ~WS_OVERLAPPEDWINDOW);
+              SetWindowPos(win->hwnd, HWND_TOP,
+                           mi.rcMonitor.left, mi.rcMonitor.top,
+                           mi.rcMonitor.right - mi.rcMonitor.left,
+                           mi.rcMonitor.bottom - mi.rcMonitor.top,
+                           SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+              win->is_fullscreen = true;
+          }
+      } else if (!attributes->fullscreen && win->is_fullscreen) {
+          // Exit fullscreen
+          SetWindowLongW(win->hwnd, GWL_STYLE, win->saved_style);
+          SetWindowLongW(win->hwnd, GWL_EXSTYLE, win->saved_ex_style);
+          SetWindowPos(win->hwnd, NULL,
+                       win->saved_rect.left, win->saved_rect.top,
+                       win->saved_rect.right - win->saved_rect.left,
+                       win->saved_rect.bottom - win->saved_rect.top,
+                       SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+          win->is_fullscreen = false;
+      }
+      win->base.attrs_effective.fullscreen = attributes->fullscreen;
+      if (win->is_fullscreen) {
+          win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+      } else {
+          win->base.pub.flags &= ~MARU_WINDOW_STATE_FULLSCREEN;
+      }
+      _maru_windows_dispatch_presentation_event(win, MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE);
+  }
+
+  if (!win->is_fullscreen) {
+      if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
+          if (attributes->maximized) {
+              ShowWindow(win->hwnd, SW_MAXIMIZE);
+          } else {
+              ShowWindow(win->hwnd, SW_RESTORE);
+          }
+          win->base.attrs_effective.maximized = attributes->maximized;
+      }
+
+      if (field_mask & MARU_WINDOW_ATTR_MINIMIZED) {
+          if (attributes->minimized) {
+              ShowWindow(win->hwnd, SW_MINIMIZE);
+          } else {
+              ShowWindow(win->hwnd, SW_RESTORE);
+          }
+          win->base.attrs_effective.minimized = attributes->minimized;
+      }
+  }
+
+  // TODO: Implement other attributes (resize, etc)
 
   return MARU_SUCCESS;
 }
