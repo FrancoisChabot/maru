@@ -8,6 +8,7 @@
 
 #include "maru/maru.h"
 #include "maru/cpp/fwd.hpp"
+#include "maru/cpp/expected.hpp"
 
 namespace maru {
 
@@ -41,7 +42,7 @@ public:
     bool isLost() const;
 
     std::vector<MARU_VideoMode> getModes() const;
-    void setMode(MARU_VideoMode mode);
+    MARU_Status setMode(MARU_VideoMode mode);
 
     explicit Monitor(MARU_Monitor* handle, bool retain = true);
 

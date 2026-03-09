@@ -6,6 +6,7 @@
 
 #include "maru/maru.h"
 #include "maru/cpp/fwd.hpp"
+#include "maru/cpp/expected.hpp"
 #include "maru/cpp/context.hpp"
 #include <chrono>
 
@@ -16,7 +17,8 @@ namespace maru {
  */
 class Queue {
 public:
-    Queue(Context& ctx, uint32_t capacity_power_of_2);
+    [[nodiscard]] static expected<Queue> create(Context& ctx, uint32_t capacity_power_of_2);
+
     ~Queue();
 
     Queue(const Queue&) = delete;
@@ -28,14 +30,14 @@ public:
     MARU_Queue* get() const { return m_handle; }
     operator MARU_Queue*() const { return m_handle; }
 
-    void pump(uint32_t timeout_ms = 0);
+    MARU_Status pump(uint32_t timeout_ms = 0);
     
     template <typename Rep, typename Period>
-    void pump(std::chrono::duration<Rep, Period> timeout) {
-        pump((uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
+    MARU_Status pump(std::chrono::duration<Rep, Period> timeout) {
+        return pump((uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
     }
 
-    void commit();
+    MARU_Status commit();
 
     void scan(MARU_EventMask mask, MARU_EventCallback callback, void* userdata = nullptr);
 
@@ -52,6 +54,7 @@ public:
 #endif
 
 private:
+    explicit Queue(MARU_Queue* handle) : m_handle(handle) {}
     MARU_Queue* m_handle = nullptr;
 };
 

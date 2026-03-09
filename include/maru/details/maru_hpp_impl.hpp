@@ -6,14 +6,6 @@
 
 namespace maru {
 
-/* --- Exception Implementations --- */
-
-inline void check(MARU_Status status, const char* message) {
-    if (status == MARU_SUCCESS) return;
-    if (status == MARU_ERROR_CONTEXT_LOST) throw ContextLostException(message);
-    throw Exception(status, message);
-}
-
 /* --- Image Implementations --- */
 
 inline Image::~Image() {
@@ -113,8 +105,8 @@ inline std::vector<MARU_VideoMode> Monitor::getModes() const {
     return std::vector<MARU_VideoMode>(modes_ptr, modes_ptr + count);
 }
 
-inline void Monitor::setMode(MARU_VideoMode mode) {
-    check(maru_setMonitorMode(m_handle, mode), "Failed to set monitor mode");
+inline MARU_Status Monitor::setMode(MARU_VideoMode mode) {
+    return maru_setMonitorMode(m_handle, mode);
 }
 
 /* --- Controller Implementations --- */
@@ -157,9 +149,10 @@ inline void* Controller::getUserData() const { return maru_getControllerUserdata
 inline void Controller::setUserData(void* userdata) { maru_setControllerUserdata(m_handle, userdata); }
 inline bool Controller::isLost() const { return maru_isControllerLost(m_handle); }
 
-inline MARU_ControllerInfo Controller::getInfo() const {
+inline expected<MARU_ControllerInfo> Controller::getInfo() const {
     MARU_ControllerInfo info;
-    check(maru_getControllerInfo(m_handle, &info), "Failed to get controller info");
+    MARU_Status status = maru_getControllerInfo(m_handle, &info);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
     return info;
 }
 
@@ -173,8 +166,8 @@ inline bool Controller::isButtonPressed(uint32_t button_id) const { return maru_
 inline uint32_t Controller::getHapticCount() const { return maru_getControllerHapticCount(m_handle); }
 inline const MARU_HapticChannelInfo* Controller::getHapticChannelInfo() const { return maru_getControllerHapticChannelInfo(m_handle); }
 
-inline void Controller::setHapticLevels(uint32_t first_haptic, uint32_t count, const MARU_Scalar* intensities) {
-    check(maru_setControllerHapticLevels(m_handle, first_haptic, count, intensities), "Failed to set haptic levels");
+inline MARU_Status Controller::setHapticLevels(uint32_t first_haptic, uint32_t count, const MARU_Scalar* intensities) {
+    return maru_setControllerHapticLevels(m_handle, first_haptic, count, intensities);
 }
 
 /* --- Window Implementations --- */
@@ -212,83 +205,84 @@ inline void Window::getGeometry(MARU_WindowGeometry& out_geometry) const {
     maru_getWindowGeometry(m_handle, &out_geometry);
 }
 
-inline void Window::update(uint64_t field_mask, const MARU_WindowAttributes& attributes) {
-    check(maru_updateWindow(m_handle, field_mask, &attributes), "Failed to update window attributes");
+inline MARU_Status Window::update(uint64_t field_mask, const MARU_WindowAttributes& attributes) {
+    return maru_updateWindow(m_handle, field_mask, &attributes);
 }
 
-inline void Window::requestFocus() { check(maru_requestWindowFocus(m_handle), "Failed to request window focus"); }
-inline void Window::requestFrame() { check(maru_requestWindowFrame(m_handle), "Failed to request window frame"); }
-inline void Window::requestAttention() { check(maru_requestWindowAttention(m_handle), "Failed to request window attention"); }
+inline MARU_Status Window::requestFocus() { return maru_requestWindowFocus(m_handle); }
+inline MARU_Status Window::requestFrame() { return maru_requestWindowFrame(m_handle); }
+inline MARU_Status Window::requestAttention() { return maru_requestWindowAttention(m_handle); }
 
-inline VkSurfaceKHR Window::createVkSurface(VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader) {
+inline expected<VkSurfaceKHR> Window::createVkSurface(VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader) {
     VkSurfaceKHR surface = nullptr;
-    check(maru_createVkSurface(m_handle, instance, vk_loader, &surface), "Failed to create Vulkan surface");
+    MARU_Status status = maru_createVkSurface(m_handle, instance, vk_loader, &surface);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
     return surface;
 }
 
-inline void Window::setTitle(const char* title) {
+inline MARU_Status Window::setTitle(const char* title) {
     MARU_WindowAttributes attrs = {};
     attrs.title = title;
-    update(MARU_WINDOW_ATTR_TITLE, attrs);
+    return update(MARU_WINDOW_ATTR_TITLE, attrs);
 }
 
-inline void Window::setLogicalSize(MARU_Vec2Dip size) {
+inline MARU_Status Window::setLogicalSize(MARU_Vec2Dip size) {
     MARU_WindowAttributes attrs = {};
     attrs.logical_size = size;
-    update(MARU_WINDOW_ATTR_LOGICAL_SIZE, attrs);
+    return update(MARU_WINDOW_ATTR_LOGICAL_SIZE, attrs);
 }
 
-inline void Window::setFullscreen(bool enabled) {
+inline MARU_Status Window::setFullscreen(bool enabled) {
     MARU_WindowAttributes attrs = {};
     attrs.fullscreen = enabled;
-    update(MARU_WINDOW_ATTR_FULLSCREEN, attrs);
+    return update(MARU_WINDOW_ATTR_FULLSCREEN, attrs);
 }
 
-inline void Window::setMaximized(bool enabled) {
+inline MARU_Status Window::setMaximized(bool enabled) {
     MARU_WindowAttributes attrs = {};
     attrs.maximized = enabled;
-    update(MARU_WINDOW_ATTR_MAXIMIZED, attrs);
+    return update(MARU_WINDOW_ATTR_MAXIMIZED, attrs);
 }
 
-inline void Window::setVisible(bool enabled) {
+inline MARU_Status Window::setVisible(bool enabled) {
     MARU_WindowAttributes attrs = {};
     attrs.visible = enabled;
-    update(MARU_WINDOW_ATTR_VISIBLE, attrs);
+    return update(MARU_WINDOW_ATTR_VISIBLE, attrs);
 }
 
-inline void Window::setMinimized(bool enabled) {
+inline MARU_Status Window::setMinimized(bool enabled) {
     MARU_WindowAttributes attrs = {};
     attrs.minimized = enabled;
-    update(MARU_WINDOW_ATTR_MINIMIZED, attrs);
+    return update(MARU_WINDOW_ATTR_MINIMIZED, attrs);
 }
 
-inline void Window::setCursorMode(MARU_CursorMode mode) {
+inline MARU_Status Window::setCursorMode(MARU_CursorMode mode) {
     MARU_WindowAttributes attrs = {};
     attrs.cursor_mode = mode;
-    update(MARU_WINDOW_ATTR_CURSOR_MODE, attrs);
+    return update(MARU_WINDOW_ATTR_CURSOR_MODE, attrs);
 }
 
-inline void Window::setCursor(MARU_Cursor* cursor) {
+inline MARU_Status Window::setCursor(MARU_Cursor* cursor) {
     MARU_WindowAttributes attrs = {};
     attrs.cursor = cursor;
-    update(MARU_WINDOW_ATTR_CURSOR, attrs);
+    return update(MARU_WINDOW_ATTR_CURSOR, attrs);
 }
 
-inline void Window::setEventMask(MARU_EventMask mask) {
+inline MARU_Status Window::setEventMask(MARU_EventMask mask) {
     MARU_WindowAttributes attrs = {};
     attrs.event_mask = mask;
-    update(MARU_WINDOW_ATTR_EVENT_MASK, attrs);
+    return update(MARU_WINDOW_ATTR_EVENT_MASK, attrs);
 }
 
 /* --- Context Implementations --- */
 
-inline Context::Context() {
-    MARU_ContextCreateInfo ci = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-    check(maru_createContext(&ci, &m_handle), "Failed to create context");
-}
-
-inline Context::Context(const MARU_ContextCreateInfo& create_info) {
-    check(maru_createContext(&create_info, &m_handle), "Failed to create context");
+inline expected<Context> Context::create(const MARU_ContextCreateInfo& create_info) {
+    MARU_Context* handle = nullptr;
+    MARU_Status status = maru_createContext(&create_info, &handle);
+    if (status != MARU_SUCCESS) {
+        return unexpected<MARU_Status>(status);
+    }
+    return Context(handle);
 }
 
 inline Context::~Context() {
@@ -313,8 +307,8 @@ inline void Context::setUserData(void* userdata) { maru_setContextUserdata(m_han
 inline bool Context::isLost() const { return maru_isContextLost(m_handle); }
 inline bool Context::isReady() const { return maru_isContextReady(m_handle); }
 
-inline void Context::update(uint64_t field_mask, const MARU_ContextAttributes& attributes) {
-    check(maru_updateContext(m_handle, field_mask, &attributes), "Failed to update context attributes");
+inline MARU_Status Context::update(uint64_t field_mask, const MARU_ContextAttributes& attributes) {
+    return maru_updateContext(m_handle, field_mask, &attributes);
 }
 
 inline std::vector<const char*> Context::getVkExtensions() const {
@@ -324,7 +318,7 @@ inline std::vector<const char*> Context::getVkExtensions() const {
     return std::vector<const char*>(extensions, extensions + count);
 }
 
-inline std::vector<Monitor> Context::getMonitors() {
+inline expected<std::vector<Monitor>> Context::getMonitors() {
     uint32_t count = 0;
     MARU_Monitor* const* monitors_ptr = maru_getMonitors(m_handle, &count);
     std::vector<Monitor> result;
@@ -334,12 +328,14 @@ inline std::vector<Monitor> Context::getMonitors() {
             result.emplace_back(monitors_ptr[i], true);
         }
     }
-    return result;
+    return result; // Currently maru_getMonitors doesn't return MARU_Status, it just returns array. Wrapping it in expected as per new sig.
 }
 
-inline std::vector<Controller> Context::getControllers() {
+inline expected<std::vector<Controller>> Context::getControllers() {
     MARU_ControllerList list;
-    check(maru_getControllers(m_handle, &list), "Failed to get controllers");
+    MARU_Status status = maru_getControllers(m_handle, &list);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
+    
     std::vector<Controller> result;
     if (list.controllers && list.count > 0) {
         result.reserve(list.count);
@@ -350,40 +346,46 @@ inline std::vector<Controller> Context::getControllers() {
     return result;
 }
 
-inline Window Context::createWindow(const MARU_WindowCreateInfo& create_info) {
+inline expected<Window> Context::createWindow(const MARU_WindowCreateInfo& create_info) {
     MARU_Window* window_handle = nullptr;
-    check(maru_createWindow(m_handle, &create_info, &window_handle), "Failed to create window");
+    MARU_Status status = maru_createWindow(m_handle, &create_info, &window_handle);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
     return Window(window_handle);
 }
 
-inline Cursor Context::createCursor(const MARU_CursorCreateInfo& create_info) {
+inline expected<Cursor> Context::createCursor(const MARU_CursorCreateInfo& create_info) {
     MARU_Cursor* cursor_handle = nullptr;
-    check(maru_createCursor(m_handle, &create_info, &cursor_handle), "Failed to create cursor");
+    MARU_Status status = maru_createCursor(m_handle, &create_info, &cursor_handle);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
     return Cursor(cursor_handle);
 }
 
-inline Image Context::createImage(const MARU_ImageCreateInfo& create_info) {
+inline expected<Image> Context::createImage(const MARU_ImageCreateInfo& create_info) {
     MARU_Image* image_handle = nullptr;
-    check(maru_createImage(m_handle, &create_info, &image_handle), "Failed to create image");
+    MARU_Status status = maru_createImage(m_handle, &create_info, &image_handle);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
     return Image(image_handle);
 }
 
-inline void Context::pumpEvents(uint32_t timeout_ms, MARU_EventCallback callback, void* userdata) {
-    check(maru_pumpEvents(m_handle, timeout_ms, callback, userdata), "Failed to pump events");
+inline MARU_Status Context::pumpEvents(uint32_t timeout_ms, MARU_EventCallback callback, void* userdata) {
+    return maru_pumpEvents(m_handle, timeout_ms, callback, userdata);
 }
 
-inline void Context::postEvent(MARU_EventId type, MARU_Window* window, MARU_UserDefinedEvent evt) {
-    check(maru_postEvent(m_handle, type, window, evt), "Failed to post event");
+inline MARU_Status Context::postEvent(MARU_EventId type, MARU_Window* window, MARU_UserDefinedEvent evt) {
+    return maru_postEvent(m_handle, type, window, evt);
 }
 
-inline void Context::wake() {
-    check(maru_wakeContext(m_handle), "Failed to wake context");
+inline MARU_Status Context::wake() {
+    return maru_wakeContext(m_handle);
 }
 
 /* --- Queue Implementations --- */
 
-inline Queue::Queue(Context& ctx, uint32_t capacity_power_of_2) {
-    check(maru_queue_create(ctx.get(), capacity_power_of_2, &m_handle), "Failed to create queue");
+inline expected<Queue> Queue::create(Context& ctx, uint32_t capacity_power_of_2) {
+    MARU_Queue* handle = nullptr;
+    MARU_Status status = maru_queue_create(ctx.get(), capacity_power_of_2, &handle);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
+    return Queue(handle);
 }
 
 inline Queue::~Queue() {
@@ -403,12 +405,12 @@ inline Queue& Queue::operator=(Queue&& other) noexcept {
     return *this;
 }
 
-inline void Queue::pump(uint32_t timeout_ms) {
-    check(maru_queue_pump(m_handle, timeout_ms), "Failed to pump queue");
+inline MARU_Status Queue::pump(uint32_t timeout_ms) {
+    return maru_queue_pump(m_handle, timeout_ms);
 }
 
-inline void Queue::commit() {
-    check(maru_queue_commit(m_handle), "Failed to commit queue");
+inline MARU_Status Queue::commit() {
+    return maru_queue_commit(m_handle);
 }
 
 inline void Queue::scan(MARU_EventMask mask, MARU_EventCallback callback, void* userdata) {

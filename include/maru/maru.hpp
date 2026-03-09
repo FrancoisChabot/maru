@@ -7,7 +7,7 @@
 #include "maru/maru.h"
 
 #include "maru/cpp/fwd.hpp"
-#include "maru/cpp/error.hpp"
+#include "maru/cpp/expected.hpp"
 #include "maru/cpp/events.hpp"
 #include "maru/cpp/image.hpp"
 #include "maru/cpp/cursor.hpp"

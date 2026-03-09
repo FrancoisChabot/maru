@@ -6,6 +6,7 @@
 
 #include "maru/maru.h"
 #include "maru/cpp/fwd.hpp"
+#include "maru/cpp/expected.hpp"
 
 namespace maru {
 
@@ -30,7 +31,7 @@ public:
     void setUserData(void* userdata);
     bool isLost() const;
 
-    MARU_ControllerInfo getInfo() const;
+    expected<MARU_ControllerInfo> getInfo() const;
     uint32_t getAnalogCount() const;
     const MARU_AnalogChannelInfo* getAnalogChannelInfo() const;
     const MARU_AnalogInputState* getAnalogStates() const;
@@ -41,7 +42,7 @@ public:
     uint32_t getHapticCount() const;
     const MARU_HapticChannelInfo* getHapticChannelInfo() const;
 
-    void setHapticLevels(uint32_t first_haptic, uint32_t count, const MARU_Scalar* intensities);
+    MARU_Status setHapticLevels(uint32_t first_haptic, uint32_t count, const MARU_Scalar* intensities);
 
     explicit Controller(MARU_Controller* handle, bool retain = true);
 

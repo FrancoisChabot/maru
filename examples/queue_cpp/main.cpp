@@ -50,7 +50,12 @@ int main() {
   bool keep_running = true;
 
   // Create a maru context
-  maru::Context context;
+  auto context_result = maru::Context::create();
+  if (!context_result) {
+    std::cerr << "Failed to create context\n";
+    return -1;
+  }
+  maru::Context& context = *context_result;
 
   // Initialize the vulkan renderer (we'll need a vkInstance at least)
   Renderer renderer(context.getVkExtensions());
@@ -59,10 +64,21 @@ int main() {
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru Queue C++ Example";
   window_info.attributes.logical_size = {800, 600};
-  maru::Window window = context.createWindow(window_info);
+  
+  auto window_result = context.createWindow(window_info);
+  if (!window_result) {
+    std::cerr << "Failed to create window\n";
+    return -1;
+  }
+  maru::Window& window = *window_result;
 
   // Create an event queue
-  maru::Queue queue(context, 1024);
+  auto queue_result = maru::Queue::create(context, 1024);
+  if (!queue_result) {
+    std::cerr << "Failed to create queue\n";
+    return -1;
+  }
+  maru::Queue& queue = *queue_result;
 
   while (keep_running) {
     // Avoid busy-looping before the window is ready.
@@ -93,10 +109,10 @@ int main() {
         std::cout << "Controller Button: (" << e->button_id << ", " << e->state << ")\n";
       },
       [&](maru::WindowReadyEvent e) {
-        renderer.setup_surface(
-          window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr), 
-          e->geometry
-        );
+        auto surface_result = window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr);
+        if (surface_result) {
+          renderer.setup_surface(*surface_result, e->geometry);
+        }
       }
     });
 

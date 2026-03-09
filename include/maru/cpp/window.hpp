@@ -6,6 +6,7 @@
 
 #include "maru/maru.h"
 #include "maru/cpp/fwd.hpp"
+#include "maru/cpp/expected.hpp"
 
 namespace maru {
 
@@ -14,7 +15,6 @@ namespace maru {
  */
 class Window {
 public:
-    Window() = default;
     ~Window();
 
     Window(const Window&) = delete;
@@ -41,27 +41,26 @@ public:
     MARU_EventMask getEventMask() const;
     void getGeometry(MARU_WindowGeometry& out_geometry) const;
 
-    void update(uint64_t field_mask, const MARU_WindowAttributes& attributes);
-    void requestFocus();
-    void requestFrame();
-    void requestAttention();
+    MARU_Status update(uint64_t field_mask, const MARU_WindowAttributes& attributes);
+    MARU_Status requestFocus();
+    MARU_Status requestFrame();
+    MARU_Status requestAttention();
 
-    VkSurfaceKHR createVkSurface(VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader);
+    expected<VkSurfaceKHR> createVkSurface(VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader);
 
     // Convenience setters
-    void setTitle(const char* title);
-    void setLogicalSize(MARU_Vec2Dip size);
-    void setFullscreen(bool enabled);
-    void setMaximized(bool enabled);
-    void setVisible(bool enabled);
-    void setMinimized(bool enabled);
-    void setCursorMode(MARU_CursorMode mode);
-    void setCursor(MARU_Cursor* cursor);
-    void setEventMask(MARU_EventMask mask);
-
-    explicit Window(MARU_Window* handle) : m_handle(handle) {}
+    MARU_Status setTitle(const char* title);
+    MARU_Status setLogicalSize(MARU_Vec2Dip size);
+    MARU_Status setFullscreen(bool enabled);
+    MARU_Status setMaximized(bool enabled);
+    MARU_Status setVisible(bool enabled);
+    MARU_Status setMinimized(bool enabled);
+    MARU_Status setCursorMode(MARU_CursorMode mode);
+    MARU_Status setCursor(MARU_Cursor* cursor);
+    MARU_Status setEventMask(MARU_EventMask mask);
 
 private:
+    explicit Window(MARU_Window* handle) : m_handle(handle) {}
     MARU_Window* m_handle = nullptr;
 
     friend class Context;

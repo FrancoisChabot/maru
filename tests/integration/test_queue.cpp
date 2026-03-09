@@ -3,8 +3,13 @@
 #include <vector>
 
 TEST_CASE("Queue C++ API - Basic") {
-    maru::Context ctx;
-    maru::Queue queue(ctx, 16);
+    auto ctx_res = maru::Context::create();
+    REQUIRE(ctx_res.has_value());
+    maru::Context& ctx = *ctx_res;
+
+    auto queue_res = maru::Queue::create(ctx, 16);
+    REQUIRE(queue_res.has_value());
+    maru::Queue& queue = *queue_res;
 
     maru_postEvent(ctx.get(), MARU_EVENT_USER_0, nullptr, (MARU_UserDefinedEvent){0});
     queue.pump();
@@ -20,13 +25,18 @@ TEST_CASE("Queue C++ API - Basic") {
 
 #if __cplusplus >= 202002L
 TEST_CASE("Queue C++ API - C++20 Visitor Scan") {
-    maru::Context ctx;
-    maru::Queue queue(ctx, 16);
+    auto ctx_res = maru::Context::create();
+    REQUIRE(ctx_res.has_value());
+    maru::Context& ctx = *ctx_res;
+
+    auto queue_res = maru::Queue::create(ctx, 16);
+    REQUIRE(queue_res.has_value());
+    maru::Queue& queue = *queue_res;
 
     // Post some events
     maru_postEvent(ctx.get(), MARU_EVENT_WINDOW_READY, nullptr, (MARU_Event){.window_ready = {0}});
     maru_postEvent(ctx.get(), MARU_EVENT_CLOSE_REQUESTED, nullptr, (MARU_Event){.close_requested = {0}});
-    
+
     queue.pump();
     queue.commit();
 

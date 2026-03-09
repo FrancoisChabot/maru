@@ -92,7 +92,9 @@ int main() {
   bool keep_running = true;
 
   // Create a maru context
-  maru::Context context;
+  auto context_result = maru::Context::create();
+  if (!context_result) return -1;
+  maru::Context& context = *context_result;
 
   // Create your vulkan renderer. (all we need is the VkInstance at this point)
   // examples/basic_cpp shows what Renderer can look like.
@@ -102,7 +104,10 @@ int main() {
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru Basic C++ Example";
   window_info.attributes.logical_size = {800, 600};
-  maru::Window window = context.createWindow(window_info);
+  
+  auto window_result = context.createWindow(window_info);
+  if (!window_result) return -1;
+  maru::Window& window = *window_result;
 
   // Setup our event handler.
   // N.B. maru::makeDispatcher requires C++20.
@@ -125,10 +130,10 @@ int main() {
       [&](maru::WindowReadyEvent e) {
         // Create the OS-specific surface for Vulkan.
         // vkGetInstanceProcAddr is usually provided by your vulkan loader.
-        renderer.setup_surface(
-          window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr), 
-          e->geometry
-        );
+        auto surface_result = window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr);
+        if (surface_result) {
+          renderer.setup_surface(*surface_result, e->geometry);
+        }
       });
 
   while (keep_running) {

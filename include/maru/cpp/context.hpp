@@ -9,6 +9,7 @@
 
 #include "maru/maru.h"
 #include "maru/cpp/fwd.hpp"
+#include "maru/cpp/expected.hpp"
 #include "maru/cpp/window.hpp"
 #include "maru/cpp/monitor.hpp"
 #include "maru/cpp/controller.hpp"
@@ -22,8 +23,8 @@ namespace maru {
  */
 class Context {
 public:
-    Context();
-    explicit Context(const MARU_ContextCreateInfo& create_info);
+    [[nodiscard]] static expected<Context> create(const MARU_ContextCreateInfo& create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT);
+
     ~Context();
 
     Context(const Context&) = delete;
@@ -40,37 +41,38 @@ public:
     bool isLost() const;
     bool isReady() const;
 
-    void update(uint64_t field_mask, const MARU_ContextAttributes& attributes);
+    MARU_Status update(uint64_t field_mask, const MARU_ContextAttributes& attributes);
     
     std::vector<const char*> getVkExtensions() const;
-    std::vector<Monitor> getMonitors();
-    std::vector<Controller> getControllers();
+    expected<std::vector<Monitor>> getMonitors();
+    expected<std::vector<Controller>> getControllers();
 
-    Window createWindow(const MARU_WindowCreateInfo& create_info);
-    Cursor createCursor(const MARU_CursorCreateInfo& create_info);
-    Image createImage(const MARU_ImageCreateInfo& create_info);
+    [[nodiscard]] expected<Window> createWindow(const MARU_WindowCreateInfo& create_info);
+    [[nodiscard]] expected<Cursor> createCursor(const MARU_CursorCreateInfo& create_info);
+    [[nodiscard]] expected<Image> createImage(const MARU_ImageCreateInfo& create_info);
 
-    void pumpEvents(uint32_t timeout_ms, MARU_EventCallback callback, void* userdata = nullptr);
+    MARU_Status pumpEvents(uint32_t timeout_ms, MARU_EventCallback callback, void* userdata = nullptr);
 
 #if __cplusplus >= 202002L
     template <typename Visitor>
-    void pumpEvents(EventDispatcher<Visitor>& dispatcher, uint32_t timeout_ms = 0);
+    MARU_Status pumpEvents(EventDispatcher<Visitor>& dispatcher, uint32_t timeout_ms = 0);
 
     template <typename Visitor, typename Rep, typename Period>
-    void pumpEvents(EventDispatcher<Visitor>& dispatcher, std::chrono::duration<Rep, Period> timeout) {
-        pumpEvents(dispatcher, (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
+    MARU_Status pumpEvents(EventDispatcher<Visitor>& dispatcher, std::chrono::duration<Rep, Period> timeout) {
+        return pumpEvents(dispatcher, (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
     }
 #endif
 
     template <typename Rep, typename Period>
-    void pumpEvents(std::chrono::duration<Rep, Period> timeout, MARU_EventCallback callback, void* userdata = nullptr) {
-        pumpEvents((uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count(), callback, userdata);
+    MARU_Status pumpEvents(std::chrono::duration<Rep, Period> timeout, MARU_EventCallback callback, void* userdata = nullptr) {
+        return pumpEvents((uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count(), callback, userdata);
     }
 
-    void postEvent(MARU_EventId type, MARU_Window* window, MARU_UserDefinedEvent evt);
-    void wake();
+    MARU_Status postEvent(MARU_EventId type, MARU_Window* window, MARU_UserDefinedEvent evt);
+    MARU_Status wake();
 
 private:
+    explicit Context(MARU_Context* handle) : m_handle(handle) {}
     MARU_Context* m_handle = nullptr;
 };
 
