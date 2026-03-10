@@ -25,16 +25,15 @@
  */
 #ifdef MARU_STATIC_ASSERT
 
-#define MARU_EXPECTED_EVENT_SIZE ((sizeof(MARU_Scalar) == 4) ? 64 : 64)
+#define MARU_EXPECTED_EVENT_SIZE 64
 
 MARU_STATIC_ASSERT(
     sizeof(MARU_Event) <= MARU_EXPECTED_EVENT_SIZE,
-    "MARU_Event ABI Violation: Size exceeds guaranteed threshold. "
-    "Check structure packing or MARU_USE_FLOAT configuration.");
+    "MARU_Event ABI Violation: Size exceeds guaranteed threshold. ");
 
 /* Verify user event payload size */
-MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 32,
-                   "MARU_UserDefinedEvent ABI Violation: Expected 32 bytes.");
+MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 64,
+                   "MARU_UserDefinedEvent ABI Violation: Expected 64 bytes.");
 
 #endif
 

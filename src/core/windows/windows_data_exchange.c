@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "windows_internal.h"
 #include "maru_mem_internal.h"
+#include "windows_internal.h"
 #include <shlwapi.h>
 
 // Helper to map MIME types to Windows clipboard formats
@@ -18,21 +18,21 @@ static UINT _maru_mime_to_clipboard_format(const char *mime_type) {
 // Helper to map Windows clipboard formats to MIME types
 const char *_maru_clipboard_format_to_mime(UINT format) {
   switch (format) {
-    case CF_UNICODETEXT:
-      return "text/plain";
-    case CF_TEXT:
-      return "text/plain;charset=ascii";
-    default: {
-      static char name[256];
-      if (GetClipboardFormatNameA(format, name, sizeof(name))) {
-        // This is a bit dangerous due to the static buffer, but 
-        // maru_getAvailableMIMETypes documentation says it's only valid
-        // until the next call to maru_pumpEvents. 
-        // Better would be to have a per-context or per-window cache.
-        return name;
-      }
-      return NULL;
+  case CF_UNICODETEXT:
+    return "text/plain";
+  case CF_TEXT:
+    return "text/plain;charset=ascii";
+  default: {
+    char name[256];
+    if (GetClipboardFormatNameA(format, name, sizeof(name))) {
+      // This is a bit dangerous due to the static buffer, but
+      // maru_getAvailableMIMETypes documentation says it's only valid
+      // until the next call to maru_pumpEvents.
+      // Better would be to have a per-context or per-window cache.
+      return name;
     }
+    return NULL;
+  }
   }
 }
 
@@ -40,10 +40,8 @@ static void _maru_windows_emit_data_received(MARU_Context_Base *ctx_base,
                                              MARU_Window *window,
                                              MARU_DataExchangeTarget target,
                                              const char *mime_type,
-                                             void *user_tag,
-                                             MARU_Status status,
-                                             const void *data,
-                                             size_t size) {
+                                             void *user_tag, MARU_Status status,
+                                             const void *data, size_t size) {
   MARU_Event evt = {0};
   evt.data_received.user_tag = user_tag;
   evt.data_received.target = target;
@@ -68,8 +66,9 @@ static char *_maru_windows_copy_string(MARU_Context_Base *ctx_base,
   return copy;
 }
 
-static void _maru_windows_enqueue_deferred_event(
-    MARU_Context_Windows *ctx, MARU_WindowsDeferredEvent *evt) {
+static void
+_maru_windows_enqueue_deferred_event(MARU_Context_Windows *ctx,
+                                     MARU_WindowsDeferredEvent *evt) {
   if (!ctx || !evt) {
     return;
   }
@@ -100,11 +99,10 @@ void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx) {
         _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED,
                              handle->window, &req_evt);
 
-        _maru_windows_emit_data_received(&ctx->base, handle->window,
-                                         handle->target, handle->mime_type,
-                                         handle->user_tag, handle->status,
-                                         handle->provided_data,
-                                         handle->provided_size);
+        _maru_windows_emit_data_received(
+            &ctx->base, handle->window, handle->target, handle->mime_type,
+            handle->user_tag, handle->status, handle->provided_data,
+            handle->provided_size);
         if (handle->provided_data) {
           maru_context_free(&ctx->base, handle->provided_data);
         }
@@ -115,9 +113,9 @@ void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx) {
       }
     } else if (evt->kind == MARU_WINDOWS_DEFERRED_EVENT_DATA_RECEIVED) {
       _maru_windows_emit_data_received(
-          &ctx->base, evt->window, evt->received.target, evt->received.mime_type,
-          evt->received.user_tag, evt->received.status, evt->received.data,
-          evt->received.size);
+          &ctx->base, evt->window, evt->received.target,
+          evt->received.mime_type, evt->received.user_tag, evt->received.status,
+          evt->received.data, evt->received.size);
       if (evt->received.data) {
         maru_context_free(&ctx->base, (void *)evt->received.data);
       }
@@ -201,12 +199,14 @@ MARU_Status maru_provideData_Windows(const MARU_DataRequestEvent *request_event,
 
   if (format == CF_UNICODETEXT) {
     // Convert UTF-8 to UTF-16
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, (const char *)data, (int)size, NULL, 0);
+    int wlen =
+        MultiByteToWideChar(CP_UTF8, 0, (const char *)data, (int)size, NULL, 0);
     if (wlen > 0) {
       hGlobal = GlobalAlloc(GMEM_MOVEABLE, (wlen + 1) * sizeof(WCHAR));
       if (hGlobal) {
         WCHAR *wstr = (WCHAR *)GlobalLock(hGlobal);
-        MultiByteToWideChar(CP_UTF8, 0, (const char *)data, (int)size, wstr, wlen);
+        MultiByteToWideChar(CP_UTF8, 0, (const char *)data, (int)size, wstr,
+                            wlen);
         wstr[wlen] = L'\0';
         GlobalUnlock(hGlobal);
       }
@@ -244,7 +244,8 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
   if (GetClipboardOwner() == win->hwnd) {
     MARU_Context_Windows *ctx = (MARU_Context_Windows *)ctx_base;
     MARU_WindowsDataRequestHandle *handle =
-        (MARU_WindowsDataRequestHandle *)maru_context_alloc(ctx_base, sizeof(*handle));
+        (MARU_WindowsDataRequestHandle *)maru_context_alloc(ctx_base,
+                                                            sizeof(*handle));
     MARU_WindowsDeferredEvent *deferred = NULL;
     if (!handle) {
       return MARU_FAILURE;
@@ -268,11 +269,12 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
       req_evt.data_requested.target = target;
       req_evt.data_requested.mime_type = handle->mime_type;
       req_evt.data_requested.internal_handle = handle;
-      _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_REQUESTED, window, &req_evt);
+      _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_REQUESTED, window,
+                           &req_evt);
 
-      _maru_windows_emit_data_received(ctx_base, window, target, handle->mime_type,
-                                       user_tag, handle->status,
-                                       handle->provided_data, handle->provided_size);
+      _maru_windows_emit_data_received(
+          ctx_base, window, target, handle->mime_type, user_tag, handle->status,
+          handle->provided_data, handle->provided_size);
       if (handle->provided_data) {
         maru_context_free(ctx_base, handle->provided_data);
       }
@@ -281,7 +283,8 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
       return MARU_SUCCESS;
     }
 
-    deferred = (MARU_WindowsDeferredEvent *)maru_context_alloc(ctx_base, sizeof(*deferred));
+    deferred = (MARU_WindowsDeferredEvent *)maru_context_alloc(
+        ctx_base, sizeof(*deferred));
     if (!deferred) {
       maru_context_free(ctx_base, handle->mime_type);
       maru_context_free(ctx_base, handle);
@@ -310,8 +313,8 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
       size_t size = GlobalSize(hData);
       if (format == CF_UNICODETEXT) {
         // Convert UTF-16 to UTF-8
-        int len = WideCharToMultiByte(CP_UTF8, 0, (const WCHAR *)ptr, -1, NULL, 0,
-                                      NULL, NULL);
+        int len = WideCharToMultiByte(CP_UTF8, 0, (const WCHAR *)ptr, -1, NULL,
+                                      0, NULL, NULL);
         if (len > 0) {
           char *utf8 = maru_context_alloc(ctx_base, len);
           if (utf8) {
@@ -338,15 +341,16 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
   CloseClipboard();
 
   if (ctx_base->pump_ctx) {
-    _maru_windows_emit_data_received(ctx_base, window, target, mime_type, user_tag,
-                                     status, event_data, event_size);
+    _maru_windows_emit_data_received(ctx_base, window, target, mime_type,
+                                     user_tag, status, event_data, event_size);
     if (event_data) {
       maru_context_free(ctx_base, (void *)event_data);
     }
   } else {
     MARU_Context_Windows *ctx = (MARU_Context_Windows *)ctx_base;
     MARU_WindowsDeferredEvent *deferred =
-        (MARU_WindowsDeferredEvent *)maru_context_alloc(ctx_base, sizeof(*deferred));
+        (MARU_WindowsDeferredEvent *)maru_context_alloc(ctx_base,
+                                                        sizeof(*deferred));
     char *mime_copy = _maru_windows_copy_string(ctx_base, mime_type);
     if (!deferred || !mime_copy) {
       if (deferred) {

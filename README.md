@@ -1,30 +1,23 @@
-# MARU
+# Maru
 
 [![License](https://img.shields.io/badge/license-zlib-blue.svg)](LICENSE.txt)
 
-A vulkan-centric Platform Abstraction Layer that gets out of your way.
+A brutally strict, high-performance desktop windowing and input layer.
 
-What's neat about Maru?
+Maru may be harder to use than GLFW or SDL for a quick prototype, but its goal is to ensure that what you build on day one will take you all the way to the finish line.
 
-- It has no dynamic global state whatsoever unless OS-mandated, and is completely inert until invoked.
-- It goes out of its way to provide fast and steady timing (< 0.1ms generally), even during unusual events like controller hot-plugs.
-- API use is aggressively validated by default, and all guardrails can be disabled for maximum performance.
-- It exposes clear and detailed metrics about its internal timing and resource usage.
+What makes Maru neat?
+- It goes out of its way to provide fast and steady timing, even during unusual events like controller hot-plugs.
+- Ruthless API validation that can be completely stripped out.
+- Zero Hidden Allocations: Bring your own memory, on a per-context basis. Or don't. Maru will fallback to malloc if necessary.
+- No dynamic global state whatsoever unless OS-mandated.
+- Zero System Dependencies to Build: Maru vendors all necessary OS headers (X11, Wayland, etc.). You literally only need a C compiler and CMake to build the library on a completely bare OS installation. No apt-get install libx11-dev libwayland-dev required.
 
-Why is it called Maru?
+Why is it called Maru? This library was built to support a bird-themed game, so it's named after my pet parrot: Marula.
 
-- This library was built to support a bird-centric game, so it's named after my pet parrot: Marula.
+## Library status
 
-## Status
-
-Ready for use by early adopters on Linux.
-
-### Backend statuses
-
-- Wayland: Feature complete, with expected protocol/compositor-dependent limits on some advanced operations.
-- X11: Effectively complete for most uses. IME handling is still subpar, but that's it.
-- Windows: Broadly functional for gaming applcations, but still incomplete (WIP)
-- macOS: Broadly functional for gaming applcations, but still incomplete (WIP)
+Ready for early adopters. There hasn't been enough testing on enough OS/Machine configurations to blindly trust this yet.
 
 ## Quickstart 
 
@@ -77,84 +70,89 @@ You can also build Maru by itself and use it as a regular library:
 cd path/to/maru
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=path/to/where/to/install/maru ..
-make && make install
+cmake --install build
 ```
 
 ## Usage example
 
-```cpp
+N.B. 
+
+- This example is in C, but Maru also comes with a thin C++ wrapper for convenience and RAII.
+- We are also intentionally skipping error handling to focus on the Maru semantics. Check out the [basic_c 
+example](examples/basic_c/main.c) for a more complete example.
+
+```c
 // N.B. Maru does not include vulkan headers for you, it does not care if you 
 // include them before or after it, and it doesn't require any #define beforehand.
 #include <vulkan/vulkan.h>
-#include "maru/maru.hpp"
+#include "maru/maru.h"
 
-// ...
+typedef struct AppState {
+  bool keep_running;
+  VkSurfaceKHR surface;
+  MyVkRenderer renderer;
+} AppState;
 
-using namespace std::chrono_literals;
+
+static void handle_event(MARU_EventId type, MARU_Window *window,
+                         const MARU_Event *event, void *userdata) {
+  AppState* app = (AppState*)userdata;
+  
+  switch(type) {
+    case MARU_EVENT_CLOSE_REQUESTED:
+      app->keep_running = false;
+      break;
+    case MARU_EVENT_WINDOW_READY:
+      maru_createVkSurface(window, app->renderer.instance, vkGetInstanceProcAddr, &app->surface);
+      renderer_init_surface(&app->renderer, app->surface);
+      break;
+    default: 
+      break;
+  }
+}
+
 
 int main() {
-  bool keep_running = true;
+  AppState app = {0};
 
   // Create a maru context
-  auto context_result = maru::Context::create();
-  if (!context_result) return -1;
-  maru::Context& context = *context_result;
+  MARU_Context *context = NULL;
+  MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+  maru_createContext(&create_info, &context);
 
-  // Create your vulkan renderer. (all we need is the VkInstance at this point)
-  // examples/basic_cpp shows what Renderer can look like.
-  Renderer renderer(context.getVkExtensions());
-  
-  // Create a window.
+  // Initialize Vulkan.
+  uint32_t vk_extension_count = 0;
+  const char **vk_extensions = maru_getVkExtensions(context, &vk_extension_count);
+  init_vk_renderer(&app.renderer, vk_extensions, vk_extension_count);
+
+  // create a window
+  MARU_Window *window = NULL;
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
-  window_info.attributes.title = "Maru Basic C++ Example";
-  window_info.attributes.logical_size = {800, 600};
-  
-  auto window_result = context.createWindow(window_info);
-  if (!window_result) return -1;
-  maru::Window& window = *window_result;
+  window_info.attributes.title = "Maru Basic C Example";
+  window_info.attributes.logical_size = (MARU_Vec2Dip){800, 600};
+  maru_createWindow(context, &window_info, &window)
 
-  // Setup our event handler.
-  // N.B. maru::makeDispatcher requires C++20.
-  auto event_handler = maru::makeDispatcher(
-      [&](maru::WindowCloseEvent) { 
-        keep_running = false; 
-      },
-      [&](maru::WindowResizedEvent e) {
-        renderer.on_resized(e->geometry);
-      },
-      [&](maru::MouseMotionEvent e) {
-        std::cout << "mouse movement: (" << e->position.x << ", " << e->position.y << ")\n";
-      },
-      [&](maru::KeyboardEvent e) {
-        std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";
-      },
-      [&](maru::ControllerButtonStateChangedEvent e) {
-        std::cout << "Controller Button: (" << e->button_id << ", " << e->state << ")\n";
-      },
-      [&](maru::WindowReadyEvent e) {
-        // Create the OS-specific surface for Vulkan.
-        // vkGetInstanceProcAddr is usually provided by your vulkan loader.
-        auto surface_result = window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr);
-        if (surface_result) {
-          renderer.setup_surface(*surface_result, e->geometry);
-        }
-      });
-
-  while (keep_running) {
-    // Avoid busy-looping before the window is ready.
-    auto pump_timeout = renderer.ready() ? 0ms : 16ms;
-    context.pumpEvents(event_handler, pump_timeout);
-
-    if (renderer.ready()) {
-      renderer.draw_frame();
-    }
+  // Wait for the window to be ready
+  while(!renderer.has_surface && keep_running) {
+    maru_pumpEvents(context, MARU_NEVER /*timeout, in ms*/, handle_event, &app);
   }
+
+  // main loop
+  while (keep_running) {
+    maru_pumpEvents(context, 0, handle_event, &app);
+    renderer_draw_frame(&renderer);
+  }
+
+  destroy_vk_renderer(app.renderer);
+
+  // Destroying the context destroys everything attached to it.
+  maru_destroyContext(context);
 
   return 0;
 }
 ```
 
-Consult the `examples/` directory for more, including the pure C equivalent of this in `examples/basic_c`
+Consult the `examples/` directory for more.
 
 ## Safety, Validation and diagnostics
 
@@ -182,12 +180,48 @@ Maru provides a few different options to control the validation behavior. These 
 
 ## FAQs
 
+### How do I use a custom allocator?
+
+Maru allows you to provide a custom allocator during context creation to guarantee zero hidden allocations. The allocator interface requires three function pointers (`alloc_cb`, `realloc_cb`, `free_cb`) and an optional userdata pointer.
+
+```c
+// Example of a custom allocator setup
+MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+create_info.allocator.alloc_cb = my_custom_alloc;
+create_info.allocator.realloc_cb = my_custom_realloc;
+create_info.allocator.free_cb = my_custom_free;
+create_info.allocator.userdata = &my_memory_arena;
+
+maru_createContext(&create_info, &context);
+```
+
+### How does error handling work?
+
+Maru distinguishes between **Control Flow** and **Diagnostics**. 
+
+`MARU_Status`, which is returned by all funcitions that can fail, is not meant to tell you *what* went wrong, but rather *what you can do about it*. 
+- `MARU_SUCCESS`: All good
+- `MARU_FAILURE`: That operation failed, but you can still proceed
+- `MARU_CONTEXT_LOST`: The context is dead in the water (e.g. because the display server went AWOL). You have to tear it down and rebuild from scratch.
+
+For deeper, human-readable errors and warnings—such as failing to load a dynamic library, dropping an invalid OS event, or backend-specific initialization failures—you should attach a `MARU_DiagnosticCallback` to your context.
+
+```c
+static void my_diagnostic_cb(const MARU_DiagnosticInfo *info, void *userdata) {
+    fprintf(stderr, "Maru Diagnostic [%d]: %s\n", info->diagnostic, info->message);
+}
+
+// Attach during context creation or via maru_updateContext
+MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+create_info.attributes.diagnostic_cb = my_diagnostic_cb;
+maru_createContext(&create_info, &context);
+```
+
 ### Is Maru Thread-safe?
 
-Here are the rule of thumbs:
-
-- Each `MARU_Context` is its own little universe. They are **fully** independent from one-another, and you can instantiate different contexts in different threads.
+- Each `MARU_Context` is its own little universe. They are **fully** independent from one-another.
 - The thread that creates a `MARU_Context` is that context's owner thread.
+- If you want true cross-platform parity, `MARU_context` should live on the main thread. As much as we'd like to support concurrent contexts in different threads, it's just not possible in every single backend.
 - `maru_postEvent()`, `maru_wakeContext()`, `maru_*retain()` and `maru_*release()` are the only functions that are truly thread-safe.
 - Any function that does not return a `MARU_Status` is a **passive accessor**, and can be safely called from arbitrary threads; provided that you synchronize with the Context's thread with a R/W lock.
 - Any other function has to be called from the context's owner thread.
@@ -204,11 +238,39 @@ Yes!
 
 You use either or both. The default is a one-size-fits-all mode that will try Wayland first and fall back to X11 if it cannot use it, but you can force it one way or another at runtime. Every system dependency is manually loaded and checked, so your game/app will work as long as either X11 or Wayland is available.
 
-If you want to exclusively support X11 or Wayland, that's also possible, and it eliminates every shred of overhead from the dynamic selection machinery (what little there is).
+If neither of them is available, context creation will fail at runtime.
+
+If you want to exclusively support X11 or Wayland, that's also possible, and it eliminates every shred of overhead from the dynamic selection machinery (what little there is). Just link against the `maru::x11` or `maru::wayland` target instead of `maru::maru`.
 
 ### How does Maru handle high-frequency mouse input?
 
-By default, every single mouse movement is dispatched to your callback to ensure zero-latency access to raw OS input. However, Maru provides a `MARU_Queue` utility that supports opt-in **event coalescence**. This allows you to combine high-frequency events (like mouse motion or scrolling) into a single event with accumulated deltas, while strictly preserving temporal ordering with other events.
+By default, every single mouse movement is dispatched to your callback to ensure zero-latency access to raw OS input. However, Maru provides a `MARU_Queue` utility that supports opt-in **event coalescence**. It can combine high-frequency events (like mouse motion or scrolling) into a single event with accumulated deltas while strictly preserving temporal ordering with other events. The queue also provides sane and efficient multi-threaded event processing.
+
+```c
+MARU_Queue* queue = NULL;
+RWLock queue_lock; // Your preferred synchronization primitive
+
+// --- Initialization (Main Thread) ---
+maru_queue_create(context, 256 /* queue capacity */, &queue);
+maru_queue_set_coalesce_mask(queue, MARU_EVENT_MOUSE_MOVED | MARU_EVENT_WINDOW_RESIZED);
+
+// ... later in the frame ...
+
+// --- Event Gathering (Main Thread) ---
+// 1. Pump OS events into the queue's transient front-buffer (Lock-free!)
+maru_queue_pump(queue, 0);
+
+// 2. Commit the transient buffer into the stable snapshot
+lock_for_writing(&queue_lock);
+maru_queue_commit(queue);
+unlock_for_writing(&queue_lock);
+
+// --- Event Consumption (Any Worker Thread) ---
+// 3. Scan the stable snapshot safely while the main thread can go back to pumping
+lock_for_reading(&queue_lock);
+maru_queue_scan(queue, MARU_EVENT_MASK_ALL, my_event_handler, my_userdata);
+unlock_for_reading(&queue_lock);
+```
 
 See the [Event Queues documentation](docs/user/queue.md) for more details.
 
@@ -225,9 +287,19 @@ Not at the moment. Maybe one day, if there's enough demand for it. However, supp
 
 ### Is there really no synchronous window creation mechanism?
 
-"You'll thank me later." is a crass way to put it, but that's effectively our stance on this.
-
 Unfortunately, asynchronous window creation is absolutely necessary to get a smooth experience in certain backends. On top of that, synchronous window creation is too sticky/tempting of an API, so it's easy to paint oneself in a corner and run into issues later down the road.
+
+For a single-window app/game, as shown in the usage example, you can fairly easily work around that with a dedicated pump loop right after the window creation.
+
+### Why do Controllers and Monitors use a retain() / release() reference counting system?
+
+Because hardware is physically volatile, and your threads are not.
+
+In a multi-threaded engine, your simulation thread might be actively reading from a MARU_Controller* at the exact millisecond the user violently unplugs it from their USB port. If Maru automatically freed the controller's memory upon receiving the OS disconnect event, your simulation thread would instantly segfault on a dangling pointer.
+
+Instead, Maru uses reference counting. When you get a controller or monitor, you own a reference to it. If the device is physically disconnected, Maru flags the object as "lost" (which you can check via maru_isControllerLost() or maru_isMonitorLost()). It will stop receiving new data and API calls will safely no-op or fail, but the pointer remains valid in memory until you explicitly call maru_releaseController().
+
+This guarantees you will never suffer a use-after-free crash due to unpredictable hardware events. If you cache a pointer, retain it. When you drop it, release it.
 
 ### What's up with the attribute substructs in the createInfos?
 
@@ -235,7 +307,7 @@ Some properties of context/windows must be set at creation, and others can be ch
 
 ### Can I store event pointers for later?
 
-**No.** The `MARU_Event*` pointer passed to your callback is only valid for the duration of that callback.
+**No.** The `MARU_Event*` pointer, as well as any data it points to, passed to your callback is only valid for the duration of that callback.
 
 ### What's the difference between logical vectors and pixel vectors
 
@@ -245,7 +317,21 @@ All coordinate variables and types have either `logical` or `pixel` in their nam
 
 ### Why do I need to pass the event handling callback to maru_pumpEvents() every single time?.
 
-Maru guarantees that events are only ever dispatched during maru_pumpEvents(). Having the callback only exist for the duration of the pump enshrines this on both sides of the fence.
+One of the things that's always bugged me about GLFW is that I am never fully confident *when* my callback is getting invoked. The only way I can be truly 100% confident my callback isn't called when I don't want it to is simply to not let the library have it at all.
+
+Maru performs direct, synchronous event dispatch. It pulls events from the OS and fires them inline, strictly during the pump. That is the only time your callback comes into play. Forcing you to provide the callback to maru_pumpEvents() every single frame enshrines this reality on both sides of the fence.
+
+### How am I supposed to use MARU_TextEditCommitEvent correctly?
+
+Yeah, the only text-input mechanism Maru provides is the full complicated IME payload, which can be a bit overwhelming. What you should **NOT** do is use `MARU_KeyboardEvent` as a quick-and-dirty stop-gap.
+
+- It does not respect keyboard layouts.
+- It does not produce key repeats.
+- It does not handle internationalization.
+
+Instead, use the `maru_applyTextEditCommitUtf8()` convenience function that will apply a text commit to a string buffer in-place.
+
+If you also take the time to update `MARU_WINDOW_ATTR_TEXT_INPUT_RECT` so the OS knows where to draw the IME candidate popup over your game, you'll have proper Japanese/Korean/etc... support pretty much out-of-the-box.
 
 ### Why does Maru create a worker thread in some backends? I thought this was supposed to be lightweight!
 
@@ -259,7 +345,7 @@ That's why having an extra thread (in the backends that warrant it) is the light
 
 ### Do I really need CMake to build the library itself? Can I just compile the files myself and use the headers?
 
-Not reliably. Even if it was reasonably feasible today, it might break with any release. The CMake path is the only one we plan on ensuring stability on for now.
+Not reliably. Even if it was reasonably feasible today, it might break with any release. This is mostly because the X11 and Wayland backends each need to be compiled twice (direct use vs runtime-dispatched). The CMake path is the only one we plan on ensuring stability on for now. If you want to integrate Maru in some other build system, headers + precompiled library is the way to go.
 
 ## Acknowledgements
 

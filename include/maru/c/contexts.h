@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 #include "maru/c/core.h"
-#include "maru/c/metrics.h"
 #include "maru/c/events.h"
+#include "maru/c/metrics.h"
 #include "maru/c/tuning.h"
 
 /**
@@ -21,26 +21,26 @@
 extern "C" {
 #endif
 
-/** @brief Opaque handle representing the library state and display server connection. */
+/** @brief Opaque handle representing the library state and display server
+ * connection. */
 typedef struct MARU_Context MARU_Context;
-
 
 /** @brief Runtime state flags for a context. */
 #define MARU_CONTEXT_STATE_LOST ((MARU_Flags)1 << 0)
 #define MARU_CONTEXT_STATE_READY ((MARU_Flags)1 << 1)
 
-
 /** @brief Forward declaration of diagnostic info. */
 struct MARU_DiagnosticInfo;
 
 /** @brief Callback function for library diagnostics. */
-typedef void (*MARU_DiagnosticCallback)(const struct MARU_DiagnosticInfo *info, void *userdata);
+typedef void (*MARU_DiagnosticCallback)(const struct MARU_DiagnosticInfo *info,
+                                        void *userdata);
 
-/* ----- Passive Accessors (External Synchronization Required) ----- 
+/* ----- Passive Accessors (External Synchronization Required) -----
  *
- * These functions are essentially zero-cost member accesses. They are safe to 
- * call from any thread, provided the access is synchronized with mutating 
- * operations (like maru_pumpEvents or maru_updateContext) on the same context 
+ * These functions are essentially zero-cost member accesses. They are safe to
+ * call from any thread, provided the access is synchronized with mutating
+ * operations (like maru_pumpEvents or maru_updateContext) on the same context
  * to ensure memory visibility.
  */
 
@@ -48,7 +48,8 @@ typedef void (*MARU_DiagnosticCallback)(const struct MARU_DiagnosticInfo *info, 
 static inline void *maru_getContextUserdata(const MARU_Context *context);
 
 /** @brief Sets the user-defined data pointer associated with a context. */
-static inline void maru_setContextUserdata(MARU_Context *context, void *userdata);
+static inline void maru_setContextUserdata(MARU_Context *context,
+                                           void *userdata);
 
 /** @brief Checks if the context has been lost due to an unrecoverable error. */
 static inline bool maru_isContextLost(const MARU_Context *context);
@@ -57,29 +58,40 @@ static inline bool maru_isContextLost(const MARU_Context *context);
 static inline bool maru_isContextReady(const MARU_Context *context);
 
 /** @brief Retrieves the runtime performance metrics for a context. */
-static inline const MARU_ContextMetrics *maru_getContextMetrics(const MARU_Context *context);
+static inline const MARU_ContextMetrics *
+maru_getContextMetrics(const MARU_Context *context);
 
-/** @brief Retrieves the number of mouse button channels supported by this context. */
-static inline uint32_t maru_getContextMouseButtonCount(const MARU_Context *context);
+/** @brief Retrieves the number of mouse button channels supported by this
+ * context. */
+static inline uint32_t
+maru_getContextMouseButtonCount(const MARU_Context *context);
 
 /** @brief Retrieves the current context-level mouse button states table. */
-static inline const MARU_ButtonState8 *maru_getContextMouseButtonStates(const MARU_Context *context);
+static inline const MARU_ButtonState8 *
+maru_getContextMouseButtonStates(const MARU_Context *context);
 
 /** @brief Retrieves metadata for context-level mouse button channels. */
-static inline const MARU_MouseButtonChannelInfo *maru_getContextMouseButtonChannelInfo(const MARU_Context *context);
+static inline const MARU_MouseButtonChannelInfo *
+maru_getContextMouseButtonChannelInfo(const MARU_Context *context);
 
-/** @brief Retrieves the channel index for a default mouse role on this context. */
-static inline int32_t maru_getContextMouseDefaultButtonChannel(const MARU_Context *context, MARU_MouseDefaultButton which);
+/** @brief Retrieves the channel index for a default mouse role on this context.
+ */
+static inline int32_t
+maru_getContextMouseDefaultButtonChannel(const MARU_Context *context,
+                                         MARU_MouseDefaultButton which);
 
-/** @brief Checks whether a context-level mouse button channel is currently pressed. */
-static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context, uint32_t button_id);
+/** @brief Checks whether a context-level mouse button channel is currently
+ * pressed. */
+static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context,
+                                                    uint32_t button_id);
 
 /* ----- Context Management ----- */
 
 /** @brief Special value for timeouts to indicate it should never trigger. */
-#define MARU_NEVER (uint32_t)-1
+#define MARU_NEVER UINT32_MAX
 
-/** @brief Bitmask for selecting which attributes to update in maru_updateContext(). */
+/** @brief Bitmask for selecting which attributes to update in
+ * maru_updateContext(). */
 typedef uint32_t MARU_ContextAttributesField;
 #define MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE (1u << 0)
 #define MARU_CONTEXT_ATTR_DIAGNOSTICS (1u << 1)
@@ -90,62 +102,67 @@ typedef uint32_t MARU_ContextAttributesField;
 
 /** @brief Updatable parameters for an active context. */
 typedef struct MARU_ContextAttributes {
-  MARU_DiagnosticCallback diagnostic_cb;  ///< Optional callback for library diagnostics.
-  void *diagnostic_userdata;              ///< Passed to the diagnostic callback.
-  
-  MARU_EventMask event_mask;              ///< Bitmask of events to allow.
-  
-  bool inhibit_idle;                      ///< If true, prevents the OS from entering sleep.
+  MARU_DiagnosticCallback
+      diagnostic_cb;         ///< Optional callback for library diagnostics.
+  void *diagnostic_userdata; ///< Passed to the diagnostic callback.
 
-  uint32_t idle_timeout_ms;               ///< Threshold for MARU_EVENT_IDLE_STATE_CHANGED. 0 disables idle notifications.
+  MARU_EventMask event_mask; ///< Bitmask of events to allow.
+
+  bool inhibit_idle; ///< If true, prevents the OS from entering sleep.
+
+  uint32_t idle_timeout_ms; ///< Threshold for MARU_EVENT_IDLE_STATE_CHANGED. 0
+                            ///< disables idle notifications.
 
 } MARU_ContextAttributes;
 
 /** @brief Parameters for maru_createContext(). */
 typedef struct MARU_ContextCreateInfo {
-  MARU_Allocator allocator;           ///< Custom memory allocator.
-  MARU_BackendType backend;           ///< Requested backend, if set to MARU_BACKEND_UNKNOWN, a sensible default will be picked if possible.
-  MARU_ContextAttributes attributes;  ///< Initial runtime attributes.
-  MARU_ContextTuning tuning;          ///< Low-level tuning.
+  MARU_Allocator allocator; ///< Custom memory allocator.
+  MARU_BackendType
+      backend; ///< Requested backend, if set to MARU_BACKEND_UNKNOWN, a
+               ///< sensible default will be picked if possible.
+  MARU_ContextAttributes attributes; ///< Initial runtime attributes.
+  MARU_ContextTuning tuning;         ///< Low-level tuning.
 } MARU_ContextCreateInfo;
 
 /** @brief Default initialization macro for MARU_ContextCreateInfo. */
-#define MARU_CONTEXT_CREATE_INFO_DEFAULT        \
-  {                                             \
-      .allocator = {                            \
-          .alloc_cb = NULL,                     \
-          .realloc_cb = NULL,                   \
-          .free_cb = NULL,                      \
-          .userdata = NULL,                     \
-      },                                        \
-      .backend = MARU_BACKEND_UNKNOWN,          \
-      .attributes =                             \
-          {                                     \
-              .diagnostic_cb = NULL,           \
-              .diagnostic_userdata = NULL,      \
-              .event_mask = MARU_ALL_EVENTS, \
-              .inhibit_idle = false,            \
-              .idle_timeout_ms = 0,             \
-          },                                    \
-      .tuning = MARU_CONTEXT_TUNING_DEFAULT,    \
+#define MARU_CONTEXT_CREATE_INFO_DEFAULT                                       \
+  {                                                                            \
+      .allocator =                                                             \
+          {                                                                    \
+              .alloc_cb = NULL,                                                \
+              .realloc_cb = NULL,                                              \
+              .free_cb = NULL,                                                 \
+              .userdata = NULL,                                                \
+          },                                                                   \
+      .backend = MARU_BACKEND_UNKNOWN,                                         \
+      .attributes =                                                            \
+          {                                                                    \
+              .diagnostic_cb = NULL,                                           \
+              .diagnostic_userdata = NULL,                                     \
+              .event_mask = MARU_ALL_EVENTS,                                   \
+              .inhibit_idle = false,                                           \
+              .idle_timeout_ms = 0,                                            \
+          },                                                                   \
+      .tuning = MARU_CONTEXT_TUNING_DEFAULT,                                   \
   }
 
-/** @brief Creates a new context. 
+/** @brief Creates a new context.
  *
- *  The creating thread becomes the 'Owner Thread'. Only this thread may 
- *  perform mutating operations (pump, update, etc.). Other threads may 
- *  use passive accessors if they provide external synchronization to 
+ *  The creating thread becomes the 'Owner Thread'. Only this thread may
+ *  perform mutating operations (pump, update, etc.). Other threads may
+ *  use passive accessors if they provide external synchronization to
  *  ensure memory visibility. See maru.h for the full threading model.
  */
 MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
-                                          MARU_Context **out_context);
+                               MARU_Context **out_context);
 
 /** @brief Destroys a context and all associated windows. */
 MARU_Status maru_destroyContext(MARU_Context *context);
 
 /** @brief Updates one or more context attributes. */
 MARU_Status maru_updateContext(MARU_Context *context, uint64_t field_mask,
-                                          const MARU_ContextAttributes *attributes);
+                               const MARU_ContextAttributes *attributes);
 
 /** @brief Resets the metrics counters attached to a context handle. */
 MARU_Status maru_resetContextMetrics(MARU_Context *context);
@@ -156,4 +173,4 @@ MARU_Status maru_resetContextMetrics(MARU_Context *context);
 }
 #endif
 
-#endif  // MARU_CONTEXT_H_INCLUDED
+#endif // MARU_CONTEXT_H_INCLUDED
