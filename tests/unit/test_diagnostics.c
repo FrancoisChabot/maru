@@ -27,12 +27,13 @@ UTEST(DiagnosticTest, UpdateContextAndReport) {
     attrs.diagnostic_cb = diagnostic_cb;
     attrs.diagnostic_userdata = &state;
 
-    EXPECT_EQ(maru_updateContext(context, MARU_CONTEXT_ATTR_DIAGNOSTICS, &attrs), MARU_SUCCESS);
+    EXPECT_EQ(maru_updateContext(context, MARU_CONTEXT_ATTR_DIAGNOSTICS, &attrs),
+              (MARU_Status)MARU_SUCCESS);
 
     _maru_reportDiagnostic(context, MARU_DIAGNOSTIC_INFO, "Test message");
 
     EXPECT_EQ(state.call_count, 1);
-    EXPECT_EQ(state.last_diag, MARU_DIAGNOSTIC_INFO);
+    EXPECT_EQ(state.last_diag, (MARU_Diagnostic)MARU_DIAGNOSTIC_INFO);
 
     maru_destroyContext(context);
     EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));

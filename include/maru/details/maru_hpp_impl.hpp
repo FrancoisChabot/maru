@@ -202,7 +202,7 @@ inline const char* Window::getTitle() const { return maru_getWindowTitle(m_handl
 inline MARU_EventMask Window::getEventMask() const { return maru_getWindowEventMask(m_handle); }
 
 inline void Window::getGeometry(MARU_WindowGeometry& out_geometry) const {
-    maru_getWindowGeometry(m_handle, &out_geometry);
+    out_geometry = maru_getWindowGeometry(m_handle);
 }
 
 inline MARU_Status Window::update(uint64_t field_mask, const MARU_WindowAttributes& attributes) {

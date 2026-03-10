@@ -18,7 +18,7 @@
  *    display server or modify internal library state.
  *
  * 3. PASSIVE ACCESSORS: Functions that return values directly (e.g., maru_isWindowReady,
- *    maru_getMonitorScale, maru_getWindowUserdata). These are zero-cost reads from
+ *    maru_getMonitorScale, maru_getWindowUserdata, maru_getWindowGeometry). These are zero-cost reads from
  *    cached state. They are safe to call from any thread provided the user ensures
  *    EXTERNAL SYNCHRONIZATION (e.g., a mutex or memory barrier) with the Owner Thread
  *    to guarantee memory visibility.

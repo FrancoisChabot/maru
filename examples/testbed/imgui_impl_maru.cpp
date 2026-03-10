@@ -265,8 +265,7 @@ void ImGui_ImplMaru_NewFrame() {
     ImGui_ImplMaru_Data* bd = ImGui_ImplMaru_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
 
-    MARU_WindowGeometry geometry;
-    maru_getWindowGeometry(bd->Window, &geometry);
+    MARU_WindowGeometry geometry = maru_getWindowGeometry(bd->Window);
     io.DisplaySize = ImVec2((float)geometry.logical_size.x, (float)geometry.logical_size.y);
     if (geometry.logical_size.x > 0 && geometry.logical_size.y > 0)
         io.DisplayFramebufferScale = ImVec2((float)geometry.pixel_size.x / (float)geometry.logical_size.x, (float)geometry.pixel_size.y / (float)geometry.logical_size.y);

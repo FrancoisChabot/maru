@@ -222,7 +222,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
                                        const MARU_WindowCreateInfo *create_info,
                                        MARU_Window **out_window);
 MARU_Status maru_destroyWindow_Windows(MARU_Window *window);
-void maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
+MARU_WindowGeometry maru_getWindowGeometry_Windows(MARU_Window *window_handle);
 MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes);
 MARU_Status maru_requestWindowFocus_Windows(MARU_Window *window);

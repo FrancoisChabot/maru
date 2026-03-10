@@ -20,7 +20,7 @@ UTEST(QueueTest, CreateDestroy) {
     ASSERT_TRUE(context != NULL);
 
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(maru_queue_create(context, 16, &queue), MARU_SUCCESS);
+    EXPECT_EQ(maru_queue_create(context, 16, &queue), (MARU_Status)MARU_SUCCESS);
     ASSERT_TRUE(queue != NULL);
 
     maru_queue_destroy(queue);
@@ -52,12 +52,12 @@ UTEST(QueueTest, PumpCommitScan) {
     EXPECT_EQ(state.event_count, 0);
 
     // 4. Commit
-    EXPECT_EQ(maru_queue_commit(queue), MARU_SUCCESS);
+    EXPECT_EQ(maru_queue_commit(queue), (MARU_Status)MARU_SUCCESS);
 
     // 5. Scan should now find the event
     maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
-    EXPECT_EQ(state.last_type, MARU_EVENT_USER_0);
+    EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_0);
 
     maru_queue_destroy(queue);
     maru_destroyContext(context);
@@ -87,14 +87,14 @@ UTEST(QueueTest, MultipleCommits) {
     state.event_count = 0;
     maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
-    EXPECT_EQ(state.last_type, MARU_EVENT_USER_0);
+    EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_0);
 
     // Second commit: A is discarded, B becomes stable
     maru_queue_commit(queue);
     state.event_count = 0;
     maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
-    EXPECT_EQ(state.last_type, MARU_EVENT_USER_1);
+    EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_1);
 
     maru_queue_destroy(queue);
     maru_destroyContext(context);
@@ -116,7 +116,7 @@ UTEST(QueueTest, Masking) {
     // Scan only for USER_1
     maru_queue_scan(queue, MARU_MASK_USER_1, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
-    EXPECT_EQ(state.last_type, MARU_EVENT_USER_1);
+    EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_1);
 
     maru_queue_destroy(queue);
     maru_destroyContext(context);
@@ -149,18 +149,18 @@ UTEST(QueueTest, Coalescence) {
 
     // ev1
     MARU_Event ev1 = {0};
-    ev1.mouse_motion.position.x = 10.0f;
-    ev1.mouse_motion.position.y = 10.0f;
-    ev1.mouse_motion.delta.x = 5.0f;
-    ev1.mouse_motion.delta.y = 5.0f;
+    ev1.mouse_motion.position.x = (MARU_Scalar)10.0;
+    ev1.mouse_motion.position.y = (MARU_Scalar)10.0;
+    ev1.mouse_motion.delta.x = (MARU_Scalar)5.0;
+    ev1.mouse_motion.delta.y = (MARU_Scalar)5.0;
     _maru_post_event_internal(ctx_base, MARU_EVENT_MOUSE_MOVED, NULL, &ev1);
 
     // ev2
     MARU_Event ev2 = {0};
-    ev2.mouse_motion.position.x = 20.0f;
-    ev2.mouse_motion.position.y = 20.0f;
-    ev2.mouse_motion.delta.x = 10.0f;
-    ev2.mouse_motion.delta.y = 10.0f;
+    ev2.mouse_motion.position.x = (MARU_Scalar)20.0;
+    ev2.mouse_motion.position.y = (MARU_Scalar)20.0;
+    ev2.mouse_motion.delta.x = (MARU_Scalar)10.0;
+    ev2.mouse_motion.delta.y = (MARU_Scalar)10.0;
     _maru_post_event_internal(ctx_base, MARU_EVENT_MOUSE_MOVED, NULL, &ev2);
 
     maru_queue_pump(queue, 0);
@@ -170,10 +170,10 @@ UTEST(QueueTest, Coalescence) {
     maru_queue_scan(queue, MARU_ALL_EVENTS, on_coalesce_event, &result);
 
     EXPECT_EQ(result.count, 1);
-    EXPECT_EQ(result.pos.x, 20.0f);
-    EXPECT_EQ(result.pos.y, 20.0f);
-    EXPECT_EQ(result.delta.x, 15.0f);
-    EXPECT_EQ(result.delta.y, 15.0f);
+    EXPECT_EQ(result.pos.x, (MARU_Scalar)20.0);
+    EXPECT_EQ(result.pos.y, (MARU_Scalar)20.0);
+    EXPECT_EQ(result.delta.x, (MARU_Scalar)15.0);
+    EXPECT_EQ(result.delta.y, (MARU_Scalar)15.0);
 
     maru_queue_destroy(queue);
     maru_destroyContext(context);

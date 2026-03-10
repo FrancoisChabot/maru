@@ -315,7 +315,6 @@ static const MARU_Backend _maru_mock_backend = {
     
     .createWindow = NULL,
     .destroyWindow = NULL,
-    .getWindowGeometry = NULL,
     .updateWindow = NULL,
     .requestWindowFocus = NULL,
     .requestWindowFrame = NULL,

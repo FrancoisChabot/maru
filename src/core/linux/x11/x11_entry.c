@@ -114,7 +114,6 @@ const MARU_Backend maru_backend_X11 = {
   .wakeContext = maru_wakeContext_X11,
   .createWindow = maru_createWindow_X11,
   .destroyWindow = maru_destroyWindow_X11,
-  .getWindowGeometry = maru_getWindowGeometry_X11,
   .updateWindow = maru_updateWindow_X11,
   .requestWindowFocus = maru_requestWindowFocus_X11,
   .requestWindowFrame = maru_requestWindowFrame_X11,
@@ -178,12 +177,6 @@ MARU_API MARU_Status maru_createWindow(MARU_Context *context,
 MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
   MARU_API_VALIDATE(destroyWindow, window);
   return maru_destroyWindow_X11(window);
-}
-
-MARU_API void maru_getWindowGeometry(MARU_Window *window,
-                                              MARU_WindowGeometry *out_geometry) {
-  MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
-  maru_getWindowGeometry_X11(window, out_geometry);
 }
 
 MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,

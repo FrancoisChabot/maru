@@ -23,9 +23,6 @@ void InputModule::render(MARU_Context* ctx, MARU_Window* window) {
     if (!enabled_) return;
 
     if (ImGui::Begin("Input", &enabled_)) {
-        MARU_WindowGeometry geometry;
-        maru_getWindowGeometry(window, &geometry);
-
         auto render_default_map = [](const char* label, const int32_t* defaults) {
             static const char* kDefaultNames[] = {
                 "Left", "Right", "Middle", "Back", "Forward"

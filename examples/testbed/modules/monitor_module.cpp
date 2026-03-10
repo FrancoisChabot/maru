@@ -88,7 +88,7 @@ void MonitorModule::render(MARU_Context* ctx, MARU_Window* window) {
         const MARU_VideoMode current_mode = maru_getMonitorCurrentMode(monitor);
         ImGui::Text("Current Mode: %dx%d @ %.2f Hz", current_mode.size.x,
                     current_mode.size.y,
-                    (float)current_mode.refresh_rate_mhz / 1000.0f);
+                    (double)current_mode.refresh_rate_mhz / 1000.0);
 
         uint32_t mode_count = 0;
         const MARU_VideoMode* modes = maru_getMonitorModes(monitor, &mode_count);
@@ -107,7 +107,7 @@ void MonitorModule::render(MARU_Context* ctx, MARU_Window* window) {
                     ImGui::TableNextColumn();
                     ImGui::Text("%dx%d", modes[j].size.x, modes[j].size.y);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f Hz", (float)modes[j].refresh_rate_mhz / 1000.0f);
+                    ImGui::Text("%.2f Hz", (double)modes[j].refresh_rate_mhz / 1000.0);
                     ImGui::TableNextColumn();
 
                     char btn_label[48];

@@ -22,8 +22,7 @@ WindowModule::WindowModule(MARU_Window* primary_window, VkInstance instance, VkP
         std::strncpy(primary_title_buf_, current_title, sizeof(primary_title_buf_) - 1);
         primary_title_buf_[sizeof(primary_title_buf_) - 1] = '\0';
     }
-    MARU_WindowGeometry geometry = {};
-    maru_getWindowGeometry(primary_window_, &geometry);
+    MARU_WindowGeometry geometry = maru_getWindowGeometry(primary_window_);
     primary_size_[0] = (int)geometry.logical_size.x;
     primary_size_[1] = (int)geometry.logical_size.y;
 }
@@ -125,8 +124,7 @@ void WindowModule::onContextRecreated(MARU_Context* ctx, MARU_Window* window) {
         std::strncpy(primary_title_buf_, current_title, sizeof(primary_title_buf_) - 1);
         primary_title_buf_[sizeof(primary_title_buf_) - 1] = '\0';
     }
-    MARU_WindowGeometry geometry = {};
-    maru_getWindowGeometry(primary_window_, &geometry);
+    MARU_WindowGeometry geometry = maru_getWindowGeometry(primary_window_);
     primary_size_[0] = (int)geometry.logical_size.x;
     primary_size_[1] = (int)geometry.logical_size.y;
 
@@ -173,8 +171,7 @@ void WindowModule::update(MARU_Context* ctx, MARU_Window* window) {
             continue;
         }
 
-        MARU_WindowGeometry geom = {};
-        maru_getWindowGeometry(sw->window, &geom);
+        MARU_WindowGeometry geom = maru_getWindowGeometry(sw->window);
         if (geom.pixel_size.x <= 0 || geom.pixel_size.y <= 0) {
             continue;
         }
@@ -251,8 +248,7 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow& sw) {
         VkPresentModeKHR present_modes[] = {VK_PRESENT_MODE_FIFO_KHR};
         sw.wd.PresentMode = ImGui_ImplVulkanH_SelectPresentMode(physical_device_, sw.wd.Surface, &present_modes[0], IM_ARRAYSIZE(present_modes));
 
-        MARU_WindowGeometry geom = {};
-        maru_getWindowGeometry(sw.window, &geom);
+        MARU_WindowGeometry geom = maru_getWindowGeometry(sw.window);
         if (geom.pixel_size.x <= 0 || geom.pixel_size.y <= 0) {
             return;
         }
@@ -263,8 +259,8 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow& sw) {
 
     ImGui_ImplVulkanH_Window* wd = &sw.wd;
     VkResult err;
-    VkSemaphore image_acquired_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
-    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
+    VkSemaphore image_acquired_semaphore = wd->FrameSemaphores[(int)wd->SemaphoreIndex].ImageAcquiredSemaphore;
+    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[(int)wd->SemaphoreIndex].RenderCompleteSemaphore;
 
     err = vkAcquireNextImageKHR(device_, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
     if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR) {
@@ -273,7 +269,7 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow& sw) {
     }
     check_vk_result(err);
 
-    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[(int)wd->FrameIndex];
     err = vkWaitForFences(device_, 1, &fd->Fence, VK_TRUE, UINT64_MAX);
     check_vk_result(err);
 
@@ -395,8 +391,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
     if (ImGui::CollapsingHeader("Primary Window", ImGuiTreeNodeFlags_DefaultOpen)) {
         MARU_Window* target = primary_window_ ? primary_window_ : window;
         if (target) {
-            MARU_WindowGeometry geometry = {};
-            maru_getWindowGeometry(target, &geometry);
+            MARU_WindowGeometry geometry = maru_getWindowGeometry(target);
 
             ImGui::Text("Handle: %p", (void*)target);
             ImGui::Text("Flags: %s%s%s%s%s",
@@ -512,8 +507,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             }
 
             if (sw.window && window_ready) {
-                MARU_WindowGeometry geometry = {};
-                maru_getWindowGeometry(sw.window, &geometry);
+                MARU_WindowGeometry geometry = maru_getWindowGeometry(sw.window);
                 ImGui::Text("Handle: %p", (void*)sw.window);
                 ImGui::Text("Flags: %s%s%s%s%s",
                             maru_isWindowReady(sw.window) ? "[Ready] " : "",

@@ -139,7 +139,7 @@ void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {
       it->pending_ready_event = false;
       it->pub.flags |= MARU_WINDOW_STATE_READY;
       MARU_Event evt = {0};
-      maru_getWindowGeometry((MARU_Window *)it, &evt.window_ready.geometry);
+      evt.window_ready.geometry = maru_getWindowGeometry((MARU_Window *)it);
       _maru_dispatch_event(ctx_base, MARU_EVENT_WINDOW_READY, (MARU_Window *)it, &evt);
     }
   }

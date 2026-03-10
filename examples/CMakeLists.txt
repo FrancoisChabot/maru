@@ -9,7 +9,7 @@ add_library(imgui STATIC
     ${IMGUI_DIR}/imgui_demo.cpp
     ${IMGUI_DIR}/backends/imgui_impl_vulkan.cpp
 )
-target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
+target_include_directories(imgui SYSTEM PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
 target_link_libraries(imgui PUBLIC Vulkan::Vulkan)
 
 find_package(Vulkan REQUIRED)

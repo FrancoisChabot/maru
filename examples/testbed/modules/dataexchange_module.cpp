@@ -51,7 +51,7 @@ void DataExchangeModule::onContextRecreated(MARU_Context* ctx, MARU_Window* wind
     dnd_mime_types_.clear();
     dropped_paths_.clear();
 
-    MARU_WindowAttributes attrs = {0};
+    MARU_WindowAttributes attrs = {};
     attrs.accept_drop = true;
     maru_updateWindow(window, MARU_WINDOW_ATTR_ACCEPT_DROP, &attrs);
 }
@@ -225,7 +225,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
 
         if (ImGui::Button("Refresh MIME Types")) {
             clipboard_mime_types_.clear();
-            MARU_MIMETypeList list = {0};
+            MARU_MIMETypeList list = {};
             last_status_ = maru_getAvailableMIMETypes(
                 window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, &list);
             if (last_status_ == MARU_SUCCESS && list.mime_types) {
@@ -260,7 +260,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
 
         if (ImGui::Button("Refresh Primary MIME Types")) {
             primary_mime_types_.clear();
-            MARU_MIMETypeList list = {0};
+            MARU_MIMETypeList list = {};
             last_status_ = maru_getAvailableMIMETypes(
                 window, MARU_DATA_EXCHANGE_TARGET_PRIMARY, &list);
             if (last_status_ == MARU_SUCCESS && list.mime_types) {
@@ -331,7 +331,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         ImGui::Text("(Drag this button)");
         
         static MARU_Scalar drop_zone_size = 100.0;
-        ImGui::Button("Drop Zone", ImVec2(drop_zone_size, drop_zone_size));
+        ImGui::Button("Drop Zone", ImVec2((float)drop_zone_size, (float)drop_zone_size));
     }
     ImGui::End();
 }

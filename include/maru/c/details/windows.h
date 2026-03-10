@@ -36,6 +36,7 @@ typedef struct MARU_WindowExposed {
   const MARU_Cursor *current_cursor;
   const char *title;
   const MARU_Image *icon;
+  MARU_WindowGeometry geometry;
 } MARU_WindowExposed;
 
 static inline void *maru_getWindowUserdata(const MARU_Window *window) {
@@ -104,6 +105,11 @@ static inline MARU_CursorMode maru_getWindowCursorMode(const MARU_Window *window
 
 static inline const MARU_Image *maru_getWindowIcon(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->icon;
+}
+
+static inline MARU_WindowGeometry
+maru_getWindowGeometry(const MARU_Window *window) {
+  return ((const MARU_WindowExposed *)window)->geometry;
 }
 
 #ifdef __cplusplus

@@ -121,7 +121,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
                    SWP_NOZORDER | SWP_NOACTIVATE);
 
       MARU_Event evt = {0};
-      maru_getWindowGeometry_Windows((MARU_Window *)win, &evt.resized.geometry);
+      evt.resized.geometry = maru_getWindowGeometry_Windows((MARU_Window *)win);
       _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &evt);
       return 0;
     }
@@ -411,8 +411,13 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       }
 
       MARU_Event evt = {0};
-      maru_getWindowGeometry_Windows((MARU_Window *)win, &evt.resized.geometry);
+      evt.resized.geometry = maru_getWindowGeometry_Windows((MARU_Window *)win);
       _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &evt);
+      return 0;
+    }
+
+    case WM_MOVE: {
+      (void)maru_getWindowGeometry_Windows((MARU_Window *)win);
       return 0;
     }
 
@@ -601,6 +606,8 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
       win->base.pub.icon = create_info->attributes.icon;
   }
 
+  (void)maru_getWindowGeometry_Windows((MARU_Window *)win);
+
   // Initial attribute application
   uint64_t initial_mask = MARU_WINDOW_ATTR_CURSOR_MODE | 
                           MARU_WINDOW_ATTR_CURSOR | 
@@ -638,31 +645,37 @@ MARU_Status maru_destroyWindow_Windows(MARU_Window *window) {
   return MARU_SUCCESS;
 }
 
-void maru_getWindowGeometry_Windows(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
+MARU_WindowGeometry maru_getWindowGeometry_Windows(MARU_Window *window_handle) {
   MARU_Window_Windows *win = (MARU_Window_Windows *)window_handle;
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
-  if (!win->hwnd || !out_geometry) return;
+  MARU_WindowGeometry geometry = win->base.pub.geometry;
+  if (!win->hwnd) {
+    return geometry;
+  }
 
+  geometry = (MARU_WindowGeometry){0};
   RECT rect;
   GetClientRect(win->hwnd, &rect);
   int w = rect.right - rect.left;
   int h = rect.bottom - rect.top;
 
-  out_geometry->pixel_size.x = (int32_t)w;
-  out_geometry->pixel_size.y = (int32_t)h;
+  geometry.pixel_size.x = (int32_t)w;
+  geometry.pixel_size.y = (int32_t)h;
   
   UINT dpi = ctx->GetDpiForWindow ? ctx->GetDpiForWindow(win->hwnd) : 96;
-  out_geometry->scale = (MARU_Scalar)dpi / 96.0;
+  geometry.scale = (MARU_Scalar)dpi / 96.0;
   
-  out_geometry->logical_size.x = (MARU_Scalar)w / out_geometry->scale;
-  out_geometry->logical_size.y = (MARU_Scalar)h / out_geometry->scale;
+  geometry.logical_size.x = (MARU_Scalar)w / geometry.scale;
+  geometry.logical_size.y = (MARU_Scalar)h / geometry.scale;
 
   POINT pt = {0, 0};
   ClientToScreen(win->hwnd, &pt);
-  out_geometry->origin.x = (MARU_Scalar)pt.x / out_geometry->scale;
-  out_geometry->origin.y = (MARU_Scalar)pt.y / out_geometry->scale;
+  geometry.origin.x = (MARU_Scalar)pt.x / geometry.scale;
+  geometry.origin.y = (MARU_Scalar)pt.y / geometry.scale;
   
-  out_geometry->buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
+  geometry.buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
+  win->base.pub.geometry = geometry;
+  return geometry;
 }
 
 MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
@@ -737,7 +750,7 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
           new_y = attributes->position.y;
       } else {
           MARU_WindowGeometry geo;
-          maru_getWindowGeometry_Windows(window, &geo);
+          geo = maru_getWindowGeometry_Windows(window);
           new_x = geo.origin.x;
           new_y = geo.origin.y;
       }
@@ -843,6 +856,8 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
   }
 
   // TODO: Implement other attributes (resize, etc)
+
+  (void)maru_getWindowGeometry_Windows(window);
 
   return MARU_SUCCESS;
 }

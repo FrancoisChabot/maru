@@ -91,6 +91,17 @@ static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame
     return geo;
 }
 
+static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
+                                                MARU_WindowGeometry *out_geometry) {
+    NSWindow *nsWindow = win->ns_window;
+    NSRect frame = [nsWindow contentRectForFrameRect:nsWindow.frame];
+    MARU_WindowGeometry geometry = NSRectToMARUGeometry(nsWindow, frame);
+    win->base.pub.geometry = geometry;
+    if (out_geometry) {
+        *out_geometry = geometry;
+    }
+}
+
 @implementation MARU_WindowDelegate
 
 - (BOOL)windowShouldClose:(NSWindow *)sender {
@@ -100,15 +111,30 @@ static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame
 }
 
 - (void)windowDidResize:(NSNotification *)notification {
-    NSWindow *nsWindow = notification.object;
-    NSRect frame = [nsWindow contentRectForFrameRect:nsWindow.frame];
-    
-    MARU_WindowGeometry geo = NSRectToMARUGeometry(nsWindow, frame);
+    (void)notification;
+    MARU_WindowGeometry geo = {0};
+    _maru_cocoa_refresh_window_geometry(self.window, &geo);
     [self.window->ns_layer setContentsScale:geo.scale];
 
     MARU_Event event = {0};
     event.resized.geometry = geo;
 
+    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
+}
+
+- (void)windowDidMove:(NSNotification *)notification {
+    (void)notification;
+    _maru_cocoa_refresh_window_geometry(self.window, NULL);
+}
+
+- (void)windowDidChangeBackingProperties:(NSNotification *)notification {
+    (void)notification;
+    MARU_WindowGeometry geo = {0};
+    _maru_cocoa_refresh_window_geometry(self.window, &geo);
+    [self.window->ns_layer setContentsScale:geo.scale];
+
+    MARU_Event event = {0};
+    event.resized.geometry = geo;
     _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
 }
 
@@ -231,6 +257,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     [view release];
     [nsWindow makeKeyAndOrderFront:nil];
     [nsWindow center];
+    _maru_cocoa_refresh_window_geometry(win, NULL);
 
     win->base.pending_ready_event = true;
 
@@ -265,11 +292,7 @@ MARU_Status maru_destroyWindow_Cocoa(MARU_Window *window) {
 
 MARU_Status maru_getWindowGeometry_Cocoa(MARU_Window *window, MARU_WindowGeometry *out_geometry) {
     MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
-    NSWindow *nsWindow = win->ns_window;
-    NSRect frame = [nsWindow contentRectForFrameRect:nsWindow.frame];
-
-    *out_geometry = NSRectToMARUGeometry(nsWindow, frame);
-    
+    _maru_cocoa_refresh_window_geometry(win, out_geometry);
     return MARU_SUCCESS;
 }
 
@@ -412,6 +435,7 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         }
     }
 
+    _maru_cocoa_refresh_window_geometry(win, NULL);
     win->base.attrs_dirty_mask &= ~field_mask;
     return MARU_SUCCESS;
 }

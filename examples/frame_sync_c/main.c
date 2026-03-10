@@ -107,8 +107,7 @@ int main() {
     return 1;
   }
 
-  MARU_WindowGeometry geometry;
-  maru_getWindowGeometry(window, &geometry);
+  MARU_WindowGeometry geometry = maru_getWindowGeometry(window);
   vulkan_renderer_setup_surface(&renderer, surface,
                                 (uint32_t)geometry.pixel_size.x,
                                 (uint32_t)geometry.pixel_size.y);

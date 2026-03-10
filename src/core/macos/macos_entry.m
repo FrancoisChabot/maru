@@ -16,7 +16,6 @@ const MARU_Backend maru_backend_Cocoa = {
 
   .createWindow = maru_createWindow_Cocoa,
   .destroyWindow = maru_destroyWindow_Cocoa,
-  .getWindowGeometry = maru_getWindowGeometry_Cocoa,
   .updateWindow = maru_updateWindow_Cocoa,
   .requestWindowFocus = maru_requestWindowFocus_Cocoa,
   .requestWindowFrame = maru_requestWindowFrame_Cocoa,
@@ -90,12 +89,6 @@ MARU_API MARU_Status maru_createWindow(MARU_Context *context,
 MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
   MARU_API_VALIDATE(destroyWindow, window);
   return maru_destroyWindow_Cocoa(window);
-}
-
-MARU_API void maru_getWindowGeometry(MARU_Window *window,
-                                             MARU_WindowGeometry *out_geometry) {
-  MARU_API_VALIDATE(getWindowGeometry, window, out_geometry);
-  maru_getWindowGeometry_Cocoa(window, out_geometry);
 }
 
 MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,

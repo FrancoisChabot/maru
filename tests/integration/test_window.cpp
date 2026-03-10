@@ -12,7 +12,7 @@ using Clock = std::chrono::steady_clock;
 
 struct TestEventCallback {
   std::atomic<bool> called{false};
-  MARU_EventId last_type = (MARU_EventId)-1;
+  MARU_EventId last_type = MARU_EVENT_CLOSE_REQUESTED;
 };
 
 void test_callback(MARU_EventId type, MARU_Window *window, const MARU_Event *evt,

@@ -98,6 +98,13 @@ static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window);
 static inline const MARU_WindowMetrics *
 maru_getWindowMetrics(const MARU_Window *window);
 
+/** @brief Returns the latest cached window geometry snapshot.
+ *
+ * Before a window reaches the ready state, the snapshot may still be zeroed.
+ */
+static inline MARU_WindowGeometry
+maru_getWindowGeometry(const MARU_Window *window);
+
 /** @brief Semantic hints for compositor optimization. */
 typedef enum MARU_ContentType {
   MARU_CONTENT_TYPE_NONE = 0,
@@ -223,14 +230,6 @@ MARU_Status maru_destroyWindow(MARU_Window *window);
 /** @brief Updates window attributes. */
 MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
                               const MARU_WindowAttributes *attributes);
-
-/** @brief Returns a snapshot of window geometry.
- *
- * The `origin` member follows `MARU_WindowGeometry` semantics and may be
- * `{0, 0}` on platforms that do not expose global window position.
- */
-void maru_getWindowGeometry(MARU_Window *window,
-                            MARU_WindowGeometry *out_geometry);
 
 /** @brief Requests input focus for a window. */
 MARU_Status maru_requestWindowFocus(MARU_Window *window);

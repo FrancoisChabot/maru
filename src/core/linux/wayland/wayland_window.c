@@ -692,6 +692,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   }
   window->pending_resized_event = true;
   window->preferred_buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
+  maru_getWindowGeometry_WL((MARU_Window *)window, NULL);
 
   if (window->base.attrs_effective.maximized) {
     window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
@@ -1257,6 +1258,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       _maru_wayland_dispatch_presentation_state(window, presentation_changed, icon_effective);
   }
 
+  maru_getWindowGeometry_WL(window_handle, NULL);
   window->base.attrs_dirty_mask &= ~field_mask;
 
   return status;
@@ -1415,13 +1417,17 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
 }
 
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
-  const MARU_Window_WL *window = (const MARU_Window_WL *)window_handle;
-  memset(out_geometry, 0, sizeof(MARU_WindowGeometry));
-  out_geometry->logical_size = window->base.attrs_effective.logical_size;
-  out_geometry->scale = (window->scale > (MARU_Scalar)0) ? window->scale : (MARU_Scalar)1.0;
-  out_geometry->pixel_size.x = (int32_t)(out_geometry->logical_size.x * out_geometry->scale);
-  out_geometry->pixel_size.y = (int32_t)(out_geometry->logical_size.y * out_geometry->scale);
-  out_geometry->buffer_transform = window->preferred_buffer_transform;
+  MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
+  MARU_WindowGeometry geometry = {0};
+  geometry.logical_size = window->base.attrs_effective.logical_size;
+  geometry.scale = (window->scale > (MARU_Scalar)0) ? window->scale : (MARU_Scalar)1.0;
+  geometry.pixel_size.x = (int32_t)(geometry.logical_size.x * geometry.scale);
+  geometry.pixel_size.y = (int32_t)(geometry.logical_size.y * geometry.scale);
+  geometry.buffer_transform = window->preferred_buffer_transform;
+  window->base.pub.geometry = geometry;
+  if (out_geometry) {
+    *out_geometry = geometry;
+  }
 }
 
 #include <errno.h>

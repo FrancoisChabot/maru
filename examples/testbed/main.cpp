@@ -524,8 +524,7 @@ int main(int, char **) {
     return 1;
   }
 
-  MARU_WindowGeometry geometry;
-  maru_getWindowGeometry(window, &geometry);
+  MARU_WindowGeometry geometry = maru_getWindowGeometry(window);
   ImGui_ImplVulkanH_Window *wd = &g_MainWindowData;
   SetupVulkanWindow(wd, surface, (int)geometry.pixel_size.x,
                     (int)geometry.pixel_size.y);
@@ -567,7 +566,7 @@ int main(int, char **) {
       if (app.update(context, window) == AppStatus::EXIT)
         g_KeepRunning = false;
 
-      maru_getWindowGeometry(window, &geometry);
+      geometry = maru_getWindowGeometry(window);
       const uint64_t now = now_ms();
       const bool debounce_elapsed =
           g_PendingResize && (now >= g_LastResizeAtMs) &&

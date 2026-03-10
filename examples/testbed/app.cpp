@@ -86,7 +86,7 @@ void App::updateCursor(MARU_Context* ctx, MARU_Window* window) {
 void App::renderUi(MARU_Context* ctx, MARU_Window* window) {
     {
         ImGui::Begin("MARU Testbed");
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", (double)(1000.0f / ImGui::GetIO().Framerate), (double)ImGui::GetIO().Framerate);
         
         ImGui::Separator();
         ImGui::Text("Modules");

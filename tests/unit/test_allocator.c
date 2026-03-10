@@ -53,7 +53,7 @@ UTEST(AllocatorTest, MemoryMetricsTracking) {
     
 #ifdef MARU_GATHER_METRICS
     uint64_t initial_mem = metrics->memory_allocated_current;
-    EXPECT_GT(initial_mem, 0);
+    EXPECT_GT(initial_mem, UINT64_C(0));
     EXPECT_GE(metrics->memory_allocated_peak, initial_mem);
     
     void* ptr = maru_context_alloc((MARU_Context_Base*)context, 1024);
@@ -110,7 +110,7 @@ UTEST(AllocatorTest, DefaultAllocatorWorks) {
     MARU_Context* context = maru_test_createContext(&create_info);
     ASSERT_TRUE(context != NULL);
     
-    EXPECT_EQ(maru_destroyContext(context), MARU_SUCCESS);
+    EXPECT_EQ(maru_destroyContext(context), (MARU_Status)MARU_SUCCESS);
     EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));
     maru_test_tracking_allocator_shutdown(&tracking);
 }

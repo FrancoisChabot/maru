@@ -682,6 +682,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     _maru_x11_dispatch_presentation_state(win, presentation_changed, true);
   }
 
+  maru_getWindowGeometry_X11((MARU_Window *)win, NULL);
   ctx->x11_lib.XFlush(ctx->display);
   return status;
 }
@@ -691,13 +692,17 @@ void maru_getWindowGeometry_X11(MARU_Window *window,
   MARU_Window_X11 *win = (MARU_Window_X11 *)window;
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
   const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
-  memset(out_geometry, 0, sizeof(*out_geometry));
+  MARU_WindowGeometry geometry = {0};
 
-  out_geometry->logical_size = win->base.attrs_effective.logical_size;
-  out_geometry->pixel_size.x = (int32_t)win->server_logical_size.x;
-  out_geometry->pixel_size.y = (int32_t)win->server_logical_size.y;
-  out_geometry->scale = scale;
-  out_geometry->buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
+  geometry.logical_size = win->base.attrs_effective.logical_size;
+  geometry.pixel_size.x = (int32_t)win->server_logical_size.x;
+  geometry.pixel_size.y = (int32_t)win->server_logical_size.y;
+  geometry.scale = scale;
+  geometry.buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
+  win->base.pub.geometry = geometry;
+  if (out_geometry) {
+    *out_geometry = geometry;
+  }
 }
 
 MARU_Status maru_updateWindow_X11(MARU_Window *window, uint64_t field_mask,
@@ -953,13 +958,14 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
     MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xconfigure.window);
     if (win) {
       _maru_x11_reconcile_wm_presentation_state(ctx, win, 0);
+      const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
       const MARU_Scalar new_w = (MARU_Scalar)ev->xconfigure.width;
       const MARU_Scalar new_h = (MARU_Scalar)ev->xconfigure.height;
-      const bool changed = (win->server_logical_size.x != new_w) ||
-                           (win->server_logical_size.y != new_h);
+      const bool size_changed = (win->server_logical_size.x != new_w) ||
+                                (win->server_logical_size.y != new_h);
+      const bool scale_changed = (win->base.pub.geometry.scale != scale);
 
-      if (changed) {
-        const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
+      if (size_changed) {
         win->server_logical_size.x = new_w;
         win->server_logical_size.y = new_h;
         if (win->base.pub.cursor_mode == MARU_CURSOR_LOCKED &&
@@ -978,13 +984,21 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
           win->base.attrs_effective.logical_size.y =
               _maru_x11_px_to_dip(win->server_logical_size.y, scale);
         }
+      } else if (scale_changed) {
+        const bool viewport_active =
+            (win->base.attrs_effective.viewport_size.x > (MARU_Scalar)0.0) &&
+            (win->base.attrs_effective.viewport_size.y > (MARU_Scalar)0.0);
+        if (!viewport_active) {
+          win->base.attrs_effective.logical_size.x =
+              _maru_x11_px_to_dip(win->server_logical_size.x, scale);
+          win->base.attrs_effective.logical_size.y =
+              _maru_x11_px_to_dip(win->server_logical_size.y, scale);
+        }
+      }
 
+      if (size_changed || scale_changed) {
         MARU_Event mevt = {0};
-        mevt.resized.geometry.logical_size = win->base.attrs_effective.logical_size;
-        mevt.resized.geometry.pixel_size.x = ev->xconfigure.width;
-        mevt.resized.geometry.pixel_size.y = ev->xconfigure.height;
-        mevt.resized.geometry.scale = scale;
-        mevt.resized.geometry.buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
+        maru_getWindowGeometry_X11((MARU_Window *)win, &mevt.resized.geometry);
         _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED,
                              (MARU_Window *)win, &mevt);
       }

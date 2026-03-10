@@ -183,14 +183,6 @@ static inline void _maru_validate_destroyWindow(MARU_Window *window) {
     _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
 }
 
-static inline void _maru_validate_getWindowGeometry(MARU_Window *window,
-                                              MARU_WindowGeometry *out_geometry) {
-    MARU_CONSTRAINT_CHECK(window != NULL);
-    MARU_CONSTRAINT_CHECK(out_geometry != NULL);
-    _maru_validate_window_ready(window);
-    _maru_validate_window_not_lost(window);
-}
-
 static inline void _maru_validate_updateWindow(MARU_Window *window, uint64_t field_mask,
                                          const MARU_WindowAttributes *attributes) {
     MARU_CONSTRAINT_CHECK(window != NULL);
