@@ -248,8 +248,8 @@ MARU_Status maru_resetCursorMetrics_Windows(MARU_Cursor *cursor);
 
 // monitors.h
 MARU_Status maru_updateMonitors_Windows(MARU_Context *context);
-const MARU_VideoMode *maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
-                                         uint32_t *out_count);
+MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
+                                         MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
                                         MARU_VideoMode mode);
 MARU_Status maru_resetMonitorMetrics_Windows(MARU_Monitor *monitor);
@@ -276,7 +276,7 @@ MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window, MARU_DataExc
 void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx);
 
 // vulkan.h
-const char **maru_getVkExtensions_Windows(const MARU_Context *context, uint32_t *out_count);
+MARU_Status maru_getVkExtensions_Windows(const MARU_Context *context, MARU_VkExtensionList *out_list);
 MARU_Status maru_createVkSurface_Windows(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 // Native handles

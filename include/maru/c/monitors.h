@@ -42,6 +42,12 @@ typedef struct MARU_VideoMode {
   uint32_t refresh_rate_mhz;
 } MARU_VideoMode;
 
+/** @brief A transient list of video modes. */
+typedef struct MARU_VideoModeList {
+  const MARU_VideoMode *modes;
+  uint32_t count;
+} MARU_VideoModeList;
+
 /** @brief A transient list of monitor handles. */
 typedef struct MARU_MonitorList {
   MARU_Monitor *const *monitors;
@@ -117,8 +123,8 @@ MARU_API void maru_releaseMonitor(MARU_Monitor *monitor);
 
 The returned list is valid until the next call to maru_pumpEvents().
 */
-MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor,
-                                                    uint32_t *out_count);
+MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor,
+                                         MARU_VideoModeList *out_list);
 
 /** @brief Sets the monitor to the provided mode */
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor,

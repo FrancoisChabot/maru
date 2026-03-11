@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern const char **maru_getVkExtensions_WL(const MARU_Context *context,
-                                            uint32_t *out_count);
+MARU_Status maru_getVkExtensions_WL(const MARU_Context *context,
+                                   MARU_VkExtensionList *out_list);
 extern MARU_Status maru_createVkSurface_WL(
     MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
@@ -252,9 +252,9 @@ MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   maru_releaseMonitor_WL(monitor);
 }
 
-MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {
-  MARU_API_VALIDATE(getMonitorModes, monitor, out_count);
-  return maru_getMonitorModes_WL(monitor, out_count);
+MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+  MARU_API_VALIDATE(getMonitorModes, monitor, out_list);
+  return maru_getMonitorModes_WL(monitor, out_list);
 }
 
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {

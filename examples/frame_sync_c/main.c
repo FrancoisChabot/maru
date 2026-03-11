@@ -75,11 +75,10 @@ int main() {
     return 1;
   }
 
-  uint32_t vk_extension_count = 0;
-  const char **vk_extensions =
-      maru_getVkExtensions(context, &vk_extension_count);
-  vulkan_renderer_init(&renderer, vk_extension_count,
-                       (const char **)vk_extensions);
+  MARU_VkExtensionList vk_extensions = {};
+  maru_getVkExtensions(context, &vk_extensions);
+  vulkan_renderer_init(&renderer, vk_extensions.count,
+                       (const char **)vk_extensions.names);
 
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru Frame Sync Test";

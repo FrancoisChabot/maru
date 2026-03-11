@@ -346,7 +346,7 @@ MARU_Status maru_destroyImage_X11(MARU_Image *image);
 MARU_Status maru_getMonitors_X11(MARU_Context *context, MARU_MonitorList *out_list);
 void maru_retainMonitor_X11(MARU_Monitor *monitor);
 void maru_releaseMonitor_X11(MARU_Monitor *monitor);
-const MARU_VideoMode *maru_getMonitorModes_X11(const MARU_Monitor *monitor, uint32_t *out_count);
+MARU_Status maru_getMonitorModes_X11(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode mode);
 MARU_Status maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
 
@@ -355,7 +355,7 @@ MARU_Status maru_provideData_X11(const MARU_DataRequestEvent *request_event, con
 MARU_Status maru_requestData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag);
 MARU_Status maru_getAvailableMIMETypes_X11(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
 
-const char **maru_getVkExtensions_X11(const MARU_Context *context, uint32_t *out_count);
+MARU_Status maru_getVkExtensions_X11(const MARU_Context *context, MARU_VkExtensionList *out_list);
 MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *win);

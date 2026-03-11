@@ -378,10 +378,11 @@ MARU_Status maru_updateMonitors_WL(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
-const MARU_VideoMode *maru_getMonitorModes_WL(const MARU_Monitor *monitor_handle, uint32_t *out_count) {
+MARU_Status maru_getMonitorModes_WL(const MARU_Monitor *monitor_handle, MARU_VideoModeList *out_list) {
   const MARU_Monitor_WL *monitor = (const MARU_Monitor_WL *)monitor_handle;
-  *out_count = monitor->mode_count;
-  return monitor->modes;
+  out_list->count = monitor->mode_count;
+  out_list->modes = monitor->modes;
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_setMonitorMode_WL(const MARU_Monitor *monitor, MARU_VideoMode mode) {

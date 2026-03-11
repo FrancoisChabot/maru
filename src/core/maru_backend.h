@@ -8,6 +8,7 @@
 #include "maru/c/controllers.h"
 #include "maru/c/data_exchange.h"
 #include "maru/c/vulkan.h"
+#include "maru/c/monitors.h"
 
 #ifdef MARU_INDIRECT_BACKEND
 typedef struct MARU_Backend {

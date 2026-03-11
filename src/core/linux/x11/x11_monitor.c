@@ -265,10 +265,11 @@ void maru_releaseMonitor_X11(MARU_Monitor *monitor) {
   }
 }
 
-const MARU_VideoMode *maru_getMonitorModes_X11(const MARU_Monitor *monitor, uint32_t *out_count) {
+MARU_Status maru_getMonitorModes_X11(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
   const MARU_Monitor_X11 *mon = (const MARU_Monitor_X11 *)monitor;
-  *out_count = mon->mode_count;
-  return mon->modes;
+  out_list->count = mon->mode_count;
+  out_list->modes = mon->modes;
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode mode) {

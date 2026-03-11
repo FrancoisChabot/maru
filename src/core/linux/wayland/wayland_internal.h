@@ -444,10 +444,13 @@ MARU_Status maru_getMonitors_WL(MARU_Context *context, MARU_MonitorList *out_lis
 void maru_retainMonitor_WL(MARU_Monitor *monitor);
 void maru_releaseMonitor_WL(MARU_Monitor *monitor);
 MARU_Status maru_updateMonitors_WL(MARU_Context *context);
-const MARU_VideoMode *maru_getMonitorModes_WL(const MARU_Monitor *monitor, uint32_t *out_count);
-MARU_Status maru_setMonitorMode_WL(const MARU_Monitor *monitor, MARU_VideoMode mode);
-void maru_destroyMonitor_WL(MARU_Monitor *monitor);
+MARU_Status maru_getMonitorModes_WL(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
+MARU_Status maru_setMonitorMode_WL(const MARU_Monitor *monitor,
+                                    MARU_VideoMode mode);
+MARU_Status maru_resetMonitorMetrics_WL(MARU_Monitor *monitor);
 
+MARU_Status maru_getVkExtensions_WL(const MARU_Context *context,
+                                   MARU_VkExtensionList *out_list);
 void _maru_wayland_register_xdg_output(MARU_Context_WL *ctx, MARU_Monitor_WL *monitor);
 
 MARU_Status maru_createCursor_WL(MARU_Context *context,

@@ -171,18 +171,20 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
   return win_base->backend->getAvailableMIMETypes(window, target, out_list);
 }
 
-MARU_API const char **maru_getVkExtensions(const MARU_Context *context,
-                                                  uint32_t *out_count) {
-  MARU_API_VALIDATE(getVkExtensions, context, out_count);
-  if (!context || !out_count) {
-    return NULL;
+MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
+                                          MARU_VkExtensionList *out_list) {
+  MARU_API_VALIDATE(getVkExtensions, context, out_list);
+  if (!context || !out_list) {
+    return MARU_FAILURE;
   }
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   if (!ctx_base->backend->getVkExtensions) {
-    *out_count = 0;
-    return NULL;
+    out_list->count = 0;
+    out_list->names = NULL;
+    return MARU_SUCCESS;
   }
-  return ctx_base->backend->getVkExtensions(context, out_count);
+  return ctx_base->backend->getVkExtensions(context, out_list);
+}
 }
 
 MARU_API MARU_Status maru_createVkSurface(
@@ -305,10 +307,13 @@ MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   }
 }
 
-MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {
-  MARU_API_VALIDATE(getMonitorModes, monitor, out_count);
+MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+  MARU_API_VALIDATE(getMonitorModes, monitor, out_list);
+  if (!monitor || !out_list) {
+    return MARU_FAILURE;
+  }
   const MARU_Monitor_Base *mon_base = (const MARU_Monitor_Base *)monitor;
-  return mon_base->backend->getMonitorModes(monitor, out_count);
+  return mon_base->backend->getMonitorModes(monitor, out_list);
 }
 
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {

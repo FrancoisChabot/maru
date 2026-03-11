@@ -53,13 +53,13 @@ You can query various properties of a monitor:
 To see what resolutions and refresh rates a monitor supports:
 
 ```c
-uint32_t mode_count = 0;
-const MARU_VideoMode *modes = maru_getMonitorModes(monitor, &mode_count);
+MARU_VideoModeList modes = {};
+maru_getMonitorModes(monitor, &modes);
 
-for (uint32_t i = 0; i < mode_count; ++i) {
+for (uint32_t i = 0; i < modes.count; ++i) {
     printf("Mode %d: %dx%d @ %fHz\n", i, 
-           (int)modes[i].size.x, (int)modes[i].size.y,
-           modes[i].refresh_rate_mhz / 1000.0f);
+           (int)modes.modes[i].size.x, (int)modes.modes[i].size.y,
+           modes.modes[i].refresh_rate_mhz / 1000.0f);
 }
 ```
 

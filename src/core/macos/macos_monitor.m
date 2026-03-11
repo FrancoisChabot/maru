@@ -132,11 +132,12 @@ void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor) {
     }
 }
 
-const MARU_VideoMode *maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor, uint32_t *out_count) {
+MARU_Status maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
     MARU_Monitor_Cocoa *mon = (MARU_Monitor_Cocoa *)monitor;
     _maru_cocoa_populate_video_modes(mon);
-    if (out_count) *out_count = mon->mode_count;
-    return mon->modes;
+    out_list->count = mon->mode_count;
+    out_list->modes = mon->modes;
+    return MARU_SUCCESS;
 }
 
 MARU_Status maru_setMonitorMode_Cocoa(const MARU_Monitor *monitor, MARU_VideoMode mode) {

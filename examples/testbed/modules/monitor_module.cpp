@@ -97,11 +97,11 @@ void MonitorModule::render(MARU_Context* ctx, MARU_Window* window) {
                     current_mode.size.y,
                     (double)current_mode.refresh_rate_mhz / 1000.0);
 
-        uint32_t mode_count = 0;
-        const MARU_VideoMode* modes = maru_getMonitorModes(monitor, &mode_count);
+        MARU_VideoModeList modes = {};
+        maru_getMonitorModes(monitor, &modes);
 
         if (ImGui::TreeNode("Supported Modes")) {
-            if (mode_count == 0 || !modes) {
+            if (modes.count == 0 || !modes.modes) {
                 ImGui::Text("No modes reported by backend.");
             } else if (ImGui::BeginTable("ModesTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
                 ImGui::TableSetupColumn("Size");
@@ -109,18 +109,18 @@ void MonitorModule::render(MARU_Context* ctx, MARU_Window* window) {
                 ImGui::TableSetupColumn("Action");
                 ImGui::TableHeadersRow();
 
-                for (uint32_t j = 0; j < mode_count; ++j) {
+                for (uint32_t j = 0; j < modes.count; ++j) {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::Text("%dx%d", modes[j].size.x, modes[j].size.y);
+                    ImGui::Text("%dx%d", modes.modes[j].size.x, modes.modes[j].size.y);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f Hz", (double)modes[j].refresh_rate_mhz / 1000.0);
+                    ImGui::Text("%.2f Hz", (double)modes.modes[j].refresh_rate_mhz / 1000.0);
                     ImGui::TableNextColumn();
 
                     char btn_label[48];
                     snprintf(btn_label, sizeof(btn_label), "Set###Mode%u_%u", i, j);
                     if (ImGui::Button(btn_label)) {
-                        last_mode_set_status_ = maru_setMonitorMode(monitor, modes[j]);
+                        last_mode_set_status_ = maru_setMonitorMode(monitor, modes.modes[j]);
                         has_mode_set_result_ = true;
                     }
                 }

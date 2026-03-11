@@ -99,10 +99,10 @@ inline MARU_Scalar Monitor::getScale() const { return maru_getMonitorScale(m_han
 inline bool Monitor::isLost() const { return maru_isMonitorLost(m_handle); }
 
 inline std::vector<MARU_VideoMode> Monitor::getModes() const {
-    uint32_t count = 0;
-    const MARU_VideoMode* modes_ptr = maru_getMonitorModes(m_handle, &count);
-    if (!modes_ptr || count == 0) return std::vector<MARU_VideoMode>();
-    return std::vector<MARU_VideoMode>(modes_ptr, modes_ptr + count);
+    MARU_VideoModeList list = {};
+    MARU_Status status = maru_getMonitorModes(m_handle, &list);
+    if (status != MARU_SUCCESS || !list.modes || list.count == 0) return std::vector<MARU_VideoMode>();
+    return std::vector<MARU_VideoMode>(list.modes, list.modes + list.count);
 }
 
 inline MARU_Status Monitor::setMode(MARU_VideoMode mode) {
@@ -305,10 +305,10 @@ inline MARU_Status Context::update(uint64_t field_mask, const MARU_ContextAttrib
 }
 
 inline std::vector<const char*> Context::getVkExtensions() const {
-    uint32_t count = 0;
-    const char** extensions = maru_getVkExtensions(m_handle, &count);
-    if (!extensions || count == 0) return std::vector<const char*>();
-    return std::vector<const char*>(extensions, extensions + count);
+    MARU_VkExtensionList list = {};
+    MARU_Status status = maru_getVkExtensions(m_handle, &list);
+    if (status != MARU_SUCCESS || !list.names || list.count == 0) return std::vector<const char*>();
+    return std::vector<const char*>(list.names, list.names + list.count);
 }
 
 inline expected<std::vector<Monitor>> Context::getMonitors() {

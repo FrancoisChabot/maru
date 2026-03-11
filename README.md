@@ -119,9 +119,9 @@ int main() {
   maru_createContext(&create_info, &context);
 
   // Initialize Vulkan.
-  uint32_t vk_extension_count = 0;
-  const char **vk_extensions = maru_getVkExtensions(context, &vk_extension_count);
-  init_vk_renderer(&app.renderer, vk_extensions, vk_extension_count);
+  MARU_VkExtensionList vk_extensions = {};
+  maru_getVkExtensions(context, &vk_extensions);
+  init_vk_renderer(&app.renderer, vk_extensions.names, vk_extensions.count);
 
   // create a window
   MARU_Window *window = NULL;

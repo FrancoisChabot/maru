@@ -25,13 +25,14 @@ typedef VkResult (*PFN_vkCreateMetalSurfaceEXT)(
     VkInstance instance, const VkMetalSurfaceCreateInfoEXT *pCreateInfo,
     const void *pAllocator, VkSurfaceKHR *pSurface);
 
-const char **maru_getVkExtensions_Cocoa(const MARU_Context *context, uint32_t *out_count) {
+MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_VkExtensionList *out_list) {
     static const char *extensions[] = {
         "VK_KHR_surface",
         "VK_EXT_metal_surface"
     };
-    *out_count = 2;
-    return extensions;
+    out_list->count = 2;
+    out_list->names = (const char *const *)extensions;
+    return MARU_SUCCESS;
 }
 
 MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {

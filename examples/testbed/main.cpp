@@ -446,12 +446,11 @@ int main(int, char **) {
     return 1;
   }
 
-  uint32_t extensions_count = 0;
-  const char **maru_extensions =
-      maru_getVkExtensions(context, &extensions_count);
+  MARU_VkExtensionList maru_extensions = {};
+  maru_getVkExtensions(context, &maru_extensions);
   ImVector<const char *> extensions;
-  for (uint32_t i = 0; i < extensions_count; i++)
-    extensions.push_back(maru_extensions[i]);
+  for (uint32_t i = 0; i < maru_extensions.count; i++)
+    extensions.push_back(maru_extensions.names[i]);
   SetupVulkan(extensions);
 
   MARU_Image *window_icon = NULL;

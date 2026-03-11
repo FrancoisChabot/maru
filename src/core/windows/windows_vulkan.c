@@ -25,17 +25,18 @@ typedef VkResult (*PFN_vkCreateWin32SurfaceKHR)(
     VkInstance instance, const VkWin32SurfaceCreateInfoKHR *pCreateInfo,
     const void *pAllocator, VkSurfaceKHR *pSurface);
 
-const char **maru_getVkExtensions_Windows(const MARU_Context *context, uint32_t *out_count) {
+MARU_Status maru_getVkExtensions_Windows(const MARU_Context *context, MARU_VkExtensionList *out_list) {
   (void)context;
   static const char *extensions[] = {
       "VK_KHR_surface",
       "VK_KHR_win32_surface",
   };
 
-  if (out_count) {
-    *out_count = 2;
+  if (out_list) {
+    out_list->count = 2;
+    out_list->names = (const char *const *)extensions;
   }
-  return extensions;
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_createVkSurface_Windows(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {

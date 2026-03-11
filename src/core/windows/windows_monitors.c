@@ -126,13 +126,14 @@ MARU_Status maru_updateMonitors_Windows(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
-const MARU_VideoMode *maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
-                                         uint32_t *out_count) {
+MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
+                                         MARU_VideoModeList *out_list) {
   MARU_Monitor_Windows *win_mon = (MARU_Monitor_Windows *)monitor;
 
   if (win_mon->modes) {
-    *out_count = win_mon->mode_count;
-    return win_mon->modes;
+    out_list->count = win_mon->mode_count;
+    out_list->modes = win_mon->modes;
+    return MARU_SUCCESS;
   }
 
   // Enumerate modes
@@ -164,8 +165,9 @@ const MARU_VideoMode *maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
     mode_index++;
   }
 
-  *out_count = win_mon->mode_count;
-  return win_mon->modes;
+  out_list->count = win_mon->mode_count;
+  out_list->modes = win_mon->modes;
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,

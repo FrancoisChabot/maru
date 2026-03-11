@@ -27,16 +27,17 @@ typedef VkResult (*PFN_vkCreateWaylandSurfaceKHR)(
     VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
     const void *pAllocator, VkSurfaceKHR *pSurface);
 
-const char **maru_getVkExtensions_WL(const MARU_Context *context,
-                                     uint32_t *out_count) {
+MARU_Status maru_getVkExtensions_WL(const MARU_Context *context,
+                                    MARU_VkExtensionList *out_list) {
   (void)context;
   static const char *extensions[] = {
       "VK_KHR_surface",
       "VK_KHR_wayland_surface",
   };
 
-  *out_count = 2;
-  return extensions;
+  out_list->count = 2;
+  out_list->names = (const char *const *)extensions;
+  return MARU_SUCCESS;
 }
 
 MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
@@ -75,10 +76,10 @@ MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
 }
 
 #ifndef MARU_INDIRECT_BACKEND
-MARU_API const char **maru_getVkExtensions(const MARU_Context *context,
-                                                  uint32_t *out_count) {
-  MARU_API_VALIDATE(getVkExtensions, context, out_count);
-  return maru_getVkExtensions_WL(context, out_count);
+MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
+                                         MARU_VkExtensionList *out_list) {
+  MARU_API_VALIDATE(getVkExtensions, context, out_list);
+  return maru_getVkExtensions_WL(context, out_list);
 }
 
 MARU_API MARU_Status maru_createVkSurface(

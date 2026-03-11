@@ -223,9 +223,9 @@ MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
   maru_releaseMonitor_Cocoa(monitor);
 }
 
-MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count) {
-  MARU_API_VALIDATE(getMonitorModes, monitor, out_count);
-  return maru_getMonitorModes_Cocoa(monitor, out_count);
+MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+  MARU_API_VALIDATE(getMonitorModes, monitor, out_list);
+  return maru_getMonitorModes_Cocoa(monitor, out_list);
 }
 
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
@@ -238,10 +238,10 @@ MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   return maru_resetMonitorMetrics_Cocoa(monitor);
 }
 
-MARU_API const char **maru_getVkExtensions(const MARU_Context *context,
-                                                 uint32_t *out_count) {
-  MARU_API_VALIDATE(getVkExtensions, context, out_count);
-  return maru_getVkExtensions_Cocoa(context, out_count);
+MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
+                                         MARU_VkExtensionList *out_list) {
+  MARU_API_VALIDATE(getVkExtensions, context, out_list);
+  return maru_getVkExtensions_Cocoa(context, out_list);
 }
 
 MARU_API MARU_Status maru_createVkSurface(

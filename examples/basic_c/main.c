@@ -58,17 +58,16 @@ int main() {
     return 1;
   }
 
-  uint32_t vk_extension_count = 0;
-  const char **vk_extensions = maru_getVkExtensions(context, &vk_extension_count);
-  if (!vk_extensions) {
+  MARU_VkExtensionList vk_extensions = {};
+  if (maru_getVkExtensions(context, &vk_extensions) != MARU_SUCCESS) {
     fprintf(stderr, "Failed to get Vulkan extensions.\n");
     maru_destroyContext(context);
     return 1;
   }
 
   // Cast const char* const* to const char**
-  vulkan_renderer_init(&renderer, vk_extension_count,
-                       (const char **)vk_extensions);
+  vulkan_renderer_init(&renderer, vk_extensions.count,
+                       (const char **)vk_extensions.names);
 
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru Basic C Example";

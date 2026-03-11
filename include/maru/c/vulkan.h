@@ -28,12 +28,18 @@ typedef struct MARU_Window MARU_Window;
 /** @brief Opaque handle to a Vulkan surface. */
 typedef struct VkSurfaceKHR_T *VkSurfaceKHR;
 
+/** @brief A transient list of Vulkan instance extension names. */
+typedef struct MARU_VkExtensionList {
+  const char *const *names;
+  uint32_t count;
+} MARU_VkExtensionList;
+
 /** @brief Retrieves the list of Vulkan instance extensions required by MARU. 
 
 The returned list is valid until the next call to maru_pumpEvents().
 */
-MARU_API const char **maru_getVkExtensions(const MARU_Context *context,
-                                           uint32_t *out_count);
+MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
+                                         MARU_VkExtensionList *out_list);
 
 /** @brief Creates a Vulkan surface for the specified window. 
 */
