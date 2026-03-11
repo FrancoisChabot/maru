@@ -23,7 +23,7 @@ Ready for early adopters. There hasn't been enough testing on enough OS/Machine 
 Run the following, and you should be presented with an ImGui-based playground to mess with the various things Maru provides.
 
 You'll need: 
-  - A basic development environment (MVSC /XCode / gcc+make)
+  - A basic development environment (MSVC / XCode / gcc+make)
   - [git](https://git-scm.com/)
   - [CMake](https://cmake.org/) (3.20 or above)
   - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home). (N.B. only needed for the examples, the Maru library itself doesn't require it)
@@ -180,7 +180,7 @@ Maru provides a few different options to control the validation behavior. These 
 
 ### How do I use a custom allocator?
 
-Maru allows you to provide a custom allocator during context creation to guarantee zero hidden allocations. The allocator interface requires three function pointers (`alloc_cb`, `realloc_cb`, `free_cb`) and an optional userdata pointer. If you omit them altogether, Maru will use `malloc()`/`realloc()`/`free()`.
+Maru allows you to provide a custom allocator during context creation. The allocator interface requires three function pointers (`alloc_cb`, `realloc_cb`, `free_cb`) and an optional userdata pointer. If you omit them altogether, Maru will use `malloc()`/`realloc()`/`free()`.
 
 ```c
 // Example of a custom allocator setup

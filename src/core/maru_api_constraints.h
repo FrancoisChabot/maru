@@ -63,6 +63,10 @@ static inline bool _maru_validate_positive_vec2px(MARU_Vec2Px v) {
   return v.x > 0 && v.y > 0;
 }
 
+static inline bool _maru_validate_non_negative_vec2px(MARU_Vec2Px v) {
+  return v.x >= 0 && v.y >= 0;
+}
+
 static inline bool _maru_validate_non_negative_rect(MARU_RectDip r) {
   return r.size.x >= 0 && r.size.y >= 0;
 }
@@ -181,6 +185,9 @@ _maru_validate_updateContext(MARU_Context *context, uint64_t field_mask,
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(attributes != NULL);
   _maru_validate_thread((const MARU_Context_Base *)context);
+
+  const uint64_t known_fields = MARU_CONTEXT_ATTR_ALL;
+  MARU_CONSTRAINT_CHECK((field_mask & ~known_fields) == 0);
 }
 
 static inline void _maru_validate_pumpEvents(MARU_Context *context,
@@ -285,9 +292,15 @@ _maru_validate_createCursor(MARU_Context *context,
     MARU_CONSTRAINT_CHECK(create_info->frames != NULL);
     for (uint32_t i = 0; i < create_info->frame_count; ++i) {
       MARU_CONSTRAINT_CHECK(create_info->frames[i].image != NULL);
+      const MARU_Image_Base *image_base =
+          (const MARU_Image_Base *)create_info->frames[i].image;
+      MARU_CONSTRAINT_CHECK(image_base->ctx_base == ctx_base);
       MARU_CONSTRAINT_CHECK(
-          ((const MARU_Image_Base *)create_info->frames[i].image)->ctx_base ==
-          ctx_base);
+          _maru_validate_non_negative_vec2px(create_info->frames[i].hot_spot));
+      MARU_CONSTRAINT_CHECK((uint32_t)create_info->frames[i].hot_spot.x <
+                            image_base->width);
+      MARU_CONSTRAINT_CHECK((uint32_t)create_info->frames[i].hot_spot.y <
+                            image_base->height);
     }
   } else {
     MARU_CONSTRAINT_CHECK(
@@ -317,9 +330,10 @@ _maru_validate_createImage(MARU_Context *context,
 
   MARU_CONSTRAINT_CHECK(_maru_validate_positive_vec2px(create_info->size));
   MARU_CONSTRAINT_CHECK(create_info->pixels != NULL);
+  const uint64_t min_stride_u64 = (uint64_t)(uint32_t)create_info->size.x * 4u;
+  MARU_CONSTRAINT_CHECK(min_stride_u64 <= UINT32_MAX);
   if (create_info->stride_bytes != 0) {
-    MARU_CONSTRAINT_CHECK(create_info->stride_bytes >=
-                          (uint32_t)create_info->size.x * 4u);
+    MARU_CONSTRAINT_CHECK((uint64_t)create_info->stride_bytes >= min_stride_u64);
   }
 }
 
@@ -372,7 +386,9 @@ _maru_validate_setControllerHapticLevels(MARU_Controller *controller,
   _maru_validate_thread(
       (const MARU_Context_Base *)maru_getControllerContext(controller));
   _maru_validate_controller_not_lost(controller);
-  (void)first_haptic;
+  const uint32_t haptic_count = maru_getControllerHapticCount(controller);
+  MARU_CONSTRAINT_CHECK(first_haptic <= haptic_count);
+  MARU_CONSTRAINT_CHECK(count <= (haptic_count - first_haptic));
   if (count > 0) {
     MARU_CONSTRAINT_CHECK(intensities != NULL);
   }
@@ -388,10 +404,16 @@ _maru_validate_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
   MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
                         target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
+  const MARU_DropActionMask known_actions = (MARU_DropActionMask)(
+      MARU_DROP_ACTION_COPY | MARU_DROP_ACTION_MOVE | MARU_DROP_ACTION_LINK);
+  MARU_CONSTRAINT_CHECK((allowed_actions & ~known_actions) == 0);
   if (count > 0) {
     MARU_CONSTRAINT_CHECK(mime_types != NULL);
+    for (uint32_t i = 0; i < count; ++i) {
+      MARU_CONSTRAINT_CHECK(mime_types[i] != NULL);
+      MARU_CONSTRAINT_CHECK(mime_types[i][0] != '\0');
+    }
   }
-  (void)allowed_actions;
 }
 
 static inline void
@@ -406,7 +428,8 @@ _maru_validate_provideData(const MARU_DataRequestEvent *request_event,
   if (size > 0) {
     MARU_CONSTRAINT_CHECK(data != NULL);
   }
-  (void)flags;
+  const uint32_t known_flags = (uint32_t)MARU_DATA_PROVIDE_FLAG_ZERO_COPY;
+  MARU_CONSTRAINT_CHECK((((uint32_t)flags) & ~known_flags) == 0);
 }
 
 static inline void _maru_validate_requestData(MARU_Window *window,
@@ -420,6 +443,7 @@ static inline void _maru_validate_requestData(MARU_Window *window,
   MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
                         target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
   MARU_CONSTRAINT_CHECK(mime_type != NULL);
+  MARU_CONSTRAINT_CHECK(mime_type[0] != '\0');
   (void)user_tag;
 }
 
