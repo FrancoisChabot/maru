@@ -32,14 +32,14 @@ typedef struct VkSurfaceKHR_T *VkSurfaceKHR;
 
 The returned list is valid until the next call to maru_pumpEvents().
 */
-const char **maru_getVkExtensions(const MARU_Context *context, uint32_t *out_count);
+MARU_API const char **maru_getVkExtensions(const MARU_Context *context,
+                                           uint32_t *out_count);
 
 /** @brief Creates a Vulkan surface for the specified window. 
 */
-MARU_Status maru_createVkSurface(MARU_Window *window, 
-                                        VkInstance instance,
-                                        MARU_VkGetInstanceProcAddrFunc vk_loader,
-                                        VkSurfaceKHR *out_surface);
+MARU_API MARU_Status maru_createVkSurface(
+    MARU_Window *window, VkInstance instance,
+    MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 #ifdef __cplusplus
 }

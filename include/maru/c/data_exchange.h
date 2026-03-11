@@ -46,29 +46,29 @@ typedef struct MARU_Window MARU_Window;
  *  specifies which operations the source permits. For other targets,
  *  this parameter is ignored.
  */
-MARU_Status maru_announceData(MARU_Window *window,
-                              MARU_DataExchangeTarget target,
-                              const char **mime_types, uint32_t count,
-                              MARU_DropActionMask allowed_actions);
+MARU_API MARU_Status maru_announceData(MARU_Window *window,
+                                       MARU_DataExchangeTarget target,
+                                       const char **mime_types, uint32_t count,
+                                       MARU_DropActionMask allowed_actions);
 
 /** @brief Provides the actual payload in response to an `MARU_DATA_REQUESTED`
  * event. */
-MARU_Status maru_provideData(const MARU_DataRequestEvent *request_event,
-                             const void *data, size_t size,
-                             MARU_DataProvideFlags flags);
+MARU_API MARU_Status maru_provideData(const MARU_DataRequestEvent *request_event,
+                                      const void *data, size_t size,
+                                      MARU_DataProvideFlags flags);
 
 /** @brief Asynchronously requests an arbitrary data payload from the OS. */
-MARU_Status maru_requestData(MARU_Window *window,
-                             MARU_DataExchangeTarget target,
-                             const char *mime_type, void *user_tag);
+MARU_API MARU_Status maru_requestData(MARU_Window *window,
+                                      MARU_DataExchangeTarget target,
+                                      const char *mime_type, void *user_tag);
 
 /** @brief Retrieves MIME types currently available in the system buffer.
 
 The returned list is valid until the next call to maru_pumpEvents().
 */
-MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
-                                       MARU_DataExchangeTarget target,
-                                       MARU_MIMETypeList *out_list);
+MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
+                                                MARU_DataExchangeTarget target,
+                                                MARU_MIMETypeList *out_list);
 
 #ifdef __cplusplus
 }

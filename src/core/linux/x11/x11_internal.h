@@ -341,7 +341,7 @@ MARU_Status maru_resetCursorMetrics_X11(MARU_Cursor *cursor);
 MARU_Status maru_createImage_X11(MARU_Context *context, const MARU_ImageCreateInfo *create_info, MARU_Image **out_image);
 MARU_Status maru_destroyImage_X11(MARU_Image *image);
 
-MARU_Monitor *const *maru_getMonitors_X11(MARU_Context *context, uint32_t *out_count);
+MARU_Status maru_getMonitors_X11(MARU_Context *context, MARU_MonitorList *out_list);
 void maru_retainMonitor_X11(MARU_Monitor *monitor);
 void maru_releaseMonitor_X11(MARU_Monitor *monitor);
 const MARU_VideoMode *maru_getMonitorModes_X11(const MARU_Monitor *monitor, uint32_t *out_count);

@@ -319,16 +319,18 @@ inline std::vector<const char*> Context::getVkExtensions() const {
 }
 
 inline expected<std::vector<Monitor>> Context::getMonitors() {
-    uint32_t count = 0;
-    MARU_Monitor* const* monitors_ptr = maru_getMonitors(m_handle, &count);
+    MARU_MonitorList list = {};
+    MARU_Status status = maru_getMonitors(m_handle, &list);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
+
     std::vector<Monitor> result;
-    if (monitors_ptr && count > 0) {
-        result.reserve(count);
-        for (uint32_t i = 0; i < count; ++i) {
-            result.emplace_back(monitors_ptr[i], true);
+    if (list.monitors && list.count > 0) {
+        result.reserve(list.count);
+        for (uint32_t i = 0; i < list.count; ++i) {
+            result.emplace_back(list.monitors[i], true);
         }
     }
-    return result; // Currently maru_getMonitors doesn't return MARU_Status, it just returns array. Wrapping it in expected as per new sig.
+    return result;
 }
 
 inline expected<std::vector<Controller>> Context::getControllers() {

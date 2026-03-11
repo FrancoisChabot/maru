@@ -7,12 +7,14 @@ Maru provides comprehensive APIs for discovering and managing physical monitors 
 You can get a list of all currently connected monitors using `maru_getMonitors`.
 
 ```c
-uint32_t monitor_count = 0;
-MARU_Monitor *const *monitors = maru_getMonitors(context, &monitor_count);
+MARU_MonitorList monitor_list = {0};
+if (maru_getMonitors(context, &monitor_list) != MARU_SUCCESS) {
+    // handle failure
+}
 
-for (uint32_t i = 0; i < monitor_count; ++i) {
-    const char *name = maru_getMonitorName(monitors[i]);
-    bool is_primary = maru_isMonitorPrimary(monitors[i]);
+for (uint32_t i = 0; i < monitor_list.count; ++i) {
+    const char *name = maru_getMonitorName(monitor_list.monitors[i]);
+    bool is_primary = maru_isMonitorPrimary(monitor_list.monitors[i]);
     printf("Monitor %d: %s %s\n", i, name, is_primary ? "(Primary)" : "");
 }
 ```

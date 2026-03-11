@@ -122,9 +122,6 @@ typedef enum MARU_TextInputType {
   MARU_TEXT_INPUT_TYPE_NUMERIC,
 } MARU_TextInputType;
 
-/** @brief Bitmask for selecting which attributes to update in
- * maru_updateWindow(). */
-typedef uint32_t MARU_WindowAttributesField;
 #define MARU_WINDOW_ATTR_TITLE (1u << 0)
 #define MARU_WINDOW_ATTR_LOGICAL_SIZE (1u << 1)
 #define MARU_WINDOW_ATTR_FULLSCREEN (1u << 2)
@@ -149,7 +146,19 @@ typedef uint32_t MARU_WindowAttributesField;
 #define MARU_WINDOW_ATTR_MINIMIZED (1u << 21)
 #define MARU_WINDOW_ATTR_ICON (1u << 22)
 
-#define MARU_WINDOW_ATTR_ALL 0xFFFFFFFFu
+#define MARU_WINDOW_ATTR_ALL                                                   \
+  (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_LOGICAL_SIZE |                    \
+   MARU_WINDOW_ATTR_FULLSCREEN | MARU_WINDOW_ATTR_CURSOR_MODE |                \
+   MARU_WINDOW_ATTR_CURSOR | MARU_WINDOW_ATTR_MONITOR |                        \
+   MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_MIN_SIZE |                    \
+   MARU_WINDOW_ATTR_MAX_SIZE | MARU_WINDOW_ATTR_POSITION |                     \
+   MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE |                \
+   MARU_WINDOW_ATTR_ACCEPT_DROP | MARU_WINDOW_ATTR_TEXT_INPUT_TYPE |           \
+   MARU_WINDOW_ATTR_TEXT_INPUT_RECT | MARU_WINDOW_ATTR_PRIMARY_SELECTION |     \
+   MARU_WINDOW_ATTR_EVENT_MASK | MARU_WINDOW_ATTR_VIEWPORT_SIZE |              \
+   MARU_WINDOW_ATTR_SURROUNDING_TEXT |                                         \
+   MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET | MARU_WINDOW_ATTR_VISIBLE |     \
+   MARU_WINDOW_ATTR_MINIMIZED | MARU_WINDOW_ATTR_ICON)
 
 /** @brief Live-updatable window properties. */
 typedef struct MARU_WindowAttributes {
@@ -220,27 +229,29 @@ typedef struct MARU_WindowCreateInfo {
    .userdata = NULL}
 
 /** @brief Creates a new window. */
-MARU_Status maru_createWindow(MARU_Context *context,
-                              const MARU_WindowCreateInfo *create_info,
-                              MARU_Window **out_window);
+MARU_API MARU_Status maru_createWindow(MARU_Context *context,
+                                       const MARU_WindowCreateInfo *create_info,
+                                       MARU_Window **out_window);
 
 /** @brief Destroys a window. */
-MARU_Status maru_destroyWindow(MARU_Window *window);
+MARU_API MARU_Status maru_destroyWindow(MARU_Window *window);
 
 /** @brief Updates window attributes. */
-MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
-                              const MARU_WindowAttributes *attributes);
+MARU_API MARU_Status
+maru_updateWindow(MARU_Window *window, uint64_t field_mask,
+                  const MARU_WindowAttributes *attributes);
 
 /** @brief Requests input focus for a window. */
-MARU_Status maru_requestWindowFocus(MARU_Window *window);
+MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window);
 
 /** @brief Requests a frame callback for the window. */
-MARU_Status maru_requestWindowFrame(MARU_Window *window);
-/** @brief Requests user attention for the specified window (best effort). */
-MARU_Status maru_requestWindowAttention(MARU_Window *window);
+MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window);
+/** @brief Requests user attention for the specified window (best
+ * effort). */
+MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window);
 
 /** @brief Resets the metrics counters attached to a window handle. */
-MARU_Status maru_resetWindowMetrics(MARU_Window *window);
+MARU_API MARU_Status maru_resetWindowMetrics(MARU_Window *window);
 
 #include "maru/c/details/windows.h"
 

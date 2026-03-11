@@ -40,7 +40,7 @@ typedef struct MARU_Version {
 } MARU_Version;
 
 /** @brief Retrieves the linked version of the MARU library. */
-MARU_Version maru_getVersion(void);
+MARU_API MARU_Version maru_getVersion(void);
 
 /** @brief Function pointer for memory allocation. */
 typedef void *(*MARU_AllocationFunction)(size_t size, void *userdata);

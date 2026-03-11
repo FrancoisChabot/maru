@@ -346,10 +346,11 @@ void _maru_wayland_register_xdg_output(MARU_Context_WL *ctx,
                                    &_maru_wayland_xdg_output_listener, monitor);
 }
 
-MARU_Monitor *const *maru_getMonitors_WL(MARU_Context *context, uint32_t *out_count) {
+MARU_Status maru_getMonitors_WL(MARU_Context *context, MARU_MonitorList *out_list) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  *out_count = ctx->base.monitor_cache_count;
-  return ctx->base.monitor_cache;
+  out_list->monitors = ctx->base.monitor_cache;
+  out_list->count = ctx->base.monitor_cache_count;
+  return MARU_SUCCESS;
 }
 
 void maru_retainMonitor_WL(MARU_Monitor *monitor) {

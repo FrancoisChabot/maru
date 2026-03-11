@@ -31,12 +31,12 @@ typedef struct MARU_ImageCreateInfo {
 } MARU_ImageCreateInfo;
 
 /** @brief Creates an immutable image from ARGB8888 pixels. */
-MARU_Status maru_createImage(MARU_Context *context,
-                             const MARU_ImageCreateInfo *create_info,
-                             MARU_Image **out_image);
+MARU_API MARU_Status maru_createImage(MARU_Context *context,
+                                      const MARU_ImageCreateInfo *create_info,
+                                      MARU_Image **out_image);
 
 /** @brief Destroys an image handle. */
-MARU_Status maru_destroyImage(MARU_Image *image);
+MARU_API MARU_Status maru_destroyImage(MARU_Image *image);
 
 /** @brief Retrieves image user data. */
 static inline void *maru_getImageUserdata(const MARU_Image *image);

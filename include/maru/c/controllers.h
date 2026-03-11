@@ -143,16 +143,18 @@ typedef struct MARU_ControllerList {
   uint32_t count;
 } MARU_ControllerList;
 
-MARU_Status maru_getControllers(MARU_Context *context,
-                                MARU_ControllerList *out_list);
-MARU_Status maru_retainController(MARU_Controller *controller);
-MARU_Status maru_releaseController(MARU_Controller *controller);
-MARU_Status maru_resetControllerMetrics(MARU_Controller *controller);
-MARU_Status maru_getControllerInfo(MARU_Controller *controller,
-                                   MARU_ControllerInfo *out_info);
-MARU_Status maru_setControllerHapticLevels(MARU_Controller *controller,
-                                           uint32_t first_haptic, uint32_t count,
-                                           const MARU_Scalar *intensities);
+MARU_API MARU_Status maru_getControllers(MARU_Context *context,
+                                         MARU_ControllerList *out_list);
+MARU_API MARU_Status maru_retainController(MARU_Controller *controller);
+MARU_API MARU_Status maru_releaseController(MARU_Controller *controller);
+MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller);
+MARU_API MARU_Status
+maru_getControllerInfo(MARU_Controller *controller,
+                       MARU_ControllerInfo *out_info);
+MARU_API MARU_Status
+maru_setControllerHapticLevels(MARU_Controller *controller,
+                               uint32_t first_haptic, uint32_t count,
+                               const MARU_Scalar *intensities);
 
 #include "maru/c/details/controllers.h"
 

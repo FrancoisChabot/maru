@@ -91,15 +91,16 @@ typedef struct MARU_CursorCreateInfo {
 } MARU_CursorCreateInfo;
 
 /** @brief Creates a hardware cursor (system or custom). */
-MARU_Status maru_createCursor(MARU_Context *context,
-                                         const MARU_CursorCreateInfo *create_info,
-                                         MARU_Cursor **out_cursor);
+MARU_API MARU_Status
+maru_createCursor(MARU_Context *context,
+                  const MARU_CursorCreateInfo *create_info,
+                  MARU_Cursor **out_cursor);
 
 /** @brief Destroys a hardware cursor. */
-MARU_Status maru_destroyCursor(MARU_Cursor *cursor);
+MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor);
 
 /** @brief Resets the metrics counters attached to a cursor handle. */
-MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor);
+MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor);
 
 #include "maru/c/details/cursors.h"
 

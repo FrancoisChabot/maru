@@ -438,7 +438,7 @@ MARU_Status maru_requestWindowFrame_WL(MARU_Window *window);
 MARU_Status maru_requestWindowAttention_WL(MARU_Window *window);
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 
-MARU_Monitor *const *maru_getMonitors_WL(MARU_Context *context, uint32_t *out_count);
+MARU_Status maru_getMonitors_WL(MARU_Context *context, MARU_MonitorList *out_list);
 void maru_retainMonitor_WL(MARU_Monitor *monitor);
 void maru_releaseMonitor_WL(MARU_Monitor *monitor);
 MARU_Status maru_updateMonitors_WL(MARU_Context *context);

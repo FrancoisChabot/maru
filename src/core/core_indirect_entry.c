@@ -257,10 +257,10 @@ MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
   return MARU_FAILURE;
 }
 
-MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
-  MARU_API_VALIDATE(getMonitors, context, out_count);
+MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+  MARU_API_VALIDATE(getMonitors, context, out_list);
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  return ctx_base->backend->getMonitors(context, out_count);
+  return ctx_base->backend->getMonitors(context, out_list);
 }
 
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {

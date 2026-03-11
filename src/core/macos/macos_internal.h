@@ -102,8 +102,8 @@ MARU_Status maru_provideData_Cocoa(const MARU_DataRequestEvent *request_event, c
 MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag);
 MARU_Status maru_getAvailableMIMETypes_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
 
-MARU_Monitor *const *maru_getMonitors_Cocoa(MARU_Context *context,
-                                             uint32_t *out_count);
+MARU_Status maru_getMonitors_Cocoa(MARU_Context *context,
+                                   MARU_MonitorList *out_list);
 void maru_retainMonitor_Cocoa(MARU_Monitor *monitor);
 void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor);
 const MARU_VideoMode *maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor,

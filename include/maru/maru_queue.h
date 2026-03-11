@@ -43,12 +43,11 @@ typedef struct MARU_Queue MARU_Queue;
  * @brief Creates a new event queue.
  *
  * @param ctx The library context this queue will be associated with.
- * @param capacity_power_of_2 The internal buffer size (must be a power of 2).
+ * @param capacity The internal buffer size
  * @param out_queue Pointer to receive the created queue handle.
  * @return MARU_SUCCESS on success, or an error code.
  */
-MARU_API MARU_Status maru_queue_create(MARU_Context *ctx,
-                                       uint32_t capacity_power_of_2,
+MARU_API MARU_Status maru_queue_create(MARU_Context *ctx, uint32_t capacity,
                                        MARU_Queue **out_queue);
 
 /**

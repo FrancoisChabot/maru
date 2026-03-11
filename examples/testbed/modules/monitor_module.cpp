@@ -45,10 +45,17 @@ void MonitorModule::render(MARU_Context* ctx, MARU_Window* window) {
         refresh_requested_ = false;
     }
 
-    uint32_t monitor_count = 0;
-    MARU_Monitor* const* monitors = maru_getMonitors(ctx, &monitor_count);
+    MARU_MonitorList monitor_list = {};
+    MARU_Status monitor_status = maru_getMonitors(ctx, &monitor_list);
+    const uint32_t monitor_count = monitor_list.count;
+    MARU_Monitor* const* monitors = monitor_list.monitors;
 
     ImGui::Separator();
+    if (monitor_status != MARU_SUCCESS) {
+        ImGui::Text("Detected monitors: unavailable (status=%d)", (int)monitor_status);
+        ImGui::End();
+        return;
+    }
     ImGui::Text("Detected monitors: %u", monitor_count);
 
     if (monitor_count == 0 || !monitors) {

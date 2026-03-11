@@ -302,9 +302,9 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   return maru_wakeContext_X11(context);
 }
 
-MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
-  MARU_API_VALIDATE(getMonitors, context, out_count);
-  return maru_getMonitors_X11(context, out_count);
+MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+  MARU_API_VALIDATE(getMonitors, context, out_list);
+  return maru_getMonitors_X11(context, out_list);
 }
 
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {

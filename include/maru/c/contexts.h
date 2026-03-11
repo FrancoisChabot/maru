@@ -90,15 +90,14 @@ static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context,
 /** @brief Special value for timeouts to indicate it should never trigger. */
 #define MARU_NEVER UINT32_MAX
 
-/** @brief Bitmask for selecting which attributes to update in
- * maru_updateContext(). */
-typedef uint32_t MARU_ContextAttributesField;
 #define MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE (1u << 0)
 #define MARU_CONTEXT_ATTR_DIAGNOSTICS (1u << 1)
 #define MARU_CONTEXT_ATTR_EVENT_MASK (1u << 2)
 #define MARU_CONTEXT_ATTR_IDLE_TIMEOUT (1u << 3)
 
-#define MARU_CONTEXT_ATTR_ALL 0xFFFFFFFFu
+#define MARU_CONTEXT_ATTR_ALL                                                  \
+  (MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE | MARU_CONTEXT_ATTR_DIAGNOSTICS |    \
+   MARU_CONTEXT_ATTR_EVENT_MASK | MARU_CONTEXT_ATTR_IDLE_TIMEOUT)
 
 /** @brief Updatable parameters for an active context. */
 typedef struct MARU_ContextAttributes {
@@ -110,8 +109,8 @@ typedef struct MARU_ContextAttributes {
 
   bool inhibit_idle; ///< If true, prevents the OS from entering sleep.
 
-  uint32_t idle_timeout_ms; ///< Threshold for MARU_EVENT_IDLE_STATE_CHANGED. 0
-                            ///< disables idle notifications.
+  uint32_t idle_timeout_ms; ///< Threshold for MARU_EVENT_IDLE_STATE_CHANGED.
+                            ///< 0 disables idle notifications.
 
 } MARU_ContextAttributes;
 
@@ -154,18 +153,19 @@ typedef struct MARU_ContextCreateInfo {
  *  use passive accessors if they provide external synchronization to
  *  ensure memory visibility. See maru.h for the full threading model.
  */
-MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
-                               MARU_Context **out_context);
+MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
+                                        MARU_Context **out_context);
 
 /** @brief Destroys a context and all associated windows. */
-MARU_Status maru_destroyContext(MARU_Context *context);
+MARU_API MARU_Status maru_destroyContext(MARU_Context *context);
 
 /** @brief Updates one or more context attributes. */
-MARU_Status maru_updateContext(MARU_Context *context, uint64_t field_mask,
-                               const MARU_ContextAttributes *attributes);
+MARU_API MARU_Status
+maru_updateContext(MARU_Context *context, uint64_t field_mask,
+                   const MARU_ContextAttributes *attributes);
 
 /** @brief Resets the metrics counters attached to a context handle. */
-MARU_Status maru_resetContextMetrics(MARU_Context *context);
+MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context);
 
 #include "maru/c/details/contexts.h"
 

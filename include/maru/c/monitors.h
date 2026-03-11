@@ -42,6 +42,12 @@ typedef struct MARU_VideoMode {
   uint32_t refresh_rate_mhz;
 } MARU_VideoMode;
 
+/** @brief A transient list of monitor handles. */
+typedef struct MARU_MonitorList {
+  MARU_Monitor *const *monitors;
+  uint32_t count;
+} MARU_MonitorList;
+
 /* ----- Passive Accessors (External Synchronization Required) ----- 
  *
  * These functions are essentially zero-cost member accesses. They are safe to 
@@ -85,37 +91,40 @@ static inline bool maru_isMonitorPrimary(const MARU_Monitor *monitor);
 /** @brief Retrieves the scaling factor for the monitor. */
 static inline MARU_Scalar maru_getMonitorScale(const MARU_Monitor *monitor);
 
-/** @brief Retrieves the list of currently connected monitors. 
-
-The returned list is valid until the next call to maru_pumpEvents().
-*/
-MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count);
+/** @brief Retrieves the list of currently connected monitors.
+ *
+ * The returned list is valid until the next call to maru_pumpEvents().
+ */
+MARU_API MARU_Status maru_getMonitors(MARU_Context *context,
+                                      MARU_MonitorList *out_list);
 
 /** @brief Increments the reference count of a monitor handle. 
  *
  * This is a GLOBALLY THREAD-SAFE function and can be called from any thread 
  * without external synchronization.
  */
-void maru_retainMonitor(MARU_Monitor *monitor);
+MARU_API void maru_retainMonitor(MARU_Monitor *monitor);
 
 /** @brief Decrements the reference count of a monitor handle. 
  *
  * This is a GLOBALLY THREAD-SAFE function and can be called from any thread 
  * without external synchronization.
  */
-void maru_releaseMonitor(MARU_Monitor *monitor);
+MARU_API void maru_releaseMonitor(MARU_Monitor *monitor);
 
 /** @brief Retrieves all video modes supported by a specific monitor. 
 
 The returned list is valid until the next call to maru_pumpEvents().
 */
-const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor, uint32_t *out_count);
+MARU_API const MARU_VideoMode *maru_getMonitorModes(const MARU_Monitor *monitor,
+                                                    uint32_t *out_count);
 
 /** @brief Sets the monitor to the provided mode */
-MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode);
+MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor,
+                                         MARU_VideoMode mode);
 
 /** @brief Resets the metrics counters attached to a monitor handle. */
-void maru_resetMonitorMetrics(MARU_Monitor *monitor);
+MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor);
 
 #include "maru/c/details/monitors.h"
 

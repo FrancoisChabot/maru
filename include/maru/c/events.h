@@ -37,20 +37,23 @@ typedef enum MARU_EventId {
   MARU_EVENT_WINDOW_RESIZED = 1,
   MARU_EVENT_KEY_STATE_CHANGED = 2,
   MARU_EVENT_WINDOW_READY = 3,
+
   MARU_EVENT_MOUSE_MOVED = 4,
   MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED = 5,
   MARU_EVENT_MOUSE_SCROLLED = 6,
   MARU_EVENT_IDLE_STATE_CHANGED = 7,
+
   MARU_EVENT_MONITOR_CONNECTION_CHANGED = 8,
   MARU_EVENT_MONITOR_MODE_CHANGED = 9,
+
   MARU_EVENT_WINDOW_FRAME = 10, // As a resposne to maru_requestWindowFrame()
   MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED = 11,
+
   MARU_EVENT_TEXT_EDIT_START = 12,
   MARU_EVENT_TEXT_EDIT_UPDATE = 13,
   MARU_EVENT_TEXT_EDIT_COMMIT = 14,
   MARU_EVENT_TEXT_EDIT_END = 15,
 
-  /* Data Exchange (32-39) */
   MARU_EVENT_DROP_ENTERED = 16,
   MARU_EVENT_DROP_HOVERED = 17,
   MARU_EVENT_DROP_EXITED = 18,
@@ -60,7 +63,6 @@ typedef enum MARU_EventId {
   MARU_EVENT_DATA_CONSUMED = 22,
   MARU_EVENT_DRAG_FINISHED = 23,
 
-  /* Controllers (46-47) */
   MARU_EVENT_CONTROLLER_CONNECTION_CHANGED = 24,
   MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED = 25,
 
@@ -550,23 +552,25 @@ typedef void (*MARU_EventCallback)(MARU_EventId type, MARU_Window *window,
 
 /** @brief Synchronizes the event queue with the OS and dispatches events to the
  * provided callback. */
-MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms,
-                            MARU_EventCallback callback, void *userdata);
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms,
+                                     MARU_EventCallback callback,
+                                     void *userdata);
 
 /** @brief Manually pushes a user-defined event into the queue.
  *
  *  This is a GLOBALLY THREAD-SAFE function and can be called from any thread
  *  without external synchronization. The passed event will be COPIED.
  */
-MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
-                           MARU_Window *window, MARU_UserDefinedEvent evt);
+MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
+                                    MARU_Window *window,
+                                    MARU_UserDefinedEvent evt);
 
 /** @brief Wakes a context up without dispatching an event.
  *
  *  This is a GLOBALLY THREAD-SAFE function and can be called from any thread
  *  without external synchronization.
  */
-MARU_Status maru_wakeContext(MARU_Context *context);
+MARU_API MARU_Status maru_wakeContext(MARU_Context *context);
 
 #ifdef __cplusplus
 }

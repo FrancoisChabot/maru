@@ -38,12 +38,13 @@ static void _maru_cocoa_populate_video_modes(MARU_Monitor_Cocoa *mon) {
     CFRelease(displayModes);
 }
 
-MARU_Monitor *const *maru_getMonitors_Cocoa(MARU_Context *context, uint32_t *out_count) {
+MARU_Status maru_getMonitors_Cocoa(MARU_Context *context, MARU_MonitorList *out_list) {
     MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
 
     if (ctx_base->monitor_cache) {
-        if (out_count) *out_count = ctx_base->monitor_cache_count;
-        return ctx_base->monitor_cache;
+        out_list->monitors = ctx_base->monitor_cache;
+        out_list->count = ctx_base->monitor_cache_count;
+        return MARU_SUCCESS;
     }
 
     NSArray<NSScreen *> *screens = [NSScreen screens];
@@ -98,8 +99,9 @@ MARU_Monitor *const *maru_getMonitors_Cocoa(MARU_Context *context, uint32_t *out
         ctx_base->monitor_cache[i] = (MARU_Monitor *)mon;
     }
 
-    if (out_count) *out_count = count;
-    return ctx_base->monitor_cache;
+    out_list->monitors = ctx_base->monitor_cache;
+    out_list->count = count;
+    return MARU_SUCCESS;
 }
 
 void maru_retainMonitor_Cocoa(MARU_Monitor *monitor) {

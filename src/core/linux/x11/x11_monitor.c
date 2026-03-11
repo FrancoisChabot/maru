@@ -236,11 +236,12 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
   }
 }
 
-MARU_Monitor *const *maru_getMonitors_X11(MARU_Context *context, uint32_t *out_count) {
+MARU_Status maru_getMonitors_X11(MARU_Context *context, MARU_MonitorList *out_list) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   _maru_x11_refresh_monitors(ctx);
-  *out_count = ctx->base.monitor_cache_count;
-  return ctx->base.monitor_cache;
+  out_list->monitors = ctx->base.monitor_cache;
+  out_list->count = ctx->base.monitor_cache_count;
+  return MARU_SUCCESS;
 }
 
 void maru_retainMonitor_X11(MARU_Monitor *monitor) {

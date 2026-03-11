@@ -228,13 +228,15 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   return maru_wakeContext_WL(context);
 }
 
-MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
-  MARU_API_VALIDATE(getMonitors, context, out_count);
-  if (maru_updateMonitors_WL(context) != MARU_SUCCESS) {
-    *out_count = 0;
-    return NULL;
+MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+  MARU_API_VALIDATE(getMonitors, context, out_list);
+  MARU_Status res = maru_updateMonitors_WL(context);
+  if (res != MARU_SUCCESS) {
+    out_list->monitors = NULL;
+    out_list->count = 0;
+    return res;
   }
-  return maru_getMonitors_WL(context, out_count);
+  return maru_getMonitors_WL(context, out_list);
 }
 
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {

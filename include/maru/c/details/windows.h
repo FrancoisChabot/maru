@@ -16,7 +16,7 @@ typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 typedef struct MARU_Cursor MARU_Cursor;
 
-/** @brief Internal representation of MARU_Window. 
+/** @brief Internal representation of MARU_Window.
     CHANGING THIS REQUIRES A MAJOR VERSION BUMP
 */
 typedef struct MARU_WindowExposed {
@@ -56,50 +56,62 @@ static inline const char *maru_getWindowTitle(const MARU_Window *window) {
 }
 
 static inline bool maru_isWindowLost(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_LOST) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_LOST) != 0;
 }
 
 static inline bool maru_isWindowReady(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_READY) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_READY) != 0;
 }
 
 static inline bool maru_isWindowFocused(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_FOCUSED) != 0;
 }
 
 static inline bool maru_isWindowMaximized(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_MAXIMIZED) != 0;
 }
 
 static inline bool maru_isWindowFullscreen(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_FULLSCREEN) != 0;
 }
 
 static inline bool maru_isWindowVisible(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_VISIBLE) != 0;
 }
 
 static inline bool maru_isWindowMinimized(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_MINIMIZED) != 0;
 }
 
 static inline bool maru_isWindowResizable(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_RESIZABLE) != 0;
 }
 
 static inline bool maru_isWindowDecorated(const MARU_Window *window) {
-  return (((const MARU_WindowExposed *)window)->flags & MARU_WINDOW_STATE_DECORATED) != 0;
+  return (((const MARU_WindowExposed *)window)->flags &
+          MARU_WINDOW_STATE_DECORATED) != 0;
 }
 
-static inline MARU_EventMask maru_getWindowEventMask(const MARU_Window *window) {
+static inline MARU_EventMask
+maru_getWindowEventMask(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->event_mask;
 }
 
-static inline const MARU_WindowMetrics *maru_getWindowMetrics(const MARU_Window *window) {
+static inline const MARU_WindowMetrics *
+maru_getWindowMetrics(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->metrics;
 }
 
-static inline MARU_CursorMode maru_getWindowCursorMode(const MARU_Window *window) {
+static inline MARU_CursorMode
+maru_getWindowCursorMode(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->cursor_mode;
 }
 
@@ -116,4 +128,4 @@ maru_getWindowGeometry(const MARU_Window *window) {
 }
 #endif
 
-#endif  // MARU_DETAILS_WINDOWS_H_INCLUDED
+#endif // MARU_DETAILS_WINDOWS_H_INCLUDED

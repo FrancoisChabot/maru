@@ -108,17 +108,19 @@ MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
 
 // --- Monitors (monitors.h) ---
 
-MARU_API MARU_Monitor *const *maru_getMonitors(MARU_Context *context, uint32_t *out_count) {
-  MARU_API_VALIDATE(getMonitors, context, out_count);
+MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+  MARU_API_VALIDATE(getMonitors, context, out_list);
   MARU_Status res = maru_updateMonitors_Windows(context);
   if (res != MARU_SUCCESS) {
-    *out_count = 0;
-    return NULL;
+    out_list->monitors = NULL;
+    out_list->count = 0;
+    return res;
   }
   
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  *out_count = ctx_base->monitor_cache_count;
-  return ctx_base->monitor_cache;
+  out_list->monitors = ctx_base->monitor_cache;
+  out_list->count = ctx_base->monitor_cache_count;
+  return MARU_SUCCESS;
 }
 
 MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
