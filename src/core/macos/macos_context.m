@@ -308,11 +308,13 @@ MARU_Status maru_updateContext_Cocoa(MARU_Context *context, uint64_t field_mask,
     return MARU_SUCCESS;
 }
 
-MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
+MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
+                                  MARU_EventMask mask,
+                                  MARU_EventCallback callback, void *userdata) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
     const uint64_t pump_start_ns = _maru_cocoa_now_ns();
     
-    MARU_PumpContext pump_ctx = {callback, userdata};
+    MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
     ctx->base.pump_ctx = &pump_ctx;
 
     if (atomic_load(&ctx->controllers_dirty)) {

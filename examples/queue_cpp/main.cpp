@@ -79,13 +79,25 @@ int main() {
     return -1;
   }
   maru::Queue& queue = *queue_result;
+  struct QueuePumpBridge {
+    maru::Queue* queue;
+  } queue_bridge{&queue};
+  auto enqueue_callback = [](MARU_EventId type, MARU_Window* event_window,
+                             const MARU_Event* evt, void* userdata) {
+    QueuePumpBridge* bridge = static_cast<QueuePumpBridge*>(userdata);
+    bridge->queue->push(type, event_window, *evt);
+  };
 
   while (keep_running) {
     // Avoid busy-looping before the window is ready.
     auto pump_timeout = renderer.ready() ? 0ms : 16ms;
     
-    // 1. Pump events from the OS into the queue's active buffer
-    queue.pump(pump_timeout);
+    // 1. Pump queue-safe events and push them into the queue active buffer.
+    context.pumpEvents(
+        (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+            pump_timeout)
+            .count(),
+        MARU_QUEUE_SAFE_EVENT_MASK, enqueue_callback, &queue_bridge);
 
     // 2. Commit: swap buffers to make the pumped events available for scanning
     queue.commit();
@@ -104,9 +116,6 @@ int main() {
       },
       [&](maru::KeyboardEvent e) {
         std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";
-      },
-      [&](maru::ControllerButtonStateChangedEvent e) {
-        std::cout << "Controller Button: (" << e->button_id << ", " << e->state << ")\n";
       },
       [&](maru::WindowReadyEvent e) {
         auto surface_result = window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr);

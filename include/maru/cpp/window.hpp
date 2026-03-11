@@ -38,7 +38,6 @@ public:
     bool isMinimized() const;
 
     const char* getTitle() const;
-    MARU_EventMask getEventMask() const;
     void getGeometry(MARU_WindowGeometry& out_geometry) const;
 
     MARU_Status update(uint64_t field_mask, const MARU_WindowAttributes& attributes);
@@ -57,7 +56,6 @@ public:
     MARU_Status setMinimized(bool enabled);
     MARU_Status setCursorMode(MARU_CursorMode mode);
     MARU_Status setCursor(MARU_Cursor* cursor);
-    MARU_Status setEventMask(MARU_EventMask mask);
 
 private:
     explicit Window(MARU_Window* handle) : m_handle(handle) {}

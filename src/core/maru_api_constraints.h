@@ -185,12 +185,16 @@ _maru_validate_updateContext(MARU_Context *context, uint64_t field_mask,
 
 static inline void _maru_validate_pumpEvents(MARU_Context *context,
                                              uint32_t timeout_ms,
+                                             MARU_EventMask mask,
                                              MARU_EventCallback callback,
                                              void *userdata) {
   MARU_CONSTRAINT_CHECK(context != NULL);
-  MARU_CONSTRAINT_CHECK(callback != NULL);
+  if (mask != 0) {
+    MARU_CONSTRAINT_CHECK(callback != NULL);
+  }
   _maru_validate_thread((const MARU_Context_Base *)context);
   (void)timeout_ms;
+  (void)mask;
   (void)userdata;
 }
 

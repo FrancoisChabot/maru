@@ -513,7 +513,6 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   memcpy(win->base.pub.mouse_default_button_channels,
          ctx->base.pub.mouse_default_button_channels,
          sizeof(win->base.pub.mouse_default_button_channels));
-  win->base.pub.event_mask = create_info->attributes.event_mask;
   win->base.pub.cursor_mode = create_info->attributes.cursor_mode;
   win->base.pub.current_cursor = (MARU_Cursor *)create_info->attributes.cursor;
   win->base.pub.title = NULL; // Updated when title is changed or requested

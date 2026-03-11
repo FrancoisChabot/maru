@@ -1,56 +1,69 @@
 # Event Queues
 
-`MARU_Queue` provides an optional, double-buffered snapshot mechanism to consume events. While `maru_pumpEvents()` uses a direct-dispatch callback model, `MARU_Queue` allows you to decouple event gathering from event processing, making it safe to scan events from multiple threads simultaneously.
+`MARU_Queue` provides an optional, double-buffered snapshot mechanism to consume events. While `maru_pumpEvents()` uses direct callback dispatch, `MARU_Queue` lets you decouple event gathering from event processing and scan events safely from multiple threads.
 
-## The Pump-Commit-Scan Lifecycle
+## The Push-Commit-Scan Lifecycle
 
 A `MARU_Queue` operates in three distinct phases:
 
-1.  **PUMP**: Gathering events from the OS.
-2.  **COMMIT**: Creating a stable snapshot of gathered events.
-3.  **SCAN**: Iterating over the stable snapshot.
+1.  **PUSH**: Copy queue-safe callback events into the queue's active buffer.
+2.  **COMMIT**: Create a stable snapshot of the active buffer.
+3.  **SCAN**: Iterate over the stable snapshot.
 
-### 1. Pumping
-On the **primary thread**, you call `maru_queue_pump()`. This functions like `maru_pumpEvents()`, but instead of invoking a user callback immediately, it stores all received events in an internal "active" buffer.
+### 1. Pushing
+On the **primary thread**, call `maru_pumpEvents(...)` and forward queue-safe events into `maru_queue_push(...)` from your callback.
+
+Use `MARU_QUEUE_SAFE_EVENT_MASK` when pumping, or `maru_isQueueSafeEventId(type)` if you prefer to filter inside your callback.
+This mask intentionally excludes data-exchange events, monitor/controller handle events, and pointer-bearing text-edit payloads.
 
 ### 2. Committing
-Once you are ready to process the gathered events, call `maru_queue_commit()` on the **primary thread**. This "freezes" the current active buffer and makes it the "stable" buffer. The active buffer is then cleared and ready for the next round of pumping.
+When ready to process pushed events, call `maru_queue_commit()` on the **primary thread**. This freezes the active buffer as the stable snapshot, then clears the active buffer for the next frame.
 
 ### 3. Scanning
-The stable snapshot can be iterated using `maru_queue_scan()`. This can be done from **any thread**. 
+Call `maru_queue_scan()` to iterate the stable snapshot. Scanning can happen from **any thread**.
 
 ## Threading and Synchronization
 
-- `maru_queue_pump()` and `maru_queue_commit()` **MUST** be called from the primary thread.
+- `maru_queue_push()` and `maru_queue_commit()` **MUST** be called from the primary thread.
 - `maru_queue_scan()` is safe for concurrent readers and can be called from multiple threads simultaneously.
-- **Synchronization**: `MARU_Queue` is NOT a lock-free SPMC queue. You **must** ensure that `maru_queue_scan()` does not run concurrently with `maru_queue_commit()`. A Read-Write lock (where `commit` is the writer and `scan` is the reader) or a thread barrier is required if scanning from worker threads.
+- **Synchronization**: `MARU_Queue` is NOT a lock-free SPMC queue. You **must** ensure that `maru_queue_scan()` does not run concurrently with `maru_queue_commit()`. A read-write lock (where `commit` is the writer and `scan` is the reader) or a thread barrier is required if scanning from worker threads.
 
 ## C API Example
 
 ```c
 #include <maru/maru.h>
 
-void on_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
+static void queue_capture_cb(MARU_EventId type, MARU_Window *window,
+                             const MARU_Event *evt, void *userdata) {
+    MARU_Queue *queue = (MARU_Queue *)userdata;
+    maru_queue_push(queue, type, window, evt);
+}
+
+static void on_queue_event(MARU_EventId type, MARU_Window *window,
+                           const MARU_Event *evt, void *userdata) {
+    (void)window;
+    (void)evt;
     if (type == MARU_EVENT_CLOSE_REQUESTED) {
-        *(bool*)userdata = false;
+        *(bool *)userdata = false;
     }
 }
 
 int main() {
     MARU_Context *ctx = ...;
-    MARU_Queue *queue;
+    MARU_Queue *queue = NULL;
     maru_queue_create(ctx, 1024, &queue);
 
     bool running = true;
     while (running) {
-        // 1. Gather events
-        maru_queue_pump(queue, 16);
+        // 1. Pump queue-safe events and push each callback event into queue
+        maru_pumpEvents(ctx, 16, MARU_QUEUE_SAFE_EVENT_MASK, queue_capture_cb,
+                        queue);
 
-        // 2. Make them available for scanning
+        // 2. Publish snapshot
         maru_queue_commit(queue);
 
-        // 3. Process the stable snapshot
-        maru_queue_scan(queue, MARU_ALL_EVENTS, on_event, &running);
+        // 3. Consume snapshot
+        maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &running);
     }
 
     maru_queue_destroy(queue);
@@ -63,16 +76,16 @@ int main() {
 
 Coalescence is opt-in per event type via a bitmask.
 
-### Supported Coalescence Logic:
+### Supported Coalescence Logic
 - **`MARU_EVENT_MOUSE_MOVED`**: Updates the absolute position to the latest, and accumulates both `delta` and `raw_delta`.
 - **`MARU_EVENT_MOUSE_SCROLLED`**: Accumulates both `delta` and `steps`.
 - **`MARU_EVENT_WINDOW_RESIZED`**: Updates the geometry to the latest.
-- **Other events**: If opted-in, the existing event is simply overwritten by the latest one.
+- **Other events**: If opted-in, the existing event is overwritten by the latest one.
 
 ### Example (C)
 ```c
-// Enable coalescence for mouse motion and scrolling
-maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_SCROLLED);
+maru_queue_set_coalesce_mask(queue,
+    MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_SCROLLED);
 ```
 
 ### Example (C++)
@@ -82,23 +95,18 @@ queue.setCoalesceMask(MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_SCROLLED);
 
 ## Overflow Compaction
 
-When the active queue reaches capacity, `MARU_Queue` now attempts a compaction
-sweep before dropping incoming events:
+When the active queue reaches capacity, `MARU_Queue` attempts a compaction sweep before dropping incoming events:
 
 - For coalescible types, only the latest event per `(type, window)` is kept.
-- Older duplicates are folded into the survivor using the same coalescing
-  semantics (`delta`/`raw_delta`/`steps` accumulation where applicable).
+- Older duplicates are folded into the survivor using the same coalescing semantics (`delta`/`raw_delta`/`steps` accumulation where applicable).
 - Non-coalescible events preserve relative order.
 - If no space is freed, the new event is dropped.
 
-You can inspect cumulative queue metrics (including peak occupancy and
-per-event drop counters):
+You can inspect cumulative queue metrics (including peak occupancy and per-event drop counters):
 
 ```c
 MARU_QueueMetrics metrics = {0};
 maru_queue_get_metrics(queue, &metrics);
-// metrics.peak_active_count
-// metrics.overflow_drop_count_by_event[MARU_EVENT_MOUSE_MOVED]
 
 // Reset between sampling windows if desired
 maru_queue_reset_metrics(queue);
@@ -111,21 +119,27 @@ queue.resetMetrics();
 
 ## C++ API Example (RAII)
 
-The C++ wrapper `maru::Queue` provides a more idiomatic interface, especially when combined with C++20 visitors.
-
 ```cpp
 #include <maru/maru.hpp>
 
+static void queue_capture_cb(MARU_EventId type, MARU_Window *window,
+                             const MARU_Event *evt, void *userdata) {
+    auto *queue = static_cast<maru::Queue *>(userdata);
+    queue->push(type, window, *evt);
+}
+
 int main() {
-    maru::Context ctx;
-    maru::Queue queue(ctx, 1024);
+    auto ctx_result = maru::Context::create();
+    maru::Context &ctx = *ctx_result;
+    auto queue_result = maru::Queue::create(ctx, 1024);
+    maru::Queue &queue = *queue_result;
 
     bool running = true;
     while (running) {
-        queue.pump(16ms);
+        ctx.pumpEvents(16, MARU_QUEUE_SAFE_EVENT_MASK, queue_capture_cb,
+                       &queue);
         queue.commit();
 
-        // Use a visitor to handle events
         queue.scan(maru::overloads{
             [&](maru::WindowCloseEvent) { running = false; },
             [&](maru::MouseMotionEvent e) { /* ... */ }
@@ -137,5 +151,5 @@ int main() {
 ## Performance Considerations
 
 - **Memory Layout**: `MARU_Queue` uses a bulk-allocated, 64-byte aligned memory layout to minimize cache misses and false sharing during scanning.
-- **Lock-Free**: The internal handover between `pump` and `commit` is designed for high throughput on the main thread.
-- **Filtering**: Use `MARU_EventMask` in `maru_queue_scan()` to only iterate over events your application cares about, which can significantly improve performance if the queue contains many high-frequency events (like mouse motion).
+- **Lock-Free**: The active/stable buffer swap in `commit()` is O(1) and designed for high throughput on the main thread.
+- **Filtering**: Use `MARU_QUEUE_SAFE_EVENT_MASK` at pump-time and a scan mask in `maru_queue_scan()` to minimize queue traffic and scan work.

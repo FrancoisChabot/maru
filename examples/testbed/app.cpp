@@ -23,7 +23,9 @@ App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_dev
     inst_module_ = inst.get();
     modules_.push_back(std::move(inst));
 
-    modules_.push_back(std::make_unique<EventModule>());
+    auto event_module = std::make_unique<EventModule>();
+    event_module_ = event_module.get();
+    modules_.push_back(std::move(event_module));
     modules_.push_back(std::make_unique<EventLogModule>());
     modules_.push_back(std::make_unique<MetricsModule>());
     modules_.push_back(std::make_unique<MonitorModule>());
@@ -110,4 +112,11 @@ void App::onContextRecreated(MARU_Context* ctx, MARU_Window* window) {
     for (auto& mod : modules_) {
         mod->onContextRecreated(ctx, window);
     }
+}
+
+MARU_EventMask App::getPumpMask() const {
+    if (!event_module_ || !event_module_->getEnabled()) {
+        return MARU_ALL_EVENTS;
+    }
+    return event_module_->getPumpMask();
 }

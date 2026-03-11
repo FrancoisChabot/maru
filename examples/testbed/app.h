@@ -27,6 +27,7 @@ public:
     void renderUi(MARU_Context* ctx, MARU_Window* window);
     void onContextRecreated(MARU_Context* ctx, MARU_Window* window);
     void updateCursor(MARU_Context* ctx, MARU_Window* window);
+    MARU_EventMask getPumpMask() const;
 
     ImVec4 getClearColor() const { return clear_color_; }
 
@@ -37,4 +38,5 @@ private:
 
     std::vector<std::unique_ptr<FeatureModule>> modules_;
     class InstrumentationModule* inst_module_ = nullptr;
+    class EventModule* event_module_ = nullptr;
 };

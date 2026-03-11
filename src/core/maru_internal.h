@@ -43,6 +43,7 @@ typedef struct MARU_External_Lib_Base {
 } MARU_External_Lib_Base;
 
 typedef struct MARU_PumpContext {
+  MARU_EventMask mask;
   MARU_EventCallback callback;
   void *userdata;
 } MARU_PumpContext;
@@ -77,7 +78,6 @@ typedef struct MARU_Context_Base {
   uint64_t attrs_dirty_mask;
 
   MARU_PumpContext *pump_ctx;
-  MARU_EventMask event_mask;
   bool inhibit_idle;
 
   MARU_ContextMetrics metrics;

@@ -27,9 +27,6 @@ void EventModule::render(MARU_Context* ctx, MARU_Window* window) {
             bool val = (mask & bit) != 0;
             if (ImGui::Checkbox(name, &val)) {
                 if (val) mask |= bit; else mask &= ~bit;
-                MARU_ContextAttributes attrs = {};
-                attrs.event_mask = mask;
-                maru_updateContext(ctx, MARU_CONTEXT_ATTR_EVENT_MASK, &attrs);
                 context_mask_ = mask;
             }
         };

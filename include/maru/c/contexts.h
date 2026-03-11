@@ -92,20 +92,17 @@ static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context,
 
 #define MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE (1u << 0)
 #define MARU_CONTEXT_ATTR_DIAGNOSTICS (1u << 1)
-#define MARU_CONTEXT_ATTR_EVENT_MASK (1u << 2)
-#define MARU_CONTEXT_ATTR_IDLE_TIMEOUT (1u << 3)
+#define MARU_CONTEXT_ATTR_IDLE_TIMEOUT (1u << 2)
 
 #define MARU_CONTEXT_ATTR_ALL                                                  \
   (MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE | MARU_CONTEXT_ATTR_DIAGNOSTICS |    \
-   MARU_CONTEXT_ATTR_EVENT_MASK | MARU_CONTEXT_ATTR_IDLE_TIMEOUT)
+   MARU_CONTEXT_ATTR_IDLE_TIMEOUT)
 
 /** @brief Updatable parameters for an active context. */
 typedef struct MARU_ContextAttributes {
   MARU_DiagnosticCallback
       diagnostic_cb;         ///< Optional callback for library diagnostics.
   void *diagnostic_userdata; ///< Passed to the diagnostic callback.
-
-  MARU_EventMask event_mask; ///< Bitmask of events to allow.
 
   bool inhibit_idle; ///< If true, prevents the OS from entering sleep.
 
@@ -139,7 +136,6 @@ typedef struct MARU_ContextCreateInfo {
           {                                                                    \
               .diagnostic_cb = NULL,                                           \
               .diagnostic_userdata = NULL,                                     \
-              .event_mask = MARU_ALL_EVENTS,                                   \
               .inhibit_idle = false,                                           \
               .idle_timeout_ms = 0,                                            \
           },                                                                   \

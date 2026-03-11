@@ -28,10 +28,13 @@ maru_updateContext(MARU_Context *context, uint64_t field_mask,
   return ctx_base->backend->updateContext(context, field_mask, attributes);
 }
 
-MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
-  MARU_API_VALIDATE(pumpEvents, context, timeout_ms, callback, userdata);
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms,
+                                     MARU_EventMask mask,
+                                     MARU_EventCallback callback, void *userdata) {
+  MARU_API_VALIDATE(pumpEvents, context, timeout_ms, mask, callback, userdata);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  return ctx_base->backend->pumpEvents(context, timeout_ms, callback, userdata);
+  return ctx_base->backend->pumpEvents(context, timeout_ms, mask, callback,
+                                       userdata);
 }
 
 MARU_API MARU_Status maru_createWindow(MARU_Context *context,

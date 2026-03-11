@@ -489,7 +489,8 @@ int main(int, char **) {
 
   printf("Waiting for window to be ready...\n");
   while (g_KeepRunning && !g_WindowReady) {
-    if (maru_pumpEvents(context, 16, handle_maru_event, NULL) != MARU_SUCCESS) {
+    if (maru_pumpEvents(context, 16, MARU_ALL_EVENTS, handle_maru_event,
+                        NULL) != MARU_SUCCESS) {
       fprintf(stderr, "Failed while waiting for window readiness.\n");
       maru_destroyWindow(window);
       if (window_icon) {
@@ -561,7 +562,8 @@ int main(int, char **) {
     app.onContextRecreated(context, window);
 
     while (g_KeepRunning) {
-      maru_pumpEvents(context, 0, handle_maru_event, NULL);
+      const MARU_EventMask pump_mask = app.getPumpMask();
+      maru_pumpEvents(context, 0, pump_mask, handle_maru_event, NULL);
 
       if (app.update(context, window) == AppStatus::EXIT)
         g_KeepRunning = false;

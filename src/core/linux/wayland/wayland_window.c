@@ -680,7 +680,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.attrs_requested = create_info->attributes;
   window->base.attrs_effective = create_info->attributes;
   window->base.attrs_dirty_mask = MARU_WINDOW_ATTR_ALL;
-  window->base.pub.event_mask = window->base.attrs_effective.event_mask;
   window->base.pub.cursor_mode = window->base.attrs_effective.cursor_mode;
   window->base.pub.current_cursor = window->base.attrs_effective.cursor;
   window->scale = (MARU_Scalar)1.0;
@@ -1147,12 +1146,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
       requested->primary_selection = attributes->primary_selection;
       effective->primary_selection = attributes->primary_selection;
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
-      requested->event_mask = attributes->event_mask;
-      effective->event_mask = attributes->event_mask;
-      window->base.pub.event_mask = attributes->event_mask;
   }
 
   if (field_mask & (MARU_WINDOW_ATTR_LOGICAL_SIZE | MARU_WINDOW_ATTR_MIN_SIZE |

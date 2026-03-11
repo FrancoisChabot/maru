@@ -65,7 +65,7 @@ int main() {
     while (keep_running) {
         // We pump events with a 16ms timeout, which is about 60 Hz.
         // If there are no events, maru_pumpEvents will return after 16ms.
-        maru_pumpEvents(context, 16, handle_event, NULL);
+        maru_pumpEvents(context, 16, MARU_ALL_EVENTS, handle_event, NULL);
     }
 
     // Cleanup

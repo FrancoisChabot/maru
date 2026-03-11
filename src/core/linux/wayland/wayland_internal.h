@@ -426,7 +426,9 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context);
 MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
                                   const MARU_ContextAttributes *attributes);
 MARU_Status maru_wakeContext_WL(MARU_Context *context);
-MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata);
+MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
+                               MARU_EventMask mask,
+                               MARU_EventCallback callback, void *userdata);
 MARU_Status maru_createWindow_WL(MARU_Context *context,
                                 const MARU_WindowCreateInfo *create_info,
                                 MARU_Window **out_window);

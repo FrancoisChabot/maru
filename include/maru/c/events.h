@@ -552,9 +552,9 @@ typedef void (*MARU_EventCallback)(MARU_EventId type, MARU_Window *window,
 
 /** @brief Synchronizes the event queue with the OS and dispatches events to the
  * provided callback. */
-MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms,
-                                     MARU_EventCallback callback,
-                                     void *userdata);
+MARU_API MARU_Status
+maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventMask mask,
+                MARU_EventCallback callback, void *userdata);
 
 /** @brief Manually pushes a user-defined event into the queue.
  *

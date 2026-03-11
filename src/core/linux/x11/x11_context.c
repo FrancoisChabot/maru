@@ -282,7 +282,6 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->base.attrs_dirty_mask = 0;
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_mask = create_info->attributes.event_mask;
   ctx->base.inhibit_idle = create_info->attributes.inhibit_idle;
   ctx->xss_idle_inhibit_active = false;
   _maru_x11_apply_idle_inhibit(ctx);
@@ -655,10 +654,11 @@ static bool _maru_x11_pop_next_event(MARU_Context_X11 *ctx, XEvent *out_ev) {
 }
 
 MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
+                                MARU_EventMask mask,
                                 MARU_EventCallback callback, void *userdata) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   const uint64_t pump_start_ns = _maru_x11_get_monotonic_time_ns();
-  MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
+  MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
   _maru_x11_clear_mime_query_cache(ctx);
 

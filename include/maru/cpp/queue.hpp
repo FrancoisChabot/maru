@@ -8,7 +8,6 @@
 #include "maru/cpp/fwd.hpp"
 #include "maru/cpp/expected.hpp"
 #include "maru/cpp/context.hpp"
-#include <chrono>
 
 namespace maru {
 
@@ -30,12 +29,8 @@ public:
     MARU_Queue* get() const { return m_handle; }
     operator MARU_Queue*() const { return m_handle; }
 
-    MARU_Status pump(uint32_t timeout_ms = 0);
-    
-    template <typename Rep, typename Period>
-    MARU_Status pump(std::chrono::duration<Rep, Period> timeout) {
-        return pump((uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
-    }
+    MARU_Status push(MARU_EventId type, MARU_Window* window,
+                     const MARU_Event& event);
 
     MARU_Status commit();
 

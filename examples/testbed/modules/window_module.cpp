@@ -47,50 +47,6 @@ static void check_vk_result(VkResult err) {
     }
 }
 
-static void renderWindowEventMaskControls(const char* id_label, MARU_Window* target) {
-    if (!target) {
-        return;
-    }
-
-    ImGui::PushID(id_label);
-    if (ImGui::CollapsingHeader("Window Event Mask")) {
-        MARU_EventMask mask = maru_getWindowEventMask(target);
-
-        auto event_checkbox = [&](const char* name, MARU_EventMask bit) {
-            bool val = (mask & bit) != 0;
-            if (ImGui::Checkbox(name, &val)) {
-                if (val) {
-                    mask |= bit;
-                } else {
-                    mask &= ~bit;
-                }
-
-                MARU_WindowAttributes attrs = {};
-                attrs.event_mask = mask;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
-            }
-        };
-
-        event_checkbox("CLOSE_REQUESTED", MARU_MASK_CLOSE_REQUESTED);
-        event_checkbox("WINDOW_RESIZED", MARU_MASK_WINDOW_RESIZED);
-        event_checkbox("KEY_STATE_CHANGED", MARU_MASK_KEY_STATE_CHANGED);
-        event_checkbox("WINDOW_READY", MARU_MASK_WINDOW_READY);
-        event_checkbox("MOUSE_MOVED", MARU_MASK_MOUSE_MOVED);
-        event_checkbox("MOUSE_BUTTON_STATE_CHANGED", MARU_MASK_MOUSE_BUTTON_STATE_CHANGED);
-        event_checkbox("MOUSE_SCROLLED", MARU_MASK_MOUSE_SCROLLED);
-        event_checkbox("IDLE_STATE_CHANGED", MARU_MASK_IDLE_STATE_CHANGED);
-        event_checkbox("MONITOR_CONNECTION_CHANGED", MARU_MASK_MONITOR_CONNECTION_CHANGED);
-        event_checkbox("MONITOR_MODE_CHANGED", MARU_MASK_MONITOR_MODE_CHANGED);
-        event_checkbox("WINDOW_FRAME", MARU_MASK_WINDOW_FRAME);
-        event_checkbox("WINDOW_PRESENTATION_STATE_CHANGED", MARU_MASK_WINDOW_PRESENTATION_STATE_CHANGED);
-        event_checkbox("TEXT_EDIT_START", MARU_MASK_TEXT_EDIT_START);
-        event_checkbox("TEXT_EDIT_UPDATE", MARU_MASK_TEXT_EDIT_UPDATE);
-        event_checkbox("TEXT_EDIT_COMMIT", MARU_MASK_TEXT_EDIT_COMMIT);
-        event_checkbox("TEXT_EDIT_END", MARU_MASK_TEXT_EDIT_END);
-    }
-    ImGui::PopID();
-}
-
 void WindowModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
     (void)event;
     if (handling_window_teardown_) {
@@ -485,7 +441,6 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 maru_updateWindow(target, MARU_WINDOW_ATTR_ICON, &attrs);
             }
 
-            renderWindowEventMaskControls("primary_window_mask", target);
         }
     }
 
@@ -580,9 +535,6 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 sw.should_close = true;
             }
 
-            if (window_ready) {
-                renderWindowEventMaskControls("secondary_window_mask", sw.window);
-            }
         }
         ImGui::PopID();
     }

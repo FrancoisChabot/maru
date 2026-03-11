@@ -50,7 +50,7 @@ TEST_CASE("DesktopIntegration.CrossThreadPostEventWithoutWindow") {
   auto started = Clock::now();
   status = MARU_FAILURE;
   while (Clock::now() - started < std::chrono::seconds(2)) {
-    status = maru_pumpEvents(ctx, 100, test_callback, &cb);
+    status = maru_pumpEvents(ctx, 100, MARU_ALL_EVENTS, test_callback, &cb);
     if (cb.called) break;
   }
 
@@ -86,7 +86,7 @@ TEST_CASE("DesktopIntegration.CrossThreadWakeContextWithoutWindow") {
   auto started = Clock::now();
   // We expect maru_pumpEvents to return SUCCESS even if no events were processed
   // but it was woken up. 
-  status = maru_pumpEvents(ctx, 2000, test_callback, &cb);
+  status = maru_pumpEvents(ctx, 2000, MARU_ALL_EVENTS, test_callback, &cb);
   
   auto elapsed_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - started)

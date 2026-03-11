@@ -480,12 +480,6 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     _maru_x11_apply_size_hints_local(ctx, win);
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
-    requested->event_mask = attributes->event_mask;
-    effective->event_mask = attributes->event_mask;
-    win->base.pub.event_mask = attributes->event_mask;
-  }
-
   if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
     requested->accept_drop = attributes->accept_drop;
     effective->accept_drop = attributes->accept_drop;
@@ -736,7 +730,6 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   memcpy(win->base.pub.mouse_default_button_channels,
          ctx->base.pub.mouse_default_button_channels,
          sizeof(win->base.pub.mouse_default_button_channels));
-  win->base.pub.event_mask = create_info->attributes.event_mask;
   win->base.pub.cursor_mode = create_info->attributes.cursor_mode;
   win->base.pub.current_cursor = create_info->attributes.cursor;
   win->base.pub.title = NULL;

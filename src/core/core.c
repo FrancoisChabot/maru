@@ -75,8 +75,7 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
   MARU_ASSUME(ctx->pump_ctx != NULL);
 
   const MARU_EventMask event_bit = MARU_EVENT_MASK(type);
-  if ((ctx->event_mask & event_bit) == 0) return;
-  if (window && (maru_getWindowEventMask(window) & event_bit) == 0) return;
+  if ((ctx->pump_ctx->mask & event_bit) == 0) return;
   if (window &&
       (type == MARU_EVENT_DROP_ENTERED || type == MARU_EVENT_DROP_HOVERED ||
        type == MARU_EVENT_DROP_EXITED || type == MARU_EVENT_DROP_DROPPED)) {
@@ -182,12 +181,6 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
     ctx_base->attrs_effective.diagnostic_userdata = attributes->diagnostic_userdata;
     ctx_base->diagnostic_cb = ctx_base->attrs_effective.diagnostic_cb;
     ctx_base->diagnostic_userdata = ctx_base->attrs_effective.diagnostic_userdata;
-  }
-
-  if (field_mask & MARU_CONTEXT_ATTR_EVENT_MASK) {
-    ctx_base->attrs_requested.event_mask = attributes->event_mask;
-    ctx_base->attrs_effective.event_mask = attributes->event_mask;
-    ctx_base->event_mask = ctx_base->attrs_effective.event_mask;
   }
 
   if (field_mask & MARU_CONTEXT_ATTR_IDLE_TIMEOUT) {

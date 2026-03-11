@@ -10,8 +10,16 @@ struct QueueTestState {
 
 static void on_queue_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
     struct QueueTestState *state = (struct QueueTestState *)userdata;
+    (void)window;
+    (void)evt;
     state->event_count++;
     state->last_type = type;
+}
+
+static MARU_Status push_user_event(MARU_Queue *queue, MARU_EventId type) {
+    MARU_Event evt = {0};
+    evt.user = (MARU_UserDefinedEvent){0};
+    return maru_queue_push(queue, type, NULL, &evt);
 }
 
 UTEST(QueueTest, CreateDestroy) {
@@ -27,27 +35,21 @@ UTEST(QueueTest, CreateDestroy) {
     maru_destroyContext(context);
 }
 
-UTEST(QueueTest, PumpCommitScan) {
+UTEST(QueueTest, PushCommitScan) {
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
     MARU_Context *context = maru_test_createContext(&create_info);
     
     MARU_Queue *queue = NULL;
     maru_queue_create(context, 16, &queue);
 
-    // 1. Post an event
-    MARU_UserDefinedEvent user_evt = { .userdata = (void*)0x123 };
-    maru_postEvent(context, MARU_EVENT_USER_0, NULL, user_evt);
+    // 1. Push an event
+    MARU_Event evt = {0};
+    evt.user.userdata = (void *)0x123;
+    maru_queue_push(queue, MARU_EVENT_USER_0, NULL, &evt);
 
     struct QueueTestState state = {0};
 
-    // 2. Scan before pump/commit should find nothing
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
-    EXPECT_EQ(state.event_count, 0);
-
-    // 3. Pump events (this pulls from context into queue's active buffer)
-    maru_queue_pump(queue, 0);
-    
-    // Scan still should find nothing because not committed
+    // 2. Scan before commit should find nothing
     maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 0);
 
@@ -70,18 +72,18 @@ UTEST(QueueTest, MultipleCommits) {
     MARU_Queue *queue = NULL;
     maru_queue_create(context, 16, &queue);
 
-    // Post Event A
-    maru_postEvent(context, MARU_EVENT_USER_0, NULL, (MARU_UserDefinedEvent){0});
-    maru_queue_pump(queue, 0);
+    // Push Event A
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
+              (MARU_Status)MARU_SUCCESS);
     maru_queue_commit(queue);
 
     struct QueueTestState state = {0};
     maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
 
-    // Post Event B
-    maru_postEvent(context, MARU_EVENT_USER_1, NULL, (MARU_UserDefinedEvent){0});
-    maru_queue_pump(queue, 0);
+    // Push Event B
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
+              (MARU_Status)MARU_SUCCESS);
     
     // Before second commit, scan still shows only A
     state.event_count = 0;
@@ -107,9 +109,10 @@ UTEST(QueueTest, Masking) {
     MARU_Queue *queue = NULL;
     maru_queue_create(context, 16, &queue);
 
-    maru_postEvent(context, MARU_EVENT_USER_0, NULL, (MARU_UserDefinedEvent){0});
-    maru_postEvent(context, MARU_EVENT_USER_1, NULL, (MARU_UserDefinedEvent){0});
-    maru_queue_pump(queue, 0);
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
+              (MARU_Status)MARU_SUCCESS);
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
+              (MARU_Status)MARU_SUCCESS);
     maru_queue_commit(queue);
 
     struct QueueTestState state = {0};
@@ -117,6 +120,28 @@ UTEST(QueueTest, Masking) {
     maru_queue_scan(queue, MARU_MASK_USER_1, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
     EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_1);
+
+    maru_queue_destroy(queue);
+    maru_destroyContext(context);
+}
+
+UTEST(QueueTest, QueueSafeMaskHelper) {
+    EXPECT_TRUE(maru_isQueueSafeEventId(MARU_EVENT_USER_0));
+    EXPECT_TRUE(maru_isQueueSafeEventId(MARU_EVENT_WINDOW_FRAME));
+    EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_DATA_REQUESTED));
+    EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_MONITOR_CONNECTION_CHANGED));
+    EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_CONTROLLER_CONNECTION_CHANGED));
+}
+
+UTEST(QueueTest, PushRejectsNullPayload) {
+    MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+    MARU_Context *context = maru_test_createContext(&create_info);
+
+    MARU_Queue *queue = NULL;
+    maru_queue_create(context, 16, &queue);
+
+    EXPECT_EQ(maru_queue_push(queue, MARU_EVENT_USER_0, NULL, NULL),
+              (MARU_Status)MARU_FAILURE);
 
     maru_queue_destroy(queue);
     maru_destroyContext(context);
@@ -130,6 +155,7 @@ struct CoalesceResult {
 
 static void on_coalesce_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
     struct CoalesceResult *r = (struct CoalesceResult *)userdata;
+    (void)window;
     r->count++;
     if (type == MARU_EVENT_MOUSE_MOVED) {
         r->pos = evt->mouse_motion.position;
@@ -140,7 +166,6 @@ static void on_coalesce_event(MARU_EventId type, MARU_Window *window, const MARU
 UTEST(QueueTest, Coalescence) {
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
     MARU_Context *context = maru_test_createContext(&create_info);
-    MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
     
     MARU_Queue *queue = NULL;
     maru_queue_create(context, 16, &queue);
@@ -153,7 +178,7 @@ UTEST(QueueTest, Coalescence) {
     ev1.mouse_motion.position.y = (MARU_Scalar)10.0;
     ev1.mouse_motion.delta.x = (MARU_Scalar)5.0;
     ev1.mouse_motion.delta.y = (MARU_Scalar)5.0;
-    _maru_post_event_internal(ctx_base, MARU_EVENT_MOUSE_MOVED, NULL, &ev1);
+    maru_queue_push(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev1);
 
     // ev2
     MARU_Event ev2 = {0};
@@ -161,9 +186,8 @@ UTEST(QueueTest, Coalescence) {
     ev2.mouse_motion.position.y = (MARU_Scalar)20.0;
     ev2.mouse_motion.delta.x = (MARU_Scalar)10.0;
     ev2.mouse_motion.delta.y = (MARU_Scalar)10.0;
-    _maru_post_event_internal(ctx_base, MARU_EVENT_MOUSE_MOVED, NULL, &ev2);
+    maru_queue_push(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev2);
 
-    maru_queue_pump(queue, 0);
     maru_queue_commit(queue);
 
     struct CoalesceResult result = {0};
@@ -197,7 +221,6 @@ static void on_trace_event(MARU_EventId type, MARU_Window *window, const MARU_Ev
 UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
     MARU_Context *context = maru_test_createContext(&create_info);
-    MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
 
     MARU_Queue *queue = NULL;
     maru_queue_create(context, 3, &queue);
@@ -210,9 +233,9 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     move_a.mouse_motion.delta.y = (MARU_Scalar)2.0;
     move_a.mouse_motion.raw_delta.x = (MARU_Scalar)3.0;
     move_a.mouse_motion.raw_delta.y = (MARU_Scalar)4.0;
-    _maru_post_event_internal(ctx_base, MARU_EVENT_MOUSE_MOVED, NULL, &move_a);
+    maru_queue_push(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_a);
 
-    maru_postEvent(context, MARU_EVENT_USER_0, NULL, (MARU_UserDefinedEvent){0});
+    push_user_event(queue, MARU_EVENT_USER_0);
 
     MARU_Event move_b = {0};
     move_b.mouse_motion.position.x = (MARU_Scalar)20.0;
@@ -221,11 +244,9 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     move_b.mouse_motion.delta.y = (MARU_Scalar)7.0;
     move_b.mouse_motion.raw_delta.x = (MARU_Scalar)11.0;
     move_b.mouse_motion.raw_delta.y = (MARU_Scalar)13.0;
-    _maru_post_event_internal(ctx_base, MARU_EVENT_MOUSE_MOVED, NULL, &move_b);
+    maru_queue_push(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_b);
 
-    maru_postEvent(context, MARU_EVENT_USER_1, NULL, (MARU_UserDefinedEvent){0});
-
-    maru_queue_pump(queue, 0);
+    push_user_event(queue, MARU_EVENT_USER_1);
     maru_queue_commit(queue);
 
     struct QueueTrace trace = {0};
@@ -265,11 +286,12 @@ UTEST(QueueTest, OverflowDropsWhenCompactionCannotFreeSpace) {
     maru_queue_create(context, 2, &queue);
     maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED);
 
-    maru_postEvent(context, MARU_EVENT_USER_0, NULL, (MARU_UserDefinedEvent){0});
-    maru_postEvent(context, MARU_EVENT_USER_1, NULL, (MARU_UserDefinedEvent){0});
-    maru_postEvent(context, MARU_EVENT_USER_2, NULL, (MARU_UserDefinedEvent){0});
-
-    maru_queue_pump(queue, 0);
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
+              (MARU_Status)MARU_SUCCESS);
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
+              (MARU_Status)MARU_SUCCESS);
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_2),
+              (MARU_Status)MARU_FAILURE);
     maru_queue_commit(queue);
 
     struct QueueTrace trace = {0};
@@ -299,10 +321,12 @@ UTEST(QueueTest, ResetMetricsClearsOverflowCounters) {
     MARU_Queue *queue = NULL;
     maru_queue_create(context, 2, &queue);
 
-    maru_postEvent(context, MARU_EVENT_USER_0, NULL, (MARU_UserDefinedEvent){0});
-    maru_postEvent(context, MARU_EVENT_USER_1, NULL, (MARU_UserDefinedEvent){0});
-    maru_postEvent(context, MARU_EVENT_USER_2, NULL, (MARU_UserDefinedEvent){0});
-    maru_queue_pump(queue, 0);
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
+              (MARU_Status)MARU_SUCCESS);
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
+              (MARU_Status)MARU_SUCCESS);
+    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_2),
+              (MARU_Status)MARU_FAILURE);
 
     MARU_QueueMetrics metrics = {0};
     maru_queue_get_metrics(queue, &metrics);

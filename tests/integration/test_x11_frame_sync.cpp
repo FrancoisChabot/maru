@@ -64,7 +64,7 @@ TEST_CASE("X11.FrameSynchronizationThrottling") {
 
   // Run for 1 second
   while (Clock::now() - state.start_time < std::chrono::seconds(1)) {
-    maru_pumpEvents(ctx, 16, frame_sync_callback, &state);
+    maru_pumpEvents(ctx, 16, MARU_ALL_EVENTS, frame_sync_callback, &state);
   }
 
   int total_frames = state.frame_count.load();

@@ -79,13 +79,12 @@ UTEST(X11DataExchange, SelectionRequestRejectsUnknownSelectionAtomsWithoutDndDis
   ctx.selection_primary = 12;
   ctx.xdnd_selection = 13;
   ctx.x11_lib.XSendEvent = test_xsend_event;
-  ctx.base.event_mask = MARU_ALL_EVENTS;
   ctx.base.pump_ctx = &pump_ctx;
 
+  pump_ctx.mask = MARU_ALL_EVENTS;
   pump_ctx.callback = test_event_callback;
 
   owner_window.handle = 77;
-  owner_window.base.pub.event_mask = MARU_ALL_EVENTS;
   ctx.dnd_offer.owner_window = &owner_window;
 
   ev.type = SelectionRequest;

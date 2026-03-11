@@ -14,17 +14,17 @@
  * A MARU_Queue provides an OPTIONAL way to consume events with a thread-safe
  * scanning phase, and event coalescence.
  * You don't have to use it, but if you are not bringing in your own event
- * queue, it makes dealing with events a lot smoother. It follows a pump ->
+ * queue, it makes dealing with events a lot smoother. It follows a push ->
  * commit -> scan lifecycle:
  *
- * 1. PUMP: On the primary thread, events are gathered from the OS and pushed
- *    into the queue's internal buffer.
+ * 1. PUSH: On the primary thread, callback events are copied into the queue's
+ *    internal active buffer.
  * 2. COMMIT: On the primary thread, the gathered events are made "stable",
  *    forming a consistent snapshot for readers.
  * 3. SCAN: From any thread, the stable snapshot can be iterated.
  *
  * Threading Rules:
- * - maru_queue_pump() and maru_queue_commit() MUST be called from the primary
+ * - maru_queue_push() and maru_queue_commit() MUST be called from the primary
  * thread.
  * - maru_queue_scan() can be called from any thread.
  * - External synchronization (e.g., an RW lock) MUST be used to ensure that
@@ -38,6 +38,47 @@ extern "C" {
 
 /** @brief Opaque handle to an event queue. */
 typedef struct MARU_Queue MARU_Queue;
+
+/**
+ * @brief Event mask of payloads safe to queue by value via maru_queue_push().
+ *
+ * Any event outside this mask may carry transient pointers/handles whose
+ * lifetime only spans the active pump callback.
+ */
+#define MARU_QUEUE_SAFE_EVENT_MASK                                              \
+  (MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED) |                               \
+   MARU_EVENT_MASK(MARU_EVENT_WINDOW_RESIZED) |                                \
+   MARU_EVENT_MASK(MARU_EVENT_KEY_STATE_CHANGED) |                             \
+   MARU_EVENT_MASK(MARU_EVENT_WINDOW_READY) |                                  \
+   MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED) |                                   \
+   MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED) |                    \
+   MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED) |                                \
+   MARU_EVENT_MASK(MARU_EVENT_IDLE_STATE_CHANGED) |                            \
+   MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME) |                                  \
+   MARU_EVENT_MASK(MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED) |             \
+   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_START) |                               \
+   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_END) |                                 \
+   MARU_EVENT_MASK(MARU_EVENT_USER_0) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_1) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_2) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_3) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_4) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_5) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_6) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_7) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_8) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_9) |                                        \
+   MARU_EVENT_MASK(MARU_EVENT_USER_10) |                                       \
+   MARU_EVENT_MASK(MARU_EVENT_USER_11) |                                       \
+   MARU_EVENT_MASK(MARU_EVENT_USER_12) |                                       \
+   MARU_EVENT_MASK(MARU_EVENT_USER_13) |                                       \
+   MARU_EVENT_MASK(MARU_EVENT_USER_14) |                                       \
+   MARU_EVENT_MASK(MARU_EVENT_USER_15))
+
+/** @brief Returns true when an event id is safe for maru_queue_push(). */
+static inline bool maru_isQueueSafeEventId(MARU_EventId type) {
+  return maru_eventMaskHas(MARU_QUEUE_SAFE_EVENT_MASK, type);
+}
 
 /** @brief Cumulative queue overflow/compaction counters. */
 typedef struct MARU_QueueMetrics {
@@ -77,19 +118,23 @@ MARU_API MARU_Status maru_queue_create(MARU_Context *ctx, uint32_t capacity,
 MARU_API void maru_queue_destroy(MARU_Queue *queue);
 
 /**
- * @brief Pumps events from the OS into the queue's transient buffer.
+ * @brief Pushes one event into the queue's transient active buffer.
  *
- * This function invokes the underlying context's event pumping mechanism.
+ * Typical usage is from inside the callback provided to maru_pumpEvents().
  * Must be called on the primary thread.
  *
  * @param queue The event queue.
- * @param timeout_ms How long to wait for events from the OS.
+ * @param type Event id.
+ * @param window Event window (may be NULL).
+ * @param event Event payload to copy by value.
  * @return MARU_SUCCESS on success, or an error code.
  */
-MARU_API MARU_Status maru_queue_pump(MARU_Queue *queue, uint32_t timeout_ms);
+MARU_API MARU_Status maru_queue_push(MARU_Queue *queue, MARU_EventId type,
+                                     MARU_Window *window,
+                                     const MARU_Event *event);
 
 /**
- * @brief Makes all pumped events since the last commit available for scanning.
+ * @brief Makes all pushed events since the last commit available for scanning.
  *
  * This "freezes" the current set of events into a stable snapshot.
  * Must be called on the primary thread.

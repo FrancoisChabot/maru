@@ -40,7 +40,7 @@ On some platforms (like Wayland), a window must be fully initialized by the comp
 ```c
 // Example waiting loop
 while (!maru_isWindowReady(window)) {
-    maru_pumpEvents(context, 16, handle_event, NULL);
+    maru_pumpEvents(context, 16, MARU_ALL_EVENTS, handle_event, NULL);
 }
 
 // Now it's safe to create the surface

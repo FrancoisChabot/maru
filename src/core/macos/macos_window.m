@@ -179,7 +179,6 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     win->base.attrs_requested = create_info->attributes;
     win->base.attrs_effective = create_info->attributes;
     win->base.attrs_dirty_mask = 0;
-    win->base.pub.event_mask = win->base.attrs_effective.event_mask;
     win->base.pub.cursor_mode = win->base.attrs_effective.cursor_mode;
     win->base.pub.current_cursor = win->base.attrs_effective.cursor;
 
@@ -400,12 +399,6 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         }
         effective->visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
         effective->minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-    }
-
-    if (field_mask & MARU_WINDOW_ATTR_EVENT_MASK) {
-        requested->event_mask = attributes->event_mask;
-        effective->event_mask = attributes->event_mask;
-        win->base.pub.event_mask = effective->event_mask;
     }
 
     if (field_mask & MARU_WINDOW_ATTR_CURSOR) {

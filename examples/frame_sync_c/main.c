@@ -66,7 +66,6 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
 
 int main() {
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-  create_info.attributes.event_mask = MARU_ALL_EVENTS;
 
   MARU_Context *context = NULL;
   MARU_Window *window = NULL;
@@ -95,7 +94,7 @@ int main() {
   }
 
   while (keep_running && !window_ready) {
-    maru_pumpEvents(context, 16, handle_event, NULL);
+    maru_pumpEvents(context, 16, MARU_ALL_EVENTS, handle_event, NULL);
   }
 
   if (maru_createVkSurface(window, renderer.instance, vkGetInstanceProcAddr,
@@ -122,7 +121,7 @@ int main() {
   while (keep_running) {
     // We use a small timeout to avoid busy-waiting, but 0 is also fine
     // if we are driven by frame events.
-    maru_pumpEvents(context, 10, handle_event, NULL);
+    maru_pumpEvents(context, 10, MARU_ALL_EVENTS, handle_event, NULL);
   }
 
   vkDeviceWaitIdle(renderer.device);

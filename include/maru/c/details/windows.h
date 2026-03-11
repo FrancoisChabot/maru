@@ -31,7 +31,6 @@ typedef struct MARU_WindowExposed {
   const MARU_MouseButtonChannelInfo *mouse_button_channels;
   uint32_t mouse_button_count;
   int32_t mouse_default_button_channels[MARU_MOUSE_DEFAULT_COUNT];
-  MARU_EventMask event_mask;
   MARU_CursorMode cursor_mode;
   const MARU_Cursor *current_cursor;
   const char *title;
@@ -98,11 +97,6 @@ static inline bool maru_isWindowResizable(const MARU_Window *window) {
 static inline bool maru_isWindowDecorated(const MARU_Window *window) {
   return (((const MARU_WindowExposed *)window)->flags &
           MARU_WINDOW_STATE_DECORATED) != 0;
-}
-
-static inline MARU_EventMask
-maru_getWindowEventMask(const MARU_Window *window) {
-  return ((const MARU_WindowExposed *)window)->event_mask;
 }
 
 static inline const MARU_WindowMetrics *

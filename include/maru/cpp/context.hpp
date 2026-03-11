@@ -51,21 +51,25 @@ public:
     [[nodiscard]] expected<Cursor> createCursor(const MARU_CursorCreateInfo& create_info);
     [[nodiscard]] expected<Image> createImage(const MARU_ImageCreateInfo& create_info);
 
-    MARU_Status pumpEvents(uint32_t timeout_ms, MARU_EventCallback callback, void* userdata = nullptr);
+    MARU_Status pumpEvents(uint32_t timeout_ms, MARU_EventMask mask, MARU_EventCallback callback, void* userdata = nullptr);
+
+    MARU_Status pumpEvents(uint32_t timeout_ms, MARU_EventCallback callback, void* userdata = nullptr) {
+        return pumpEvents(timeout_ms, MARU_ALL_EVENTS, callback, userdata);
+    }
 
 #if __cplusplus >= 202002L
     template <typename Visitor>
-    MARU_Status pumpEvents(EventDispatcher<Visitor>& dispatcher, uint32_t timeout_ms = 0);
+    MARU_Status pumpEvents(EventDispatcher<Visitor>& dispatcher, uint32_t timeout_ms = 0, MARU_EventMask mask = MARU_ALL_EVENTS);
 
     template <typename Visitor, typename Rep, typename Period>
-    MARU_Status pumpEvents(EventDispatcher<Visitor>& dispatcher, std::chrono::duration<Rep, Period> timeout) {
-        return pumpEvents(dispatcher, (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
+    MARU_Status pumpEvents(EventDispatcher<Visitor>& dispatcher, std::chrono::duration<Rep, Period> timeout, MARU_EventMask mask = MARU_ALL_EVENTS) {
+        return pumpEvents(dispatcher, (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count(), mask);
     }
 #endif
 
     template <typename Rep, typename Period>
-    MARU_Status pumpEvents(std::chrono::duration<Rep, Period> timeout, MARU_EventCallback callback, void* userdata = nullptr) {
-        return pumpEvents((uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count(), callback, userdata);
+    MARU_Status pumpEvents(std::chrono::duration<Rep, Period> timeout, MARU_EventCallback callback, void* userdata = nullptr, MARU_EventMask mask = MARU_ALL_EVENTS) {
+        return pumpEvents((uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count(), mask, callback, userdata);
     }
 
     MARU_Status postEvent(MARU_EventId type, MARU_Window* window, MARU_UserDefinedEvent evt);

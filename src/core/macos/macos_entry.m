@@ -69,9 +69,11 @@ MARU_API MARU_Status maru_updateContext(MARU_Context *context, uint64_t field_ma
   return maru_updateContext_Cocoa(context, field_mask, attributes);
 }
 
-MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms, MARU_EventCallback callback, void *userdata) {
-  MARU_API_VALIDATE(pumpEvents, context, timeout_ms, callback, userdata);
-  return maru_pumpEvents_Cocoa(context, timeout_ms, callback, userdata);
+MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms,
+                                     MARU_EventMask mask,
+                                     MARU_EventCallback callback, void *userdata) {
+  MARU_API_VALIDATE(pumpEvents, context, timeout_ms, mask, callback, userdata);
+  return maru_pumpEvents_Cocoa(context, timeout_ms, mask, callback, userdata);
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {

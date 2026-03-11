@@ -196,6 +196,7 @@ static bool _maru_windows_has_pending_frames(MARU_Context_Windows *ctx) {
 }
 
 MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
+                                    MARU_EventMask mask,
                                     MARU_EventCallback callback,
                                     void *userdata) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
@@ -211,7 +212,7 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
     ctx->clipboard_mime_query_count = 0;
   }
 
-  MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
+  MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
 
   _maru_drain_queued_events(&ctx->base);

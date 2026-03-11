@@ -2,6 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "maru/maru_queue.h"
+#include "maru_api_constraints.h"
 #include "maru_internal.h"
 #include "maru_mem_internal.h"
 #include <limits.h>
@@ -24,7 +25,7 @@ typedef struct MARU_Queue {
     uint32_t active_count;
     uint32_t stable_count;
     uint32_t capacity;
-    
+
     MARU_EventMask coalesce_mask;
     uint32_t peak_active_count;
     uint32_t overflow_drop_count;
@@ -220,14 +221,14 @@ static uint32_t _maru_queue_compact_active(MARU_Queue *q) {
     return removed;
 }
 
-static void _maru_queue_on_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
-    MARU_Queue *q = (MARU_Queue *)userdata;
-
+static bool _maru_queue_push_internal(MARU_Queue *q, MARU_EventId type,
+                                      MARU_Window *window,
+                                      const MARU_Event *evt) {
     if (q->active_count > 0 && maru_eventMaskHas(q->coalesce_mask, type)) {
         uint32_t last_idx = q->active_count - 1u;
         if (q->active.types[last_idx] == type && q->active.windows[last_idx] == window) {
             _maru_queue_coalesce_latest(type, &q->active.events[last_idx], evt);
-            return;
+            return true;
         }
     }
 
@@ -242,8 +243,10 @@ static void _maru_queue_on_event(MARU_EventId type, MARU_Window *window, const M
         q->active.windows[idx] = window;
         q->active.events[idx] = *evt;
         _maru_queue_update_peak_active_count(q);
+        return true;
     } else {
         _maru_queue_count_drop(q, type);
+        return false;
     }
 }
 
@@ -322,14 +325,27 @@ void maru_queue_destroy(MARU_Queue *queue) {
     maru_context_free(ctx_base, queue);
 }
 
-MARU_Status maru_queue_pump(MARU_Queue *queue, uint32_t timeout_ms) {
-    if (!queue) return MARU_FAILURE;
-    
-    return maru_pumpEvents((MARU_Context *)queue->ctx_base, timeout_ms, _maru_queue_on_event, queue);
+MARU_Status maru_queue_push(MARU_Queue *queue, MARU_EventId type,
+                            MARU_Window *window, const MARU_Event *event) {
+    if (!queue || !event) return MARU_FAILURE;
+
+#ifdef MARU_VALIDATE_API_CALLS
+    _maru_validate_thread(queue->ctx_base);
+    MARU_CONSTRAINT_CHECK(maru_isKnownEventId(type));
+    MARU_CONSTRAINT_CHECK(maru_isQueueSafeEventId(type));
+#endif
+
+    return _maru_queue_push_internal(queue, type, window, event)
+               ? MARU_SUCCESS
+               : MARU_FAILURE;
 }
 
 MARU_Status maru_queue_commit(MARU_Queue *queue) {
     if (!queue) return MARU_FAILURE;
+
+#ifdef MARU_VALIDATE_API_CALLS
+    _maru_validate_thread(queue->ctx_base);
+#endif
 
     // O(1) swap
     MARU_QueueBuffer tmp_buf = queue->active;

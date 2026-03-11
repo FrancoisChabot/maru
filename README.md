@@ -132,12 +132,12 @@ int main() {
 
   // Wait for the window to be ready
   while(!app.renderer.has_surface && app.keep_running) {
-    maru_pumpEvents(context, MARU_NEVER /*timeout, in ms*/, handle_event, &app);
+    maru_pumpEvents(context, MARU_NEVER /*timeout, in ms*/, MARU_ALL_EVENTS, handle_event, &app);
   }
 
   // main loop
   while (app.keep_running) {
-    maru_pumpEvents(context, 0, handle_event, &app);
+    maru_pumpEvents(context, 0, MARU_ALL_EVENTS, handle_event, &app);
     renderer_draw_frame(&app.renderer);
   }
 
@@ -248,6 +248,17 @@ By default, every single mouse movement is dispatched to your callback to ensure
 MARU_Queue* queue = NULL;
 RWLock queue_lock; // Your preferred synchronization primitive
 
+static void queue_push_callback(MARU_EventId type, MARU_Window *window,
+                                const MARU_Event *evt, void *userdata) {
+  MARU_Queue *queue = (MARU_Queue *)userdata;
+  if (maru_isQueueSafeEventId(type)) {
+    maru_queue_push(queue, type, window, evt);
+  }
+  else {
+    // handle other events.
+  }
+}
+
 // --- Initialization (Main Thread) ---
 maru_queue_create(context, 256 /* queue capacity */, &queue);
 maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED | MARU_MASK_WINDOW_RESIZED);
@@ -255,8 +266,9 @@ maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED | MARU_MASK_WINDOW_RES
 // ... later in the frame ...
 
 // --- Event Gathering (Main Thread) ---
-// 1. Pump OS events into the queue's transient front-buffer. Doesn't affect any other thread scanning the stable buffer.
-maru_queue_pump(queue, 0);
+// 1. Pump queue-safe events and push them into the active queue buffer.
+maru_pumpEvents(context, 0, MARU_QUEUE_SAFE_EVENT_MASK, queue_push_callback,
+                queue);
 
 // 2. Commit the transient buffer into the stable snapshot
 lock_for_writing(&queue_lock);
@@ -313,11 +325,11 @@ The wording distinction is to make dealing with High DPI (retina) displays easie
 
 All coordinate variables and types have either `logical` or `pixel` in their name to make crystal clear if they are referring to logical OS dimensions or to the actual pixel count. In short, use `logical` units for your UI and `pixel` for rendering.
 
-### Why do I need to pass the event handling callback to maru_pumpEvents() every single time?
+### Why do I need to pass callback and mask to maru_pumpEvents() every frame?
 
 One of the things that's always bugged me about GLFW is that I am never fully confident *when* my callback is getting invoked. The only way I can be truly 100% sure my callback isn't called when I don't want it is simply to not let the library have it at all.
 
-Maru performs direct, synchronous event dispatch. It pulls events from the OS and fires them inline, strictly during the pump. That is the only time your callback comes into play. Forcing you to provide the callback to maru_pumpEvents() every single frame enshrines this reality on both sides of the fence.
+Maru performs direct, synchronous event dispatch. It pulls events from the OS and fires them inline, strictly during the pump. That is the only time your callback comes into play. Forcing you to provide callback and mask to maru_pumpEvents() every frame enshrines this reality on both sides of the fence.
 
 ### How am I supposed to use MARU_TextEditCommitEvent correctly?
 

@@ -80,8 +80,10 @@ auto makeDispatcher(Fs &&...handlers) {
 namespace maru {
 
 template <typename Visitor>
-inline MARU_Status Context::pumpEvents(EventDispatcher<Visitor>& dispatcher, uint32_t timeout_ms) {
-  return pumpEvents(timeout_ms, dispatcher.callback, &dispatcher);
+inline MARU_Status Context::pumpEvents(EventDispatcher<Visitor>& dispatcher,
+                                       uint32_t timeout_ms,
+                                       MARU_EventMask mask) {
+  return pumpEvents(timeout_ms, mask, dispatcher.callback, &dispatcher);
 }
 
 template <typename Visitor>

@@ -51,7 +51,6 @@ int main() {
   create_info.tuning.wayland.decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO;
 
   create_info.attributes.diagnostic_cb = handle_diagnostic;
-  create_info.attributes.event_mask = MARU_ALL_EVENTS;
 
   MARU_Context *context = NULL;
   if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {
@@ -85,7 +84,7 @@ int main() {
 
   printf("Waiting for window to be ready...\n");
   while (keep_running && !maru_isWindowReady(window)) {
-    maru_pumpEvents(context, 16, handle_event, NULL);
+    maru_pumpEvents(context, 16, MARU_ALL_EVENTS, handle_event, NULL);
   }
 
   if (!keep_running) {
@@ -113,7 +112,7 @@ int main() {
 
   printf("Entering main loop...\n");
   while (keep_running) {
-    maru_pumpEvents(context, 0, handle_event, NULL);
+    maru_pumpEvents(context, 0, MARU_ALL_EVENTS, handle_event, NULL);
 
     vulkan_renderer_draw_frame(&renderer);
   }

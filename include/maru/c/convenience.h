@@ -40,7 +40,6 @@ static inline MARU_Status maru_setWindowResizable(MARU_Window *window, bool enab
 static inline MARU_Status maru_setWindowTextInputType(MARU_Window *window, MARU_TextInputType type);
 static inline MARU_Status maru_setWindowTextInputRect(MARU_Window *window, MARU_RectDip rect);
 static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window *window, bool enabled);
-static inline MARU_Status maru_setWindowEventMask(MARU_Window *window, MARU_EventMask mask);
 static inline MARU_Status maru_setWindowVisible(MARU_Window *window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window *window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window *window, MARU_Image *icon);
@@ -52,11 +51,8 @@ static inline MARU_Status maru_requestText(MARU_Window *window,
 /**
  * @brief Configures a window for simple text input consumption.
  *
- * This helper keeps the full IME pipeline enabled internally but configures the
- * window-side event mask to only deliver commit events for text input:
- * - enables `MARU_MASK_TEXT_EDIT_COMMIT`
- * - disables `MARU_MASK_TEXT_EDIT_START`, `MARU_MASK_TEXT_EDIT_UPDATE`,
- *   and `MARU_MASK_TEXT_EDIT_END`
+ * This helper only updates the text-input type. Event filtering should be
+ * handled via the mask passed to maru_pumpEvents().
  */
 static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window *window, MARU_TextInputType type);
 

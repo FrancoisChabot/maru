@@ -10,6 +10,7 @@ public:
     void update(MARU_Context* ctx, MARU_Window* window) override;
     void render(MARU_Context* ctx, MARU_Window* window) override;
     void onContextRecreated(MARU_Context* ctx, MARU_Window* window) override;
+    MARU_EventMask getPumpMask() const { return context_mask_; }
 
     const char* getName() const override { return "Event Mask"; }
     bool& getEnabled() override { return enabled_; }

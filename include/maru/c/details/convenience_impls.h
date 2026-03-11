@@ -116,13 +116,6 @@ static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window *window, bool ena
   return maru_updateWindow(window, MARU_WINDOW_ATTR_ACCEPT_DROP, &attrs);
 }
 
-static inline MARU_Status maru_setWindowEventMask(MARU_Window *window, MARU_EventMask mask) {
-  MARU_WindowAttributes attrs;
-  memset(&attrs, 0, sizeof(attrs));
-  attrs.event_mask = mask;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
-}
-
 static inline MARU_Status maru_setWindowVisible(MARU_Window *window, bool visible) {
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
@@ -154,12 +147,7 @@ static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window *windo
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
   attrs.text_input_type = type;
-  attrs.event_mask = maru_getWindowEventMask(window);
-  attrs.event_mask = maru_eventMaskAdd(attrs.event_mask, MARU_EVENT_TEXT_EDIT_COMMIT);
-  attrs.event_mask = maru_eventMaskRemove(attrs.event_mask, MARU_EVENT_TEXT_EDIT_START);
-  attrs.event_mask = maru_eventMaskRemove(attrs.event_mask, MARU_EVENT_TEXT_EDIT_UPDATE);
-  attrs.event_mask = maru_eventMaskRemove(attrs.event_mask, MARU_EVENT_TEXT_EDIT_END);
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_EVENT_MASK, &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &attrs);
 }
 
 static inline MARU_Status maru_applyTextEditCommitUtf8(char *buffer,

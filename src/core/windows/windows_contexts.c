@@ -127,7 +127,6 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.attrs_dirty_mask = 0;
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx->base.event_mask = create_info->attributes.event_mask;
   ctx->base.inhibit_idle = create_info->attributes.inhibit_idle;
 
   _maru_windows_apply_idle_inhibit(ctx);

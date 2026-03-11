@@ -199,7 +199,6 @@ inline bool Window::isFullscreen() const { return maru_isWindowFullscreen(m_hand
 inline bool Window::isVisible() const { return maru_isWindowVisible(m_handle); }
 inline bool Window::isMinimized() const { return maru_isWindowMinimized(m_handle); }
 inline const char* Window::getTitle() const { return maru_getWindowTitle(m_handle); }
-inline MARU_EventMask Window::getEventMask() const { return maru_getWindowEventMask(m_handle); }
 
 inline void Window::getGeometry(MARU_WindowGeometry& out_geometry) const {
     out_geometry = maru_getWindowGeometry(m_handle);
@@ -266,12 +265,6 @@ inline MARU_Status Window::setCursor(MARU_Cursor* cursor) {
     MARU_WindowAttributes attrs = {};
     attrs.cursor = cursor;
     return update(MARU_WINDOW_ATTR_CURSOR, attrs);
-}
-
-inline MARU_Status Window::setEventMask(MARU_EventMask mask) {
-    MARU_WindowAttributes attrs = {};
-    attrs.event_mask = mask;
-    return update(MARU_WINDOW_ATTR_EVENT_MASK, attrs);
 }
 
 /* --- Context Implementations --- */
@@ -369,8 +362,10 @@ inline expected<Image> Context::createImage(const MARU_ImageCreateInfo& create_i
     return Image(image_handle);
 }
 
-inline MARU_Status Context::pumpEvents(uint32_t timeout_ms, MARU_EventCallback callback, void* userdata) {
-    return maru_pumpEvents(m_handle, timeout_ms, callback, userdata);
+inline MARU_Status Context::pumpEvents(uint32_t timeout_ms, MARU_EventMask mask,
+                                       MARU_EventCallback callback,
+                                       void* userdata) {
+    return maru_pumpEvents(m_handle, timeout_ms, mask, callback, userdata);
 }
 
 inline MARU_Status Context::postEvent(MARU_EventId type, MARU_Window* window, MARU_UserDefinedEvent evt) {
@@ -407,8 +402,9 @@ inline Queue& Queue::operator=(Queue&& other) noexcept {
     return *this;
 }
 
-inline MARU_Status Queue::pump(uint32_t timeout_ms) {
-    return maru_queue_pump(m_handle, timeout_ms);
+inline MARU_Status Queue::push(MARU_EventId type, MARU_Window* window,
+                               const MARU_Event& event) {
+    return maru_queue_push(m_handle, type, window, &event);
 }
 
 inline MARU_Status Queue::commit() {

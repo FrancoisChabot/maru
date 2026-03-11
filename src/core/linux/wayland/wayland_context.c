@@ -583,7 +583,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   ctx->base.attrs_dirty_mask = MARU_CONTEXT_ATTR_ALL;
   ctx->base.diagnostic_cb = ctx->base.attrs_effective.diagnostic_cb;
   ctx->base.diagnostic_userdata = ctx->base.attrs_effective.diagnostic_userdata;
-  ctx->base.event_mask = ctx->base.attrs_effective.event_mask;
   ctx->base.inhibit_idle = ctx->base.attrs_effective.inhibit_idle;
   ctx->base.tuning.idle_timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
 
@@ -1155,6 +1154,7 @@ static void _maru_wayland_pump_post_tick(MARU_Context_WL *ctx) {
 }
 
 MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
+                               MARU_EventMask mask,
                                MARU_EventCallback callback, void *userdata) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   if (maru_isContextLost(context)) {
@@ -1163,7 +1163,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   const uint64_t pump_start_ns = _maru_wayland_get_monotonic_time_ns();
   MARU_Status status = MARU_SUCCESS;
 
-  MARU_PumpContext pump_ctx = {.callback = callback, .userdata = userdata};
+  MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
@@ -1196,4 +1196,3 @@ pump_exit:;
   ctx->base.pump_ctx = NULL;
   return status;
 }
-

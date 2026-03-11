@@ -65,7 +65,7 @@ int main() {
     // 3. Main loop
     while (keep_running) {
         // Pump events for up to 16ms (matches ~60fps)
-        maru_pumpEvents(context, 16, handle_event, NULL);
+        maru_pumpEvents(context, 16, MARU_ALL_EVENTS, handle_event, NULL);
     }
 
     // 4. Cleanup
