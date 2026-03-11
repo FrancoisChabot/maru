@@ -75,7 +75,7 @@ int main() {
     return 1;
   }
 
-  MARU_VkExtensionList vk_extensions = {};
+  MARU_VkExtensionList vk_extensions = {0};
   maru_getVkExtensions(context, &vk_extensions);
   vulkan_renderer_init(&renderer, vk_extensions.count,
                        (const char **)vk_extensions.names);

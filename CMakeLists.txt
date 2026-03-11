@@ -8,16 +8,6 @@ else()
     set(MARU_IS_ROOT_CMAKE_PROJECT OFF)
 endif()
 
-option(MARU_USE_FLOAT "Use float instead of double for logical coordinates" OFF)
-
-if(MARU_USE_FLOAT)
-  set(MARU_LIB_SUFFIX "_f")
-  set(MARU_PRECISION_IFACE "maru_iface_f")
-else()
-  set(MARU_LIB_SUFFIX "")
-  set(MARU_PRECISION_IFACE "maru_iface_d")
-endif()
-
 # Debug and diagnostics options
 option(MARU_ENABLE_DIAGNOSTICS "Enable diagnostics reporting through callbacks" ON)
 option(MARU_GATHER_METRICS "Enable metrics gathering" ON)
@@ -40,15 +30,15 @@ add_subdirectory(src)
 
 # Define library aliases
 if (WIN32)
-  add_library(maru::maru ALIAS maru_windows${MARU_LIB_SUFFIX})
+  add_library(maru::maru ALIAS maru_windows)
 elseif (APPLE)
-  add_library(maru::maru ALIAS maru_macos${MARU_LIB_SUFFIX})
+  add_library(maru::maru ALIAS maru_macos)
 else()
-  add_library(maru::maru ALIAS maru_linux${MARU_LIB_SUFFIX})
+  add_library(maru::maru ALIAS maru_linux)
   
   # Backend aliases
-  add_library(maru::wayland ALIAS maru_wayland${MARU_LIB_SUFFIX})
-  add_library(maru::x11 ALIAS maru_x11${MARU_LIB_SUFFIX})
+  add_library(maru::wayland ALIAS maru_wayland)
+  add_library(maru::x11 ALIAS maru_x11)
 endif()
 
 if(MARU_BUILD_EXAMPLES)
@@ -62,16 +52,16 @@ endif()
 
 # Set export names for consistent cross-platform usage
 if (WIN32)
-  set_target_properties(maru_windows${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
-  list(APPEND MARU_INSTALL_TARGETS maru_windows${MARU_LIB_SUFFIX})
+  set_target_properties(maru_windows PROPERTIES EXPORT_NAME maru)
+  list(APPEND MARU_INSTALL_TARGETS maru_windows)
 elseif (APPLE)
-  set_target_properties(maru_macos${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
-  list(APPEND MARU_INSTALL_TARGETS maru_macos${MARU_LIB_SUFFIX})
+  set_target_properties(maru_macos PROPERTIES EXPORT_NAME maru)
+  list(APPEND MARU_INSTALL_TARGETS maru_macos)
 else()
-  set_target_properties(maru_linux${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME maru${MARU_LIB_SUFFIX})
-  set_target_properties(maru_wayland${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME wayland${MARU_LIB_SUFFIX})
-  set_target_properties(maru_x11${MARU_LIB_SUFFIX} PROPERTIES EXPORT_NAME x11${MARU_LIB_SUFFIX})
-  list(APPEND MARU_INSTALL_TARGETS maru_linux${MARU_LIB_SUFFIX} maru_wayland${MARU_LIB_SUFFIX} maru_x11${MARU_LIB_SUFFIX})
+  set_target_properties(maru_linux PROPERTIES EXPORT_NAME maru)
+  set_target_properties(maru_wayland PROPERTIES EXPORT_NAME wayland)
+  set_target_properties(maru_x11 PROPERTIES EXPORT_NAME x11)
+  list(APPEND MARU_INSTALL_TARGETS maru_linux maru_wayland maru_x11)
 endif()
 
 # Installation

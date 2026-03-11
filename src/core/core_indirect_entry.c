@@ -185,7 +185,6 @@ MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
   }
   return ctx_base->backend->getVkExtensions(context, out_list);
 }
-}
 
 MARU_API MARU_Status maru_createVkSurface(
     MARU_Window *window, VkInstance instance,

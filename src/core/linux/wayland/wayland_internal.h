@@ -443,6 +443,7 @@ void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *
 MARU_Status maru_getMonitors_WL(MARU_Context *context, MARU_MonitorList *out_list);
 void maru_retainMonitor_WL(MARU_Monitor *monitor);
 void maru_releaseMonitor_WL(MARU_Monitor *monitor);
+void maru_destroyMonitor_WL(MARU_Monitor *monitor);
 MARU_Status maru_updateMonitors_WL(MARU_Context *context);
 MARU_Status maru_getMonitorModes_WL(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_WL(const MARU_Monitor *monitor,

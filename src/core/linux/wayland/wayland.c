@@ -26,7 +26,7 @@ void *maru_getWindowNativeHandle_WL(MARU_Window *window) {
 
 
 #ifdef MARU_INDIRECT_BACKEND
-static MARU_Status maru_resetMonitorMetrics_WL(MARU_Monitor *monitor) {
+MARU_Status maru_resetMonitorMetrics_WL(MARU_Monitor *monitor) {
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
   return MARU_SUCCESS;

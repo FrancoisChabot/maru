@@ -119,7 +119,7 @@ int main() {
   maru_createContext(&create_info, &context);
 
   // Initialize Vulkan.
-  MARU_VkExtensionList vk_extensions = {};
+  MARU_VkExtensionList vk_extensions = {0};
   maru_getVkExtensions(context, &vk_extensions);
   init_vk_renderer(&app.renderer, vk_extensions.names, vk_extensions.count);
 
@@ -176,16 +176,16 @@ Maru provides a few different options to control the validation behavior. These 
 **N.B.** `MARU_ENABLE_INTERNAL_CHECKS` can have subtle implications beyond performance in some cases. See [Internal Checks Caveats](docs/dev/internal_checks_caveats.md) for details.
 
 
-## Design Rationale & Philosophy
+## Why is Maru built the way it is?
 
 ### 1. Core Philosophy
 
 #### Deterministic Event Dispatch
-**"Why do I need to pass callback and mask to maru_pumpEvents() every frame?"**
+**"Why do I need to pass callback and mask to maru_pumpEvents() every time?"**
 
 One of the things that's always bugged me about GLFW is that I am never fully confident *when* my callback is getting invoked. The only way I can be truly 100% sure my callback won't ever be called when I don't want it is simply to not let the library have it at all.
 
-Maru performs direct, synchronous event dispatch. It pulls events from the OS and fires them inline, strictly during the pump. That is the only time your callback comes into play. Forcing you to provide the callback and mask to `maru_pumpEvents()` every frame enshrines this on both sides of the fence.
+Maru performs direct, synchronous event dispatch. It pulls events from the OS and fires them inline, strictly during the pump. That is the only time your callback comes into play. Forcing you to provide the callback and mask to `maru_pumpEvents()` every pump enshrines this on both sides of the fence.
 
 #### Principled Asynchronicity
 **"Is there really no synchronous window creation mechanism?"**
@@ -202,6 +202,7 @@ Maru isn't "lightweight" for the sake of a low binary size; it is lightweight so
 Certain OS operations (e.g., scanning for gamepads on Linux via udev or handling device-change notifications on Windows) can block for several milliseconds. If we ran these on your main thread, you would see a hitch in your frame rate every time a controller was plugged in. We offload these non-deterministic blocking calls to a dedicated worker thread to ensure `maru_pumpEvents()` remains fast and predictable, even during unusual OS events.
 
 #### Control Flow vs. Diagnostics
+**"Why are there so few error codes?"**
 
 `MARU_Status` is not meant to tell you *what* went wrong, but rather *what you can do about it* (e.g., `MARU_ERROR_CONTEXT_LOST` means you must rebuild the context). 
 

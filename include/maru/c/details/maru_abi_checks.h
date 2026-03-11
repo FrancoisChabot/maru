@@ -21,7 +21,6 @@
 #endif
 
 /* Ensure MARU_Event fits within the guaranteed cache-line friendly size limits.
- * We check if MARU_USE_FLOAT is defined or if MARU_Scalar is 4 bytes.
  */
 #ifdef MARU_STATIC_ASSERT
 

@@ -1,4 +1,4 @@
-add_library(maru_windows${MARU_LIB_SUFFIX} ${MARU_LIB_TYPE} 
+add_library(maru_windows ${MARU_LIB_TYPE} 
     windows_entry.c 
     windows_contexts.c 
     windows_windows.c 
@@ -11,8 +11,8 @@ add_library(maru_windows${MARU_LIB_SUFFIX} ${MARU_LIB_TYPE}
     windows_vulkan.c
     $<TARGET_OBJECTS:maru_base_obj> 
 )
-target_link_libraries(maru_windows${MARU_LIB_SUFFIX} PRIVATE ${MARU_ACTIVE_CORE_IFACE} ole32 uuid hid)
-target_link_libraries(maru_windows${MARU_LIB_SUFFIX} PUBLIC maru_iface${MARU_LIB_SUFFIX}_direct)
+target_link_libraries(maru_windows PRIVATE ${MARU_ACTIVE_CORE_IFACE} ole32 uuid hid)
+target_link_libraries(maru_windows PUBLIC maru_iface_direct)
 if(MARU_BUILD_SHARED)
-  target_compile_definitions(maru_windows${MARU_LIB_SUFFIX} PRIVATE MARU_BUILDING_DLL)
+  target_compile_definitions(maru_windows PRIVATE MARU_BUILDING_DLL)
 endif()

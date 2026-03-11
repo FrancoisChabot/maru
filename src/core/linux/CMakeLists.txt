@@ -31,13 +31,13 @@ add_subdirectory(wayland)
 add_subdirectory(x11)
 
 # Combined Linux library (Indirect)
-add_library(maru_linux${MARU_LIB_SUFFIX} ${MARU_LIB_TYPE}
+add_library(maru_linux ${MARU_LIB_TYPE}
     $<TARGET_OBJECTS:maru_linux_indirect_obj>
     $<TARGET_OBJECTS:maru_base_indirect_obj>
     $<TARGET_OBJECTS:maru_wayland_indirect_obj>
     $<TARGET_OBJECTS:maru_x11_indirect_obj>
 )
-target_link_libraries(maru_linux${MARU_LIB_SUFFIX} PUBLIC maru_iface${MARU_LIB_SUFFIX}_indirect)
+target_link_libraries(maru_linux PUBLIC maru_iface_indirect)
 if(MARU_BUILD_SHARED)
-  target_compile_definitions(maru_linux${MARU_LIB_SUFFIX} PRIVATE MARU_BUILDING_DLL)
+  target_compile_definitions(maru_linux PRIVATE MARU_BUILDING_DLL)
 endif()

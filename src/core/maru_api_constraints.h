@@ -493,10 +493,10 @@ static inline void _maru_validate_releaseMonitor(MARU_Monitor *monitor) {
 }
 
 static inline void _maru_validate_getMonitorModes(const MARU_Monitor *monitor,
-                                                  uint32_t *out_count) {
+                                                  MARU_VideoModeList *out_list) {
   MARU_CONSTRAINT_CHECK(monitor != NULL);
   _maru_validate_monitor_not_lost(monitor);
-  MARU_CONSTRAINT_CHECK(out_count != NULL);
+  MARU_CONSTRAINT_CHECK(out_list != NULL);
 }
 
 static inline void _maru_validate_setMonitorMode(const MARU_Monitor *monitor,
@@ -588,9 +588,9 @@ static inline void _maru_validate_getLinuxWindowHandle(MARU_Window *window) {
 }
 
 static inline void _maru_validate_getVkExtensions(const MARU_Context *context,
-                                                  uint32_t *out_count) {
+                                                  MARU_VkExtensionList *out_list) {
   MARU_CONSTRAINT_CHECK(context != NULL);
-  MARU_CONSTRAINT_CHECK(out_count != NULL);
+  MARU_CONSTRAINT_CHECK(out_list != NULL);
 }
 
 static inline void

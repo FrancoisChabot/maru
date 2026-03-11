@@ -120,39 +120,20 @@ add_custom_target(maru_cursor_asset_codegen
 target_include_directories(maru_core_iface INTERFACE
     $<BUILD_INTERFACE:${MARU_CURSOR_GEN_DIR}>
 )
-
-# 4. Precision-specific interfaces
-add_library(maru_iface_d INTERFACE)
-target_link_libraries(maru_iface_d INTERFACE maru_iface)
-
-add_library(maru_iface_f INTERFACE)
-target_link_libraries(maru_iface_f INTERFACE maru_iface)
-target_compile_definitions(maru_iface_f INTERFACE MARU_USE_FLOAT)
-
-# Internal precision interfaces
-add_library(maru_core_iface_d INTERFACE)
-target_link_libraries(maru_core_iface_d INTERFACE maru_core_iface maru_iface_d)
-
-add_library(maru_core_iface_f INTERFACE)
-target_link_libraries(maru_core_iface_f INTERFACE maru_core_iface maru_iface_f)
-
-# The active precision interface for this build
-set(MARU_ACTIVE_CORE_IFACE "maru_core_iface${MARU_LIB_SUFFIX}")
-set(MARU_ACTIVE_IFACE "${MARU_PRECISION_IFACE}")
+# 4. Final precision-specific interfaces
+set(MARU_ACTIVE_CORE_IFACE "maru_core_iface")
+set(MARU_ACTIVE_IFACE "maru_iface")
 
 install(TARGETS
     maru_iface
-    maru_iface_d
-    maru_iface_f
     maru_common_settings
     maru_core_iface
-    maru_core_iface_d
-    maru_core_iface_f
-    EXPORT MaruTargets)
+    EXPORT MaruTargets
+)
 
 # 5. Specialized interfaces for direct vs indirect
-set(target_direct "maru_iface${MARU_LIB_SUFFIX}_direct")
-set(target_indirect "maru_iface${MARU_LIB_SUFFIX}_indirect")
+set(target_direct "maru_iface_direct")
+set(target_indirect "maru_iface_indirect")
 
 # Public flavor interfaces
 add_library(${target_direct} INTERFACE)

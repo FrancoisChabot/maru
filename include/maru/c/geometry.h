@@ -18,13 +18,13 @@ extern "C" {
 #endif
 
 /** @brief Generic floating point scalar type. 
-WARNING! If you use MARU_USE_FLOAT, make certain that you are linking against maru_f. 
-*/
-#ifdef MARU_USE_FLOAT
-typedef float MARU_Scalar;
-#else
+ *
+ * This is standardized to `double` to ensure ABI consistency. 
+ * If you require `float` for specific constraints, you may modify 
+ * this typedef in a private fork, but be aware it will break 
+ * binary compatibility with the standard MARU build.
+ */
 typedef double MARU_Scalar;
-#endif
 
 /** @brief Represents a simple fraction or aspect ratio. */
 typedef struct MARU_Fraction {

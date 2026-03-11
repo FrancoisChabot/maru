@@ -58,7 +58,7 @@ int main() {
     return 1;
   }
 
-  MARU_VkExtensionList vk_extensions = {};
+  MARU_VkExtensionList vk_extensions = {0};
   if (maru_getVkExtensions(context, &vk_extensions) != MARU_SUCCESS) {
     fprintf(stderr, "Failed to get Vulkan extensions.\n");
     maru_destroyContext(context);
