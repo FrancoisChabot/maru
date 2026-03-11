@@ -181,7 +181,7 @@ MARU_Status maru_updateContext_Windows(MARU_Context *context, uint64_t field_mas
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
   _maru_update_context_base(&ctx->base, field_mask, attributes);
 
-  if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
+  if (field_mask & MARU_CONTEXT_ATTR_INHIBIT_IDLE) {
     _maru_windows_apply_idle_inhibit(ctx);
   }
 

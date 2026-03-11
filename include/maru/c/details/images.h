@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+/**
+ * ATTENTION: This file is in the maru details/ directory. This means that
+ * it's NOT part of the Maru API, and is just machinery that is required to
+ * implement the API.
+ *
+ * Nothing in here is meant to be stable, or even read by a user of the library.
+ */
+
 #ifndef MARU_DETAILS_IMAGES_H_INCLUDED
 #define MARU_DETAILS_IMAGES_H_INCLUDED
 
@@ -26,4 +34,4 @@ static inline void maru_setImageUserdata(MARU_Image *image, void *userdata) {
 }
 #endif
 
-#endif  // MARU_DETAILS_IMAGES_H_INCLUDED
+#endif // MARU_DETAILS_IMAGES_H_INCLUDED

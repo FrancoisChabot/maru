@@ -44,9 +44,7 @@ typedef struct MARU_ControllerInfo {
 } MARU_ControllerInfo;
 
 /** @brief Runtime state flags for a controller. */
-enum MARU_ControllerStateFlagBits {
-  MARU_CONTROLLER_STATE_LOST = 1ULL << 0,
-};
+#define MARU_CONTROLLER_STATE_LOST MARU_BIT(0)
 
 /** @brief Capabilities and properties of an analog input channel. */
 typedef struct MARU_AnalogChannelInfo {
@@ -64,10 +62,10 @@ typedef struct MARU_HapticChannelInfo {
 } MARU_HapticChannelInfo;
 
 /** @brief Event mask for controller connection changes. */
-#define MARU_MASK_CONTROLLER_CONNECTION_CHANGED \
+#define MARU_MASK_CONTROLLER_CONNECTION_CHANGED                                \
   MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_CONNECTION_CHANGED)
 /** @brief Event mask for controller button state changes. */
-#define MARU_MASK_CONTROLLER_BUTTON_STATE_CHANGED \
+#define MARU_MASK_CONTROLLER_BUTTON_STATE_CHANGED                              \
   MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED)
 
 /* ----- Direct-Return State Access (External Synchronization Required) -----
@@ -77,7 +75,8 @@ typedef struct MARU_HapticChannelInfo {
  * operations on the owning context to ensure memory visibility.
  */
 
-static inline void *maru_getControllerUserdata(const MARU_Controller *controller);
+static inline void *
+maru_getControllerUserdata(const MARU_Controller *controller);
 static inline void maru_setControllerUserdata(MARU_Controller *controller,
                                               void *userdata);
 static inline MARU_Context *
@@ -89,16 +88,19 @@ static inline uint32_t
 maru_getControllerAnalogCount(const MARU_Controller *controller);
 static inline const MARU_AnalogChannelInfo *
 maru_getControllerAnalogChannelInfo(const MARU_Controller *controller);
+
 static inline const MARU_AnalogInputState *
 maru_getControllerAnalogStates(const MARU_Controller *controller);
+
 static inline uint32_t
 maru_getControllerButtonCount(const MARU_Controller *controller);
 static inline const MARU_ButtonChannelInfo *
 maru_getControllerButtonChannelInfo(const MARU_Controller *controller);
 static inline const MARU_ButtonState8 *
 maru_getControllerButtonStates(const MARU_Controller *controller);
-static inline bool maru_isControllerButtonPressed(const MARU_Controller *controller,
-                                                  uint32_t button_id);
+static inline bool
+maru_isControllerButtonPressed(const MARU_Controller *controller,
+                               uint32_t button_id);
 static inline uint32_t
 maru_getControllerHapticCount(const MARU_Controller *controller);
 static inline const MARU_HapticChannelInfo *
@@ -153,13 +155,11 @@ MARU_API MARU_Status maru_getControllers(MARU_Context *context,
 MARU_API void maru_retainController(MARU_Controller *controller);
 MARU_API void maru_releaseController(MARU_Controller *controller);
 MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller);
-MARU_API MARU_Status
-maru_getControllerInfo(MARU_Controller *controller,
-                       MARU_ControllerInfo *out_info);
-MARU_API MARU_Status
-maru_setControllerHapticLevels(MARU_Controller *controller,
-                               uint32_t first_haptic, uint32_t count,
-                               const MARU_Scalar *intensities);
+MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
+                                            MARU_ControllerInfo *out_info);
+MARU_API MARU_Status maru_setControllerHapticLevels(
+    MARU_Controller *controller, uint32_t first_haptic, uint32_t count,
+    const MARU_Scalar *intensities);
 
 #include "maru/c/details/controllers.h"
 
@@ -167,4 +167,4 @@ maru_setControllerHapticLevels(MARU_Controller *controller,
 }
 #endif
 
-#endif  // MARU_CONTROLLERS_H_INCLUDED
+#endif // MARU_CONTROLLERS_H_INCLUDED

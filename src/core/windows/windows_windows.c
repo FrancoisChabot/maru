@@ -467,7 +467,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       };
       MARU_Event evt = {0};
       evt.data_requested.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
-      evt.data_requested.internal_handle = &handle;
+      evt.data_requested.request = (MARU_DataRequest *)&handle;
       evt.data_requested.mime_type = _maru_clipboard_format_to_mime((UINT)wParam);
       _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED, (MARU_Window *)win, &evt);
       return 0;

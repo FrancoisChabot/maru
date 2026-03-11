@@ -34,12 +34,12 @@ typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Monitor MARU_Monitor;
 
 /** @brief Runtime state flags for a monitor. */
-#define MARU_MONITOR_STATE_LOST ((MARU_Flags)1 << 0)
+#define MARU_MONITOR_STATE_LOST MARU_BIT(0)
 
 /** @brief A video mode supported by a monitor. */
 typedef struct MARU_VideoMode {
   MARU_Vec2Px size;
-  uint32_t refresh_rate_mhz;
+  uint32_t refresh_rate_millihz;
 } MARU_VideoMode;
 
 /** @brief A transient list of video modes. */

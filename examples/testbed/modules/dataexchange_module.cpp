@@ -139,13 +139,13 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         if (!_is_text_mime(req->mime_type)) return;
         if (req->target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
             clipboard_serves_large_payload_ && !large_clipboard_payload_.empty()) {
-            (void)maru_provideData(req, large_clipboard_payload_.data(),
+            (void)maru_provideData(req->request, large_clipboard_payload_.data(),
                                    large_clipboard_payload_.size(),
                                    MARU_DATA_PROVIDE_FLAG_NONE);
             return;
         }
         const size_t text_size = strnlen(input_buffer_, sizeof(input_buffer_));
-        (void)maru_provideData(req, input_buffer_, text_size, MARU_DATA_PROVIDE_FLAG_NONE);
+        (void)maru_provideData(req->request, input_buffer_, text_size, MARU_DATA_PROVIDE_FLAG_NONE);
         return;
     }
 

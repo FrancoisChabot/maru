@@ -1318,7 +1318,7 @@ MARU_Status maru_resetControllerMetrics_Windows(MARU_Controller *controller) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_getControllerInfo_Windows(MARU_Controller *controller,
+MARU_Status maru_getControllerInfo_Windows(const MARU_Controller *controller,
                                            MARU_ControllerInfo *out_info) {
   MARU_Controller_Windows *ctrl = (MARU_Controller_Windows *)controller;
   memset(out_info, 0, sizeof(*out_info));

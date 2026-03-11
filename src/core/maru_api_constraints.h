@@ -7,6 +7,56 @@
 #include "maru_internal.h"
 #include <stdlib.h>
 
+static inline MARU_Status
+_maru_status_if_context_lost(const MARU_Context *context) {
+  if (maru_isContextLost(context)) {
+    return MARU_ERROR_CONTEXT_LOST;
+  }
+  return MARU_SUCCESS;
+}
+
+static inline MARU_Status
+_maru_status_if_window_context_lost(const MARU_Window *window) {
+  return _maru_status_if_context_lost(maru_getWindowContext(window));
+}
+
+static inline MARU_Status
+_maru_status_if_cursor_context_lost(const MARU_Cursor *cursor) {
+  return _maru_status_if_context_lost(
+      (const MARU_Context *)((const MARU_Cursor_Base *)cursor)->ctx_base);
+}
+
+static inline MARU_Status
+_maru_status_if_image_context_lost(const MARU_Image *image) {
+  return _maru_status_if_context_lost(
+      (const MARU_Context *)((const MARU_Image_Base *)image)->ctx_base);
+}
+
+static inline MARU_Status
+_maru_status_if_monitor_context_lost(const MARU_Monitor *monitor) {
+  return _maru_status_if_context_lost(maru_getMonitorContext(monitor));
+}
+
+static inline MARU_Status
+_maru_status_if_controller_context_lost(const MARU_Controller *controller) {
+  return _maru_status_if_context_lost(maru_getControllerContext(controller));
+}
+
+static inline MARU_Status
+_maru_status_if_request_context_lost(MARU_DataRequest *request) {
+  const MARU_DataRequestHandleBase *handle =
+      (const MARU_DataRequestHandleBase *)request;
+  return _maru_status_if_context_lost((const MARU_Context *)handle->ctx_base);
+}
+
+#define MARU_RETURN_IF_CONTEXT_LOST(expr)                                      \
+  do {                                                                         \
+    const MARU_Status _maru_status = (expr);                                   \
+    if (_maru_status != MARU_SUCCESS) {                                        \
+      return _maru_status;                                                     \
+    }                                                                          \
+  } while (0)
+
 #ifdef MARU_ENABLE_INTERNAL_CHECKS
 #define MARU_ASSUME(cond)                                                      \
   do {                                                                         \
@@ -229,8 +279,6 @@ _maru_validate_updateWindow(MARU_Window *window, uint64_t field_mask,
                             const MARU_WindowAttributes *attributes) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   MARU_CONSTRAINT_CHECK(attributes != NULL);
-  _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
   _maru_validate_thread(win_base->ctx_base);
@@ -243,22 +291,16 @@ _maru_validate_updateWindow(MARU_Window *window, uint64_t field_mask,
 
 static inline void _maru_validate_requestWindowFocus(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
 }
 
 static inline void _maru_validate_requestWindowFrame(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
 }
 
 static inline void _maru_validate_requestWindowAttention(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
 }
 
@@ -269,7 +311,6 @@ static inline void _maru_validate_resetContextMetrics(MARU_Context *context) {
 
 static inline void _maru_validate_resetWindowMetrics(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_not_lost(window);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
 }
 
@@ -365,17 +406,15 @@ _maru_validate_resetControllerMetrics(MARU_Controller *controller) {
   MARU_CONSTRAINT_CHECK(controller != NULL);
   _maru_validate_thread(
       (const MARU_Context_Base *)maru_getControllerContext(controller));
-  _maru_validate_controller_not_lost(controller);
 }
 
 static inline void
-_maru_validate_getControllerInfo(MARU_Controller *controller,
+_maru_validate_getControllerInfo(const MARU_Controller *controller,
                                  MARU_ControllerInfo *out_info) {
   MARU_CONSTRAINT_CHECK(controller != NULL);
   MARU_CONSTRAINT_CHECK(out_info != NULL);
   _maru_validate_thread(
       (const MARU_Context_Base *)maru_getControllerContext(controller));
-  _maru_validate_controller_not_lost(controller);
 }
 
 static inline void
@@ -385,7 +424,6 @@ _maru_validate_setControllerHapticLevels(MARU_Controller *controller,
   MARU_CONSTRAINT_CHECK(controller != NULL);
   _maru_validate_thread(
       (const MARU_Context_Base *)maru_getControllerContext(controller));
-  _maru_validate_controller_not_lost(controller);
   const uint32_t haptic_count = maru_getControllerHapticCount(controller);
   MARU_CONSTRAINT_CHECK(first_haptic <= haptic_count);
   MARU_CONSTRAINT_CHECK(count <= (haptic_count - first_haptic));
@@ -399,8 +437,6 @@ _maru_validate_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
                             const char **mime_types, uint32_t count,
                             MARU_DropActionMask allowed_actions) {
   MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
   MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
                         target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
@@ -417,13 +453,12 @@ _maru_validate_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
 }
 
 static inline void
-_maru_validate_provideData(const MARU_DataRequestEvent *request_event,
+_maru_validate_provideData(MARU_DataRequest *request,
                            const void *data, size_t size,
                            MARU_DataProvideFlags flags) {
-  MARU_CONSTRAINT_CHECK(request_event != NULL);
-  MARU_CONSTRAINT_CHECK(request_event->internal_handle != NULL);
+  MARU_CONSTRAINT_CHECK(request != NULL);
   const MARU_DataRequestHandleBase *handle =
-      (const MARU_DataRequestHandleBase *)request_event->internal_handle;
+      (const MARU_DataRequestHandleBase *)request;
   _maru_validate_thread(handle->ctx_base);
   if (size > 0) {
     MARU_CONSTRAINT_CHECK(data != NULL);
@@ -437,8 +472,6 @@ static inline void _maru_validate_requestData(MARU_Window *window,
                                               const char *mime_type,
                                               void *user_tag) {
   MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
   MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
                         target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
@@ -452,8 +485,6 @@ _maru_validate_getAvailableMIMETypes(MARU_Window *window,
                                      MARU_DataExchangeTarget target,
                                      MARU_MIMETypeList *out_list) {
   MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
   MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
                         target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
@@ -495,21 +526,18 @@ static inline void _maru_validate_releaseMonitor(MARU_Monitor *monitor) {
 static inline void _maru_validate_getMonitorModes(const MARU_Monitor *monitor,
                                                   MARU_VideoModeList *out_list) {
   MARU_CONSTRAINT_CHECK(monitor != NULL);
-  _maru_validate_monitor_not_lost(monitor);
   MARU_CONSTRAINT_CHECK(out_list != NULL);
 }
 
 static inline void _maru_validate_setMonitorMode(const MARU_Monitor *monitor,
                                                  MARU_VideoMode mode) {
   MARU_CONSTRAINT_CHECK(monitor != NULL);
-  _maru_validate_monitor_not_lost(monitor);
   _maru_validate_thread(((const MARU_Monitor_Base *)monitor)->ctx_base);
   MARU_CONSTRAINT_CHECK(mode.size.x > 0 && mode.size.y > 0);
 }
 
 static inline void _maru_validate_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_CONSTRAINT_CHECK(monitor != NULL);
-  _maru_validate_monitor_not_lost(monitor);
   _maru_validate_thread(((const MARU_Monitor_Base *)monitor)->ctx_base);
 }
 
@@ -598,8 +626,6 @@ _maru_validate_createVkSurface(MARU_Window *window, VkInstance instance,
                                MARU_VkGetInstanceProcAddrFunc vk_loader,
                                VkSurfaceKHR *out_surface) {
   MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   MARU_CONSTRAINT_CHECK(instance != NULL);
   MARU_CONSTRAINT_CHECK(vk_loader != NULL);
   MARU_CONSTRAINT_CHECK(out_surface != NULL);
@@ -608,8 +634,119 @@ _maru_validate_createVkSurface(MARU_Window *window, VkInstance instance,
 
 #define MARU_API_VALIDATE(fn, ...) _maru_validate_##fn(__VA_ARGS__)
 
+static inline void
+_maru_validate_live_updateWindow(MARU_Window *window, uint64_t field_mask,
+                                 const MARU_WindowAttributes *attributes) {
+  (void)field_mask;
+  (void)attributes;
+  _maru_validate_window_ready(window);
+  _maru_validate_window_not_lost(window);
+}
+
+static inline void _maru_validate_live_requestWindowFocus(MARU_Window *window) {
+  _maru_validate_window_ready(window);
+  _maru_validate_window_not_lost(window);
+}
+
+static inline void _maru_validate_live_requestWindowFrame(MARU_Window *window) {
+  _maru_validate_window_ready(window);
+  _maru_validate_window_not_lost(window);
+}
+
+static inline void
+_maru_validate_live_requestWindowAttention(MARU_Window *window) {
+  _maru_validate_window_ready(window);
+  _maru_validate_window_not_lost(window);
+}
+
+static inline void _maru_validate_live_resetWindowMetrics(MARU_Window *window) {
+  _maru_validate_window_not_lost(window);
+}
+
+static inline void
+_maru_validate_live_resetControllerMetrics(MARU_Controller *controller) {
+  _maru_validate_controller_not_lost(controller);
+}
+
+static inline void
+_maru_validate_live_getControllerInfo(const MARU_Controller *controller,
+                                      MARU_ControllerInfo *out_info) {
+  (void)out_info;
+  _maru_validate_controller_not_lost(controller);
+}
+
+static inline void _maru_validate_live_setControllerHapticLevels(
+    MARU_Controller *controller, uint32_t first_haptic, uint32_t count,
+    const MARU_Scalar *intensities) {
+  (void)first_haptic;
+  (void)count;
+  (void)intensities;
+  _maru_validate_controller_not_lost(controller);
+}
+
+static inline void _maru_validate_live_announceData(
+    MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types,
+    uint32_t count, MARU_DropActionMask allowed_actions) {
+  (void)target;
+  (void)mime_types;
+  (void)count;
+  (void)allowed_actions;
+  _maru_validate_window_ready(window);
+  _maru_validate_window_not_lost(window);
+}
+
+static inline void _maru_validate_live_requestData(
+    MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type,
+    void *user_tag) {
+  (void)target;
+  (void)mime_type;
+  (void)user_tag;
+  _maru_validate_window_ready(window);
+  _maru_validate_window_not_lost(window);
+}
+
+static inline void _maru_validate_live_getAvailableMIMETypes(
+    MARU_Window *window, MARU_DataExchangeTarget target,
+    MARU_MIMETypeList *out_list) {
+  (void)target;
+  (void)out_list;
+  _maru_validate_window_ready(window);
+  _maru_validate_window_not_lost(window);
+}
+
+static inline void _maru_validate_live_getMonitorModes(
+    const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+  (void)out_list;
+  _maru_validate_monitor_not_lost(monitor);
+}
+
+static inline void
+_maru_validate_live_setMonitorMode(const MARU_Monitor *monitor,
+                                   MARU_VideoMode mode) {
+  (void)mode;
+  _maru_validate_monitor_not_lost(monitor);
+}
+
+static inline void
+_maru_validate_live_resetMonitorMetrics(MARU_Monitor *monitor) {
+  _maru_validate_monitor_not_lost(monitor);
+}
+
+static inline void _maru_validate_live_createVkSurface(
+    MARU_Window *window, VkInstance instance,
+    MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
+  (void)instance;
+  (void)vk_loader;
+  (void)out_surface;
+  _maru_validate_window_ready(window);
+  _maru_validate_window_not_lost(window);
+}
+
+#define MARU_API_VALIDATE_LIVE(fn, ...) _maru_validate_live_##fn(__VA_ARGS__)
+
 #else
 #define MARU_API_VALIDATE(fn, ...) (void)0
+#define MARU_API_VALIDATE_LIVE(fn, ...) (void)0
 #endif
 
 #endif // MARU_API_CONSTRAINTS_H_INCLUDED

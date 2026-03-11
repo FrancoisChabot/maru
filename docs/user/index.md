@@ -9,6 +9,7 @@ Welcome to the Maru user documentation. Maru is a high-performance, cross-platfo
 
 ## Core Concepts
 
+- [API Contracts](api_contracts.md)
 - [Event Queues](queue.md)
 - [Windows & Contexts](windows.md)
 - [Input Handling](inputs.md)

@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+/**
+ * ATTENTION: This file is in the maru details/ directory. This means that
+ * it's NOT part of the Maru API, and is just machinery that is required to
+ * implement the API.
+ *
+ * Nothing in here is meant to be stable, or even read by a user of the library.
+ */
 #ifndef MARU_DETAILS_CONTEXTS_H_INCLUDED
 #define MARU_DETAILS_CONTEXTS_H_INCLUDED
 
@@ -10,7 +17,7 @@
 extern "C" {
 #endif
 
-/** @brief Internal representation of MARU_Context. 
+/** @brief Internal representation of MARU_Context.
     CHANGING THIS REQUIRES A MAJOR VERSION BUMP
 */
 typedef struct MARU_ContextExposed {
@@ -24,7 +31,8 @@ typedef struct MARU_ContextExposed {
   int32_t mouse_default_button_channels[MARU_MOUSE_DEFAULT_COUNT];
 } MARU_ContextExposed;
 
-static inline MARU_BackendType maru_getContextBackend(const MARU_Context *context) {
+static inline MARU_BackendType
+maru_getContextBackend(const MARU_Context *context) {
   return ((const MARU_ContextExposed *)context)->backend_type;
 }
 
@@ -32,43 +40,53 @@ static inline void *maru_getContextUserdata(const MARU_Context *context) {
   return ((const MARU_ContextExposed *)context)->userdata;
 }
 
-static inline void maru_setContextUserdata(MARU_Context *context, void *userdata) {
+static inline void maru_setContextUserdata(MARU_Context *context,
+                                           void *userdata) {
   ((MARU_ContextExposed *)context)->userdata = userdata;
 }
 
 static inline bool maru_isContextLost(const MARU_Context *context) {
-  return (((const MARU_ContextExposed *)context)->flags & MARU_CONTEXT_STATE_LOST) != 0;
+  return (((const MARU_ContextExposed *)context)->flags &
+          MARU_CONTEXT_STATE_LOST) != 0;
 }
 
 static inline bool maru_isContextReady(const MARU_Context *context) {
-  return (((const MARU_ContextExposed *)context)->flags & MARU_CONTEXT_STATE_READY) != 0;
+  return (((const MARU_ContextExposed *)context)->flags &
+          MARU_CONTEXT_STATE_READY) != 0;
 }
 
-static inline const MARU_ContextMetrics *maru_getContextMetrics(const MARU_Context *context) {
+static inline const MARU_ContextMetrics *
+maru_getContextMetrics(const MARU_Context *context) {
   return ((const MARU_ContextExposed *)context)->metrics;
 }
 
-static inline uint32_t maru_getContextMouseButtonCount(const MARU_Context *context) {
+static inline uint32_t
+maru_getContextMouseButtonCount(const MARU_Context *context) {
   return ((const MARU_ContextExposed *)context)->mouse_button_count;
 }
 
-static inline const MARU_ButtonState8 *maru_getContextMouseButtonStates(const MARU_Context *context) {
+static inline const MARU_ButtonState8 *
+maru_getContextMouseButtonStates(const MARU_Context *context) {
   return ((const MARU_ContextExposed *)context)->mouse_button_state;
 }
 
-static inline const MARU_MouseButtonChannelInfo *maru_getContextMouseButtonChannelInfo(const MARU_Context *context) {
+static inline const MARU_MouseButtonChannelInfo *
+maru_getContextMouseButtonChannelInfo(const MARU_Context *context) {
   return ((const MARU_ContextExposed *)context)->mouse_button_channels;
 }
 
-static inline int32_t maru_getContextMouseDefaultButtonChannel(const MARU_Context *context,
-                                                               MARU_MouseDefaultButton which) {
+static inline int32_t
+maru_getContextMouseDefaultButtonChannel(const MARU_Context *context,
+                                         MARU_MouseDefaultButton which) {
   if ((uint32_t)which >= MARU_MOUSE_DEFAULT_COUNT) {
     return -1;
   }
-  return ((const MARU_ContextExposed *)context)->mouse_default_button_channels[which];
+  return ((const MARU_ContextExposed *)context)
+      ->mouse_default_button_channels[which];
 }
 
-static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context, uint32_t button_id) {
+static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context,
+                                                    uint32_t button_id) {
   uint32_t count = maru_getContextMouseButtonCount(context);
   if (button_id >= count) {
     return false;
@@ -81,4 +99,4 @@ static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context,
 }
 #endif
 
-#endif  // MARU_DETAILS_CONTEXTS_H_INCLUDED
+#endif // MARU_DETAILS_CONTEXTS_H_INCLUDED

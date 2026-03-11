@@ -141,12 +141,12 @@ typedef enum MARU_Key {
 } MARU_Key;
 
 /** @brief Bitmask for active modifiers. */
-#define MARU_MODIFIER_SHIFT ((MARU_ModifierFlags)1 << 0)
-#define MARU_MODIFIER_CONTROL ((MARU_ModifierFlags)1 << 1)
-#define MARU_MODIFIER_ALT ((MARU_ModifierFlags)1 << 2)
-#define MARU_MODIFIER_META ((MARU_ModifierFlags)1 << 3)
-#define MARU_MODIFIER_CAPS_LOCK ((MARU_ModifierFlags)1 << 4)
-#define MARU_MODIFIER_NUM_LOCK ((MARU_ModifierFlags)1 << 5)
+#define MARU_MODIFIER_SHIFT MARU_BIT(0)
+#define MARU_MODIFIER_CONTROL MARU_BIT(1)
+#define MARU_MODIFIER_ALT MARU_BIT(2)
+#define MARU_MODIFIER_META MARU_BIT(3)
+#define MARU_MODIFIER_CAPS_LOCK MARU_BIT(4)
+#define MARU_MODIFIER_NUM_LOCK MARU_BIT(5)
 
 /** @brief Named default mouse button roles. */
 typedef enum MARU_MouseDefaultButton {
@@ -182,10 +182,10 @@ typedef struct MARU_Window MARU_Window;
  */
 
 /** @brief Retrieves the number of keyboard keys supported for a window. */
-static inline uint32_t maru_getKeyboardButtonCount(const MARU_Window *window);
+static inline uint32_t maru_getKeyboardKeyCount(const MARU_Window *window);
 
 /** @brief Retrieves the current state of all keyboard keys for a window. */
-static inline const MARU_ButtonState8 *maru_getKeyboardButtonStates(const MARU_Window *window);
+static inline const MARU_ButtonState8 *maru_getKeyboardKeyStates(const MARU_Window *window);
 
 /** @brief Checks if a specific keyboard key is currently pressed for a window. */
 static inline bool maru_isKeyPressed(const MARU_Window *window, MARU_Key key);

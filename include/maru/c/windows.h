@@ -34,15 +34,15 @@ typedef struct MARU_Image MARU_Image;
 typedef struct MARU_Monitor MARU_Monitor;
 
 /** @brief Runtime state flags for a window. */
-#define MARU_WINDOW_STATE_LOST ((MARU_Flags)1 << 0)
-#define MARU_WINDOW_STATE_READY ((MARU_Flags)1 << 1)
-#define MARU_WINDOW_STATE_FOCUSED ((MARU_Flags)1 << 2)
-#define MARU_WINDOW_STATE_MAXIMIZED ((MARU_Flags)1 << 3)
-#define MARU_WINDOW_STATE_FULLSCREEN ((MARU_Flags)1 << 4)
-#define MARU_WINDOW_STATE_RESIZABLE ((MARU_Flags)1 << 5)
-#define MARU_WINDOW_STATE_DECORATED ((MARU_Flags)1 << 6)
-#define MARU_WINDOW_STATE_VISIBLE ((MARU_Flags)1 << 7)
-#define MARU_WINDOW_STATE_MINIMIZED ((MARU_Flags)1 << 8)
+#define MARU_WINDOW_STATE_LOST MARU_BIT(0)
+#define MARU_WINDOW_STATE_READY MARU_BIT(1)
+#define MARU_WINDOW_STATE_FOCUSED MARU_BIT(2)
+#define MARU_WINDOW_STATE_MAXIMIZED MARU_BIT(3)
+#define MARU_WINDOW_STATE_FULLSCREEN MARU_BIT(4)
+#define MARU_WINDOW_STATE_RESIZABLE MARU_BIT(5)
+#define MARU_WINDOW_STATE_DECORATED MARU_BIT(6)
+#define MARU_WINDOW_STATE_VISIBLE MARU_BIT(7)
+#define MARU_WINDOW_STATE_MINIMIZED MARU_BIT(8)
 
 /** @brief Cursor visibility and constraint modes. */
 typedef enum MARU_CursorMode {
@@ -131,28 +131,29 @@ typedef enum MARU_TextInputType {
   MARU_TEXT_INPUT_TYPE_NUMERIC,
 } MARU_TextInputType;
 
-#define MARU_WINDOW_ATTR_TITLE (1u << 0)
-#define MARU_WINDOW_ATTR_LOGICAL_SIZE (1u << 1)
-#define MARU_WINDOW_ATTR_FULLSCREEN (1u << 2)
-#define MARU_WINDOW_ATTR_CURSOR_MODE (1u << 3)
-#define MARU_WINDOW_ATTR_CURSOR (1u << 4)
-#define MARU_WINDOW_ATTR_MONITOR (1u << 5)
-#define MARU_WINDOW_ATTR_MAXIMIZED (1u << 6)
-#define MARU_WINDOW_ATTR_MIN_SIZE (1u << 7)
-#define MARU_WINDOW_ATTR_MAX_SIZE (1u << 8)
-#define MARU_WINDOW_ATTR_POSITION (1u << 9)
-#define MARU_WINDOW_ATTR_ASPECT_RATIO (1u << 10)
-#define MARU_WINDOW_ATTR_RESIZABLE (1u << 11)
-#define MARU_WINDOW_ATTR_ACCEPT_DROP (1u << 12)
-#define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE (1u << 13)
-#define MARU_WINDOW_ATTR_TEXT_INPUT_RECT (1u << 14)
-#define MARU_WINDOW_ATTR_PRIMARY_SELECTION (1u << 15)
-#define MARU_WINDOW_ATTR_VIEWPORT_SIZE (1u << 17)
-#define MARU_WINDOW_ATTR_SURROUNDING_TEXT (1u << 18)
-#define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET (1u << 19)
-#define MARU_WINDOW_ATTR_VISIBLE (1u << 20)
-#define MARU_WINDOW_ATTR_MINIMIZED (1u << 21)
-#define MARU_WINDOW_ATTR_ICON (1u << 22)
+#define MARU_WINDOW_ATTR_TITLE MARU_BIT(0)
+#define MARU_WINDOW_ATTR_LOGICAL_SIZE MARU_BIT(1)
+#define MARU_WINDOW_ATTR_FULLSCREEN MARU_BIT(2)
+#define MARU_WINDOW_ATTR_CURSOR_MODE MARU_BIT(3)
+#define MARU_WINDOW_ATTR_CURSOR MARU_BIT(4)
+#define MARU_WINDOW_ATTR_MONITOR MARU_BIT(5)
+#define MARU_WINDOW_ATTR_MAXIMIZED MARU_BIT(6)
+#define MARU_WINDOW_ATTR_MIN_SIZE MARU_BIT(7)
+#define MARU_WINDOW_ATTR_MAX_SIZE MARU_BIT(8)
+#define MARU_WINDOW_ATTR_POSITION MARU_BIT(9)
+#define MARU_WINDOW_ATTR_ASPECT_RATIO MARU_BIT(10)
+#define MARU_WINDOW_ATTR_RESIZABLE MARU_BIT(11)
+#define MARU_WINDOW_ATTR_ACCEPT_DROP MARU_BIT(12)
+#define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE MARU_BIT(13)
+#define MARU_WINDOW_ATTR_TEXT_INPUT_RECT MARU_BIT(14)
+#define MARU_WINDOW_ATTR_PRIMARY_SELECTION MARU_BIT(15)
+#define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(16)
+#define MARU_WINDOW_ATTR_VIEWPORT_SIZE MARU_BIT(17)
+#define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(18)
+#define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(19)
+#define MARU_WINDOW_ATTR_VISIBLE MARU_BIT(20)
+#define MARU_WINDOW_ATTR_MINIMIZED MARU_BIT(21)
+#define MARU_WINDOW_ATTR_ICON MARU_BIT(22)
 
 #define MARU_WINDOW_ATTR_ALL                                                   \
   (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_LOGICAL_SIZE |                    \
@@ -163,8 +164,9 @@ typedef enum MARU_TextInputType {
    MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE |                \
    MARU_WINDOW_ATTR_ACCEPT_DROP | MARU_WINDOW_ATTR_TEXT_INPUT_TYPE |           \
    MARU_WINDOW_ATTR_TEXT_INPUT_RECT | MARU_WINDOW_ATTR_PRIMARY_SELECTION |     \
+   MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE |                                  \
    MARU_WINDOW_ATTR_VIEWPORT_SIZE | MARU_WINDOW_ATTR_SURROUNDING_TEXT |        \
-   MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET | MARU_WINDOW_ATTR_VISIBLE |     \
+   MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE | MARU_WINDOW_ATTR_VISIBLE |     \
    MARU_WINDOW_ATTR_MINIMIZED | MARU_WINDOW_ATTR_ICON)
 
 /** @brief Live-updatable window properties. */
@@ -187,8 +189,8 @@ typedef struct MARU_WindowAttributes {
   bool primary_selection;
   MARU_Vec2Dip viewport_size;
   const char *surrounding_text;
-  uint32_t surrounding_cursor_offset;
-  uint32_t surrounding_anchor_offset;
+  uint32_t surrounding_cursor_byte;
+  uint32_t surrounding_anchor_byte;
   bool visible;
   bool minimized;
   MARU_Image *icon;
@@ -223,8 +225,8 @@ typedef struct MARU_WindowCreateInfo {
                   .primary_selection = true,                                   \
                   .viewport_size = {0, 0},                                     \
                   .surrounding_text = NULL,                                    \
-                  .surrounding_cursor_offset = 0,                              \
-                  .surrounding_anchor_offset = 0,                              \
+                  .surrounding_cursor_byte = 0,                                \
+                  .surrounding_anchor_byte = 0,                                \
                   .visible = true,                                             \
                   .minimized = false,                                          \
                   .icon = NULL},                                               \

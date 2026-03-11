@@ -4,6 +4,14 @@
 #ifndef MARU_DETAILS_ABI_CHECKS_H_INCLUDED
 #define MARU_DETAILS_ABI_CHECKS_H_INCLUDED
 
+/**
+ * ATTENTION: This file is in the maru details/ directory. This means that
+ * it's NOT part of the Maru API, and is just machinery that is required to
+ * implement the API.
+ *
+ * Nothing in here is meant to be stable, or even read by a user of the library.
+ */
+
 #include "maru/c/events.h"
 
 /*

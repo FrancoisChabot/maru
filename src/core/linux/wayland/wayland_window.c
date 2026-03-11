@@ -909,8 +909,8 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     if (window->base.attrs_effective.surrounding_text) {
         maru_zwp_text_input_v3_set_surrounding_text(ctx, window->ext.text_input, 
             window->base.attrs_effective.surrounding_text,
-            (int32_t)window->base.attrs_effective.surrounding_cursor_offset, 
-            (int32_t)window->base.attrs_effective.surrounding_anchor_offset);
+            (int32_t)window->base.attrs_effective.surrounding_cursor_byte, 
+            (int32_t)window->base.attrs_effective.surrounding_anchor_byte);
     }
 
     maru_zwp_text_input_v3_commit(ctx, window->ext.text_input);
@@ -1093,15 +1093,15 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET) {
-      requested->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
-      requested->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
-      effective->surrounding_cursor_offset = attributes->surrounding_cursor_offset;
-      effective->surrounding_anchor_offset = attributes->surrounding_anchor_offset;
+  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE) {
+      requested->surrounding_cursor_byte = attributes->surrounding_cursor_byte;
+      requested->surrounding_anchor_byte = attributes->surrounding_anchor_byte;
+      effective->surrounding_cursor_byte = attributes->surrounding_cursor_byte;
+      effective->surrounding_anchor_byte = attributes->surrounding_anchor_byte;
   }
 
   if (field_mask & (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
-                    MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET)) {
+                    MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE)) {
       _maru_wayland_update_text_input(window);
   }
 

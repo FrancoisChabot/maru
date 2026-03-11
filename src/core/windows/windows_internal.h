@@ -259,7 +259,7 @@ MARU_Status maru_getControllers_Windows(MARU_Context *context, MARU_ControllerLi
 void maru_retainController_Windows(MARU_Controller *controller);
 void maru_releaseController_Windows(MARU_Controller *controller);
 MARU_Status maru_resetControllerMetrics_Windows(MARU_Controller *controller);
-MARU_Status maru_getControllerInfo_Windows(MARU_Controller *controller, MARU_ControllerInfo *out_info);
+MARU_Status maru_getControllerInfo_Windows(const MARU_Controller *controller, MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_Windows(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
 
 void _maru_windows_cleanup_controllers(MARU_Context_Windows *ctx);
@@ -270,7 +270,7 @@ void _maru_windows_process_raw_input(MARU_Context_Windows *ctx,
 
 // data_exchange.h
 MARU_Status maru_announceData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);
-MARU_Status maru_provideData_Windows(const MARU_DataRequestEvent *request_event, const void *data, size_t size, MARU_DataProvideFlags flags);
+MARU_Status maru_provideData_Windows(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag);
 MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
 void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx);

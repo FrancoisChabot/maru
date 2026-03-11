@@ -573,21 +573,21 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET) {
-    requested->surrounding_cursor_offset =
-        attributes->surrounding_cursor_offset;
-    requested->surrounding_anchor_offset =
-        attributes->surrounding_anchor_offset;
-    effective->surrounding_cursor_offset =
-        attributes->surrounding_cursor_offset;
-    effective->surrounding_anchor_offset =
-        attributes->surrounding_anchor_offset;
+  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE) {
+    requested->surrounding_cursor_byte =
+        attributes->surrounding_cursor_byte;
+    requested->surrounding_anchor_byte =
+        attributes->surrounding_anchor_byte;
+    effective->surrounding_cursor_byte =
+        attributes->surrounding_cursor_byte;
+    effective->surrounding_anchor_byte =
+        attributes->surrounding_anchor_byte;
   }
 
   if (field_mask &
       (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
        MARU_WINDOW_ATTR_SURROUNDING_TEXT |
-       MARU_WINDOW_ATTR_SURROUNDING_CURSOR_OFFSET)) {
+       MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE)) {
     _maru_x11_refresh_text_input_state(ctx, win);
   }
 

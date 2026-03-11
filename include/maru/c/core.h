@@ -74,7 +74,10 @@ typedef enum MARU_Status {
 // The operation could not be completed, but you may carry on
   MARU_FAILURE = 1,
 
-// The entire context was dead either before, or became dead because of, the operation.
+// The entire context was dead either before, or became dead because of, the
+// operation. Once this happens, further MARU_Status API calls are usually
+// harmless but futile and will keep returning this status until you destroy and
+// rebuild the context.
   MARU_ERROR_CONTEXT_LOST = 2, 
 } MARU_Status;
 
@@ -94,6 +97,9 @@ typedef enum MARU_BackendType {
 
 /** @brief Generic flags type. */
 typedef uint64_t MARU_Flags;
+
+/** @brief Helper macro for defining 64-bit bitmask constants. */
+#define MARU_BIT(n) ((uint64_t)1 << (n))
 
 /** @brief Bitmask for filtering events during polling or waiting. */
 typedef uint64_t MARU_EventMask;

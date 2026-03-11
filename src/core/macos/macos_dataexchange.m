@@ -7,7 +7,7 @@ MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget
   return MARU_FAILURE;
 }
 
-MARU_Status maru_provideData_Cocoa(const MARU_DataRequestEvent *request_event, const void *data, size_t size, MARU_DataProvideFlags flags) {
+MARU_Status maru_provideData_Cocoa(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags) {
   return MARU_FAILURE;
 }
 

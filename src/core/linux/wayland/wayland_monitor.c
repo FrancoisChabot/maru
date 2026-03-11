@@ -67,7 +67,7 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output,
 
   MARU_VideoMode mode = {
       .size = {.x = width, .y = height},
-      .refresh_rate_mhz = (uint32_t)refresh,
+      .refresh_rate_millihz = (uint32_t)refresh,
   };
 
   if ((flags & WL_OUTPUT_MODE_CURRENT) != 0U) {
@@ -75,7 +75,7 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output,
     monitor->base.pub.current_mode = mode;
     monitor->current_mode = mode;
     if (prev_mode.size.x != mode.size.x || prev_mode.size.y != mode.size.y ||
-        prev_mode.refresh_rate_mhz != mode.refresh_rate_mhz) {
+        prev_mode.refresh_rate_millihz != mode.refresh_rate_millihz) {
       monitor->mode_changed_pending = true;
     }
   }
@@ -83,7 +83,7 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output,
   for (uint32_t i = 0; i < monitor->mode_count; ++i) {
     const MARU_VideoMode existing = monitor->modes[i];
     if (existing.size.x == mode.size.x && existing.size.y == mode.size.y &&
-        existing.refresh_rate_mhz == mode.refresh_rate_mhz) {
+        existing.refresh_rate_millihz == mode.refresh_rate_millihz) {
       return;
     }
   }

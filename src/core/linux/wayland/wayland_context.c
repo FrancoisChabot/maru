@@ -427,7 +427,7 @@ static void _idle_notification_handle_idled(void *data, struct ext_idle_notifica
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   MARU_Event evt = {0};
   evt.idle.is_idle = true;
-  evt.idle.timeout_ms = ctx->base.tuning.idle_timeout_ms;
+  evt.idle.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_STATE_CHANGED, NULL, &evt);
 }
 
@@ -435,7 +435,7 @@ static void _idle_notification_handle_resumed(void *data, struct ext_idle_notifi
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   MARU_Event evt = {0};
   evt.idle.is_idle = false;
-  evt.idle.timeout_ms = ctx->base.tuning.idle_timeout_ms;
+  evt.idle.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_STATE_CHANGED, NULL, &evt);
 }
 
@@ -450,7 +450,7 @@ static void _maru_wayland_update_idle_notification(MARU_Context_WL *ctx) {
     ctx->wl.idle_notification = NULL;
   }
 
-  uint32_t timeout_ms = ctx->base.tuning.idle_timeout_ms;
+  uint32_t timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
   if (timeout_ms > 0 && ctx->protocols.opt.ext_idle_notifier_v1 && ctx->protocols.opt.wl_seat) {
     ctx->wl.idle_notification = maru_ext_idle_notifier_v1_get_idle_notification(
         ctx, ctx->protocols.opt.ext_idle_notifier_v1, timeout_ms, ctx->protocols.opt.wl_seat);
@@ -584,7 +584,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   ctx->base.diagnostic_cb = ctx->base.attrs_effective.diagnostic_cb;
   ctx->base.diagnostic_userdata = ctx->base.attrs_effective.diagnostic_userdata;
   ctx->base.inhibit_idle = ctx->base.attrs_effective.inhibit_idle;
-  ctx->base.tuning.idle_timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
 
   if (!maru_load_wayland_symbols(&ctx->base, &ctx->dlib.wl, &ctx->dlib.wlc,
                                  &ctx->linux_common.xkb_lib,
@@ -815,7 +814,7 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
 
   _maru_update_context_base(&ctx->base, field_mask, attributes);
 
-  if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
+  if (field_mask & MARU_CONTEXT_ATTR_INHIBIT_IDLE) {
     for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
       MARU_Window_WL *window = (MARU_Window_WL *)it;
       _maru_wayland_update_idle_inhibitor(window);

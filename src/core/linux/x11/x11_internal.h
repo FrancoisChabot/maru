@@ -351,7 +351,7 @@ MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode 
 MARU_Status maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
 
 MARU_Status maru_announceData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);
-MARU_Status maru_provideData_X11(const MARU_DataRequestEvent *request_event, const void *data, size_t size, MARU_DataProvideFlags flags);
+MARU_Status maru_provideData_X11(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag);
 MARU_Status maru_getAvailableMIMETypes_X11(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
 
@@ -368,7 +368,7 @@ void _maru_x11_clear_window_dataexchange_refs(MARU_Context_X11 *ctx, MARU_Window
 MARU_Status _maru_x11_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
                                    const char **mime_types, uint32_t count,
                                    MARU_DropActionMask allowed_actions);
-MARU_Status _maru_x11_provideData(const MARU_DataRequestEvent *request_event, const void *data,
+MARU_Status _maru_x11_provideData(MARU_DataRequest *request, const void *data,
                                   size_t size, MARU_DataProvideFlags flags);
 MARU_Status _maru_x11_requestData(MARU_Window *window, MARU_DataExchangeTarget target,
                                   const char *mime_type, void *user_tag);

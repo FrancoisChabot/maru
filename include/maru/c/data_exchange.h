@@ -53,7 +53,7 @@ MARU_API MARU_Status maru_announceData(MARU_Window *window,
 
 /** @brief Provides the actual payload in response to an `MARU_DATA_REQUESTED`
  * event. */
-MARU_API MARU_Status maru_provideData(const MARU_DataRequestEvent *request_event,
+MARU_API MARU_Status maru_provideData(MARU_DataRequest *request,
                                       const void *data, size_t size,
                                       MARU_DataProvideFlags flags);
 

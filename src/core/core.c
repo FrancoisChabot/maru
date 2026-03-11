@@ -168,7 +168,7 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
                                const MARU_ContextAttributes *attributes) {
   ctx_base->attrs_dirty_mask |= field_mask;
 
-  if (field_mask & MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE) {
+  if (field_mask & MARU_CONTEXT_ATTR_INHIBIT_IDLE) {
     ctx_base->attrs_requested.inhibit_idle = attributes->inhibit_idle;
     ctx_base->attrs_effective.inhibit_idle = attributes->inhibit_idle;
     ctx_base->inhibit_idle = ctx_base->attrs_effective.inhibit_idle;
@@ -186,7 +186,6 @@ void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
   if (field_mask & MARU_CONTEXT_ATTR_IDLE_TIMEOUT) {
     ctx_base->attrs_requested.idle_timeout_ms = attributes->idle_timeout_ms;
     ctx_base->attrs_effective.idle_timeout_ms = attributes->idle_timeout_ms;
-    ctx_base->tuning.idle_timeout_ms = ctx_base->attrs_effective.idle_timeout_ms;
   }
 
   ctx_base->attrs_dirty_mask &= ~field_mask;
@@ -406,6 +405,7 @@ MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId 
 MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
                                       MARU_Window *window, MARU_UserDefinedEvent user_evt) {
   MARU_API_VALIDATE(postEvent, context, type, window, user_evt);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   MARU_Event evt;
   evt.user = user_evt;
@@ -416,6 +416,7 @@ MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
 
 MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
   MARU_API_VALIDATE(resetContextMetrics, context);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   memset(&ctx_base->user_event_metrics, 0, sizeof(MARU_UserEventMetrics));
   ctx_base->metrics.cursor_create_count_total = 0;
@@ -432,6 +433,8 @@ MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
 
 MARU_API MARU_Status maru_resetWindowMetrics(MARU_Window *window) {
   MARU_API_VALIDATE(resetWindowMetrics, window);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(resetWindowMetrics, window);
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   memset(&win_base->metrics, 0, sizeof(MARU_WindowMetrics));
   return MARU_SUCCESS;

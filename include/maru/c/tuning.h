@@ -55,9 +55,6 @@ typedef struct MARU_ContextTuning {
   // system events bypass this entirely. 
   uint32_t user_event_queue_size;
   
-  
-  uint32_t idle_timeout_ms;
-
   MARU_CursorPolicy cursor_policy;
 
   struct {
@@ -74,7 +71,6 @@ typedef struct MARU_ContextTuning {
 #define MARU_CONTEXT_TUNING_DEFAULT                           \
   {                                                            \
     .user_event_queue_size = 256, \
-    .idle_timeout_ms = 0, \
     .cursor_policy = MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK, \
     .wayland = { \
       .decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO \

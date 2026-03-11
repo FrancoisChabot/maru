@@ -24,6 +24,7 @@ MARU_API MARU_Status
 maru_updateContext(MARU_Context *context, uint64_t field_mask,
                    const MARU_ContextAttributes *attributes) {
   MARU_API_VALIDATE(updateContext, context, field_mask, attributes);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   return ctx_base->backend->updateContext(context, field_mask, attributes);
 }
@@ -32,6 +33,7 @@ MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms,
                                      MARU_EventMask mask,
                                      MARU_EventCallback callback, void *userdata) {
   MARU_API_VALIDATE(pumpEvents, context, timeout_ms, mask, callback, userdata);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   return ctx_base->backend->pumpEvents(context, timeout_ms, mask, callback,
                                        userdata);
@@ -41,12 +43,14 @@ MARU_API MARU_Status maru_createWindow(MARU_Context *context,
                                        const MARU_WindowCreateInfo *create_info,
                                        MARU_Window **out_window) {
   MARU_API_VALIDATE(createWindow, context, create_info, out_window);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->createWindow(context, create_info, out_window);
 }
 
 MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->wakeContext(context);
 }
@@ -54,6 +58,7 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
 MARU_API MARU_Status maru_getControllers(MARU_Context *context,
                                          MARU_ControllerList *out_list) {
   MARU_API_VALIDATE(getControllers, context, out_list);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   if (!ctx_base->backend->getControllers) {
     out_list->controllers = NULL;
@@ -73,9 +78,12 @@ MARU_API void maru_retainController(MARU_Controller *controller) {
   atomic_fetch_add_explicit(&ctrl_base->ref_count, 1u, memory_order_relaxed);
 }
 
-MARU_API MARU_Status maru_getControllerInfo(MARU_Controller *controller,
+MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
                                             MARU_ControllerInfo *out_info) {
   MARU_API_VALIDATE(getControllerInfo, controller, out_info);
+  MARU_RETURN_IF_CONTEXT_LOST(
+      _maru_status_if_controller_context_lost(controller));
+  MARU_API_VALIDATE_LIVE(getControllerInfo, controller, out_info);
   MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
   if (!ctx_base->backend->getControllerInfo) {
@@ -91,6 +99,10 @@ maru_setControllerHapticLevels(MARU_Controller *controller, uint32_t first_hapti
                                const MARU_Scalar *intensities) {
   MARU_API_VALIDATE(setControllerHapticLevels, controller, first_haptic, count,
                     intensities);
+  MARU_RETURN_IF_CONTEXT_LOST(
+      _maru_status_if_controller_context_lost(controller));
+  MARU_API_VALIDATE_LIVE(setControllerHapticLevels, controller, first_haptic,
+                         count, intensities);
   MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
   if (!ctx_base->backend->setControllerHapticLevels) return MARU_FAILURE;
@@ -118,6 +130,9 @@ MARU_API void maru_releaseController(MARU_Controller *controller) {
 
 MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
   MARU_API_VALIDATE(resetControllerMetrics, controller);
+  MARU_RETURN_IF_CONTEXT_LOST(
+      _maru_status_if_controller_context_lost(controller));
+  MARU_API_VALIDATE_LIVE(resetControllerMetrics, controller);
   MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
   if (!ctx_base->backend->resetControllerMetrics) return MARU_FAILURE;
@@ -130,29 +145,35 @@ MARU_API MARU_Status maru_announceData(MARU_Window *window,
                                        MARU_DropActionMask allowed_actions) {
   MARU_API_VALIDATE(announceData, window, target, mime_types, count,
                     allowed_actions);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(announceData, window, target, mime_types, count,
+                         allowed_actions);
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
   if (!win_base->backend->announceData) return MARU_FAILURE;
   return win_base->backend->announceData(window, target, mime_types, count,
                                          allowed_actions);
 }
 
-MARU_API MARU_Status maru_provideData(const MARU_DataRequestEvent *request_event,
+MARU_API MARU_Status maru_provideData(MARU_DataRequest *request,
                                       const void *data, size_t size,
                                       MARU_DataProvideFlags flags) {
-  MARU_API_VALIDATE(provideData, request_event, data, size, flags);
+  MARU_API_VALIDATE(provideData, request, data, size, flags);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_request_context_lost(request));
   const MARU_DataRequestHandleBase *handle =
-      (const MARU_DataRequestHandleBase *)request_event->internal_handle;
+      (const MARU_DataRequestHandleBase *)request;
   if (!handle || !handle->ctx_base || !handle->ctx_base->backend ||
       !handle->ctx_base->backend->provideData) {
     return MARU_FAILURE;
   }
-  return handle->ctx_base->backend->provideData(request_event, data, size, flags);
+  return handle->ctx_base->backend->provideData(request, data, size, flags);
 }
 
 MARU_API MARU_Status maru_requestData(MARU_Window *window,
                                       MARU_DataExchangeTarget target,
                                       const char *mime_type, void *user_tag) {
   MARU_API_VALIDATE(requestData, window, target, mime_type, user_tag);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(requestData, window, target, mime_type, user_tag);
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
   if (!win_base->backend->requestData) return MARU_FAILURE;
   return win_base->backend->requestData(window, target, mime_type, user_tag);
@@ -162,6 +183,8 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
                                                 MARU_DataExchangeTarget target,
                                                 MARU_MIMETypeList *out_list) {
   MARU_API_VALIDATE(getAvailableMIMETypes, window, target, out_list);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(getAvailableMIMETypes, window, target, out_list);
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
   if (!win_base->backend->getAvailableMIMETypes) {
     out_list->mime_types = NULL;
@@ -174,6 +197,7 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
                                           MARU_VkExtensionList *out_list) {
   MARU_API_VALIDATE(getVkExtensions, context, out_list);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   if (!context || !out_list) {
     return MARU_FAILURE;
   }
@@ -190,6 +214,9 @@ MARU_API MARU_Status maru_createVkSurface(
     MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
   MARU_API_VALIDATE(createVkSurface, window, instance, vk_loader, out_surface);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(createVkSurface, window, instance, vk_loader,
+                         out_surface);
   if (!window || !instance || !out_surface) {
     return MARU_FAILURE;
   }
@@ -203,6 +230,7 @@ MARU_API MARU_Status maru_createVkSurface(
 
 MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
   MARU_API_VALIDATE(destroyWindow, window);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
   return win_base->backend->destroyWindow(window);
 }
@@ -210,6 +238,8 @@ MARU_API MARU_Status maru_destroyWindow(MARU_Window *window) {
 MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
                                        const MARU_WindowAttributes *attributes) {
   MARU_API_VALIDATE(updateWindow, window, field_mask, attributes);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(updateWindow, window, field_mask, attributes);
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   return win_base->backend->updateWindow(window, field_mask, attributes);
 }
@@ -218,18 +248,21 @@ MARU_API MARU_Status maru_createCursor(MARU_Context *context,
                                        const MARU_CursorCreateInfo *create_info,
                                        MARU_Cursor **out_cursor) {
   MARU_API_VALIDATE(createCursor, context, create_info, out_cursor);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->createCursor(context, create_info, out_cursor);
 }
 
 MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   MARU_API_VALIDATE(destroyCursor, cursor);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_cursor_context_lost(cursor));
   MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
   return cur_base->backend->destroyCursor(cursor);
 }
 
 MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
   MARU_API_VALIDATE(resetCursorMetrics, cursor);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_cursor_context_lost(cursor));
   MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
   memset(&cur_base->metrics, 0, sizeof(MARU_CursorMetrics));
   return MARU_SUCCESS;
@@ -239,24 +272,30 @@ MARU_API MARU_Status maru_createImage(MARU_Context *context,
                                       const MARU_ImageCreateInfo *create_info,
                                       MARU_Image **out_image) {
   MARU_API_VALIDATE(createImage, context, create_info, out_image);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->createImage(context, create_info, out_image);
 }
 
 MARU_API MARU_Status maru_destroyImage(MARU_Image *image) {
   MARU_API_VALIDATE(destroyImage, image);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_image_context_lost(image));
   MARU_Image_Base *image_base = (MARU_Image_Base *)image;
   return image_base->backend->destroyImage(image);
 }
 
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(requestWindowFocus, window);
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   return win_base->backend->requestWindowFocus(window);
 }
 
 MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFrame, window);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(requestWindowFrame, window);
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   if (win_base->backend->requestWindowFrame) {
     return win_base->backend->requestWindowFrame(window);
@@ -266,6 +305,8 @@ MARU_API MARU_Status maru_requestWindowFrame(MARU_Window *window) {
 
 MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowAttention, window);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(requestWindowAttention, window);
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   if (win_base->backend->requestWindowAttention) {
     return win_base->backend->requestWindowAttention(window);
@@ -275,6 +316,7 @@ MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
 
 MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
   MARU_API_VALIDATE(getMonitors, context, out_list);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->getMonitors(context, out_list);
 }
@@ -308,6 +350,8 @@ MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
 
 MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
   MARU_API_VALIDATE(getMonitorModes, monitor, out_list);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
+  MARU_API_VALIDATE_LIVE(getMonitorModes, monitor, out_list);
   if (!monitor || !out_list) {
     return MARU_FAILURE;
   }
@@ -317,12 +361,16 @@ MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_Vide
 
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
   MARU_API_VALIDATE(setMonitorMode, monitor, mode);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
+  MARU_API_VALIDATE_LIVE(setMonitorMode, monitor, mode);
   const MARU_Monitor_Base *mon_base = (const MARU_Monitor_Base *)monitor;
   return mon_base->backend->setMonitorMode(monitor, mode);
 }
 
 MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(resetMonitorMetrics, monitor);
+  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
+  MARU_API_VALIDATE_LIVE(resetMonitorMetrics, monitor);
   MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
   return mon_base->backend->resetMonitorMetrics(monitor);
 }

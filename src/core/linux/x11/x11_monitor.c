@@ -7,7 +7,7 @@
 #include <stdatomic.h>
 #include <string.h>
 
-static uint32_t _maru_x11_mode_refresh_mhz(const XRRModeInfo *mode_info) {
+static uint32_t _maru_x11_mode_refresh_millihz(const XRRModeInfo *mode_info) {
   if (!mode_info || mode_info->hTotal == 0 || mode_info->vTotal == 0 ||
       mode_info->dotClock == 0) {
     return 0;
@@ -178,11 +178,11 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
             bool duplicate = false;
             const MARU_VideoMode candidate = {
                 .size = {(int32_t)mode_info->width, (int32_t)mode_info->height},
-                .refresh_rate_mhz = _maru_x11_mode_refresh_mhz(mode_info)};
+                .refresh_rate_millihz = _maru_x11_mode_refresh_millihz(mode_info)};
             for (uint32_t k = 0; k < monitor->mode_count; ++k) {
               if (monitor->modes[k].size.x == candidate.size.x &&
                   monitor->modes[k].size.y == candidate.size.y &&
-                  monitor->modes[k].refresh_rate_mhz == candidate.refresh_rate_mhz) {
+                  monitor->modes[k].refresh_rate_millihz == candidate.refresh_rate_millihz) {
                 duplicate = true;
                 break;
               }
@@ -207,8 +207,8 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
           if (mode_info) {
             monitor->base.pub.current_mode.size.x = (int32_t)mode_info->width;
             monitor->base.pub.current_mode.size.y = (int32_t)mode_info->height;
-            monitor->base.pub.current_mode.refresh_rate_mhz =
-                _maru_x11_mode_refresh_mhz(mode_info);
+            monitor->base.pub.current_mode.refresh_rate_millihz =
+                _maru_x11_mode_refresh_millihz(mode_info);
           }
           ctx->xrandr_lib.XRRFreeCrtcInfo(crtc_info);
         }
@@ -302,10 +302,10 @@ MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode 
         (int32_t)mode_info->height != mode.size.y) {
       continue;
     }
-    const uint32_t refresh_mhz = _maru_x11_mode_refresh_mhz(mode_info);
-    if (mode.refresh_rate_mhz == 0 || refresh_mhz == mode.refresh_rate_mhz) {
+    const uint32_t refresh_millihz = _maru_x11_mode_refresh_millihz(mode_info);
+    if (mode.refresh_rate_millihz == 0 || refresh_millihz == mode.refresh_rate_millihz) {
       target_mode = mode_info->id;
-      mode.refresh_rate_mhz = refresh_mhz;
+      mode.refresh_rate_millihz = refresh_millihz;
       break;
     }
   }

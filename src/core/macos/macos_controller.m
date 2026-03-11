@@ -300,9 +300,8 @@ MARU_Status maru_resetControllerMetrics_Cocoa(MARU_Controller *controller) {
     return MARU_SUCCESS;
 }
 
-MARU_Status maru_getControllerInfo_Cocoa(MARU_Controller *controller,
-                                           MARU_ControllerInfo *out_info) {
-    MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)controller;
+MARU_Status maru_getControllerInfo_Cocoa(const MARU_Controller *controller,
+                                         MARU_ControllerInfo *out_info) {    MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)controller;
     memset(out_info, 0, sizeof(MARU_ControllerInfo));
     out_info->name = [c->gc_controller.vendorName UTF8String];
     out_info->is_standardized = (c->gc_controller.extendedGamepad != nil);

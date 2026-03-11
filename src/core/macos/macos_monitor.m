@@ -32,8 +32,8 @@ static void _maru_cocoa_populate_video_modes(MARU_Monitor_Cocoa *mon) {
         MARU_VideoMode *vm = &mon->modes[mon->mode_count++];
         vm->size.x = (int32_t)CGDisplayModeGetPixelWidth(mode);
         vm->size.y = (int32_t)CGDisplayModeGetPixelHeight(mode);
-        vm->refresh_rate_mhz = (uint32_t)(CGDisplayModeGetRefreshRate(mode) * 1000000.0);
-        if (vm->refresh_rate_mhz == 0) vm->refresh_rate_mhz = 60000000;
+        vm->refresh_rate_millihz = (uint32_t)(CGDisplayModeGetRefreshRate(mode) * 1000.0);
+        if (vm->refresh_rate_millihz == 0) vm->refresh_rate_millihz = 60000;
     }
     CFRelease(displayModes);
 }
@@ -77,12 +77,12 @@ MARU_Status maru_getMonitors_Cocoa(MARU_Context *context, MARU_MonitorList *out_
         if (mode) {
             mon->base.pub.current_mode.size.x = (int32_t)CGDisplayModeGetPixelWidth(mode);
             mon->base.pub.current_mode.size.y = (int32_t)CGDisplayModeGetPixelHeight(mode);
-            mon->base.pub.current_mode.refresh_rate_mhz = (uint32_t)(CGDisplayModeGetRefreshRate(mode) * 1000000.0);
+            mon->base.pub.current_mode.refresh_rate_millihz = (uint32_t)(CGDisplayModeGetRefreshRate(mode) * 1000.0);
             CGDisplayModeRelease(mode);
         } else {
             mon->base.pub.current_mode.size.x = (int32_t)CGDisplayPixelsWide(displayID);
             mon->base.pub.current_mode.size.y = (int32_t)CGDisplayPixelsHigh(displayID);
-            mon->base.pub.current_mode.refresh_rate_mhz = 60000000;
+            mon->base.pub.current_mode.refresh_rate_millihz = 60000;
         }
 
         NSRect frame = [screen frame];

@@ -95,7 +95,7 @@ void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx) {
         MARU_Event req_evt = {0};
         req_evt.data_requested.target = handle->target;
         req_evt.data_requested.mime_type = handle->mime_type;
-        req_evt.data_requested.internal_handle = handle;
+        req_evt.data_requested.request = (MARU_DataRequest *)handle;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED,
                              handle->window, &req_evt);
 
@@ -159,17 +159,17 @@ MARU_Status maru_announceData_Windows(MARU_Window *window,
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_provideData_Windows(const MARU_DataRequestEvent *request_event,
+MARU_Status maru_provideData_Windows(MARU_DataRequest *request,
                                      const void *data, size_t size,
                                      MARU_DataProvideFlags flags) {
   (void)flags;
-  if (request_event->target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
+  MARU_WindowsDataRequestHandle *handle =
+      (MARU_WindowsDataRequestHandle *)request;
+  if (!handle || !handle->base.ctx_base) {
     return MARU_FAILURE;
   }
 
-  MARU_WindowsDataRequestHandle *handle =
-      (MARU_WindowsDataRequestHandle *)request_event->internal_handle;
-  if (!handle || !handle->base.ctx_base) {
+  if (handle->target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     return MARU_FAILURE;
   }
 
@@ -268,7 +268,7 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
       MARU_Event req_evt = {0};
       req_evt.data_requested.target = target;
       req_evt.data_requested.mime_type = handle->mime_type;
-      req_evt.data_requested.internal_handle = handle;
+      req_evt.data_requested.request = (MARU_DataRequest *)handle;
       _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_REQUESTED, window,
                            &req_evt);
 

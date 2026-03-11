@@ -201,12 +201,19 @@ Maru isn't "lightweight" for the sake of a low binary size; it is lightweight so
 
 Certain OS operations (e.g., scanning for gamepads on Linux via udev or handling device-change notifications on Windows) can block for several milliseconds. If we ran these on your main thread, you would see a hitch in your frame rate every time a controller was plugged in. We offload these non-deterministic blocking calls to a dedicated worker thread to ensure `maru_pumpEvents()` remains fast and predictable, even during unusual OS events.
 
-#### Control Flow vs. Diagnostics
+  #### Control Flow vs. Diagnostics
 **"Why are there so few error codes?"**
 
-`MARU_Status` is not meant to tell you *what* went wrong, but rather *what you can do about it* (e.g., `MARU_ERROR_CONTEXT_LOST` means you must rebuild the context). 
+`MARU_Status` is not meant to tell you *what* went wrong, but rather *what you can do about it*.
+
+- `MARU_SUCCESS`: Everything is fine
+- `MARU_FAILURE`: The operation failed, but the context is still sane
+- `MARU_ERROR_CONTEXT_LOST`: Something critical went wrong in the context, and that context must be destroyed and rebuilt.
 
 Explanations as to *why* something failed are delivered via the `MARU_DiagnosticCallback`.
+
+Note that making an API call on a lost context is **NOT** an API violation. Instead, it will early-out and return `MARU_ERROR_CONTEXT_LOST`. You don't have to check for it at every turn. Usually, handling it from `maru_pumpEvents()` 
+and relying on early-outs for the rest is fine.
 
 ---
 
@@ -262,6 +269,11 @@ Use the `maru_applyTextEditCommitUtf8()` convenience function to apply commits t
 **"What's the difference between logical vectors and pixel vectors?"**
 
 All coordinate variables in Maru explicitly include `logical` or `pixel` in their name. In short: use **logical** units for UI layout and hit testing (to match OS scaling) and **pixel** units for your rendering viewport and swapchain.
+
+#### Analog Inputs: Polling vs. Events
+**"Why is there a mouse motion event but no controller analog event?"**
+
+Unlike a mouse that rests completely still, analog joysticks constantly jitter at a microscopic level due to electrical noise. Emitting an event every time a joystick's value changes by 0.001 would flood the event queue and burn CPU cycles. Therefore, Maru provides events for discrete digital buttons, but forces you to poll continuous analog states (`maru_getControllerAnalogStates`) when you actually need them (typically once per frame).
 
 #### Zero-Latency Mouse Input & Coalescence
 **"How does Maru handle high-frequency mouse input?"**

@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+/**
+ * ATTENTION: This file is in the maru details/ directory. This means that
+ * it's NOT part of the Maru API, and is just machinery that is required to
+ * implement the API.
+ *
+ * Nothing in here is meant to be stable, or even read by a user of the library.
+ */
+
 #ifndef MARU_DETAILS_MONITORS_H_INCLUDED
 #define MARU_DETAILS_MONITORS_H_INCLUDED
 
@@ -10,7 +18,7 @@
 extern "C" {
 #endif
 
-/** @brief Internal representation of MARU_Monitor. 
+/** @brief Internal representation of MARU_Monitor.
     CHANGING THIS REQUIRES A MAJOR VERSION BUMP
 */
 typedef struct MARU_MonitorExposed {
@@ -32,19 +40,23 @@ static inline void *maru_getMonitorUserdata(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->userdata;
 }
 
-static inline void maru_setMonitorUserdata(MARU_Monitor *monitor, void *userdata) {
+static inline void maru_setMonitorUserdata(MARU_Monitor *monitor,
+                                           void *userdata) {
   ((MARU_MonitorExposed *)monitor)->userdata = userdata;
 }
 
-static inline MARU_Context *maru_getMonitorContext(const MARU_Monitor *monitor) {
+static inline MARU_Context *
+maru_getMonitorContext(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->context;
 }
 
 static inline bool maru_isMonitorLost(const MARU_Monitor *monitor) {
-  return (((const MARU_MonitorExposed *)monitor)->flags & MARU_MONITOR_STATE_LOST) != 0;
+  return (((const MARU_MonitorExposed *)monitor)->flags &
+          MARU_MONITOR_STATE_LOST) != 0;
 }
 
-static inline const MARU_MonitorMetrics *maru_getMonitorMetrics(const MARU_Monitor *monitor) {
+static inline const MARU_MonitorMetrics *
+maru_getMonitorMetrics(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->metrics;
 }
 
@@ -52,19 +64,23 @@ static inline const char *maru_getMonitorName(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->name;
 }
 
-static inline MARU_Vec2Dip maru_getMonitorPhysicalSize(const MARU_Monitor *monitor) {
+static inline MARU_Vec2Dip
+maru_getMonitorPhysicalSize(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->physical_size;
 }
 
-static inline MARU_VideoMode maru_getMonitorCurrentMode(const MARU_Monitor *monitor) {
+static inline MARU_VideoMode
+maru_getMonitorCurrentMode(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->current_mode;
 }
 
-static inline MARU_Vec2Dip maru_getMonitorLogicalPosition(const MARU_Monitor *monitor) {
+static inline MARU_Vec2Dip
+maru_getMonitorLogicalPosition(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->logical_position;
 }
 
-static inline MARU_Vec2Dip maru_getMonitorLogicalSize(const MARU_Monitor *monitor) {
+static inline MARU_Vec2Dip
+maru_getMonitorLogicalSize(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->logical_size;
 }
 
@@ -80,4 +96,4 @@ static inline MARU_Scalar maru_getMonitorScale(const MARU_Monitor *monitor) {
 }
 #endif
 
-#endif  // MARU_DETAILS_MONITORS_H_INCLUDED
+#endif // MARU_DETAILS_MONITORS_H_INCLUDED

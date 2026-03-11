@@ -1537,15 +1537,15 @@ MARU_Status _maru_x11_getAvailableMIMETypes(MARU_Window *window,
   return MARU_FAILURE;
 }
 
-MARU_Status _maru_x11_provideData(const MARU_DataRequestEvent *request_event,
+MARU_Status _maru_x11_provideData(MARU_DataRequest *request,
                                   const void *data, size_t size,
                                   MARU_DataProvideFlags flags) {
   (void)flags;
-  if (!request_event || !request_event->internal_handle) {
+  if (!request) {
     return MARU_FAILURE;
   }
   MARU_X11DataRequestHandle *handle =
-      (MARU_X11DataRequestHandle *)request_event->internal_handle;
+      (MARU_X11DataRequestHandle *)request;
   if (!handle->base.ctx_base || handle->magic != MARU_X11_DATA_REQUEST_MAGIC ||
       handle->consumed) {
     return MARU_FAILURE;
@@ -1756,9 +1756,9 @@ MARU_Status maru_announceData_X11(MARU_Window *window,
 }
 
 MARU_Status
-maru_provideData_X11(const MARU_DataRequestEvent *request_event, const void *data,
+maru_provideData_X11(MARU_DataRequest *request, const void *data,
                      size_t size, MARU_DataProvideFlags flags) {
-  return _maru_x11_provideData(request_event, data, size, flags);
+  return _maru_x11_provideData(request, data, size, flags);
 }
 
 MARU_Status maru_requestData_X11(MARU_Window *window,
@@ -1849,7 +1849,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
       MARU_Event req_evt = {0};
       req_evt.data_requested.target = target;
       req_evt.data_requested.mime_type = handle.mime_type;
-      req_evt.data_requested.internal_handle = &handle;
+      req_evt.data_requested.request = (MARU_DataRequest *)&handle;
       _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED,
                            (MARU_Window *)offer->owner_window, &req_evt);
 

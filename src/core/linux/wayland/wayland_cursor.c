@@ -209,8 +209,7 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
   cursor->base.pub.userdata = create_info->userdata;
 
   if (system_cursor) {
-    if (create_info->system_shape < MARU_CURSOR_SHAPE_DEFAULT ||
-        create_info->system_shape > MARU_CURSOR_SHAPE_NWSE_RESIZE) {
+    if (create_info->system_shape > MARU_CURSOR_SHAPE_NWSE_RESIZE) {
       maru_context_free(&ctx->base, cursor);
       return MARU_FAILURE;
     }

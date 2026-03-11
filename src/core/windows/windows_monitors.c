@@ -89,7 +89,7 @@ static BOOL CALLBACK _maru_windows_monitor_enum_proc(HMONITOR hmonitor, HDC hdc,
   if (EnumDisplaySettingsW(monitor->device_name, ENUM_CURRENT_SETTINGS, &devmode)) {
       monitor->base.pub.current_mode.size.x = devmode.dmPelsWidth;
       monitor->base.pub.current_mode.size.y = devmode.dmPelsHeight;
-      monitor->base.pub.current_mode.refresh_rate_mhz = devmode.dmDisplayFrequency * 1000;
+      monitor->base.pub.current_mode.refresh_rate_millihz = devmode.dmDisplayFrequency * 1000;
   }
 
   return TRUE;
@@ -160,7 +160,7 @@ MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
     MARU_VideoMode *m = &win_mon->modes[win_mon->mode_count++];
     m->size.x = devmode.dmPelsWidth;
     m->size.y = devmode.dmPelsHeight;
-    m->refresh_rate_mhz = devmode.dmDisplayFrequency * 1000;
+    m->refresh_rate_millihz = devmode.dmDisplayFrequency * 1000;
     
     mode_index++;
   }
@@ -179,7 +179,7 @@ MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
   devmode.dmSize = sizeof(devmode);
   devmode.dmPelsWidth = mode.size.x;
   devmode.dmPelsHeight = mode.size.y;
-  devmode.dmDisplayFrequency = mode.refresh_rate_mhz / 1000;
+  devmode.dmDisplayFrequency = mode.refresh_rate_millihz / 1000;
   devmode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
 
   LONG result = ChangeDisplaySettingsExW(win_mon->device_name, &devmode, NULL, CDS_FULLSCREEN, NULL);

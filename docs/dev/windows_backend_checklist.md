@@ -8,7 +8,7 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Context Waking (`maru_wakeContext_Windows`)
 - [x] Context Attribute Updates (`maru_updateContext_Windows`)
 - [x] Native Handle Access (`_maru_getContextNativeHandle_Windows`)
-- [x] **DONE:** Implement System Idle Inhibition (`MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE` via `SetThreadExecutionState`)
+- [x] **DONE:** Implement System Idle Inhibition (`MARU_CONTEXT_ATTR_INHIBIT_IDLE` via `SetThreadExecutionState`)
 - [x] Unicode Support (`UNICODE` / `_UNICODE` defined)
 - [x] High-DPI Awareness (Per-monitor V2)
 

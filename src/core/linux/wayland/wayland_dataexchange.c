@@ -564,7 +564,7 @@ static void _clipboard_source_send(void *data, struct wl_data_source *source,
   MARU_Event evt = {0};
   evt.data_requested.target = target;
   evt.data_requested.mime_type = handle->mime_type;
-  evt.data_requested.internal_handle = handle;
+  evt.data_requested.request = (MARU_DataRequest *)handle;
 
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED, event_window, &evt);
 
@@ -606,7 +606,7 @@ static void _primary_selection_source_send(
   MARU_Event evt = {0};
   evt.data_requested.target = MARU_DATA_EXCHANGE_TARGET_PRIMARY;
   evt.data_requested.mime_type = handle->mime_type;
-  evt.data_requested.internal_handle = handle;
+  evt.data_requested.request = (MARU_DataRequest *)handle;
 
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED, event_window, &evt);
 
@@ -1378,11 +1378,11 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_provideData_WL(const MARU_DataRequestEvent *request_event,
+MARU_Status maru_provideData_WL(MARU_DataRequest *request,
                                 const void *data, size_t size,
                                 MARU_DataProvideFlags flags) {
   MARU_WaylandDataRequestHandle *handle =
-      (MARU_WaylandDataRequestHandle *)request_event->internal_handle;
+      (MARU_WaylandDataRequestHandle *)request;
   if (handle->magic != MARU_WL_DATA_REQUEST_MAGIC || handle->fd < 0 ||
       handle->consumed) {
     return MARU_FAILURE;

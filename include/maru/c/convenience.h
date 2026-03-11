@@ -66,11 +66,11 @@ static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window *windo
  * `capacity_bytes` is the writable size of `buffer`. If there is capacity after
  * the resulting content, a trailing '\0' is written as a convenience.
  */
-static inline MARU_Status maru_applyTextEditCommitUtf8(char *buffer,
-                                                       uint32_t capacity_bytes,
-                                                       uint32_t *inout_length,
-                                                       uint32_t *inout_cursor_byte,
-                                                       const MARU_TextEditCommitEvent *commit);
+static inline bool maru_applyTextEditCommitUtf8(char *buffer,
+                                                uint32_t capacity_bytes,
+                                                uint32_t *inout_length,
+                                                uint32_t *inout_cursor_byte,
+                                                const MARU_TextEditCommitEvent *commit);
 
 static inline const MARU_UserEventMetrics *maru_getContextEventMetrics(const MARU_Context *context);
 

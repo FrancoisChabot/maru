@@ -467,7 +467,7 @@ MARU_Status maru_getControllers_WL(MARU_Context *context,
 void maru_retainController_WL(MARU_Controller *controller);
 void maru_releaseController_WL(MARU_Controller *controller);
 MARU_Status maru_resetControllerMetrics_WL(MARU_Controller *controller);
-MARU_Status maru_getControllerInfo_WL(MARU_Controller *controller,
+MARU_Status maru_getControllerInfo_WL(const MARU_Controller *controller,
                                       MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_WL(MARU_Controller *controller,
                                               uint32_t first_haptic,
@@ -476,7 +476,7 @@ MARU_Status maru_setControllerHapticLevels_WL(MARU_Controller *controller,
 MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
                                  const char **mime_types, uint32_t count,
                                  MARU_DropActionMask allowed_actions);
-MARU_Status maru_provideData_WL(const MARU_DataRequestEvent *request_event,
+MARU_Status maru_provideData_WL(MARU_DataRequest *request,
                                 const void *data, size_t size,
                                 MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget target,

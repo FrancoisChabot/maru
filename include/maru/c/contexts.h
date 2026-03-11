@@ -26,8 +26,8 @@ extern "C" {
 typedef struct MARU_Context MARU_Context;
 
 /** @brief Runtime state flags for a context. */
-#define MARU_CONTEXT_STATE_LOST ((MARU_Flags)1 << 0)
-#define MARU_CONTEXT_STATE_READY ((MARU_Flags)1 << 1)
+#define MARU_CONTEXT_STATE_LOST MARU_BIT(0)
+#define MARU_CONTEXT_STATE_READY MARU_BIT(1)
 
 /** @brief Forward declaration of diagnostic info. */
 struct MARU_DiagnosticInfo;
@@ -93,13 +93,14 @@ static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context,
 /** @brief Special value for timeouts to indicate it should never trigger. */
 #define MARU_NEVER UINT32_MAX
 
-#define MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE (1u << 0)
-#define MARU_CONTEXT_ATTR_DIAGNOSTICS (1u << 1)
-#define MARU_CONTEXT_ATTR_IDLE_TIMEOUT (1u << 2)
+#define MARU_CONTEXT_ATTR_INHIBIT_IDLE MARU_BIT(0)
+#define MARU_CONTEXT_ATTR_DIAGNOSTICS MARU_BIT(1)
+#define MARU_CONTEXT_ATTR_DEFAULT_CURSOR MARU_BIT(2)
+#define MARU_CONTEXT_ATTR_IDLE_TIMEOUT MARU_BIT(3)
 
 #define MARU_CONTEXT_ATTR_ALL                                                  \
-  (MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE | MARU_CONTEXT_ATTR_DIAGNOSTICS |    \
-   MARU_CONTEXT_ATTR_IDLE_TIMEOUT)
+  (MARU_CONTEXT_ATTR_INHIBIT_IDLE | MARU_CONTEXT_ATTR_DIAGNOSTICS |    \
+   MARU_CONTEXT_ATTR_DEFAULT_CURSOR | MARU_CONTEXT_ATTR_IDLE_TIMEOUT)
 
 /** @brief Updatable parameters for an active context. */
 typedef struct MARU_ContextAttributes {
@@ -162,6 +163,13 @@ MARU_API MARU_Status maru_destroyContext(MARU_Context *context);
 MARU_API MARU_Status
 maru_updateContext(MARU_Context *context, uint64_t field_mask,
                    const MARU_ContextAttributes *attributes);
+
+/* Most MARU_Status APIs short-circuit with MARU_ERROR_CONTEXT_LOST after a
+ * context loss. This is intentional: once a context is lost, further calls are
+ * harmless but futile, so callers only need to check for loss around important
+ * operations. maru_destroyContext() remains valid so teardown and rebuild stay
+ * straightforward.
+ */
 
 /** @brief Resets the metrics counters attached to a context handle. */
 MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context);

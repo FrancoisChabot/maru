@@ -57,9 +57,9 @@ MARU_VideoModeList modes = {};
 maru_getMonitorModes(monitor, &modes);
 
 for (uint32_t i = 0; i < modes.count; ++i) {
-    printf("Mode %d: %dx%d @ %fHz\n", i, 
+    printf("Mode %d: %dx%d @ %.2fHz\n", i, 
            (int)modes.modes[i].size.x, (int)modes.modes[i].size.y,
-           modes.modes[i].refresh_rate_mhz / 1000.0f);
+           modes.modes[i].refresh_rate_millihz / 1000.0f);
 }
 ```
 

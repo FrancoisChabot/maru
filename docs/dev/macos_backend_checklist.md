@@ -8,7 +8,7 @@ This checklist tracks the implementation status of the Maru macOS (Cocoa) backen
 - [x] Context Waking (`maru_wakeContext_Cocoa`)
 - [x] Context Attribute Updates (`maru_updateContext_Cocoa`)
 - [x] Native Handle Access (`_maru_getContextNativeHandle_Cocoa`)
-- [ ] **TODO:** Implement System Idle Inhibition (`MARU_CONTEXT_ATTR_INHIBITS_SYSTEM_IDLE`)
+- [ ] **TODO:** Implement System Idle Inhibition (`MARU_CONTEXT_ATTR_INHIBIT_IDLE`)
 - [ ] **TODO:** Support for `NSApplicationActivationPolicyProhibited` or `Accessory` if requested.
 
 ## 2. Window Management
