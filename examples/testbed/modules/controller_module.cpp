@@ -25,7 +25,7 @@ void ControllerModule::releaseAll() {
 void ControllerModule::retainController(MARU_Controller* controller) {
     if (!controller) return;
     if (controllers_.find(controller) != controllers_.end()) return;
-    if (maru_retainController(controller) != MARU_SUCCESS) return;
+    maru_retainController(controller);
 
     ControllerState state = {};
     state.controller = controller;

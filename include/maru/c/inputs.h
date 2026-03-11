@@ -173,11 +173,11 @@ typedef struct MARU_AnalogInputState {
 /** @brief Opaque handle representing an OS-level window. */
 typedef struct MARU_Window MARU_Window;
 
-/* ----- Passive Accessors (External Synchronization Required) ----- 
+/* ----- Direct-Return State Access (External Synchronization Required) -----
  *
- * These functions are essentially zero-cost member accesses. They are safe to 
- * call from any thread, provided the access is synchronized with mutating 
- * operations (like maru_pumpEvents) on the window's owner context to ensure 
+ * These functions perform direct reads/writes of cached handle state. They can
+ * be called from any thread, provided access is synchronized with owner-thread
+ * operations (like maru_pumpEvents) on the window's owner context to ensure
  * memory visibility.
  */
 

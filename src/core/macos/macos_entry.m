@@ -149,14 +149,14 @@ MARU_API MARU_Status maru_getControllers(MARU_Context *context,
   return maru_getControllers_Cocoa(context, out_list);
 }
 
-MARU_API MARU_Status maru_retainController(MARU_Controller *controller) {
+MARU_API void maru_retainController(MARU_Controller *controller) {
   MARU_API_VALIDATE(retainController, controller);
-  return maru_retainController_Cocoa(controller);
+  maru_retainController_Cocoa(controller);
 }
 
-MARU_API MARU_Status maru_releaseController(MARU_Controller *controller) {
+MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
-  return maru_releaseController_Cocoa(controller);
+  maru_releaseController_Cocoa(controller);
 }
 
 MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
@@ -233,9 +233,9 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   return maru_setMonitorMode_Cocoa(monitor, mode);
 }
 
-MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
+MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  maru_resetMonitorMetrics_Cocoa(monitor);
+  return maru_resetMonitorMetrics_Cocoa(monitor);
 }
 
 MARU_API const char **maru_getVkExtensions(const MARU_Context *context,
@@ -251,17 +251,18 @@ MARU_API MARU_Status maru_createVkSurface(
   return maru_createVkSurface_Cocoa(window, instance, vk_loader, out_surface);
 }
 
-MARU_API MARU_Status maru_getCocoaContextHandle(
-    MARU_Context *context, MARU_CocoaContextHandle *out_handle) {
-  MARU_API_VALIDATE(getCocoaContextHandle, context, out_handle);
-  out_handle->ns_application = _maru_getContextNativeHandle_Cocoa(context);
-  return out_handle->ns_application ? MARU_SUCCESS : MARU_FAILURE;
+MARU_API MARU_CocoaContextHandle maru_getCocoaContextHandle(
+    MARU_Context *context) {
+  MARU_API_VALIDATE(getCocoaContextHandle, context);
+  MARU_CocoaContextHandle handle = {0};
+  handle.ns_application = _maru_getContextNativeHandle_Cocoa(context);
+  return handle;
 }
 
-MARU_API MARU_Status maru_getCocoaWindowHandle(
-    MARU_Window *window, MARU_CocoaWindowHandle *out_handle) {
-  MARU_API_VALIDATE(getCocoaWindowHandle, window, out_handle);
-  out_handle->ns_window = _maru_getWindowNativeHandle_Cocoa(window);
-  return out_handle->ns_window ? MARU_SUCCESS : MARU_FAILURE;
+MARU_API MARU_CocoaWindowHandle maru_getCocoaWindowHandle(MARU_Window *window) {
+  MARU_API_VALIDATE(getCocoaWindowHandle, window);
+  MARU_CocoaWindowHandle handle = {0};
+  handle.ns_window = _maru_getWindowNativeHandle_Cocoa(window);
+  return handle;
 }
 #endif

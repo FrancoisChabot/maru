@@ -24,10 +24,10 @@ typedef struct MARU_WaylandWindowHandle {
   wl_surface *surface;
 } MARU_WaylandWindowHandle;
 
-MARU_API MARU_Status maru_getWaylandContextHandle(MARU_Context *context,
-                                                  MARU_WaylandContextHandle *out_handle);
-MARU_API MARU_Status maru_getWaylandWindowHandle(MARU_Window *window,
-                                                 MARU_WaylandWindowHandle *out_handle);
+MARU_API MARU_WaylandContextHandle
+maru_getWaylandContextHandle(MARU_Context *context);
+MARU_API MARU_WaylandWindowHandle
+maru_getWaylandWindowHandle(MARU_Window *window);
 
 #ifdef __cplusplus
 }

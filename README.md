@@ -11,7 +11,6 @@ What makes Maru neat?
 - Ruthless API validation that can be completely stripped out. It will abort() on any invalid API usage.
 - Bring your own allocator, on a per-context basis.
 - No dynamic global state whatsoever unless OS-mandated.
-- Zero system dependencies to build: Maru vendors all necessary OS headers (X11, Wayland, etc.). You literally only need a C compiler and CMake to build the library on a completely bare OS installation. No apt-get install libx11-dev libwayland-dev required.
 
 Why is it called Maru? This library was built to support a bird-themed game, so it's named after my pet parrot: Marula.
 
@@ -24,10 +23,11 @@ Ready for early adopters. There hasn't been enough testing on enough OS/Machine 
 Run the following, and you should be presented with an ImGui-based playground to mess with the various things Maru provides.
 
 You'll need: 
-  - A C/C++ compiler (gcc/clang/msvc)
+  - A basic development environment (MVSC /XCode / gcc+make)
   - [git](https://git-scm.com/)
   - [CMake](https://cmake.org/) (3.20 or above)
   - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home). (N.B. only needed for the examples, the Maru library itself doesn't require it)
+  - On Windows and MacOS, we only depend on libraries that come packaged with the dev environment. On Linux, we vendor all needed headers.
 
 ```bash 
 # Linux/macOS: you may have to do this depending on your environment.
@@ -197,7 +197,7 @@ maru_createContext(&create_info, &context);
 
 Maru distinguishes between **Control Flow** and **Diagnostics**. 
 
-`MARU_Status`, which is returned by all functions that can fail, is not meant to tell you *what* went wrong, but rather *what you can do about it*. 
+`MARU_Status`, used by operations that can fail in normal control flow, is not meant to tell you *what* went wrong, but rather *what you can do about it*. 
 - `MARU_SUCCESS`: All good
 - `MARU_FAILURE`: That operation failed, but you can still proceed
 - `MARU_ERROR_CONTEXT_LOST`: The context is dead in the water (e.g. because the display server went AWOL). You have to tear it down and rebuild from scratch.
@@ -218,11 +218,11 @@ maru_createContext(&create_info, &context);
 ### Is Maru Thread-safe?
 
 - Each `MARU_Context` is its own little universe. They are **fully** independent from one-another.
-- The thread that creates a `MARU_Context` is that context's owner thread.
+- The thread that creates a `MARU_Context` becomes that context's owner thread.
 - If you want true cross-platform parity, `MARU_Context` should live on the main thread. As much as we'd like to support concurrent contexts in different threads, it's just not possible in every single backend.
-- `maru_postEvent()`, `maru_wakeContext()`, `maru_*retain()` and `maru_*release()` are the only functions that are truly thread-safe.
-- Any other function that does not return a `MARU_Status` is a **passive accessor**, and can be safely called from arbitrary threads; provided that you synchronize with the Context's thread with a R/W lock.
-- Any other function has to be called from the context's owner thread.
+- Unless explicitly documented otherwise, functions that return `MARU_Status` must be called from the context's owner thread.
+- Functions that do not return `MARU_Status` and access context-owned state can be called from arbitrary threads, provided you synchronize with the owner thread (e.g., with a R/W lock).
+- `maru_postEvent()`, `maru_wakeContext()`, `maru_*retain()`, `maru_*release()`, and `maru_getVersion()` are internally synchronized and can be called from any thread without external synchronization.
 
 #### Aren't there mutations that Maru could flag as thread-safe-with-external-synchronization? 
 
@@ -244,44 +244,6 @@ If you want to exclusively support X11 or Wayland, that's also possible, and it 
 
 By default, every single mouse movement is dispatched to your callback to ensure zero-latency access to raw OS input. However, Maru provides a `MARU_Queue` utility that supports opt-in **event coalescence**. It can combine high-frequency events (like mouse motion or scrolling) into a single event with accumulated deltas while strictly preserving temporal ordering with other events. The queue also provides sane and efficient multi-threaded event processing.
 
-```c
-MARU_Queue* queue = NULL;
-RWLock queue_lock; // Your preferred synchronization primitive
-
-static void queue_push_callback(MARU_EventId type, MARU_Window *window,
-                                const MARU_Event *evt, void *userdata) {
-  MARU_Queue *queue = (MARU_Queue *)userdata;
-  if (maru_isQueueSafeEventId(type)) {
-    maru_queue_push(queue, type, window, evt);
-  }
-  else {
-    // handle other events.
-  }
-}
-
-// --- Initialization (Main Thread) ---
-maru_queue_create(context, 256 /* queue capacity */, &queue);
-maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED | MARU_MASK_WINDOW_RESIZED);
-
-// ... later in the frame ...
-
-// --- Event Gathering (Main Thread) ---
-// 1. Pump queue-safe events and push them into the active queue buffer.
-maru_pumpEvents(context, 0, MARU_QUEUE_SAFE_EVENT_MASK, queue_push_callback,
-                queue);
-
-// 2. Commit the transient buffer into the stable snapshot
-lock_for_writing(&queue_lock);
-maru_queue_commit(queue);
-unlock_for_writing(&queue_lock);
-
-// --- Event Consumption (Any Worker Thread) ---
-// 3. Scan the stable snapshot safely while the main thread can go back to pumping
-lock_for_reading(&queue_lock);
-maru_queue_scan(queue, MARU_ALL_EVENTS, my_event_handler, my_userdata);
-unlock_for_reading(&queue_lock);
-```
-
 See the [Event Queues documentation](docs/user/queue.md) for more details.
 
 ### Does Maru initialize Vulkan for me?
@@ -293,7 +255,9 @@ Nope. There are too many decisions to make around that. The library has a mandat
 
 ### Can I use Maru for other rendering APIs (OpenGL, DX11/12, etc...)?
 
-Not at the moment. Maybe one day, if there's enough demand for it. However, supporting OpenGL or other similar legacy APIs would involve breaking some of the hard guarantees that we are currently providing, so we are not keen on it. DX12/Metal would be an easier sell.
+Not natively at the moment. Maybe one day, if there's enough demand for it. However, supporting OpenGL or other similar legacy APIs would involve breaking some of the hard guarantees that we are currently providing, so we are not keen on it. DX12/Metal would be an easier sell.
+
+In the meantime, you can always reclaim the OS-specific window handles and bind them yourself.
 
 ### Is there really no synchronous window creation mechanism?
 
@@ -307,7 +271,7 @@ Because hardware is physically volatile, and your threads are not.
 
 In a multi-threaded engine, your simulation thread might be actively reading from a MARU_Controller* at the exact millisecond the user violently unplugs it from their USB port. If Maru automatically freed the controller's memory upon receiving the OS disconnect event, your simulation thread would instantly segfault on a dangling pointer.
 
-Instead, Maru uses reference counting. When you get a controller or monitor, you own a reference to it. If the device is physically disconnected, Maru flags the object as "lost" (which you can check via maru_isControllerLost() or maru_isMonitorLost()). It will stop receiving new data and API calls will safely no-op or fail, but the pointer remains valid in memory until you explicitly call maru_releaseController(), or the Context is destroyed.
+Instead, Maru uses reference counting. When you retain controller or monitor, you own a reference to it. If the device is physically disconnected, Maru flags the object as "lost" (which you can check via maru_isControllerLost() or maru_isMonitorLost()). It will stop receiving new data and API calls will safely no-op or fail, but the pointer remains valid in memory until you explicitly call maru_release*(), or the Context is destroyed.
 
 This guarantees you will never suffer a use-after-free crash due to unpredictable hardware events. If you cache a pointer, retain it. When you drop it, release it.
 
@@ -329,19 +293,20 @@ All coordinate variables and types have either `logical` or `pixel` in their nam
 
 One of the things that's always bugged me about GLFW is that I am never fully confident *when* my callback is getting invoked. The only way I can be truly 100% sure my callback isn't called when I don't want it is simply to not let the library have it at all.
 
-Maru performs direct, synchronous event dispatch. It pulls events from the OS and fires them inline, strictly during the pump. That is the only time your callback comes into play. Forcing you to provide callback and mask to maru_pumpEvents() every frame enshrines this reality on both sides of the fence.
+Maru performs direct, synchronous event dispatch. It pulls events from the OS and fires them inline, strictly during the pump. That is the only time your callback comes into play. Forcing you to provide the callback and mask to maru_pumpEvents() every frame enshrines this on both sides of the fence.
 
 ### How am I supposed to use MARU_TextEditCommitEvent correctly?
 
-Yeah, the only text-input mechanism Maru provides is the full complicated IME payload, which can be a bit overwhelming. What you should **NOT** do is use `MARU_KeyboardEvent` as a quick-and-dirty stop-gap.
+Yeah... The only text-input mechanism Maru provides is the full complicated IME payload, which can be a bit overwhelming. But Maru's philosophy is "what you build on day one will take you to the finish line", so it forces you to eat your veggies.
 
+What you should **NOT** do is use `MARU_KeyboardEvent` as a quick-and-dirty stop-gap.
 - It does not respect keyboard layouts.
 - It does not produce key repeats.
 - It does not handle internationalization.
 
 Instead, use the `maru_applyTextEditCommitUtf8()` convenience function that will apply a text commit to a string buffer in-place.
 
-If you also take the time to update `MARU_WINDOW_ATTR_TEXT_INPUT_RECT` so the OS knows where to draw the IME candidate popup over your game, you'll have proper Japanese/Korean/etc... support pretty much out-of-the-box.
+If you also take the time to update `MARU_WINDOW_ATTR_TEXT_INPUT_RECT` so the OS knows where to draw the IME candidate popup over your game/app, you'll have proper Japanese/Korean/etc... support pretty much out-of-the-box.
 
 ### Why does Maru create a worker thread in some backends? I thought this was supposed to be lightweight!
 

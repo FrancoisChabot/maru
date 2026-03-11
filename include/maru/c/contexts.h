@@ -36,10 +36,10 @@ struct MARU_DiagnosticInfo;
 typedef void (*MARU_DiagnosticCallback)(const struct MARU_DiagnosticInfo *info,
                                         void *userdata);
 
-/* ----- Passive Accessors (External Synchronization Required) -----
+/* ----- Direct-Return State Access (External Synchronization Required) -----
  *
- * These functions are essentially zero-cost member accesses. They are safe to
- * call from any thread, provided the access is synchronized with mutating
+ * These functions perform direct reads/writes of cached handle state. They can
+ * be called from any thread, provided access is synchronized with owner-thread
  * operations (like maru_pumpEvents or maru_updateContext) on the same context
  * to ensure memory visibility.
  */
@@ -56,6 +56,9 @@ static inline bool maru_isContextLost(const MARU_Context *context);
 
 /** @brief Checks if the context is fully initialized and ready for use. */
 static inline bool maru_isContextReady(const MARU_Context *context);
+
+/** @brief Retrieves the backend type of a context. */
+static inline MARU_BackendType maru_getContextBackend(const MARU_Context *context);
 
 /** @brief Retrieves the runtime performance metrics for a context. */
 static inline const MARU_ContextMetrics *
@@ -145,9 +148,9 @@ typedef struct MARU_ContextCreateInfo {
 /** @brief Creates a new context.
  *
  *  The creating thread becomes the 'Owner Thread'. Only this thread may
- *  perform mutating operations (pump, update, etc.). Other threads may
- *  use passive accessors if they provide external synchronization to
- *  ensure memory visibility. See maru.h for the full threading model.
+ *  call owner-thread APIs (pump, update, etc.). Other threads may call
+ *  direct-return state access APIs with external synchronization to ensure
+ *  memory visibility. See maru.h for the full threading model.
  */
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
                                         MARU_Context **out_context);

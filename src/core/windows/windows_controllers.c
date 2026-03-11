@@ -1299,19 +1299,17 @@ MARU_Status maru_getControllers_Windows(MARU_Context *context,
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_retainController_Windows(MARU_Controller *controller) {
+void maru_retainController_Windows(MARU_Controller *controller) {
   MARU_Controller_Windows *ctrl = (MARU_Controller_Windows *)controller;
   atomic_fetch_add_explicit(&ctrl->base.ref_count, 1u, memory_order_relaxed);
-  return MARU_SUCCESS;
 }
 
-MARU_Status maru_releaseController_Windows(MARU_Controller *controller) {
+void maru_releaseController_Windows(MARU_Controller *controller) {
   MARU_Controller_Windows *ctrl = (MARU_Controller_Windows *)controller;
   if (atomic_fetch_sub_explicit(&ctrl->base.ref_count, 1u,
                                 memory_order_acq_rel) == 1u) {
     _maru_controller_free(&ctrl->base);
   }
-  return MARU_SUCCESS;
 }
 
 MARU_Status maru_resetControllerMetrics_Windows(MARU_Controller *controller) {

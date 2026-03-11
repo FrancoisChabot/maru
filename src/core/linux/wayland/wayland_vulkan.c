@@ -54,12 +54,7 @@ MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
     return MARU_FAILURE;
   }
 
-  MARU_WaylandWindowHandle wl_handle;
-  if (maru_getWaylandWindowHandle(window, &wl_handle) != MARU_SUCCESS) {
-    MARU_REPORT_DIAGNOSTIC(ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
-                           "Failed to retrieve Wayland window handles");
-    return MARU_FAILURE;
-  }
+  MARU_WaylandWindowHandle wl_handle = maru_getWaylandWindowHandle(window);
 
   VkWaylandSurfaceCreateInfoKHR cinfo = {
       .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,

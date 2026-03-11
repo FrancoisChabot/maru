@@ -48,11 +48,12 @@ typedef struct MARU_MonitorList {
   uint32_t count;
 } MARU_MonitorList;
 
-/* ----- Passive Accessors (External Synchronization Required) ----- 
+/* ----- Direct-Return State Access (External Synchronization Required) -----
  *
- * These functions are essentially zero-cost member accesses. They are safe to 
- * call from any thread, provided the access is synchronized with mutating 
- * operations (like maru_pumpEvents) on the same monitor to ensure memory visibility.
+ * These functions perform direct reads/writes of cached handle state. They can
+ * be called from any thread, provided access is synchronized with owner-thread
+ * operations (like maru_pumpEvents) on the same monitor to ensure memory
+ * visibility.
  */
 
 /** @brief Retrieves the user-defined data pointer associated with a monitor. */
@@ -124,7 +125,7 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor,
                                          MARU_VideoMode mode);
 
 /** @brief Resets the metrics counters attached to a monitor handle. */
-MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor);
+MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor);
 
 #include "maru/c/details/monitors.h"
 

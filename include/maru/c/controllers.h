@@ -70,7 +70,12 @@ typedef struct MARU_HapticChannelInfo {
 #define MARU_MASK_CONTROLLER_BUTTON_STATE_CHANGED \
   MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED)
 
-/* ----- Passive Accessors (External Synchronization Required) ----- */
+/* ----- Direct-Return State Access (External Synchronization Required) -----
+ *
+ * These functions perform direct reads/writes of cached handle state. They can
+ * be called from any thread, provided access is synchronized with owner-thread
+ * operations on the owning context to ensure memory visibility.
+ */
 
 static inline void *maru_getControllerUserdata(const MARU_Controller *controller);
 static inline void maru_setControllerUserdata(MARU_Controller *controller,
@@ -145,8 +150,8 @@ typedef struct MARU_ControllerList {
 
 MARU_API MARU_Status maru_getControllers(MARU_Context *context,
                                          MARU_ControllerList *out_list);
-MARU_API MARU_Status maru_retainController(MARU_Controller *controller);
-MARU_API MARU_Status maru_releaseController(MARU_Controller *controller);
+MARU_API void maru_retainController(MARU_Controller *controller);
+MARU_API void maru_releaseController(MARU_Controller *controller);
 MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller);
 MARU_API MARU_Status
 maru_getControllerInfo(MARU_Controller *controller,

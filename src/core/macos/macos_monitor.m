@@ -146,7 +146,8 @@ MARU_Status maru_setMonitorMode_Cocoa(const MARU_Monitor *monitor, MARU_VideoMod
     return MARU_FAILURE; 
 }
 
-void maru_resetMonitorMetrics_Cocoa(MARU_Monitor *monitor) {
+MARU_Status maru_resetMonitorMetrics_Cocoa(MARU_Monitor *monitor) {
     MARU_Monitor_Cocoa *mon = (MARU_Monitor_Cocoa *)monitor;
     memset(&mon->base.metrics, 0, sizeof(MARU_MonitorMetrics));
+    return MARU_SUCCESS;
 }

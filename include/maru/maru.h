@@ -7,32 +7,49 @@
 /**
  * @section Threading and Memory Model
  *
- * MARU follows a "Single-Owner, Multiple-Reader" model designed for high performance
- * and predictable state management:
+ * MARU follows a "Single-Owner, Multiple-Reader" model designed for high
+ * performance and predictable state management:
  *
  * 1. OWNER THREAD: The thread that creates a MARU_Context is the only thread
- *    allowed to call Mutating Functions.
+ *    allowed to call owner-thread APIs for that context.
  *
- * 2. MUTATING FUNCTIONS: Identified by a `MARU_Status` return type (e.g., maru_pumpEvents,
- *    maru_createWindow, maru_updateContext). These functions interact with the OS
- *    display server or modify internal library state.
+ * 2. OWNER-THREAD APIs: Unless explicitly documented otherwise, functions that
+ *    return `MARU_Status` must be called from the owner thread of the target
+ *    context (e.g., maru_pumpEvents, maru_createWindow, maru_updateContext).
  *
- * 3. PASSIVE ACCESSORS: Functions that return values directly (e.g., maru_isWindowReady,
- *    maru_getMonitorScale, maru_getWindowUserdata, maru_getWindowGeometry). These are zero-cost reads from
- *    cached state. They are safe to call from any thread provided the user ensures
- *    EXTERNAL SYNCHRONIZATION (e.g., a mutex or memory barrier) with the Owner Thread
- *    to guarantee memory visibility.
+ * 3. DIRECT-RETURN APIs: Functions that do not return `MARU_Status` and
+ *    access context-owned state (e.g., maru_isWindowReady,
+ *    maru_getMonitorScale, maru_getWindowGeometry) can be called from any
+ *    thread with EXTERNAL SYNCHRONIZATION (e.g., a mutex or memory barrier)
+ *    to guarantee memory visibility with the owner thread.
  *
- * 4. GLOBALLY THREAD-SAFE: A small set of functions are internally synchronized and
- *    can be called from any thread at any time:
+ * 4. GLOBALLY THREAD-SAFE: The following APIs are internally synchronized and
+ *    can be called from any thread without external synchronization:
  *    - maru_postEvent()
  *    - maru_wakeContext()
  *    - maru_retain*() / maru_release*()
+ *    - maru_getVersion()
  */
 
-#include "maru/c/core.h"
+/**
+ * A note on handles wording:
+ *
+ * Throughout the headers, we mention "opaque" handles. This is a statement
+ * about the API, not the ABI.
+ *
+ * As far as you are concerned, the handles should be treated as truly opaque.
+ * However, as you can see for yourself in the details/ headers, the underlying
+ * structure is *partially* (the prefix) exposed. This is used by the various
+ * property accessor functions to minimize overhead.
+ *
+ * DO NOT DOWNCAST THE HANDLES to access the members yourself. Always use the
+ * API-provided accessors.
+ */
+
 #include "maru/c/contexts.h"
 #include "maru/c/controllers.h"
+#include "maru/c/convenience.h"
+#include "maru/c/core.h"
 #include "maru/c/cursors.h"
 #include "maru/c/data_exchange.h"
 #include "maru/c/events.h"
@@ -42,7 +59,6 @@
 #include "maru/c/instrumentation.h"
 #include "maru/c/metrics.h"
 #include "maru/c/monitors.h"
-#include "maru/c/convenience.h"
 #include "maru/c/tuning.h"
 #include "maru/c/vulkan.h"
 #include "maru/c/windows.h"

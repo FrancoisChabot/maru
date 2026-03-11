@@ -31,10 +31,10 @@ typedef struct MARU_LinuxWindowHandle {
   };
 } MARU_LinuxWindowHandle;
 
-MARU_API MARU_Status maru_getLinuxContextHandle(MARU_Context *context,
-                                                MARU_LinuxContextHandle *out_handle);
-MARU_API MARU_Status maru_getLinuxWindowHandle(MARU_Window *window,
-                                               MARU_LinuxWindowHandle *out_handle);
+MARU_API MARU_LinuxContextHandle
+maru_getLinuxContextHandle(MARU_Context *context);
+MARU_API MARU_LinuxWindowHandle
+maru_getLinuxWindowHandle(MARU_Window *window);
 
 #ifdef __cplusplus
 }

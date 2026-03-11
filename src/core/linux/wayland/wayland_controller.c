@@ -34,13 +34,12 @@ MARU_Status maru_getControllers_WL(MARU_Context *context,
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_retainController_WL(MARU_Controller *controller) {
+void maru_retainController_WL(MARU_Controller *controller) {
   MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
   atomic_fetch_add_explicit(&ctrl->ref_count, 1u, memory_order_relaxed);
-  return MARU_SUCCESS;
 }
 
-MARU_Status maru_releaseController_WL(MARU_Controller *controller) {
+void maru_releaseController_WL(MARU_Controller *controller) {
   MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
   uint32_t current = atomic_load_explicit(&ctrl->ref_count, memory_order_acquire);
   while (current > 0) {
@@ -54,7 +53,6 @@ MARU_Status maru_releaseController_WL(MARU_Controller *controller) {
       break;
     }
   }
-  return MARU_SUCCESS;
 }
 
 MARU_Status maru_resetControllerMetrics_WL(MARU_Controller *controller) {

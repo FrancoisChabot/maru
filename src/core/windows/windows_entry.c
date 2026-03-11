@@ -157,9 +157,9 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   return maru_setMonitorMode_Windows(monitor, mode);
 }
 
-MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
+MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  maru_resetMonitorMetrics_Windows(monitor);
+  return maru_resetMonitorMetrics_Windows(monitor);
 }
 
 // --- Controllers (controllers.h) ---
@@ -169,14 +169,14 @@ MARU_API MARU_Status maru_getControllers(MARU_Context *context, MARU_ControllerL
   return maru_getControllers_Windows(context, out_list);
 }
 
-MARU_API MARU_Status maru_retainController(MARU_Controller *controller) {
+MARU_API void maru_retainController(MARU_Controller *controller) {
   MARU_API_VALIDATE(retainController, controller);
-  return maru_retainController_Windows(controller);
+  maru_retainController_Windows(controller);
 }
 
-MARU_API MARU_Status maru_releaseController(MARU_Controller *controller) {
+MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
-  return maru_releaseController_Windows(controller);
+  maru_releaseController_Windows(controller);
 }
 
 MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
@@ -230,18 +230,19 @@ MARU_API MARU_Status maru_createVkSurface(MARU_Window *window, VkInstance instan
 
 // --- Win32 Native Handles ---
 
-MARU_API MARU_Status maru_getWin32ContextHandle(
-    MARU_Context *context, MARU_Win32ContextHandle *out_handle) {
-  if (!context || !out_handle) return MARU_FAILURE;
-  out_handle->instance = (HINSTANCE)_maru_getContextNativeHandle_Windows(context);
-  return out_handle->instance ? MARU_SUCCESS : MARU_FAILURE;
+MARU_API MARU_Win32ContextHandle
+maru_getWin32ContextHandle(MARU_Context *context) {
+  MARU_API_VALIDATE(getWin32ContextHandle, context);
+  MARU_Win32ContextHandle handle = {0};
+  handle.instance = (HINSTANCE)_maru_getContextNativeHandle_Windows(context);
+  return handle;
 }
 
-MARU_API MARU_Status maru_getWin32WindowHandle(
-    MARU_Window *window, MARU_Win32WindowHandle *out_handle) {
-  if (!window || !out_handle) return MARU_FAILURE;
+MARU_API MARU_Win32WindowHandle maru_getWin32WindowHandle(MARU_Window *window) {
+  MARU_API_VALIDATE(getWin32WindowHandle, window);
+  MARU_Win32WindowHandle handle = {0};
   MARU_Context *context = maru_getWindowContext(window);
-  out_handle->instance = (HINSTANCE)_maru_getContextNativeHandle_Windows(context);
-  out_handle->hwnd = (HWND)_maru_getWindowNativeHandle_Windows(window);
-  return (out_handle->instance && out_handle->hwnd) ? MARU_SUCCESS : MARU_FAILURE;
+  handle.instance = (HINSTANCE)_maru_getContextNativeHandle_Windows(context);
+  handle.hwnd = (HWND)_maru_getWindowNativeHandle_Windows(window);
+  return handle;
 }

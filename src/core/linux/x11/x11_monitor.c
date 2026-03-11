@@ -348,6 +348,7 @@ MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode 
   return MARU_SUCCESS;
 }
 
-void maru_resetMonitorMetrics_X11(MARU_Monitor *monitor) {
+MARU_Status maru_resetMonitorMetrics_X11(MARU_Monitor *monitor) {
   (void)monitor;
+  return MARU_SUCCESS;
 }

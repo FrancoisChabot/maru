@@ -252,12 +252,12 @@ const MARU_VideoMode *maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
                                          uint32_t *out_count);
 MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
                                         MARU_VideoMode mode);
-void maru_resetMonitorMetrics_Windows(MARU_Monitor *monitor);
+MARU_Status maru_resetMonitorMetrics_Windows(MARU_Monitor *monitor);
 
 // controllers.h
 MARU_Status maru_getControllers_Windows(MARU_Context *context, MARU_ControllerList *out_list);
-MARU_Status maru_retainController_Windows(MARU_Controller *controller);
-MARU_Status maru_releaseController_Windows(MARU_Controller *controller);
+void maru_retainController_Windows(MARU_Controller *controller);
+void maru_releaseController_Windows(MARU_Controller *controller);
 MARU_Status maru_resetControllerMetrics_Windows(MARU_Controller *controller);
 MARU_Status maru_getControllerInfo_Windows(MARU_Controller *controller, MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_Windows(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);

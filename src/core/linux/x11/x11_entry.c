@@ -43,13 +43,12 @@ static MARU_Status maru_getControllers_X11(MARU_Context *context,
   return MARU_SUCCESS;
 }
 
-static MARU_Status maru_retainController_X11(MARU_Controller *controller) {
+static void maru_retainController_X11(MARU_Controller *controller) {
   MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
   atomic_fetch_add_explicit(&ctrl->ref_count, 1u, memory_order_relaxed);
-  return MARU_SUCCESS;
 }
 
-static MARU_Status maru_releaseController_X11(MARU_Controller *controller) {
+static void maru_releaseController_X11(MARU_Controller *controller) {
   MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
   uint32_t current = atomic_load_explicit(&ctrl->ref_count, memory_order_acquire);
   while (current > 0) {
@@ -63,7 +62,6 @@ static MARU_Status maru_releaseController_X11(MARU_Controller *controller) {
       break;
     }
   }
-  return MARU_SUCCESS;
 }
 
 static MARU_Status maru_resetControllerMetrics_X11(MARU_Controller *controller) {
@@ -217,14 +215,14 @@ MARU_API MARU_Status maru_getControllers(MARU_Context *context,
   return maru_getControllers_X11(context, out_list);
 }
 
-MARU_API MARU_Status maru_retainController(MARU_Controller *controller) {
+MARU_API void maru_retainController(MARU_Controller *controller) {
   MARU_API_VALIDATE(retainController, controller);
-  return maru_retainController_X11(controller);
+  maru_retainController_X11(controller);
 }
 
-MARU_API MARU_Status maru_releaseController(MARU_Controller *controller) {
+MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
-  return maru_releaseController_X11(controller);
+  maru_releaseController_X11(controller);
 }
 
 MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
@@ -329,52 +327,55 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   return maru_setMonitorMode_X11(monitor, mode);
 }
 
-MARU_API void maru_resetMonitorMetrics(MARU_Monitor *monitor) {
+MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
   MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  maru_resetMonitorMetrics_X11(monitor);
+  return maru_resetMonitorMetrics_X11(monitor);
 }
 
-MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
-                                              MARU_X11ContextHandle *out_handle) {
-  if (!context || !out_handle) return MARU_FAILURE;
-  out_handle->display = (Display *)maru_getContextNativeHandle_X11(context);
-  return out_handle->display ? MARU_SUCCESS : MARU_FAILURE;
+MARU_API MARU_X11ContextHandle maru_getX11ContextHandle(MARU_Context *context) {
+  MARU_API_VALIDATE(getX11ContextHandle, context);
+  MARU_X11ContextHandle handle = {0};
+  handle.display = (Display *)maru_getContextNativeHandle_X11(context);
+  return handle;
 }
 
-MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
-                                             MARU_X11WindowHandle *out_handle) {
-  if (!window || !out_handle) return MARU_FAILURE;
+MARU_API MARU_X11WindowHandle maru_getX11WindowHandle(MARU_Window *window) {
+  MARU_API_VALIDATE(getX11WindowHandle, window);
+  MARU_X11WindowHandle handle = {0};
   MARU_Context *context = maru_getWindowContext(window);
-  out_handle->display = (Display *)maru_getContextNativeHandle_X11(context);
-  out_handle->window = (Window)(uintptr_t)maru_getWindowNativeHandle_X11(window);
-  return out_handle->display ? MARU_SUCCESS : MARU_FAILURE;
+  handle.display = (Display *)maru_getContextNativeHandle_X11(context);
+  handle.window = (Window)(uintptr_t)maru_getWindowNativeHandle_X11(window);
+  return handle;
 }
 
-MARU_API MARU_Status maru_getWaylandContextHandle(
-    MARU_Context *context, MARU_WaylandContextHandle *out_handle) {
+MARU_API MARU_WaylandContextHandle
+maru_getWaylandContextHandle(MARU_Context *context) {
+  MARU_API_VALIDATE(getWaylandContextHandle, context);
   (void)context;
-  if (!out_handle) return MARU_FAILURE;
-  return _maru_stub_wayland_context_handle_unsupported(out_handle);
+  return _maru_stub_wayland_context_handle_unsupported();
 }
 
-MARU_API MARU_Status maru_getWaylandWindowHandle(
-    MARU_Window *window, MARU_WaylandWindowHandle *out_handle) {
+MARU_API MARU_WaylandWindowHandle maru_getWaylandWindowHandle(
+    MARU_Window *window) {
+  MARU_API_VALIDATE(getWaylandWindowHandle, window);
   (void)window;
-  if (!out_handle) return MARU_FAILURE;
-  return _maru_stub_wayland_window_handle_unsupported(out_handle);
+  return _maru_stub_wayland_window_handle_unsupported();
 }
 
-MARU_API MARU_Status maru_getLinuxContextHandle(
-    MARU_Context *context, MARU_LinuxContextHandle *out_handle) {
-  if (!context || !out_handle) return MARU_FAILURE;
-  out_handle->backend = MARU_BACKEND_X11;
-  return maru_getX11ContextHandle(context, &out_handle->x11);
+MARU_API MARU_LinuxContextHandle maru_getLinuxContextHandle(
+    MARU_Context *context) {
+  MARU_API_VALIDATE(getLinuxContextHandle, context);
+  MARU_LinuxContextHandle handle = {0};
+  handle.backend = MARU_BACKEND_X11;
+  handle.x11 = maru_getX11ContextHandle(context);
+  return handle;
 }
 
-MARU_API MARU_Status maru_getLinuxWindowHandle(
-    MARU_Window *window, MARU_LinuxWindowHandle *out_handle) {
-  if (!window || !out_handle) return MARU_FAILURE;
-  out_handle->backend = MARU_BACKEND_X11;
-  return maru_getX11WindowHandle(window, &out_handle->x11);
+MARU_API MARU_LinuxWindowHandle maru_getLinuxWindowHandle(MARU_Window *window) {
+  MARU_API_VALIDATE(getLinuxWindowHandle, window);
+  MARU_LinuxWindowHandle handle = {0};
+  handle.backend = MARU_BACKEND_X11;
+  handle.x11 = maru_getX11WindowHandle(window);
+  return handle;
 }
 #endif

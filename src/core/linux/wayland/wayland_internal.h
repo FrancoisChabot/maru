@@ -460,8 +460,8 @@ MARU_Status maru_createImage_WL(MARU_Context *context,
 MARU_Status maru_destroyImage_WL(MARU_Image *image);
 MARU_Status maru_getControllers_WL(MARU_Context *context,
                                    MARU_ControllerList *out_list);
-MARU_Status maru_retainController_WL(MARU_Controller *controller);
-MARU_Status maru_releaseController_WL(MARU_Controller *controller);
+void maru_retainController_WL(MARU_Controller *controller);
+void maru_releaseController_WL(MARU_Controller *controller);
 MARU_Status maru_resetControllerMetrics_WL(MARU_Controller *controller);
 MARU_Status maru_getControllerInfo_WL(MARU_Controller *controller,
                                       MARU_ControllerInfo *out_info);

@@ -272,13 +272,12 @@ MARU_Status maru_getControllers_Cocoa(MARU_Context *context,
     return MARU_SUCCESS;
 }
 
-MARU_Status maru_retainController_Cocoa(MARU_Controller *controller) {
+void maru_retainController_Cocoa(MARU_Controller *controller) {
     MARU_Controller_Base *c = (MARU_Controller_Base *)controller;
     atomic_fetch_add_explicit(&c->ref_count, 1u, memory_order_relaxed);
-    return MARU_SUCCESS;
 }
 
-MARU_Status maru_releaseController_Cocoa(MARU_Controller *controller) {
+void maru_releaseController_Cocoa(MARU_Controller *controller) {
     MARU_Controller_Base *c = (MARU_Controller_Base *)controller;
     uint32_t current = atomic_load_explicit(&c->ref_count, memory_order_acquire);
     while (current > 0u) {
@@ -290,10 +289,9 @@ MARU_Status maru_releaseController_Cocoa(MARU_Controller *controller) {
             if (current == 1u) {
                 _maru_controller_free(c);
             }
-            return MARU_SUCCESS;
+            return;
         }
     }
-    return MARU_SUCCESS;
 }
 
 MARU_Status maru_resetControllerMetrics_Cocoa(MARU_Controller *controller) {

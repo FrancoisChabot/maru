@@ -348,7 +348,7 @@ void maru_retainMonitor_X11(MARU_Monitor *monitor);
 void maru_releaseMonitor_X11(MARU_Monitor *monitor);
 const MARU_VideoMode *maru_getMonitorModes_X11(const MARU_Monitor *monitor, uint32_t *out_count);
 MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode mode);
-void maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
+MARU_Status maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
 
 MARU_Status maru_announceData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_X11(const MARU_DataRequestEvent *request_event, const void *data, size_t size, MARU_DataProvideFlags flags);

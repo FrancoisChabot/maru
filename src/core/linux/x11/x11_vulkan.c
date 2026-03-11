@@ -61,12 +61,7 @@ MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
     return MARU_FAILURE;
   }
 
-  MARU_X11WindowHandle x11_handle;
-  if (maru_getX11WindowHandle(window, &x11_handle) != MARU_SUCCESS) {
-    MARU_REPORT_DIAGNOSTIC(ctx, MARU_DIAGNOSTIC_VULKAN_FAILURE,
-                           "Failed to retrieve X11 window handles");
-    return MARU_FAILURE;
-  }
+  MARU_X11WindowHandle x11_handle = maru_getX11WindowHandle(window);
 
   VkXlibSurfaceCreateInfoKHR cinfo = {
       .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,

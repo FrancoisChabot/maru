@@ -30,10 +30,10 @@ typedef struct MARU_Win32WindowHandle {
   HWND hwnd;
 } MARU_Win32WindowHandle;
 
-MARU_API MARU_Status maru_getWin32ContextHandle(MARU_Context *context,
-                                                MARU_Win32ContextHandle *out_handle);
-MARU_API MARU_Status maru_getWin32WindowHandle(MARU_Window *window,
-                                               MARU_Win32WindowHandle *out_handle);
+MARU_API MARU_Win32ContextHandle
+maru_getWin32ContextHandle(MARU_Context *context);
+MARU_API MARU_Win32WindowHandle
+maru_getWin32WindowHandle(MARU_Window *window);
 #endif
 
 #ifdef __cplusplus

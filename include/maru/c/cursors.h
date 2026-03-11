@@ -54,11 +54,11 @@ typedef enum MARU_CursorShape {
   MARU_CURSOR_SHAPE_NWSE_RESIZE = 12,
 } MARU_CursorShape;
 
-/* ----- Passive Accessors (External Synchronization Required) ----- 
+/* ----- Direct-Return State Access (External Synchronization Required) -----
  *
- * These functions are essentially zero-cost member accesses. They are safe to 
- * call from any thread, provided the access is synchronized with mutating 
- * operations (like maru_pumpEvents) on the cursor's owner context to ensure 
+ * These functions perform direct reads/writes of cached handle state. They can
+ * be called from any thread, provided access is synchronized with owner-thread
+ * operations (like maru_pumpEvents) on the cursor's owner context to ensure
  * memory visibility.
  */
 

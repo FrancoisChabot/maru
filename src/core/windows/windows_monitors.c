@@ -188,9 +188,10 @@ MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
   return MARU_SUCCESS;
 }
 
-void maru_resetMonitorMetrics_Windows(MARU_Monitor *monitor) {
+MARU_Status maru_resetMonitorMetrics_Windows(MARU_Monitor *monitor) {
   MARU_Monitor_Windows *win_mon = (MARU_Monitor_Windows *)monitor;
-  ChangeDisplaySettingsExW(win_mon->device_name, NULL, NULL, 0, NULL);
+  (void)ChangeDisplaySettingsExW(win_mon->device_name, NULL, NULL, 0, NULL);
+  return MARU_SUCCESS;
 }
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor) {

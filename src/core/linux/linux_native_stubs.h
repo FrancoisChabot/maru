@@ -8,34 +8,32 @@
 #include "maru/c/native/wayland.h"
 #include "maru/c/native/x11.h"
 
-static inline MARU_Status _maru_stub_x11_context_handle_unsupported(
-    MARU_X11ContextHandle *out_handle) {
-  out_handle->display = NULL;
-  return MARU_FAILURE;
+static inline MARU_X11ContextHandle _maru_stub_x11_context_handle_unsupported(
+    void) {
+  MARU_X11ContextHandle handle = {0};
+  return handle;
 }
 
-static inline MARU_Status _maru_stub_x11_window_handle_unsupported(
-    MARU_X11WindowHandle *out_handle) {
-  out_handle->display = NULL;
-  out_handle->window = 0;
-  return MARU_FAILURE;
+static inline MARU_X11WindowHandle _maru_stub_x11_window_handle_unsupported(
+    void) {
+  MARU_X11WindowHandle handle = {0};
+  return handle;
 }
 
 static inline bool _maru_stub_x11_extended_frame_sync_unsupported(void) {
   return false;
 }
 
-static inline MARU_Status _maru_stub_wayland_context_handle_unsupported(
-    MARU_WaylandContextHandle *out_handle) {
-  out_handle->display = NULL;
-  return MARU_FAILURE;
+static inline MARU_WaylandContextHandle
+_maru_stub_wayland_context_handle_unsupported(void) {
+  MARU_WaylandContextHandle handle = {0};
+  return handle;
 }
 
-static inline MARU_Status _maru_stub_wayland_window_handle_unsupported(
-    MARU_WaylandWindowHandle *out_handle) {
-  out_handle->display = NULL;
-  out_handle->surface = NULL;
-  return MARU_FAILURE;
+static inline MARU_WaylandWindowHandle
+_maru_stub_wayland_window_handle_unsupported(void) {
+  MARU_WaylandWindowHandle handle = {0};
+  return handle;
 }
 
 #endif

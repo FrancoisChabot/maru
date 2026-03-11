@@ -22,10 +22,10 @@ typedef struct MARU_CocoaWindowHandle {
   void *ns_window;
 } MARU_CocoaWindowHandle;
 
-MARU_API MARU_Status maru_getCocoaContextHandle(MARU_Context *context,
-                                                MARU_CocoaContextHandle *out_handle);
-MARU_API MARU_Status maru_getCocoaWindowHandle(MARU_Window *window,
-                                               MARU_CocoaWindowHandle *out_handle);
+MARU_API MARU_CocoaContextHandle
+maru_getCocoaContextHandle(MARU_Context *context);
+MARU_API MARU_CocoaWindowHandle
+maru_getCocoaWindowHandle(MARU_Window *window);
 #endif
 
 #ifdef __cplusplus

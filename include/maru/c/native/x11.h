@@ -26,10 +26,10 @@ typedef struct MARU_X11WindowHandle {
   Window window;
 } MARU_X11WindowHandle;
 
-MARU_API MARU_Status maru_getX11ContextHandle(MARU_Context *context,
-                                              MARU_X11ContextHandle *out_handle);
-MARU_API MARU_Status maru_getX11WindowHandle(MARU_Window *window,
-                                             MARU_X11WindowHandle *out_handle);
+MARU_API MARU_X11ContextHandle
+maru_getX11ContextHandle(MARU_Context *context);
+MARU_API MARU_X11WindowHandle
+maru_getX11WindowHandle(MARU_Window *window);
 MARU_API bool maru_x11SupportsExtendedFrameSync(MARU_Context *context);
 
 #ifdef __cplusplus

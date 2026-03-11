@@ -51,12 +51,12 @@ typedef enum MARU_CursorMode {
   MARU_CURSOR_LOCKED = 2,
 } MARU_CursorMode;
 
-/* ----- Passive Accessors (External Synchronization Required) -----
+/* ----- Direct-Return State Access (External Synchronization Required) -----
  *
- * These functions are essentially zero-cost member accesses. They are safe to
- * call from any thread, provided the access is synchronized with mutating
- * operations (like maru_pumpEvents or maru_updateWindow) on the same window
- * to ensure memory visibility.
+ * These functions perform direct reads/writes of cached handle state. They can
+ * be called from any thread, provided access is synchronized with owner-thread
+ * operations (like maru_pumpEvents or maru_updateWindow) on the same window to
+ * ensure memory visibility.
  */
 
 /** @brief Retrieves the user-defined data pointer associated with a window. */
@@ -90,6 +90,18 @@ static inline bool maru_isWindowFullscreen(const MARU_Window *window);
 static inline bool maru_isWindowVisible(const MARU_Window *window);
 /** @brief Checks if the window is currently minimized. */
 static inline bool maru_isWindowMinimized(const MARU_Window *window);
+
+/** @brief Checks if the window is currently resizable. */
+static inline bool maru_isWindowResizable(const MARU_Window *window);
+
+/** @brief Checks if the window is decorated. */
+static inline bool maru_isWindowDecorated(const MARU_Window *window);
+
+/** @brief Retrieves the current cursor mode of a window. */
+static inline MARU_CursorMode maru_getWindowCursorMode(const MARU_Window *window);
+
+/** @brief Retrieves the window's currently assigned icon. */
+static inline const MARU_Image *maru_getWindowIcon(const MARU_Window *window);
 
 /** @brief Retrieves the runtime performance metrics for a window. */
 static inline const MARU_WindowMetrics *
