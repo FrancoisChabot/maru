@@ -4,6 +4,7 @@
 #include "maru/maru_queue.h"
 #include "maru_internal.h"
 #include "maru_mem_internal.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -25,50 +26,214 @@ typedef struct MARU_Queue {
     uint32_t capacity;
     
     MARU_EventMask coalesce_mask;
+    uint32_t peak_active_count;
+    uint32_t overflow_drop_count;
+    uint32_t overflow_compact_count;
+    uint32_t overflow_events_compacted;
+    uint32_t overflow_drop_count_by_event[MARU_EVENT_USER_15 + 1];
     
     MARU_QueueBuffer buffers[2];
 } MARU_Queue;
 
+#define MARU_QUEUE_COMPACT_MAP_CAPACITY 64u
+#define MARU_QUEUE_EVENT_BUCKET_COUNT ((uint32_t)MARU_EVENT_USER_15 + 1u)
+#define MARU_QUEUE_INVALID_EVENT_ID ((MARU_EventId)-1)
+
+typedef struct MARU_QueueCompactMapEntry {
+    MARU_EventId type;
+    MARU_Window *window;
+    uint32_t survivor_idx;
+    bool used;
+} MARU_QueueCompactMapEntry;
+
+static void _maru_queue_reset_metrics_internal(MARU_Queue *q) {
+    q->peak_active_count = 0;
+    q->overflow_drop_count = 0;
+    q->overflow_compact_count = 0;
+    q->overflow_events_compacted = 0;
+    memset(q->overflow_drop_count_by_event, 0, sizeof(q->overflow_drop_count_by_event));
+}
+
+static void _maru_queue_update_peak_active_count(MARU_Queue *q) {
+    if (q->active_count > q->peak_active_count) {
+        q->peak_active_count = q->active_count;
+    }
+}
+
+static void _maru_queue_count_drop(MARU_Queue *q, MARU_EventId type) {
+    q->overflow_drop_count++;
+
+    uint32_t idx = (uint32_t)type;
+    if (idx < MARU_QUEUE_EVENT_BUCKET_COUNT) {
+        q->overflow_drop_count_by_event[idx]++;
+    }
+}
+
+static void _maru_queue_coalesce_latest(MARU_EventId type, MARU_Event *dst, const MARU_Event *src) {
+    switch (type) {
+        case MARU_EVENT_MOUSE_MOVED:
+            dst->mouse_motion.position = src->mouse_motion.position;
+            dst->mouse_motion.delta.x += src->mouse_motion.delta.x;
+            dst->mouse_motion.delta.y += src->mouse_motion.delta.y;
+            dst->mouse_motion.raw_delta.x += src->mouse_motion.raw_delta.x;
+            dst->mouse_motion.raw_delta.y += src->mouse_motion.raw_delta.y;
+            dst->mouse_motion.modifiers = src->mouse_motion.modifiers;
+            break;
+        case MARU_EVENT_MOUSE_SCROLLED:
+            dst->mouse_scroll.delta.x += src->mouse_scroll.delta.x;
+            dst->mouse_scroll.delta.y += src->mouse_scroll.delta.y;
+            dst->mouse_scroll.steps.x += src->mouse_scroll.steps.x;
+            dst->mouse_scroll.steps.y += src->mouse_scroll.steps.y;
+            dst->mouse_scroll.modifiers = src->mouse_scroll.modifiers;
+            break;
+        case MARU_EVENT_WINDOW_RESIZED:
+            dst->resized.geometry = src->resized.geometry;
+            break;
+        default:
+            *dst = *src;
+            break;
+    }
+}
+
+static void _maru_queue_fold_older_into_survivor(MARU_EventId type, const MARU_Event *older, MARU_Event *survivor) {
+    switch (type) {
+        case MARU_EVENT_MOUSE_MOVED:
+            survivor->mouse_motion.delta.x += older->mouse_motion.delta.x;
+            survivor->mouse_motion.delta.y += older->mouse_motion.delta.y;
+            survivor->mouse_motion.raw_delta.x += older->mouse_motion.raw_delta.x;
+            survivor->mouse_motion.raw_delta.y += older->mouse_motion.raw_delta.y;
+            break;
+        case MARU_EVENT_MOUSE_SCROLLED:
+            survivor->mouse_scroll.delta.x += older->mouse_scroll.delta.x;
+            survivor->mouse_scroll.delta.y += older->mouse_scroll.delta.y;
+            survivor->mouse_scroll.steps.x += older->mouse_scroll.steps.x;
+            survivor->mouse_scroll.steps.y += older->mouse_scroll.steps.y;
+            break;
+        case MARU_EVENT_WINDOW_RESIZED:
+            // Latest geometry already lives in survivor.
+            break;
+        default:
+            // Latest payload already lives in survivor for generic coalescing.
+            break;
+    }
+}
+
+static uint32_t _maru_queue_compact_hash(MARU_EventId type, MARU_Window *window) {
+    uintptr_t window_bits = (uintptr_t)window;
+    uint32_t h = (uint32_t)window_bits;
+#if UINTPTR_MAX > 0xFFFFFFFFu
+    h ^= (uint32_t)(window_bits >> 32u);
+#endif
+    h ^= (uint32_t)type * 0x9E3779B1u;
+    return h;
+}
+
+static bool _maru_queue_compact_map_find(const MARU_QueueCompactMapEntry *map, uint32_t cap,
+                                         MARU_EventId type, MARU_Window *window, uint32_t *out_survivor_idx) {
+    uint32_t idx = _maru_queue_compact_hash(type, window) & (cap - 1u);
+    for (uint32_t probe = 0; probe < cap; ++probe) {
+        const MARU_QueueCompactMapEntry *entry = &map[idx];
+        if (!entry->used) return false;
+        if (entry->type == type && entry->window == window) {
+            *out_survivor_idx = entry->survivor_idx;
+            return true;
+        }
+        idx = (idx + 1u) & (cap - 1u);
+    }
+    return false;
+}
+
+static bool _maru_queue_compact_map_insert(MARU_QueueCompactMapEntry *map, uint32_t cap,
+                                           MARU_EventId type, MARU_Window *window, uint32_t survivor_idx) {
+    uint32_t idx = _maru_queue_compact_hash(type, window) & (cap - 1u);
+    for (uint32_t probe = 0; probe < cap; ++probe) {
+        MARU_QueueCompactMapEntry *entry = &map[idx];
+        if (!entry->used) {
+            entry->used = true;
+            entry->type = type;
+            entry->window = window;
+            entry->survivor_idx = survivor_idx;
+            return true;
+        }
+        if (entry->type == type && entry->window == window) {
+            entry->survivor_idx = survivor_idx;
+            return true;
+        }
+        idx = (idx + 1u) & (cap - 1u);
+    }
+    return false;
+}
+
+static uint32_t _maru_queue_compact_active(MARU_Queue *q) {
+    uint32_t count = q->active_count;
+    if (count == 0) return 0;
+
+    MARU_QueueCompactMapEntry map[MARU_QUEUE_COMPACT_MAP_CAPACITY];
+    memset(map, 0, sizeof(map));
+    bool map_saturated = false;
+    uint32_t removed = 0;
+
+    for (uint32_t i = count; i-- > 0;) {
+        MARU_EventId type = q->active.types[i];
+        if (!maru_eventMaskHas(q->coalesce_mask, type)) continue;
+
+        MARU_Window *window = q->active.windows[i];
+        uint32_t survivor_idx = UINT32_MAX;
+        bool found = _maru_queue_compact_map_find(map, MARU_QUEUE_COMPACT_MAP_CAPACITY, type, window, &survivor_idx);
+
+        if (!found && map_saturated) {
+            for (uint32_t j = i + 1u; j < count; ++j) {
+                if (q->active.types[j] == type && q->active.windows[j] == window) {
+                    survivor_idx = j;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (found) {
+            _maru_queue_fold_older_into_survivor(type, &q->active.events[i], &q->active.events[survivor_idx]);
+            q->active.types[i] = MARU_QUEUE_INVALID_EVENT_ID;
+            removed++;
+            continue;
+        }
+
+        if (!_maru_queue_compact_map_insert(map, MARU_QUEUE_COMPACT_MAP_CAPACITY, type, window, i)) {
+            map_saturated = true;
+        }
+    }
+
+    if (removed == 0) return 0;
+
+    uint32_t write_idx = 0;
+    for (uint32_t read_idx = 0; read_idx < count; ++read_idx) {
+        if (q->active.types[read_idx] == MARU_QUEUE_INVALID_EVENT_ID) continue;
+        if (write_idx != read_idx) {
+            q->active.types[write_idx] = q->active.types[read_idx];
+            q->active.windows[write_idx] = q->active.windows[read_idx];
+            q->active.events[write_idx] = q->active.events[read_idx];
+        }
+        write_idx++;
+    }
+
+    q->active_count = write_idx;
+    return removed;
+}
+
 static void _maru_queue_on_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
     MARU_Queue *q = (MARU_Queue *)userdata;
-    
+
     if (q->active_count > 0 && maru_eventMaskHas(q->coalesce_mask, type)) {
-        uint32_t last_idx = q->active_count - 1;
+        uint32_t last_idx = q->active_count - 1u;
         if (q->active.types[last_idx] == type && q->active.windows[last_idx] == window) {
-            MARU_Event *last_evt = &q->active.events[last_idx];
-            bool coalesced = false;
-            
-            switch (type) {
-                case MARU_EVENT_MOUSE_MOVED:
-                    last_evt->mouse_motion.position = evt->mouse_motion.position;
-                    last_evt->mouse_motion.delta.x += evt->mouse_motion.delta.x;
-                    last_evt->mouse_motion.delta.y += evt->mouse_motion.delta.y;
-                    last_evt->mouse_motion.raw_delta.x += evt->mouse_motion.raw_delta.x;
-                    last_evt->mouse_motion.raw_delta.y += evt->mouse_motion.raw_delta.y;
-                    last_evt->mouse_motion.modifiers = evt->mouse_motion.modifiers;
-                    coalesced = true;
-                    break;
-                case MARU_EVENT_MOUSE_SCROLLED:
-                    last_evt->mouse_scroll.delta.x += evt->mouse_scroll.delta.x;
-                    last_evt->mouse_scroll.delta.y += evt->mouse_scroll.delta.y;
-                    last_evt->mouse_scroll.steps.x += evt->mouse_scroll.steps.x;
-                    last_evt->mouse_scroll.steps.y += evt->mouse_scroll.steps.y;
-                    last_evt->mouse_scroll.modifiers = evt->mouse_scroll.modifiers;
-                    coalesced = true;
-                    break;
-                case MARU_EVENT_WINDOW_RESIZED:
-                    last_evt->resized.geometry = evt->resized.geometry;
-                    coalesced = true;
-                    break;
-                default:
-                    // Generic overwrite for other opted-in event types
-                    *last_evt = *evt;
-                    coalesced = true;
-                    break;
-            }
-            
-            if (coalesced) return;
+            _maru_queue_coalesce_latest(type, &q->active.events[last_idx], evt);
+            return;
         }
+    }
+
+    if (q->active_count >= q->capacity) {
+        q->overflow_compact_count++;
+        q->overflow_events_compacted += _maru_queue_compact_active(q);
     }
 
     if (q->active_count < q->capacity) {
@@ -76,6 +241,9 @@ static void _maru_queue_on_event(MARU_EventId type, MARU_Window *window, const M
         q->active.types[idx] = type;
         q->active.windows[idx] = window;
         q->active.events[idx] = *evt;
+        _maru_queue_update_peak_active_count(q);
+    } else {
+        _maru_queue_count_drop(q, type);
     }
 }
 
@@ -125,6 +293,7 @@ MARU_Status maru_queue_create(MARU_Context *ctx, uint32_t capacity, MARU_Queue *
     q->active_count = 0;
     q->stable_count = 0;
     q->coalesce_mask = 0;
+    _maru_queue_reset_metrics_internal(q);
 
     if (!_maru_queue_buffer_init(ctx_base, &q->buffers[0], capacity)) {
         maru_context_free(ctx_base, q);
@@ -191,4 +360,26 @@ void maru_queue_set_coalesce_mask(MARU_Queue *queue, MARU_EventMask mask) {
     if (queue) {
         queue->coalesce_mask = mask;
     }
+}
+
+void maru_queue_get_metrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metrics) {
+    if (!out_metrics) return;
+
+    if (!queue) {
+        memset(out_metrics, 0, sizeof(*out_metrics));
+        return;
+    }
+
+    out_metrics->peak_active_count = queue->peak_active_count;
+    out_metrics->overflow_drop_count = queue->overflow_drop_count;
+    out_metrics->overflow_compact_count = queue->overflow_compact_count;
+    out_metrics->overflow_events_compacted = queue->overflow_events_compacted;
+    memcpy(out_metrics->overflow_drop_count_by_event,
+           queue->overflow_drop_count_by_event,
+           sizeof(out_metrics->overflow_drop_count_by_event));
+}
+
+void maru_queue_reset_metrics(MARU_Queue *queue) {
+    if (!queue) return;
+    _maru_queue_reset_metrics_internal(queue);
 }

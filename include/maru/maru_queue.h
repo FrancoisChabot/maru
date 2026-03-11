@@ -39,6 +39,25 @@ extern "C" {
 /** @brief Opaque handle to an event queue. */
 typedef struct MARU_Queue MARU_Queue;
 
+/** @brief Cumulative queue overflow/compaction counters. */
+typedef struct MARU_QueueMetrics {
+  /** @brief Max active-buffer occupancy observed since last reset. */
+  uint32_t peak_active_count;
+  /** @brief Number of incoming events dropped because the queue stayed full. */
+  uint32_t overflow_drop_count;
+  /** @brief Number of overflow compaction sweeps executed. */
+  uint32_t overflow_compact_count;
+  /** @brief Number of stale events removed by overflow compaction. */
+  uint32_t overflow_events_compacted;
+  /**
+   * @brief Drop counters indexed by `MARU_EventId` value.
+   *
+   * Entry `overflow_drop_count_by_event[id]` is incremented when an incoming
+   * event of that type is dropped after overflow compaction.
+   */
+  uint32_t overflow_drop_count_by_event[MARU_EVENT_USER_15 + 1];
+} MARU_QueueMetrics;
+
 /**
  * @brief Creates a new event queue.
  *
@@ -106,11 +125,33 @@ MARU_API void maru_queue_scan(MARU_Queue *queue, MARU_EventMask mask,
  * - MARU_EVENT_MOUSE_SCROLLED: Accumulates delta and steps.
  * - MARU_EVENT_WINDOW_RESIZED: Updates geometry.
  *
+ * Overflow behavior:
+ * - When the queue is full, a compaction sweep is attempted before dropping.
+ * - Compaction keeps the latest coalescible event per (type, window) and folds
+ *   older duplicates into it using the same accumulation semantics.
+ * - If the queue remains full after compaction, the incoming event is dropped.
+ *
  * @param queue The event queue.
  * @param mask Bitmask of MARU_EventId bits to coalesce.
  */
 MARU_API void maru_queue_set_coalesce_mask(MARU_Queue *queue,
                                            MARU_EventMask mask);
+
+/**
+ * @brief Reads cumulative queue metrics for the queue.
+ *
+ * @param queue The queue to inspect (may be NULL).
+ * @param out_metrics Receives metrics, zeroed when queue is NULL.
+ */
+MARU_API void maru_queue_get_metrics(const MARU_Queue *queue,
+                                     MARU_QueueMetrics *out_metrics);
+
+/**
+ * @brief Resets queue metrics counters to zero.
+ *
+ * @param queue The queue to reset (may be NULL).
+ */
+MARU_API void maru_queue_reset_metrics(MARU_Queue *queue);
 
 #ifdef __cplusplus
 }

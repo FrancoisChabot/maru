@@ -80,6 +80,35 @@ maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_SCRO
 queue.setCoalesceMask(MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_SCROLLED);
 ```
 
+## Overflow Compaction
+
+When the active queue reaches capacity, `MARU_Queue` now attempts a compaction
+sweep before dropping incoming events:
+
+- For coalescible types, only the latest event per `(type, window)` is kept.
+- Older duplicates are folded into the survivor using the same coalescing
+  semantics (`delta`/`raw_delta`/`steps` accumulation where applicable).
+- Non-coalescible events preserve relative order.
+- If no space is freed, the new event is dropped.
+
+You can inspect cumulative queue metrics (including peak occupancy and
+per-event drop counters):
+
+```c
+MARU_QueueMetrics metrics = {0};
+maru_queue_get_metrics(queue, &metrics);
+// metrics.peak_active_count
+// metrics.overflow_drop_count_by_event[MARU_EVENT_MOUSE_MOVED]
+
+// Reset between sampling windows if desired
+maru_queue_reset_metrics(queue);
+```
+
+```cpp
+MARU_QueueMetrics metrics = queue.metrics();
+queue.resetMetrics();
+```
+
 ## C++ API Example (RAII)
 
 The C++ wrapper `maru::Queue` provides a more idiomatic interface, especially when combined with C++20 visitors.

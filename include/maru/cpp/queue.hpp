@@ -45,6 +45,9 @@ public:
         maru_queue_set_coalesce_mask(m_handle, mask);
     }
 
+    MARU_QueueMetrics metrics() const;
+    void resetMetrics();
+
 #if __cplusplus >= 202002L
     template <typename Visitor>
     void scan(EventDispatcher<Visitor>& dispatcher, MARU_EventMask mask = MARU_ALL_EVENTS);

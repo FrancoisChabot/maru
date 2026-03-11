@@ -419,6 +419,16 @@ inline void Queue::scan(MARU_EventMask mask, MARU_EventCallback callback, void* 
     maru_queue_scan(m_handle, mask, callback, userdata);
 }
 
+inline MARU_QueueMetrics Queue::metrics() const {
+    MARU_QueueMetrics metrics = {};
+    maru_queue_get_metrics(m_handle, &metrics);
+    return metrics;
+}
+
+inline void Queue::resetMetrics() {
+    maru_queue_reset_metrics(m_handle);
+}
+
 } // namespace maru
 
 #endif // MARU_HPP_IMPL_HPP_INCLUDED
