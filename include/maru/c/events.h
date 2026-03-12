@@ -105,31 +105,34 @@ typedef enum MARU_EventId {
 /** @brief Event fired when the mouse cursor moves. */
 #define MARU_MASK_MOUSE_MOVED MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED)
 /** @brief Event fired when a mouse button state changes. */
-#define MARU_MASK_MOUSE_BUTTON_CHANGED                                   \
+#define MARU_MASK_MOUSE_BUTTON_CHANGED                                         \
   MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_CHANGED)
 /** @brief Event fired when a mouse scroll wheel is moved. */
 #define MARU_MASK_MOUSE_SCROLLED MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED)
 /** @brief Event fired when the system idle state changes. */
 #define MARU_MASK_IDLE_CHANGED MARU_EVENT_MASK(MARU_EVENT_IDLE_CHANGED)
 /** @brief Event fired when a monitor is connected or disconnected. */
-#define MARU_MASK_MONITOR_CHANGED                                   \
-  MARU_EVENT_MASK(MARU_EVENT_MONITOR_CHANGED)
+#define MARU_MASK_MONITOR_CHANGED MARU_EVENT_MASK(MARU_EVENT_MONITOR_CHANGED)
 /** @brief Event fired when a monitor's display mode changes. */
-#define MARU_MASK_MONITOR_MODE_CHANGED MARU_EVENT_MASK(MARU_EVENT_MONITOR_MODE_CHANGED)
+#define MARU_MASK_MONITOR_MODE_CHANGED                                         \
+  MARU_EVENT_MASK(MARU_EVENT_MONITOR_MODE_CHANGED)
 /** @brief Event fired when the window should render its next frame. */
 #define MARU_MASK_WINDOW_FRAME MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME)
 /** @brief Event fired when a window presentation state changes. */
-#define MARU_MASK_WINDOW_PRESENTATION_CHANGED                            \
+#define MARU_MASK_WINDOW_PRESENTATION_CHANGED                                  \
   MARU_EVENT_MASK(MARU_EVENT_WINDOW_PRESENTATION_CHANGED)
 
 /** @brief Event fired when an IME composition session starts. */
-#define MARU_MASK_TEXT_EDIT_STARTED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED)
+#define MARU_MASK_TEXT_EDIT_STARTED                                            \
+  MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED)
 /** @brief Event fired when the current preedit text in an IME session is
  * updated. */
-#define MARU_MASK_TEXT_EDIT_UPDATED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_UPDATED)
+#define MARU_MASK_TEXT_EDIT_UPDATED                                            \
+  MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_UPDATED)
 /** @brief Event fired when text is committed to the application, potentially
  * replacing surrounding text. */
-#define MARU_MASK_TEXT_EDIT_COMMITTED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_COMMITTED)
+#define MARU_MASK_TEXT_EDIT_COMMITTED                                          \
+  MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_COMMITTED)
 /** @brief Event fired when an IME composition session ends. */
 #define MARU_MASK_TEXT_EDIT_ENDED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_ENDED)
 
