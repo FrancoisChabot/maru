@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-/**
- * ATTENTION: This file is in the maru details/ directory. This means that
- * it's NOT part of the Maru API, and is just machinery that is required to
- * implement the API.
+/*
+ * Installed details header used to implement Maru's inline accessors.
  *
- * Nothing in here is meant to be stable, or even read by a user of the library.
+ * It is not intended to be included or used directly by normal application
+ * code. Public MARU_* handles must still be treated as opaque by application
+ * code; do not cast them to the prefix types declared here.
  */
 
 #ifndef MARU_DETAILS_H_INCLUDED
@@ -18,10 +18,8 @@
 extern "C" {
 #endif
 
-/** @brief Internal representation of MARU_Context.
-    CHANGING THIS REQUIRES A MAJOR VERSION BUMP
-*/
-typedef struct MARU_ContextExposed {
+/* Stable prefix layout used by inline accessors. Not a user-facing handle API. */
+typedef struct MARU_ContextPrefix {
   void* userdata;
   uint64_t flags;
   MARU_BackendType backend_type;
@@ -32,22 +30,18 @@ typedef struct MARU_ContextExposed {
   const MARU_ButtonState8* keyboard_state;
   uint32_t keyboard_key_count;
   int32_t mouse_default_button_channels[MARU_MOUSE_DEFAULT_COUNT];
-} MARU_ContextExposed;
+} MARU_ContextPrefix;
 
-typedef struct MARU_ImageExposed {
+typedef struct MARU_ImagePrefix {
   void* userdata;
-} MARU_ImageExposed;
+} MARU_ImagePrefix;
 
-/** @brief Internal representation of MARU_Cursor. */
-typedef struct MARU_CursorExposed {
+typedef struct MARU_CursorPrefix {
   void* userdata;
   uint64_t flags;
-} MARU_CursorExposed;
+} MARU_CursorPrefix;
 
-/** @brief Internal representation of MARU_Monitor.
-    CHANGING THIS REQUIRES A MAJOR VERSION BUMP
-*/
-typedef struct MARU_MonitorExposed {
+typedef struct MARU_MonitorPrefix {
   void* userdata;
   MARU_Context* context;
   uint64_t flags;
@@ -58,12 +52,9 @@ typedef struct MARU_MonitorExposed {
   MARU_Vec2Dip dip_size;
   bool is_primary;
   MARU_Scalar scale;
-} MARU_MonitorExposed;
+} MARU_MonitorPrefix;
 
-/** @brief Internal representation of MARU_Window.
-    CHANGING THIS REQUIRES A MAJOR VERSION BUMP
-*/
-typedef struct MARU_WindowExposed {
+typedef struct MARU_WindowPrefix {
   void* userdata;
   MARU_Context* context;
   MARU_WindowId window_id;
@@ -73,12 +64,9 @@ typedef struct MARU_WindowExposed {
   const char* title;
   const MARU_Image* icon;
   MARU_WindowGeometry geometry;
-} MARU_WindowExposed;
+} MARU_WindowPrefix;
 
-/** @brief Internal representation of MARU_Controller.
-    CHANGING THIS REQUIRES A MAJOR VERSION BUMP
-*/
-typedef struct MARU_ControllerExposed {
+typedef struct MARU_ControllerPrefix {
   void* userdata;
   MARU_Context* context;
   uint64_t flags;
@@ -95,64 +83,64 @@ typedef struct MARU_ControllerExposed {
   uint32_t button_count;
   const MARU_ChannelInfo* haptic_channels;
   uint32_t haptic_count;
-} MARU_ControllerExposed;
+} MARU_ControllerPrefix;
 
-typedef struct MARU_DropSessionExposed {
+typedef struct MARU_DropSessionPrefix {
   MARU_DropAction* action;
   void** session_userdata;
-} MARU_DropSessionExposed;
+} MARU_DropSessionPrefix;
 
 static inline MARU_BackendType
 maru_getContextBackend(const MARU_Context* context) {
-  return ((const MARU_ContextExposed*)context)->backend_type;
+  return ((const MARU_ContextPrefix*)context)->backend_type;
 }
 
 static inline void* maru_getContextUserdata(const MARU_Context* context) {
-  return ((const MARU_ContextExposed*)context)->userdata;
+  return ((const MARU_ContextPrefix*)context)->userdata;
 }
 
 static inline void maru_setContextUserdata(MARU_Context* context,
                                            void* userdata) {
-  ((MARU_ContextExposed*)context)->userdata = userdata;
+  ((MARU_ContextPrefix*)context)->userdata = userdata;
 }
 
 static inline bool maru_isContextLost(const MARU_Context* context) {
-  return (((const MARU_ContextExposed*)context)->flags &
+  return (((const MARU_ContextPrefix*)context)->flags &
           MARU_CONTEXT_STATE_LOST) != 0;
 }
 
 static inline bool maru_isContextReady(const MARU_Context* context) {
-  return (((const MARU_ContextExposed*)context)->flags &
+  return (((const MARU_ContextPrefix*)context)->flags &
           MARU_CONTEXT_STATE_READY) != 0;
 }
 
 static inline const MARU_ContextMetrics*
 maru_getContextMetrics(const MARU_Context* context) {
-  return ((const MARU_ContextExposed*)context)->metrics;
+  return ((const MARU_ContextPrefix*)context)->metrics;
 }
 
 static inline uint32_t
 maru_getContextMouseButtonCount(const MARU_Context* context) {
-  return ((const MARU_ContextExposed*)context)->mouse_button_count;
+  return ((const MARU_ContextPrefix*)context)->mouse_button_count;
 }
 
 static inline const MARU_ButtonState8*
 maru_getContextMouseButtonStates(const MARU_Context* context) {
-  return ((const MARU_ContextExposed*)context)->mouse_button_state;
+  return ((const MARU_ContextPrefix*)context)->mouse_button_state;
 }
 
 static inline const MARU_ChannelInfo*
 maru_getContextMouseButtonChannelInfo(const MARU_Context* context) {
-  return ((const MARU_ContextExposed*)context)->mouse_button_channels;
+  return ((const MARU_ContextPrefix*)context)->mouse_button_channels;
 }
 
 static inline uint32_t maru_getKeyboardKeyCount(const MARU_Context* context) {
-  return ((const MARU_ContextExposed*)context)->keyboard_key_count;
+  return ((const MARU_ContextPrefix*)context)->keyboard_key_count;
 }
 
 static inline const MARU_ButtonState8*
 maru_getKeyboardKeyStates(const MARU_Context* context) {
-  return ((const MARU_ContextExposed*)context)->keyboard_state;
+  return ((const MARU_ContextPrefix*)context)->keyboard_state;
 }
 
 static inline int32_t
@@ -161,7 +149,7 @@ maru_getContextMouseDefaultButtonChannel(const MARU_Context* context,
   if ((uint32_t)which >= MARU_MOUSE_DEFAULT_COUNT) {
     return -1;
   }
-  return ((const MARU_ContextExposed*)context)
+  return ((const MARU_ContextPrefix*)context)
       ->mouse_default_button_channels[which];
 }
 
@@ -176,229 +164,229 @@ static inline bool maru_isContextMouseButtonPressed(const MARU_Context* context,
 }
 
 static inline void* maru_getImageUserdata(const MARU_Image* image) {
-  return ((const MARU_ImageExposed*)image)->userdata;
+  return ((const MARU_ImagePrefix*)image)->userdata;
 }
 
 static inline void maru_setImageUserdata(MARU_Image* image, void* userdata) {
-  ((MARU_ImageExposed*)image)->userdata = userdata;
+  ((MARU_ImagePrefix*)image)->userdata = userdata;
 }
 
 static inline void* maru_getCursorUserdata(const MARU_Cursor* cursor) {
-  return ((const MARU_CursorExposed*)cursor)->userdata;
+  return ((const MARU_CursorPrefix*)cursor)->userdata;
 }
 
 static inline void maru_setCursorUserdata(MARU_Cursor* cursor, void* userdata) {
-  ((MARU_CursorExposed*)cursor)->userdata = userdata;
+  ((MARU_CursorPrefix*)cursor)->userdata = userdata;
 }
 
 static inline bool maru_isCursorSystem(const MARU_Cursor* cursor) {
-  return (((const MARU_CursorExposed*)cursor)->flags &
+  return (((const MARU_CursorPrefix*)cursor)->flags &
           MARU_CURSOR_FLAG_SYSTEM) != 0;
 }
 
 static inline void* maru_getMonitorUserdata(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->userdata;
+  return ((const MARU_MonitorPrefix*)monitor)->userdata;
 }
 
 static inline void maru_setMonitorUserdata(MARU_Monitor* monitor,
                                            void* userdata) {
-  ((MARU_MonitorExposed*)monitor)->userdata = userdata;
+  ((MARU_MonitorPrefix*)monitor)->userdata = userdata;
 }
 
 static inline MARU_Context*
 maru_getMonitorContext(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->context;
+  return ((const MARU_MonitorPrefix*)monitor)->context;
 }
 
 static inline bool maru_isMonitorLost(const MARU_Monitor* monitor) {
-  return (((const MARU_MonitorExposed*)monitor)->flags &
+  return (((const MARU_MonitorPrefix*)monitor)->flags &
           MARU_MONITOR_STATE_LOST) != 0;
 }
 
 static inline const char* maru_getMonitorName(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->name;
+  return ((const MARU_MonitorPrefix*)monitor)->name;
 }
 
 static inline MARU_Vec2Mm
 maru_getMonitorPhysicalSize(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->physical_size;
+  return ((const MARU_MonitorPrefix*)monitor)->physical_size;
 }
 
 static inline MARU_VideoMode
 maru_getMonitorCurrentMode(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->current_mode;
+  return ((const MARU_MonitorPrefix*)monitor)->current_mode;
 }
 
 static inline MARU_Vec2Dip
 maru_getMonitorDipPosition(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->dip_position;
+  return ((const MARU_MonitorPrefix*)monitor)->dip_position;
 }
 
 static inline MARU_Vec2Dip
 maru_getMonitorDipSize(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->dip_size;
+  return ((const MARU_MonitorPrefix*)monitor)->dip_size;
 }
 
 static inline bool maru_isMonitorPrimary(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->is_primary;
+  return ((const MARU_MonitorPrefix*)monitor)->is_primary;
 }
 
 static inline MARU_Scalar maru_getMonitorScale(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->scale;
+  return ((const MARU_MonitorPrefix*)monitor)->scale;
 }
 
 static inline void* maru_getWindowUserdata(const MARU_Window* window) {
-  return ((const MARU_WindowExposed*)window)->userdata;
+  return ((const MARU_WindowPrefix*)window)->userdata;
 }
 
 static inline void maru_setWindowUserdata(MARU_Window* window, void* userdata) {
-  ((MARU_WindowExposed*)window)->userdata = userdata;
+  ((MARU_WindowPrefix*)window)->userdata = userdata;
 }
 
 static inline MARU_Context* maru_getWindowContext(const MARU_Window* window) {
-  return ((const MARU_WindowExposed*)window)->context;
+  return ((const MARU_WindowPrefix*)window)->context;
 }
 
 static inline MARU_WindowId maru_getWindowId(const MARU_Window* window) {
-  return ((const MARU_WindowExposed*)window)->window_id;
+  return ((const MARU_WindowPrefix*)window)->window_id;
 }
 
 static inline const char* maru_getWindowTitle(const MARU_Window* window) {
-  return ((const MARU_WindowExposed*)window)->title;
+  return ((const MARU_WindowPrefix*)window)->title;
 }
 
 static inline bool maru_isWindowLost(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_LOST) != 0;
 }
 
 static inline bool maru_isWindowReady(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_READY) != 0;
 }
 
 static inline bool maru_isWindowFocused(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_FOCUSED) != 0;
 }
 
 static inline bool maru_isWindowMaximized(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_MAXIMIZED) != 0;
 }
 
 static inline bool maru_isWindowFullscreen(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_FULLSCREEN) != 0;
 }
 
 static inline bool maru_isWindowVisible(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_VISIBLE) != 0;
 }
 
 static inline bool maru_isWindowMinimized(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_MINIMIZED) != 0;
 }
 
 static inline bool maru_isWindowResizable(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_RESIZABLE) != 0;
 }
 
 static inline bool maru_isWindowDecorated(const MARU_Window* window) {
-  return (((const MARU_WindowExposed*)window)->flags &
+  return (((const MARU_WindowPrefix*)window)->flags &
           MARU_WINDOW_STATE_DECORATED) != 0;
 }
 
 static inline MARU_CursorMode
 maru_getWindowCursorMode(const MARU_Window* window) {
-  return ((const MARU_WindowExposed*)window)->cursor_mode;
+  return ((const MARU_WindowPrefix*)window)->cursor_mode;
 }
 
 static inline const MARU_Image* maru_getWindowIcon(const MARU_Window* window) {
-  return ((const MARU_WindowExposed*)window)->icon;
+  return ((const MARU_WindowPrefix*)window)->icon;
 }
 
 static inline MARU_WindowGeometry
 maru_getWindowGeometry(const MARU_Window* window) {
-  return ((const MARU_WindowExposed*)window)->geometry;
+  return ((const MARU_WindowPrefix*)window)->geometry;
 }
 
 static inline void*
 maru_getControllerUserdata(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->userdata;
+  return ((const MARU_ControllerPrefix*)controller)->userdata;
 }
 
 static inline void maru_setControllerUserdata(MARU_Controller* controller,
                                               void* userdata) {
-  ((MARU_ControllerExposed*)controller)->userdata = userdata;
+  ((MARU_ControllerPrefix*)controller)->userdata = userdata;
 }
 
 static inline MARU_Context*
 maru_getControllerContext(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->context;
+  return ((const MARU_ControllerPrefix*)controller)->context;
 }
 
 static inline bool maru_isControllerLost(const MARU_Controller* controller) {
-  return (((const MARU_ControllerExposed*)controller)->flags &
+  return (((const MARU_ControllerPrefix*)controller)->flags &
           MARU_CONTROLLER_STATE_LOST) != 0;
 }
 
 static inline const char*
 maru_getControllerName(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->name;
+  return ((const MARU_ControllerPrefix*)controller)->name;
 }
 
 static inline uint16_t
 maru_getControllerVendorId(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->vendor_id;
+  return ((const MARU_ControllerPrefix*)controller)->vendor_id;
 }
 
 static inline uint16_t
 maru_getControllerProductId(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->product_id;
+  return ((const MARU_ControllerPrefix*)controller)->product_id;
 }
 
 static inline uint16_t
 maru_getControllerVersion(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->version;
+  return ((const MARU_ControllerPrefix*)controller)->version;
 }
 
 static inline const uint8_t*
 maru_getControllerGUID(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->guid;
+  return ((const MARU_ControllerPrefix*)controller)->guid;
 }
 
 static inline uint32_t
 maru_getControllerAnalogCount(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->analog_count;
+  return ((const MARU_ControllerPrefix*)controller)->analog_count;
 }
 
 static inline const MARU_ChannelInfo*
 maru_getControllerAnalogChannelInfo(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->analog_channels;
+  return ((const MARU_ControllerPrefix*)controller)->analog_channels;
 }
 
 static inline const MARU_AnalogInputState*
 maru_getControllerAnalogStates(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->analogs;
+  return ((const MARU_ControllerPrefix*)controller)->analogs;
 }
 
 static inline uint32_t
 maru_getControllerButtonCount(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->button_count;
+  return ((const MARU_ControllerPrefix*)controller)->button_count;
 }
 
 static inline const MARU_ChannelInfo*
 maru_getControllerButtonChannelInfo(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->button_channels;
+  return ((const MARU_ControllerPrefix*)controller)->button_channels;
 }
 
 static inline const MARU_ButtonState8*
 maru_getControllerButtonStates(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->buttons;
+  return ((const MARU_ControllerPrefix*)controller)->buttons;
 }
 
 static inline bool
@@ -413,32 +401,32 @@ maru_isControllerButtonPressed(const MARU_Controller* controller,
 
 static inline uint32_t
 maru_getControllerHapticCount(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->haptic_count;
+  return ((const MARU_ControllerPrefix*)controller)->haptic_count;
 }
 
 static inline const MARU_ChannelInfo*
 maru_getControllerHapticChannelInfo(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->haptic_channels;
+  return ((const MARU_ControllerPrefix*)controller)->haptic_channels;
 }
 
 static inline void maru_setDropSessionAction(MARU_DropSession* session,
                                              MARU_DropAction action) {
-  *(((MARU_DropSessionExposed*)session)->action) = action;
+  *(((MARU_DropSessionPrefix*)session)->action) = action;
 }
 
 static inline MARU_DropAction
 maru_getDropSessionAction(const MARU_DropSession* session) {
-  return *(((const MARU_DropSessionExposed*)session)->action);
+  return *(((const MARU_DropSessionPrefix*)session)->action);
 }
 
 static inline void maru_setDropSessionUserdata(MARU_DropSession* session,
                                                void* userdata) {
-  *(((MARU_DropSessionExposed*)session)->session_userdata) = userdata;
+  *(((MARU_DropSessionPrefix*)session)->session_userdata) = userdata;
 }
 
 static inline void*
 maru_getDropSessionUserdata(const MARU_DropSession* session) {
-  return *(((const MARU_DropSessionExposed*)session)->session_userdata);
+  return *(((const MARU_DropSessionPrefix*)session)->session_userdata);
 }
 
 static inline bool maru_isKeyboardKeyPressed(const MARU_Context* context,
@@ -602,22 +590,6 @@ static inline MARU_Status maru_setWindowIcon(MARU_Window* window,
   return maru_updateWindow(window, MARU_WINDOW_ATTR_ICON, &attrs);
 }
 
-static inline MARU_Status maru_requestText(MARU_Window* window,
-                                           MARU_DataExchangeTarget target,
-                                           void* userdata) {
-  return maru_requestData(window, target, "text/plain; charset=utf-8",
-                          userdata);
-}
-
-static inline MARU_Status
-maru_configureWindowSimpleTextInput(MARU_Window* window,
-                                    MARU_TextInputType type) {
-  MARU_WindowAttributes attrs;
-  memset(&attrs, 0, sizeof(attrs));
-  attrs.text_input_type = type;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &attrs);
-}
-
 static inline bool maru_applyTextEditCommitUtf8(
     char* buffer, uint32_t capacity_bytes, uint32_t* inout_length,
     uint32_t* inout_cursor_byte, const MARU_TextEditCommittedEvent* commit) {
@@ -639,28 +611,28 @@ static inline bool maru_applyTextEditCommitUtf8(
   if (delete_end > length || delete_end < delete_start) {
     return false;
   }
-  if (commit->committed_length > 0 && !commit->committed_utf8) {
+  if (commit->committed_length_bytes > 0 && !commit->committed_utf8) {
     return false;
   }
 
   const uint32_t delete_len = delete_end - delete_start;
   const uint32_t tail_len = length - delete_end;
-  const uint32_t new_length = length - delete_len + commit->committed_length;
+  const uint32_t new_length = length - delete_len + commit->committed_length_bytes;
   if (new_length > capacity_bytes) {
     return false;
   }
 
-  if (commit->committed_length != delete_len) {
-    memmove(buffer + delete_start + commit->committed_length,
+  if (commit->committed_length_bytes != delete_len) {
+    memmove(buffer + delete_start + commit->committed_length_bytes,
             buffer + delete_end, tail_len);
   }
-  if (commit->committed_length > 0) {
+  if (commit->committed_length_bytes > 0) {
     memcpy(buffer + delete_start, commit->committed_utf8,
-           commit->committed_length);
+           commit->committed_length_bytes);
   }
 
   *inout_length = new_length;
-  *inout_cursor_byte = delete_start + commit->committed_length;
+  *inout_cursor_byte = delete_start + commit->committed_length_bytes;
   if (new_length < capacity_bytes) {
     buffer[new_length] = '\0';
   }

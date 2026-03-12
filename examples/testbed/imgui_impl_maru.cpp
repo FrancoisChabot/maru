@@ -199,7 +199,7 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
         return;
 
     const MARU_Cursor* active_cursor =
-        ((const MARU_WindowExposed*)bd->Window)->current_cursor;
+        ((const MARU_WindowPrefix*)bd->Window)->current_cursor;
     if (active_cursor) {
         bool imgui_managed_cursor = false;
         for (int i = 0; i < ImGuiMouseCursor_COUNT; ++i) {
@@ -244,7 +244,7 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
              bd->MouseCursors[imgui_cursor] = cursor;
         }
 
-        const MARU_WindowExposed* win = (const MARU_WindowExposed*)bd->Window;
+        const MARU_WindowPrefix* win = (const MARU_WindowPrefix*)bd->Window;
         const bool mode_ok = (maru_getWindowCursorMode(bd->Window) == MARU_CURSOR_NORMAL);
         const bool cursor_ok = (win->current_cursor == cursor);
         if (!mode_ok || !cursor_ok) {
@@ -306,9 +306,9 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
         }
     } else if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) {
         if (event->text_edit_committed.committed_utf8 &&
-            event->text_edit_committed.committed_length > 0) {
+            event->text_edit_committed.committed_length_bytes > 0) {
             const std::string committed(event->text_edit_committed.committed_utf8,
-                                        event->text_edit_committed.committed_length);
+                                        event->text_edit_committed.committed_length_bytes);
             io.AddInputCharactersUTF8(committed.c_str());
         }
     } else if (type == MARU_EVENT_WINDOW_STATE_CHANGED) {

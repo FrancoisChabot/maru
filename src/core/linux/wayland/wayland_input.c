@@ -809,7 +809,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
         if (n > 0) {
             MARU_Event text_evt = {0};
             text_evt.text_edit_committed.committed_utf8 = buf;
-            text_evt.text_edit_committed.committed_length = (uint32_t)n;
+            text_evt.text_edit_committed.committed_length_bytes = (uint32_t)n;
             _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)window, &text_evt);
 
             if (ctx->repeat.rate > 0 && ctx->repeat.delay >= 0) {
@@ -946,7 +946,7 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
 
         evt.text_edit_updated.session_id = window->text_input_session_id;
         evt.text_edit_updated.preedit_utf8 = preedit;
-        evt.text_edit_updated.preedit_length = preedit_length;
+        evt.text_edit_updated.preedit_length_bytes = preedit_length;
         evt.text_edit_updated.caret.start_byte = safe_begin;
         evt.text_edit_updated.caret.length_byte = 0;
         evt.text_edit_updated.selection.start_byte = safe_begin;
@@ -967,7 +967,7 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
                                                       ? window->text_input_pending.delete_after_bytes
                                                       : 0u;
         evt.text_edit_committed.committed_utf8 = commit;
-        evt.text_edit_committed.committed_length = (uint32_t)strlen(commit);
+        evt.text_edit_committed.committed_length_bytes = (uint32_t)strlen(commit);
         _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)window, &evt);
 
         window->ime_preedit_active = false;
@@ -984,5 +984,4 @@ const struct zwp_text_input_v3_listener _maru_wayland_text_input_listener = {
     .delete_surrounding_text = _text_input_handle_delete_surrounding_text,
     .done = _text_input_handle_done,
 };
-
 

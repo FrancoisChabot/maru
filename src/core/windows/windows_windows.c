@@ -13,6 +13,10 @@ static void _maru_windows_dispatch_state_event(MARU_Window_Windows *win, uint32_
     evt.window_state_changed.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
     evt.window_state_changed.maximized = (win->base.pub.window_state & MARU_WINDOW_STATE_MAXIMIZED) != 0;
     evt.window_state_changed.focused = (win->base.pub.window_state & MARU_WINDOW_STATE_FOCUSED) != 0;
+    evt.window_state_changed.fullscreen = (win->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
+    evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+    evt.window_state_changed.decorated = (win->base.pub.flags & MARU_WINDOW_STATE_DECORATED) != 0;
+    evt.window_state_changed.icon = win->base.pub.icon;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &evt);
 
 }
@@ -222,7 +226,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         utf8[n] = '\0';
         MARU_Event evt = {0};
         evt.text_edit_committed.committed_utf8 = utf8;
-        evt.text_edit_committed.committed_length = (uint32_t)n;
+        evt.text_edit_committed.committed_length_bytes = (uint32_t)n;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win, &evt);
       }
       return 0;
@@ -253,7 +257,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         utf8[n] = '\0';
         MARU_Event evt = {0};
         evt.text_edit_committed.committed_utf8 = utf8;
-        evt.text_edit_committed.committed_length = (uint32_t)n;
+        evt.text_edit_committed.committed_length_bytes = (uint32_t)n;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win, &evt);
       }
       return 0;

@@ -389,7 +389,7 @@ static void _maru_x11_dispatch_preedit_update(MARU_Context_X11 *ctx,
   MARU_Event evt = {0};
   evt.text_edit_updated.session_id = win->text_input_session_id;
   evt.text_edit_updated.preedit_utf8 = preedit;
-  evt.text_edit_updated.preedit_length = len;
+  evt.text_edit_updated.preedit_length_bytes = len;
   evt.text_edit_updated.caret.start_byte = caret;
   evt.text_edit_updated.caret.length_byte = 0;
   evt.text_edit_updated.selection.start_byte = caret;
@@ -409,7 +409,7 @@ static void _maru_x11_emit_reset_commit(MARU_Context_X11 *ctx, MARU_Window_X11 *
   MARU_Event evt = {0};
   evt.text_edit_committed.session_id = win->text_input_session_id;
   evt.text_edit_committed.committed_utf8 = committed;
-  evt.text_edit_committed.committed_length = (uint32_t)strlen(committed);
+  evt.text_edit_committed.committed_length_bytes = (uint32_t)strlen(committed);
   _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win,
                        &evt);
   ctx->x11_lib.XFree(committed);
@@ -717,7 +717,7 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
               MARU_Event text_evt = {0};
               text_evt.text_edit_committed.session_id = win->text_input_session_id;
               text_evt.text_edit_committed.committed_utf8 = dyn_buf;
-              text_evt.text_edit_committed.committed_length = (uint32_t)text_len;
+              text_evt.text_edit_committed.committed_length_bytes = (uint32_t)text_len;
               _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED,
                                    (MARU_Window *)win, &text_evt);
             }
@@ -757,7 +757,7 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
         MARU_Event text_evt = {0};
         text_evt.text_edit_committed.session_id = win->text_input_session_id;
         text_evt.text_edit_committed.committed_utf8 = text_buf;
-        text_evt.text_edit_committed.committed_length = (uint32_t)text_len;
+        text_evt.text_edit_committed.committed_length_bytes = (uint32_t)text_len;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win, &text_evt);
       }
       return true;

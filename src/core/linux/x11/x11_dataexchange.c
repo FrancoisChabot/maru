@@ -1000,7 +1000,7 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
     }
 
     MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
-    MARU_DropSessionExposed session_exposed = {
+    MARU_DropSessionPrefix session_exposed = {
         .action = &dummy_action,
         .session_userdata = &ctx->dnd_session.session_userdata,
     };
@@ -1043,7 +1043,7 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
   if (is_internal_dnd_prefetch && ctx->dnd_session.active &&
       ctx->dnd_session.drop_pending && ctx->dnd_session.target_window) {
     MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
-    MARU_DropSessionExposed session_exposed = {
+    MARU_DropSessionPrefix session_exposed = {
         .action = &dummy_action,
         .session_userdata = &ctx->dnd_session.session_userdata,
     };
@@ -2004,7 +2004,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
         MARU_DropAction action = session->selected_mime ? MARU_DROP_ACTION_COPY
                                                         : MARU_DROP_ACTION_NONE;
-        MARU_DropSessionExposed session_exposed = {
+        MARU_DropSessionPrefix session_exposed = {
             .action = &action,
             .session_userdata = &session->session_userdata,
         };
@@ -2046,7 +2046,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
         MARU_DropAction action =
             session->selected_mime ? session->selected_action : MARU_DROP_ACTION_NONE;
-        MARU_DropSessionExposed session_exposed = {
+        MARU_DropSessionPrefix session_exposed = {
             .action = &action,
             .session_userdata = &session->session_userdata,
         };
@@ -2084,7 +2084,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
         }
         if (session->target_window) {
           MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
-          MARU_DropSessionExposed session_exposed = {
+          MARU_DropSessionPrefix session_exposed = {
               .action = &dummy_action,
               .session_userdata = &session->session_userdata,
           };
@@ -2130,7 +2130,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
         }
 
         MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
-        MARU_DropSessionExposed session_exposed = {
+        MARU_DropSessionPrefix session_exposed = {
             .action = &dummy_action,
             .session_userdata = &ctx->dnd_session.session_userdata,
         };

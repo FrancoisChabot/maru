@@ -1111,7 +1111,7 @@ static void _maru_wayland_pump_dispatch_repeats(MARU_Context_WL *ctx) {
         if (n > 0) {
           MARU_Event text_evt = {0};
           text_evt.text_edit_committed.committed_utf8 = buf;
-          text_evt.text_edit_committed.committed_length = (uint32_t)n;
+          text_evt.text_edit_committed.committed_length_bytes = (uint32_t)n;
           _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED,
                                (MARU_Window *)window, &text_evt);
         }

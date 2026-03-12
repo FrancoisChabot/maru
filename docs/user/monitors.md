@@ -58,10 +58,15 @@ maru_getMonitorModes(monitor, &modes);
 
 for (uint32_t i = 0; i < modes.count; ++i) {
     printf("Mode %d: %dx%d @ %.2fHz\n", i, 
-           (int)modes.modes[i].dip_size.x, (int)modes.modes[i].dip_size.y,
+           (int)modes.modes[i].px_size.x, (int)modes.modes[i].px_size.y,
            modes.modes[i].refresh_rate_millihz / 1000.0f);
 }
 ```
+
+`modes.modes` is borrowed storage owned by the monitor. It remains valid until
+the monitor is lost or destroyed, or until the backend refreshes that monitor's
+mode cache. Reacquire it after monitor topology or mode changes if you need a
+fresh snapshot.
 
 You can change the current video mode using `maru_setMonitorMode`. This is typically used for "exclusive" fullscreen games.
 

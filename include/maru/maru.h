@@ -24,9 +24,9 @@
  *
  * Handle layout note
  *
- * Public handles are API-opaque. Internal details headers expose a stable
- * prefix used to implement low-overhead inline accessors. Do not downcast the
- * handles yourself; use the public accessors below.
+ * Public handles must be treated as opaque by application code. Do not
+ * downcast them to details-level representation types; use the public
+ * accessors below.
  *
  * Ownership and lifetime model
  *
@@ -496,6 +496,14 @@ typedef enum MARU_EventId {
   MARU_EVENT_USER_15 = 63,
 } MARU_EventId;
 
+MARU_STATIC_ASSERT(MARU_EVENT_USER_15 < 64,
+                   "MARU_EventMask only supports event ids in [0, 63].");
+
+/*
+ * Constant-expression primitive for known-valid event ids.
+ *
+ * For arbitrary runtime values, use maru_getEventMask() instead.
+ */
 #define MARU_EVENT_MASK(id) MARU_BIT((uint32_t)(id))
 
 #define MARU_MASK_CLOSE_REQUESTED MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED)
@@ -559,20 +567,25 @@ static inline bool maru_isUserEventId(MARU_EventId id) {
   return id >= MARU_EVENT_USER_0 && id <= MARU_EVENT_USER_15;
 }
 
+static inline MARU_EventMask maru_getEventMask(MARU_EventId id) {
+  const uint32_t raw_id = (uint32_t)id;
+  return (raw_id < 64u) ? MARU_EVENT_MASK(raw_id) : 0u;
+}
+
 static inline bool maru_isKnownEventId(MARU_EventId id) {
-  return (MARU_EVENT_MASK(id) & (MARU_ALL_EVENTS)) != 0;
+  return (maru_getEventMask(id) & (MARU_ALL_EVENTS)) != 0;
 }
 
 static inline bool maru_eventMaskHas(MARU_EventMask mask, MARU_EventId id) {
-  return (mask & MARU_EVENT_MASK(id)) != 0;
+  return (mask & maru_getEventMask(id)) != 0;
 }
 
 static inline MARU_EventMask maru_eventMaskAdd(MARU_EventMask mask, MARU_EventId id) {
-  return mask | MARU_EVENT_MASK(id);
+  return mask | maru_getEventMask(id);
 }
 
 static inline MARU_EventMask maru_eventMaskRemove(MARU_EventMask mask, MARU_EventId id) {
-  return mask & ~MARU_EVENT_MASK(id);
+  return mask & ~maru_getEventMask(id);
 }
 
 typedef struct MARU_WindowReadyEvent {
@@ -604,6 +617,11 @@ typedef struct MARU_WindowStateChangedEvent {
   bool minimized;
   bool maximized;
   bool focused;
+  bool fullscreen;
+  bool resizable;
+  bool decorated;
+  /* Borrowed same-context handle to the window's current icon, if any. */
+  const MARU_Image* icon;
 } MARU_WindowStateChangedEvent;
 
 typedef struct MARU_KeyChangedEvent {
@@ -682,6 +700,14 @@ typedef enum MARU_DataProvideFlags {
 
 typedef struct MARU_DropEvent {
   MARU_Vec2Dip dip_position;
+  /*
+   * Callback-scoped handle for the current logical drag session. Do not store
+   * it beyond the callback that delivered this event.
+   *
+   * maru_setDropSessionUserdata() stores application state on the underlying
+   * logical drag session so that later DnD callbacks in the same session can
+   * recover it through their own callback-scoped handle.
+   */
   MARU_DropSession* session;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   MARU_PathList paths;
@@ -690,6 +716,11 @@ typedef struct MARU_DropEvent {
 } MARU_DropEvent;
 
 typedef struct MARU_DropExitedEvent {
+  /*
+   * Callback-scoped handle for the logical drag session that just ended for
+   * this window. Do not store it beyond the callback that delivered this
+   * event.
+   */
   MARU_DropSession* session;
 } MARU_DropExitedEvent;
 
@@ -752,7 +783,7 @@ typedef struct MARU_TextEditUpdatedEvent {
   uint64_t session_id;
   /* Borrowed callback-scoped UTF-8. Copy what you need before returning. */
   const char* preedit_utf8;
-  uint32_t preedit_length;
+  uint32_t preedit_length_bytes;
   MARU_TextRangeUtf8 caret;
   MARU_TextRangeUtf8 selection;
 } MARU_TextEditUpdatedEvent;
@@ -763,7 +794,7 @@ typedef struct MARU_TextEditCommittedEvent {
   uint32_t delete_after_bytes;
   /* Borrowed callback-scoped UTF-8. Copy what you need before returning. */
   const char* committed_utf8;
-  uint32_t committed_length;
+  uint32_t committed_length_bytes;
 } MARU_TextEditCommittedEvent;
 
 typedef struct MARU_TextEditEndedEvent {
@@ -1038,6 +1069,11 @@ typedef struct MARU_VideoMode {
 } MARU_VideoMode;
 
 typedef struct MARU_VideoModeList {
+  /*
+   * Borrowed monitor-owned storage. Valid until the monitor is lost or
+   * destroyed, or until the backend refreshes that monitor's mode cache.
+   * Reacquire after monitor topology/mode changes if you need a fresh view.
+   */
   const MARU_VideoMode* modes;
   uint32_t count;
 } MARU_VideoModeList;
@@ -1066,6 +1102,10 @@ static inline MARU_Scalar maru_getMonitorScale(const MARU_Monitor* monitor);
 MARU_API MARU_Status maru_getMonitors(MARU_Context* context, MARU_MonitorList* out_list);
 MARU_API void maru_retainMonitor(MARU_Monitor* monitor);
 MARU_API void maru_releaseMonitor(MARU_Monitor* monitor);
+/*
+ * Returns a borrowed mode list owned by `monitor`; see MARU_VideoModeList for
+ * lifetime details.
+ */
 MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor* monitor,
                                           MARU_VideoModeList* out_list);
 MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor* monitor, MARU_VideoMode mode);
@@ -1195,7 +1235,11 @@ typedef struct MARU_WindowAttributes {
 
 typedef struct MARU_WindowCreateInfo {
   MARU_WindowAttributes attributes;
-  /* Consumed during maru_createWindow(); it need only outlive that call. */
+  /*
+   * Optional platform app identity. NULL leaves it unset.
+   *
+   * Consumed during maru_createWindow(); it need only outlive that call.
+   */
   const char* app_id;
   MARU_ContentType content_type;
 
@@ -1235,7 +1279,7 @@ typedef struct MARU_WindowCreateInfo {
                   .surrounding_text = NULL,                     \
                   .surrounding_cursor_byte = 0,                 \
                   .surrounding_anchor_byte = 0},                \
-   .app_id = "maru.app",                                        \
+   .app_id = NULL,                                              \
    .content_type = MARU_CONTENT_TYPE_NONE,                      \
    .decorated = true,                                           \
    .userdata = NULL}
@@ -1390,6 +1434,23 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window* window,
                                                 MARU_DataExchangeTarget target,
                                                 MARU_MIMETypeList* out_list);
 
+/*
+ * Drop-session helpers operate on callback-scoped handles delivered through
+ * MARU_EVENT_DROP_ENTERED / HOVERED / EXITED / DROPPED.
+ *
+ * The handle itself is only valid for the duration of the callback that
+ * delivered it and must not be stored.
+ *
+ * maru_setDropSessionUserdata() / maru_getDropSessionUserdata() let you attach
+ * application state to the underlying logical drag session so later DnD
+ * callbacks in that same session can recover it through their own callback-
+ * scoped handle.
+ *
+ * maru_setDropSessionAction() is only meaningful during
+ * MARU_EVENT_DROP_ENTERED and MARU_EVENT_DROP_HOVERED. The selected action is
+ * consumed by the backend before that callback returns. Calling it during
+ * MARU_EVENT_DROP_EXITED or MARU_EVENT_DROP_DROPPED has no defined effect.
+ */
 static inline void maru_setDropSessionAction(MARU_DropSession* session, MARU_DropAction action);
 static inline MARU_DropAction maru_getDropSessionAction(const MARU_DropSession* session);
 static inline void maru_setDropSessionUserdata(MARU_DropSession* session, void* userdata);
@@ -1438,7 +1499,8 @@ MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
    MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED) | MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_CHANGED) | \
    MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED) | MARU_EVENT_MASK(MARU_EVENT_IDLE_CHANGED) |      \
    MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME) | MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED) |   \
-   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_ENDED) | MARU_EVENT_MASK(MARU_EVENT_USER_0) |           \
+   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_ENDED) | MARU_EVENT_MASK(MARU_EVENT_DRAG_FINISHED) |    \
+   MARU_EVENT_MASK(MARU_EVENT_USER_0) |                                                          \
    MARU_EVENT_MASK(MARU_EVENT_USER_1) | MARU_EVENT_MASK(MARU_EVENT_USER_2) |                    \
    MARU_EVENT_MASK(MARU_EVENT_USER_3) | MARU_EVENT_MASK(MARU_EVENT_USER_4) |                    \
    MARU_EVENT_MASK(MARU_EVENT_USER_5) | MARU_EVENT_MASK(MARU_EVENT_USER_6) |                    \
@@ -1526,11 +1588,6 @@ static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool ena
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, MARU_Image* icon);
-static inline MARU_Status maru_requestText(MARU_Window* window,
-                                           MARU_DataExchangeTarget target,
-                                           void* userdata);
-static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window* window,
-                                                              MARU_TextInputType type);
 static inline bool maru_applyTextEditCommitUtf8(char* buffer,
                                                 uint32_t capacity_bytes,
                                                 uint32_t* inout_length,

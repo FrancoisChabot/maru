@@ -59,9 +59,10 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
            << " Sel: [" << e.text_edit_updated.selection.start_byte << ", " << e.text_edit_updated.selection.length_byte << "]";
     } else if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) {
         const std::string committed =
-            (e.text_edit_committed.committed_utf8 && e.text_edit_committed.committed_length > 0)
+            (e.text_edit_committed.committed_utf8 &&
+             e.text_edit_committed.committed_length_bytes > 0)
                 ? std::string(e.text_edit_committed.committed_utf8,
-                              e.text_edit_committed.committed_length)
+                              e.text_edit_committed.committed_length_bytes)
                 : std::string();
         ss << "IME Commit: Session=" << e.text_edit_committed.session_id
            << " Del: (" << e.text_edit_committed.delete_before_bytes << ", " << e.text_edit_committed.delete_after_bytes << ")"
@@ -74,7 +75,12 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
            << " Minimized: " << (e.window_state_changed.minimized ? "YES" : "NO")
            << " Maximized: " << (e.window_state_changed.maximized ? "YES" : "NO")
            << " Focused: " << (e.window_state_changed.focused ? "YES" : "NO")
-           << " Icon: " << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) ? "CHANGED" : "NO");
+           << " Fullscreen: " << (e.window_state_changed.fullscreen ? "YES" : "NO")
+           << " Resizable: " << (e.window_state_changed.resizable ? "YES" : "NO")
+           << " Decorated: " << (e.window_state_changed.decorated ? "YES" : "NO")
+           << " Icon: " << (e.window_state_changed.icon ? "SET" : "NONE")
+           << " IconChanged: "
+           << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) ? "YES" : "NO");
     } else if (type == MARU_EVENT_MONITOR_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_changed.monitor << " Connected: " << (e.monitor_changed.connected ? "YES" : "NO");
     } else if (type == MARU_EVENT_DROP_ENTERED) {

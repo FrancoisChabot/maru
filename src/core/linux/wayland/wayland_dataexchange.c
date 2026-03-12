@@ -746,7 +746,7 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
   if (!meta) return;
 
   MARU_DropAction action = MARU_DROP_ACTION_NONE;
-  MARU_DropSessionExposed session_exposed = {
+  MARU_DropSessionPrefix session_exposed = {
       .action = &action,
       .session_userdata = &ctx->clipboard.dnd_session_userdata,
   };
@@ -782,7 +782,7 @@ static void _clipboard_data_device_leave(void *data, struct wl_data_device *data
   MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (window) {
     MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
-    MARU_DropSessionExposed session_exposed = {
+    MARU_DropSessionPrefix session_exposed = {
         .action = &dummy_action,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };
@@ -812,7 +812,7 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   if (!meta) return;
 
   MARU_DropAction action = MARU_DROP_ACTION_NONE;
-  MARU_DropSessionExposed session_exposed = {
+  MARU_DropSessionPrefix session_exposed = {
       .action = &action,
       .session_userdata = &ctx->clipboard.dnd_session_userdata,
   };
@@ -871,7 +871,7 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
                          "text/uri-list", (void *)1);
   } else {
     MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
-    MARU_DropSessionExposed session_exposed = {
+    MARU_DropSessionPrefix session_exposed = {
         .action = &dummy_action,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };
@@ -1434,7 +1434,7 @@ void _maru_wayland_dataexchange_handle_internal_transfer_complete(
     MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_drop.offer);
     
     MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
-    MARU_DropSessionExposed session_exposed = {
+    MARU_DropSessionPrefix session_exposed = {
         .action = &dummy_action,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };

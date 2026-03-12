@@ -13,6 +13,11 @@ static void diagnostic_cb(const MARU_DiagnosticInfo* info, void* userdata) {
     state->call_count++;
 }
 
+UTEST(DiagnosticTest, WindowCreateInfoDefaultLeavesAppIdUnset) {
+    MARU_WindowCreateInfo create_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
+    EXPECT_TRUE(create_info.app_id == NULL);
+}
+
 UTEST(DiagnosticTest, UpdateContextAndReport) {
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
     MARU_TestTrackingAllocator tracking = {0};

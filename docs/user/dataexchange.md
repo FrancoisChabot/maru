@@ -70,13 +70,15 @@ You will then receive the following events:
 
 In `DROP_ENTERED` and `DROP_HOVERED`, you must provide feedback to the OS about whether you accept the drop and what action (Copy, Move, Link) you will take.
 
+The `session` handle delivered in DnD events is callback-scoped: do not store it after the callback returns. If you need to carry application state across callbacks for the same drag session, use `maru_setDropSessionUserdata()` and recover it from the next callback's `session` handle.
+
 ```c
 if (type == MARU_EVENT_DROP_HOVERED) {
     // We only accept plain text
-    if (has_mime_type(event->drop_hover.available_types, "text/plain")) {
-        *event->drop_hover.feedback->action = MARU_DROP_ACTION_COPY;
+    if (has_mime_type(event->drop_hovered.available_types, "text/plain")) {
+        maru_setDropSessionAction(event->drop_hovered.session, MARU_DROP_ACTION_COPY);
     } else {
-        *event->drop_hover.feedback->action = MARU_DROP_ACTION_NONE;
+        maru_setDropSessionAction(event->drop_hovered.session, MARU_DROP_ACTION_NONE);
     }
 }
 ```

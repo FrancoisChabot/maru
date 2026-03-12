@@ -14,7 +14,7 @@ A `MARU_Queue` operates in three distinct phases:
 On the queue creator thread, call `maru_pumpEvents(...)` and forward queue-safe events into `maru_pushQueue(...)` from your callback.
 
 Use `MARU_QUEUE_SAFE_EVENT_MASK` when pumping, or `maru_isQueueSafeEventId(type)` if you prefer to filter inside your callback.
-This mask intentionally excludes data-exchange events, monitor/controller handle events, and pointer-bearing text-edit payloads.
+This mask intentionally excludes any event payload that contains transient handles or borrowed pointers, including data-exchange events, monitor/controller events, pointer-bearing text-edit updates, and window-state snapshots that carry a borrowed icon handle.
 
 ### 2. Committing
 When ready to process pushed events, call `maru_commitQueue()` on the queue creator thread. This freezes the active buffer as the stable snapshot, then clears the active buffer for the next frame.

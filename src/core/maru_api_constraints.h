@@ -574,6 +574,7 @@ static inline void _maru_validate_getMonitorModes(const MARU_Monitor *monitor,
                                                   MARU_VideoModeList *out_list) {
   MARU_CONSTRAINT_CHECK(monitor != NULL);
   MARU_CONSTRAINT_CHECK(out_list != NULL);
+  _maru_validate_thread(((const MARU_Monitor_Base *)monitor)->ctx_base);
 }
 
 static inline void _maru_validate_setMonitorMode(const MARU_Monitor *monitor,
@@ -677,6 +678,7 @@ static inline void _maru_validate_getVkExtensions(const MARU_Context *context,
                                                   MARU_VkExtensionList *out_list) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(out_list != NULL);
+  _maru_validate_thread((const MARU_Context_Base *)context);
 }
 
 static inline void

@@ -24,6 +24,8 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 
 - Transient lists and event-backed pointers are generally valid only until the next call to `maru_pumpEvents()`.
 - Monitor and controller handles obtained from lists or events are transient. Retain them if you need to store them beyond the current pump cycle.
+- Drop-session handles are callback-scoped. They are valid only for the duration of the DnD callback that delivered them and must not be stored.
+- Drop-session userdata persists across callbacks for the same logical drag session, but you recover it through the callback-scoped handle delivered to each callback.
 - A window handle may exist before it is ready. Operations that need the native window to exist must wait for `MARU_EVENT_WINDOW_READY` or `maru_isWindowReady(window)`.
 - Validation builds require these window operations to target a ready, non-lost window:
   - `maru_updateWindow()`
@@ -78,6 +80,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - The allowed drop action mask may only contain `COPY`, `MOVE`, and `LINK`.
 - `maru_provideData()` requires `data != NULL` when `size > 0`.
 - `maru_provideData()` flags may only contain documented bits.
+- `maru_setDropSessionAction()` is only meaningful during `MARU_EVENT_DROP_ENTERED` and `MARU_EVENT_DROP_HOVERED`.
 
 ### Native Handles And Vulkan
 

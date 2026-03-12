@@ -56,7 +56,7 @@ typedef struct MARU_CursorAnimationCallbacks {
 } MARU_CursorAnimationCallbacks;
 
 typedef struct MARU_Context_Base {
-  MARU_ContextExposed pub;
+  MARU_ContextPrefix pub;
 #ifdef MARU_INDIRECT_BACKEND
   const struct MARU_Backend *backend;
 #endif
@@ -99,7 +99,7 @@ typedef struct MARU_Context_Base {
 } MARU_Context_Base;
 
 typedef struct MARU_Window_Base {
-  MARU_WindowExposed pub;
+  MARU_WindowPrefix pub;
 #ifdef MARU_INDIRECT_BACKEND
   const struct MARU_Backend *backend;
 #endif
@@ -119,7 +119,7 @@ typedef struct MARU_Window_Base {
 } MARU_Window_Base;
 
 struct MARU_Cursor_Base {
-  MARU_CursorExposed pub;
+  MARU_CursorPrefix pub;
 #ifdef MARU_INDIRECT_BACKEND
   const struct MARU_Backend *backend;
 #endif
@@ -136,7 +136,7 @@ struct MARU_Cursor_Base {
 };
 
 typedef struct MARU_Image_Base {
-  MARU_ImageExposed pub;
+  MARU_ImagePrefix pub;
 #ifdef MARU_INDIRECT_BACKEND
   const struct MARU_Backend *backend;
 #endif
@@ -154,7 +154,7 @@ typedef enum MARU_InternalEventId {
 } MARU_InternalEventId;
 
 typedef struct MARU_Monitor_Base {
-  MARU_MonitorExposed pub;
+  MARU_MonitorPrefix pub;
 #ifdef MARU_INDIRECT_BACKEND
   const struct MARU_Backend *backend;
 #endif
@@ -166,7 +166,7 @@ typedef struct MARU_Monitor_Base {
 } MARU_Monitor_Base;
 
 typedef struct MARU_Controller_Base {
-  MARU_ControllerExposed pub;
+  MARU_ControllerPrefix pub;
 #ifdef MARU_INDIRECT_BACKEND
   const struct MARU_Backend *backend;
 #endif

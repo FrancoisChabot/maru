@@ -17,7 +17,7 @@ typedef enum MARU_LinuxWorkerMessage {
 } MARU_LinuxWorkerMessage;
 
 typedef struct MARU_LinuxController {
-  MARU_ControllerExposed base;
+  MARU_ControllerPrefix base;
   int fd;
   char *syspath;
   char *devnode;
