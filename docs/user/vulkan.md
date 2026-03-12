@@ -57,8 +57,8 @@ The event payload contains the new pixel size of the window, which you should us
 
 ```c
 if (type == MARU_EVENT_WINDOW_RESIZED) {
-    uint32_t width = (uint32_t)event->resized.geometry.px_size.x;
-    uint32_t height = (uint32_t)event->resized.geometry.px_size.y;
+    uint32_t width = (uint32_t)event->window_resized.geometry.px_size.x;
+    uint32_t height = (uint32_t)event->window_resized.geometry.px_size.y;
 
     // Recreate swapchain with new width and height
     recreate_swapchain(width, height);

@@ -29,7 +29,6 @@ const MARU_Backend maru_backend_Cocoa = {
   .getControllers = maru_getControllers_Cocoa,
   .retainController = maru_retainController_Cocoa,
   .releaseController = maru_releaseController_Cocoa,
-  .resetControllerMetrics = maru_resetControllerMetrics_Cocoa,
   .getControllerInfo = maru_getControllerInfo_Cocoa,
   .setControllerHapticLevels = maru_setControllerHapticLevels_Cocoa,
 
@@ -43,7 +42,6 @@ const MARU_Backend maru_backend_Cocoa = {
   .releaseMonitor = maru_releaseMonitor_Cocoa,
   .getMonitorModes = maru_getMonitorModes_Cocoa,
   .setMonitorMode = maru_setMonitorMode_Cocoa,
-  .resetMonitorMetrics = maru_resetMonitorMetrics_Cocoa,
 
   .getContextNativeHandle = _maru_getContextNativeHandle_Cocoa,
   .getWindowNativeHandle = _maru_getWindowNativeHandle_Cocoa,
@@ -141,12 +139,6 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   return maru_destroyCursor_Cocoa(cursor);
 }
 
-MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
-  MARU_API_VALIDATE(resetCursorMetrics, cursor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_cursor_context_lost(cursor));
-  return maru_resetCursorMetrics_Cocoa(cursor);
-}
-
 MARU_API MARU_Status maru_createImage(MARU_Context *context,
                                       const MARU_ImageCreateInfo *create_info,
                                       MARU_Image **out_image) {
@@ -168,21 +160,9 @@ MARU_API MARU_Status maru_getControllers(MARU_Context *context,
   return maru_getControllers_Cocoa(context, out_list);
 }
 
-MARU_API void maru_retainController(MARU_Controller *controller) {
-  MARU_API_VALIDATE(retainController, controller);
-  maru_retainController_Cocoa(controller);
-}
-
 MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
   maru_releaseController_Cocoa(controller);
-}
-
-MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
-  MARU_API_VALIDATE(resetControllerMetrics, controller);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(resetControllerMetrics, controller);
-  return maru_resetControllerMetrics_Cocoa(controller);
 }
 
 MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
@@ -268,13 +248,6 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
   MARU_API_VALIDATE_LIVE(setMonitorMode, monitor, mode);
   return maru_setMonitorMode_Cocoa(monitor, mode);
-}
-
-MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
-  MARU_API_VALIDATE_LIVE(resetMonitorMetrics, monitor);
-  return maru_resetMonitorMetrics_Cocoa(monitor);
 }
 
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,

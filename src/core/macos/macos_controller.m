@@ -100,7 +100,6 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     c->base.pub.analogs = c->analog_states;
     c->base.pub.button_channels = c->button_channel_infos;
     c->base.pub.buttons = c->button_states;
-    c->base.pub.metrics = &c->base.metrics;
 
     if (gc.vendorName) {
         c->base.pub.name = [gc.vendorName UTF8String];
@@ -300,12 +299,6 @@ void maru_releaseController_Cocoa(MARU_Controller *controller) {
             return;
         }
     }
-}
-
-MARU_Status maru_resetControllerMetrics_Cocoa(MARU_Controller *controller) {
-    MARU_Controller_Base *c = (MARU_Controller_Base *)controller;
-    memset(&c->metrics, 0, sizeof(MARU_ControllerMetrics));
-    return MARU_SUCCESS;
 }
 
 MARU_Status maru_getControllerInfo_Cocoa(const MARU_Controller *controller,

@@ -182,16 +182,16 @@ static void _maru_x11_dispatch_state_changed(MARU_Window_X11 *window,
                                                   uint32_t changed_fields) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)window->base.ctx_base;
   MARU_Event evt = {0};
-  evt.state_changed.changed_fields = changed_fields;
-  evt.state_changed.visible =
+  evt.window_state_changed.changed_fields = changed_fields;
+  evt.window_state_changed.visible =
       (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-  evt.state_changed.minimized =
+  evt.window_state_changed.minimized =
       (window->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-  evt.state_changed.maximized =
+  evt.window_state_changed.maximized =
       (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-  evt.state_changed.focused =
+  evt.window_state_changed.focused =
       (window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-  evt.state_changed.icon_changed =
+  evt.window_state_changed.icon_changed =
       (changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) != 0;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
@@ -721,7 +721,6 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->base.ctx_base = &ctx->base;
   win->base.pub.context = context;
   win->base.pub.userdata = create_info->userdata;
-  win->base.pub.metrics = &win->base.metrics;
   win->base.pub.cursor_mode = create_info->attributes.cursor_mode;
   win->base.pub.current_cursor = create_info->attributes.cursor;
   win->base.pub.title = NULL;
@@ -830,7 +829,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
                             (MARU_Window *)win, &mevt);
 
   MARU_Event revt = {0};
-  maru_getWindowGeometry_X11((MARU_Window *)win, &revt.resized.geometry);
+  maru_getWindowGeometry_X11((MARU_Window *)win, &revt.window_resized.geometry);
   _maru_post_event_internal(&ctx->base, MARU_EVENT_WINDOW_RESIZED,
                             (MARU_Window *)win, &revt);
 
@@ -983,7 +982,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
       if (size_changed || scale_changed) {
         MARU_Event mevt = {0};
-        maru_getWindowGeometry_X11((MARU_Window *)win, &mevt.resized.geometry);
+        maru_getWindowGeometry_X11((MARU_Window *)win, &mevt.window_resized.geometry);
         _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED,
                              (MARU_Window *)win, &mevt);
       }
@@ -1060,9 +1059,9 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
       (void)_maru_x11_apply_window_cursor_mode(ctx, win);
       _maru_x11_refresh_text_input_state(ctx, win);
       MARU_Event mevt = {0};
-      mevt.state_changed.changed_fields =
+      mevt.window_state_changed.changed_fields =
           MARU_WINDOW_STATE_CHANGED_FOCUSED;
-      mevt.state_changed.focused = true;
+      mevt.window_state_changed.focused = true;
       _maru_dispatch_event(&ctx->base,
                            MARU_EVENT_WINDOW_STATE_CHANGED,
                            (MARU_Window *)win, &mevt);
@@ -1082,9 +1081,9 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
         ctx->linux_common.xkb.focused_window = NULL;
       }
       MARU_Event mevt = {0};
-      mevt.state_changed.changed_fields =
+      mevt.window_state_changed.changed_fields =
           MARU_WINDOW_STATE_CHANGED_FOCUSED;
-      mevt.state_changed.focused = false;
+      mevt.window_state_changed.focused = false;
       _maru_dispatch_event(&ctx->base,
                            MARU_EVENT_WINDOW_STATE_CHANGED,
                            (MARU_Window *)win, &mevt);
@@ -1170,7 +1169,7 @@ void _maru_x11_dispatch_pending_frames(MARU_Context_X11 *ctx) {
         }
 
         MARU_Event evt = {0};
-        evt.frame.timestamp_ms = (uint32_t)now_ms;
+        evt.window_frame.timestamp_ms = (uint32_t)now_ms;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME,
                              (MARU_Window *)win, &evt);
 

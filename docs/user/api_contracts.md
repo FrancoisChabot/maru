@@ -36,10 +36,8 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - Validation builds require these device operations to target a non-lost handle:
   - `maru_getControllerInfo()`
   - `maru_setControllerHapticLevels()`
-  - `maru_resetControllerMetrics()`
   - `maru_getMonitorModes()`
   - `maru_setMonitorMode()`
-  - `maru_resetMonitorMetrics()`
 
 ## Cross-Context Ownership
 

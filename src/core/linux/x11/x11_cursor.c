@@ -446,7 +446,6 @@ MARU_Status maru_createCursor_X11(MARU_Context *context,
   memset(cursor, 0, sizeof(MARU_Cursor_X11));
 
   cursor->base.ctx_base = &ctx->base;
-  cursor->base.pub.metrics = &cursor->base.metrics;
   cursor->base.pub.userdata = create_info->userdata;
   cursor->base.pub.flags = is_system ? MARU_CURSOR_FLAG_SYSTEM : 0;
 #ifdef MARU_INDIRECT_BACKEND
@@ -531,12 +530,6 @@ MARU_Status maru_destroyCursor_X11(MARU_Cursor *cursor) {
   }
 
   maru_context_free(&ctx->base, cur);
-  return MARU_SUCCESS;
-}
-
-MARU_Status maru_resetCursorMetrics_X11(MARU_Cursor *cursor) {
-  MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
-  memset(&cur_base->metrics, 0, sizeof(MARU_CursorMetrics));
   return MARU_SUCCESS;
 }
 

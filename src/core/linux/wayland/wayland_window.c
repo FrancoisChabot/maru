@@ -86,7 +86,7 @@ void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
 
   window->pending_resized_event = false;
   MARU_Event evt = {0};
-  maru_getWindowGeometry_WL((MARU_Window *)window, &evt.resized.geometry);
+  maru_getWindowGeometry_WL((MARU_Window *)window, &evt.window_resized.geometry);
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)window, &evt);
 }
 
@@ -521,7 +521,7 @@ static void _wl_frame_callback_done(void *data, struct wl_callback *callback,
   maru_wl_callback_destroy(ctx, callback);
 
   MARU_Event evt = {0};
-  evt.frame.timestamp_ms = callback_data;
+  evt.window_frame.timestamp_ms = callback_data;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME, (MARU_Window *)window, &evt);
 }
 
@@ -611,7 +611,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
   window->base.pub.context = context;
-  window->base.pub.metrics = &window->base.metrics;
   window->base.attrs_requested = create_info->attributes;
   window->base.attrs_effective = create_info->attributes;
   window->base.attrs_dirty_mask = MARU_WINDOW_ATTR_ALL;

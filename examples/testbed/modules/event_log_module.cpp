@@ -34,8 +34,8 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
     
     std::stringstream ss;
     if (type == MARU_EVENT_WINDOW_RESIZED) {
-        ss << "Size: " << e.resized.geometry.dip_size.x << "x" << e.resized.geometry.dip_size.y 
-           << " (Pix: " << e.resized.geometry.px_size.x << "x" << e.resized.geometry.px_size.y << ")";
+        ss << "Size: " << e.window_resized.geometry.dip_size.x << "x" << e.window_resized.geometry.dip_size.y 
+           << " (Pix: " << e.window_resized.geometry.px_size.x << "x" << e.window_resized.geometry.px_size.y << ")";
     } else if (type == MARU_EVENT_KEY_CHANGED) {
         ss << "Key: " << (int)e.key_changed.raw_key << " State: " << (e.key_changed.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
            << " Mods: " << formatModifiers(e.key_changed.modifiers);
@@ -69,12 +69,12 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
     } else if (type == MARU_EVENT_TEXT_EDIT_ENDED) {
         ss << "IME End: Session=" << e.text_edit_ended.session_id << " Canceled: " << (e.text_edit_ended.canceled ? "YES" : "NO");
     } else if (type == MARU_EVENT_WINDOW_STATE_CHANGED) {
-        ss << "ChangedMask=0x" << std::hex << e.state_changed.changed_fields << std::dec
-           << " Visible: " << (e.state_changed.visible ? "YES" : "NO")
-           << " Minimized: " << (e.state_changed.minimized ? "YES" : "NO")
-           << " Maximized: " << (e.state_changed.maximized ? "YES" : "NO")
-           << " Focused: " << (e.state_changed.focused ? "YES" : "NO")
-           << " Icon: " << (e.state_changed.icon_changed ? "YES" : "NO");
+        ss << "ChangedMask=0x" << std::hex << e.window_state_changed.changed_fields << std::dec
+           << " Visible: " << (e.window_state_changed.visible ? "YES" : "NO")
+           << " Minimized: " << (e.window_state_changed.minimized ? "YES" : "NO")
+           << " Maximized: " << (e.window_state_changed.maximized ? "YES" : "NO")
+           << " Focused: " << (e.window_state_changed.focused ? "YES" : "NO")
+           << " Icon: " << (e.window_state_changed.icon_changed ? "YES" : "NO");
     } else if (type == MARU_EVENT_MONITOR_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_changed.monitor << " Connected: " << (e.monitor_changed.connected ? "YES" : "NO");
     } else if (type == MARU_EVENT_DROP_ENTERED) {

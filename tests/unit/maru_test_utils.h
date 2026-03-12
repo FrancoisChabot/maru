@@ -339,7 +339,6 @@ static const MARU_Backend _maru_mock_backend = {
 
     .getMonitorModes = NULL,
     .setMonitorMode = NULL,
-    .resetMonitorMetrics = NULL,
     .getContextNativeHandle = NULL,
     .getWindowNativeHandle = NULL,
 };

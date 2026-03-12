@@ -25,12 +25,6 @@ void *maru_getWindowNativeHandle_WL(MARU_Window *window) {
 
 
 #ifdef MARU_INDIRECT_BACKEND
-MARU_Status maru_resetMonitorMetrics_WL(MARU_Monitor *monitor) {
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
-  return MARU_SUCCESS;
-}
-
 const MARU_Backend maru_backend_WL = {
   .destroyContext = maru_destroyContext_WL,
   .updateContext = maru_updateContext_WL,
@@ -48,7 +42,6 @@ const MARU_Backend maru_backend_WL = {
   .getControllers = maru_getControllers_WL,
   .retainController = maru_retainController_WL,
   .releaseController = maru_releaseController_WL,
-  .resetControllerMetrics = maru_resetControllerMetrics_WL,
   .getControllerInfo = maru_getControllerInfo_WL,
   .setControllerHapticLevels = maru_setControllerHapticLevels_WL,
   .announceData = maru_announceData_WL,
@@ -61,7 +54,6 @@ const MARU_Backend maru_backend_WL = {
   .releaseMonitor = maru_releaseMonitor_WL,
   .getMonitorModes = maru_getMonitorModes_WL,
   .setMonitorMode = maru_setMonitorMode_WL,
-  .resetMonitorMetrics = maru_resetMonitorMetrics_WL,
   .getContextNativeHandle = maru_getContextNativeHandle_WL,
   .getWindowNativeHandle = maru_getWindowNativeHandle_WL,
   .getVkExtensions = maru_getVkExtensions_WL,
@@ -162,13 +154,6 @@ MARU_API void maru_releaseController(MARU_Controller *controller) {
   maru_releaseController_WL(controller);
 }
 
-MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
-  MARU_API_VALIDATE(resetControllerMetrics, controller);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(resetControllerMetrics, controller);
-  return maru_resetControllerMetrics_WL(controller);
-}
-
 MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
                                             MARU_ControllerInfo *out_info) {
   MARU_API_VALIDATE(getControllerInfo, controller, out_info);
@@ -227,14 +212,6 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
   MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(getAvailableMIMETypes, window, target, out_list);
   return maru_getAvailableMIMETypes_WL(window, target, out_list);
-}
-
-MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
-  MARU_API_VALIDATE(resetCursorMetrics, cursor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_cursor_context_lost(cursor));
-  MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
-  memset(&cur_base->metrics, 0, sizeof(MARU_CursorMetrics));
-  return MARU_SUCCESS;
 }
 
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
@@ -298,15 +275,6 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
   MARU_API_VALIDATE_LIVE(setMonitorMode, monitor, mode);
   return maru_setMonitorMode_WL(monitor, mode);
-}
-
-MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
-  MARU_API_VALIDATE_LIVE(resetMonitorMetrics, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  memset(&mon_base->metrics, 0, sizeof(MARU_MonitorMetrics));
-  return MARU_SUCCESS;
 }
 
 MARU_API MARU_WaylandContextHandle

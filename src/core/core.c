@@ -433,15 +433,6 @@ MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
-MARU_API MARU_Status maru_resetWindowMetrics(MARU_Window *window) {
-  MARU_API_VALIDATE(resetWindowMetrics, window);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(resetWindowMetrics, window);
-  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
-  memset(&win_base->metrics, 0, sizeof(MARU_WindowMetrics));
-  return MARU_SUCCESS;
-}
-
 MARU_API MARU_Version maru_getVersion(void) {
   return (MARU_Version){.major = MARU_VERSION_MAJOR,
                         .minor = MARU_VERSION_MINOR,

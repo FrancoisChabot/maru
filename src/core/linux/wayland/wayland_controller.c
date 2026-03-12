@@ -55,11 +55,6 @@ void maru_releaseController_WL(MARU_Controller *controller) {
   }
 }
 
-MARU_Status maru_resetControllerMetrics_WL(MARU_Controller *controller) {
-  (void)controller;
-  return MARU_SUCCESS;
-}
-
 MARU_Status maru_getControllerInfo_WL(const MARU_Controller *controller,
                                       MARU_ControllerInfo *out_info) {
   MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;

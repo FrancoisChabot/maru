@@ -28,7 +28,6 @@ typedef struct MARU_Backend {
   __typeof__(maru_getControllers) *getControllers;
   __typeof__(maru_retainController) *retainController;
   __typeof__(maru_releaseController) *releaseController;
-  __typeof__(maru_resetControllerMetrics) *resetControllerMetrics;
   __typeof__(maru_getControllerInfo) *getControllerInfo;
   __typeof__(maru_setControllerHapticLevels) *setControllerHapticLevels;
 
@@ -42,7 +41,6 @@ typedef struct MARU_Backend {
   __typeof__(maru_releaseMonitor) *releaseMonitor;
   __typeof__(maru_getMonitorModes) *getMonitorModes;
   __typeof__(maru_setMonitorMode) *setMonitorMode;
-  __typeof__(maru_resetMonitorMetrics) *resetMonitorMetrics;
 
   void *(*getContextNativeHandle)(MARU_Context *context);
   void *(*getWindowNativeHandle)(MARU_Window *window);

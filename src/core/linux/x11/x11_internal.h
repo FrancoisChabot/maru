@@ -339,7 +339,6 @@ MARU_Status maru_requestWindowAttention_X11(MARU_Window *window);
 
 MARU_Status maru_createCursor_X11(MARU_Context *context, const MARU_CursorCreateInfo *create_info, MARU_Cursor **out_cursor);
 MARU_Status maru_destroyCursor_X11(MARU_Cursor *cursor);
-MARU_Status maru_resetCursorMetrics_X11(MARU_Cursor *cursor);
 MARU_Status maru_createImage_X11(MARU_Context *context, const MARU_ImageCreateInfo *create_info, MARU_Image **out_image);
 MARU_Status maru_destroyImage_X11(MARU_Image *image);
 
@@ -348,7 +347,6 @@ void maru_retainMonitor_X11(MARU_Monitor *monitor);
 void maru_releaseMonitor_X11(MARU_Monitor *monitor);
 MARU_Status maru_getMonitorModes_X11(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode mode);
-MARU_Status maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
 
 MARU_Status maru_announceData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_X11(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);

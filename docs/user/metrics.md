@@ -4,11 +4,9 @@ Maru provides built-in metrics and instrumentation to help you monitor the healt
 
 ## Metrics
 
-Maru objects (Context, Window, Monitor) collect various runtime statistics. These are accessible through "getter" functions:
+Maru objects (currently only the Context) collect various runtime statistics. These are accessible through a "getter" function:
 
 - `maru_getContextMetrics(context)`
-- `maru_getWindowMetrics(window)`
-- `maru_getMonitorMetrics(monitor)`
 
 ### Context Metrics
 
@@ -30,8 +28,6 @@ printf("Peak event queue count: %u\n", metrics->user_events->peak_count);
 Most metrics are cumulative. You can reset them using:
 
 - `maru_resetContextMetrics(context)`
-- `maru_resetWindowMetrics(window)`
-- `maru_resetMonitorMetrics(monitor)`
 
 ---
 

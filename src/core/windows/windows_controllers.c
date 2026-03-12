@@ -533,7 +533,6 @@ static MARU_Controller_Windows *_maru_windows_controller_create_common(
   }
 
   ctrl->base.pub.context = (MARU_Context *)ctx;
-  ctrl->base.pub.metrics = &ctrl->base.metrics;
 
   return ctrl;
 }
@@ -1323,12 +1322,6 @@ void maru_releaseController_Windows(MARU_Controller *controller) {
                                 memory_order_acq_rel) == 1u) {
     _maru_controller_free(&ctrl->base);
   }
-}
-
-MARU_Status maru_resetControllerMetrics_Windows(MARU_Controller *controller) {
-  MARU_Controller_Windows *ctrl = (MARU_Controller_Windows *)controller;
-  memset(&ctrl->base.metrics, 0, sizeof(ctrl->base.metrics));
-  return MARU_SUCCESS;
 }
 
 MARU_Status maru_getControllerInfo_Windows(const MARU_Controller *controller,

@@ -93,7 +93,6 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
         memset(monitor, 0, sizeof(*monitor));
         monitor->base.ctx_base = &ctx->base;
         monitor->base.pub.context = (MARU_Context *)ctx;
-        monitor->base.pub.metrics = &monitor->base.metrics;
         monitor->base.pub.scale = (MARU_Scalar)1.0;
         atomic_init(&monitor->base.ref_count, 1u);
 #ifdef MARU_INDIRECT_BACKEND
@@ -346,10 +345,5 @@ MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode 
   mon->base.pub.current_mode = mode;
   ctx->x11_lib.XSync(ctx->display, False);
   _maru_x11_refresh_monitors(ctx);
-  return MARU_SUCCESS;
-}
-
-MARU_Status maru_resetMonitorMetrics_X11(MARU_Monitor *monitor) {
-  (void)monitor;
   return MARU_SUCCESS;
 }

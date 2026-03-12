@@ -244,7 +244,6 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
                                        const MARU_CursorCreateInfo *create_info,
                                        MARU_Cursor **out_cursor);
 MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor);
-MARU_Status maru_resetCursorMetrics_Windows(MARU_Cursor *cursor);
 
 // monitors.h
 MARU_Status maru_updateMonitors_Windows(MARU_Context *context);
@@ -252,13 +251,11 @@ MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
                                          MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
                                         MARU_VideoMode mode);
-MARU_Status maru_resetMonitorMetrics_Windows(MARU_Monitor *monitor);
 
 // controllers.h
 MARU_Status maru_getControllers_Windows(MARU_Context *context, MARU_ControllerList *out_list);
 void maru_retainController_Windows(MARU_Controller *controller);
 void maru_releaseController_Windows(MARU_Controller *controller);
-MARU_Status maru_resetControllerMetrics_Windows(MARU_Controller *controller);
 MARU_Status maru_getControllerInfo_Windows(const MARU_Controller *controller, MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_Windows(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
 

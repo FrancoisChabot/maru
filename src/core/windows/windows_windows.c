@@ -8,12 +8,12 @@
 static void _maru_windows_dispatch_state_event(MARU_Window_Windows *win, uint32_t changed_fields) {
     MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
     MARU_Event evt = {0};
-    evt.state_changed.changed_fields = changed_fields;
-    evt.state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-    evt.state_changed.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-    evt.state_changed.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-    evt.state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-    evt.state_changed.icon_changed = (changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) != 0;
+    evt.window_state_changed.changed_fields = changed_fields;
+    evt.window_state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+    evt.window_state_changed.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+    evt.window_state_changed.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+    evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    evt.window_state_changed.icon_changed = (changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) != 0;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &evt);
 }
 
@@ -121,7 +121,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
                    SWP_NOZORDER | SWP_NOACTIVATE);
 
       MARU_Event evt = {0};
-      evt.resized.geometry = maru_getWindowGeometry_Windows((MARU_Window *)win);
+      evt.window_resized.geometry = maru_getWindowGeometry_Windows((MARU_Window *)win);
       _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &evt);
       return 0;
     }
@@ -411,7 +411,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       }
 
       MARU_Event evt = {0};
-      evt.resized.geometry = maru_getWindowGeometry_Windows((MARU_Window *)win);
+      evt.window_resized.geometry = maru_getWindowGeometry_Windows((MARU_Window *)win);
       _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &evt);
       return 0;
     }
@@ -502,9 +502,8 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   win->base.pending_ready_event = true;
 
   // Initialize public-facing (exposed) part of the window
-  win->base.pub.context = context;
+  win->base.pub.context = (MARU_Context *)ctx;
   win->base.pub.userdata = create_info->userdata;
-  win->base.pub.metrics = &win->base.metrics;
   win->base.pub.cursor_mode = create_info->attributes.cursor_mode;
   win->base.pub.current_cursor = (MARU_Cursor *)create_info->attributes.cursor;
   win->base.pub.title = NULL; // Updated when title is changed or requested

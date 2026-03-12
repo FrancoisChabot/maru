@@ -117,7 +117,7 @@ static void handle_maru_event(MARU_EventId type, MARU_Window *window,
   else if (type == MARU_EVENT_WINDOW_RESIZED && window == g_PrimaryWindow) {
     g_PendingResize = true;
     g_LastResizeAtMs = now_ms();
-    g_PendingViewportSize = event->resized.geometry.dip_size;
+    g_PendingViewportSize = event->window_resized.geometry.dip_size;
     set_window_viewport_size(window, g_PendingViewportSize);
   }
 }

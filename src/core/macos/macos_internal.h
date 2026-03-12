@@ -80,7 +80,6 @@ MARU_Status maru_createCursor_Cocoa(MARU_Context *context,
                                      const MARU_CursorCreateInfo *create_info,
                                      MARU_Cursor **out_cursor);
 MARU_Status maru_destroyCursor_Cocoa(MARU_Cursor *cursor);
-MARU_Status maru_resetCursorMetrics_Cocoa(MARU_Cursor *cursor);
 MARU_Status maru_getStandardCursor_Cocoa(MARU_Context *context,
                                           MARU_CursorShape shape,
                                           MARU_Cursor **out_cursor);
@@ -95,7 +94,6 @@ void _maru_cocoa_cleanup_controller_observer(MARU_Context_Cocoa *ctx);
 void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base);
 void maru_retainController_Cocoa(MARU_Controller *controller);
 void maru_releaseController_Cocoa(MARU_Controller *controller);
-MARU_Status maru_resetControllerMetrics_Cocoa(MARU_Controller *controller);
 MARU_Status maru_getControllerInfo_Cocoa(const MARU_Controller *controller, MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_Cocoa(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
 
@@ -112,7 +110,6 @@ MARU_Status maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor,
                                       MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_Cocoa(const MARU_Monitor *monitor,
                                        MARU_VideoMode mode);
-MARU_Status maru_resetMonitorMetrics_Cocoa(MARU_Monitor *monitor);
 
 MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_VkExtensionList *out_list);
 MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);

@@ -316,11 +316,6 @@ static inline void _maru_validate_resetContextMetrics(MARU_Context *context) {
   _maru_validate_thread((const MARU_Context_Base *)context);
 }
 
-static inline void _maru_validate_resetWindowMetrics(MARU_Window *window) {
-  MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
-}
-
 static inline void
 _maru_validate_createCursor(MARU_Context *context,
                             const MARU_CursorCreateInfo *create_info,
@@ -358,11 +353,6 @@ _maru_validate_createCursor(MARU_Context *context,
 }
 
 static inline void _maru_validate_destroyCursor(MARU_Cursor *cursor) {
-  MARU_CONSTRAINT_CHECK(cursor != NULL);
-  _maru_validate_thread(((const MARU_Cursor_Base *)cursor)->ctx_base);
-}
-
-static inline void _maru_validate_resetCursorMetrics(MARU_Cursor *cursor) {
   MARU_CONSTRAINT_CHECK(cursor != NULL);
   _maru_validate_thread(((const MARU_Cursor_Base *)cursor)->ctx_base);
 }
@@ -406,13 +396,6 @@ _maru_validate_retainController(MARU_Controller *controller) {
 static inline void
 _maru_validate_releaseController(MARU_Controller *controller) {
   MARU_CONSTRAINT_CHECK(controller != NULL);
-}
-
-static inline void
-_maru_validate_resetControllerMetrics(MARU_Controller *controller) {
-  MARU_CONSTRAINT_CHECK(controller != NULL);
-  _maru_validate_thread(
-      (const MARU_Context_Base *)maru_getControllerContext(controller));
 }
 
 static inline void
@@ -541,11 +524,6 @@ static inline void _maru_validate_setMonitorMode(const MARU_Monitor *monitor,
   MARU_CONSTRAINT_CHECK(monitor != NULL);
   _maru_validate_thread(((const MARU_Monitor_Base *)monitor)->ctx_base);
   MARU_CONSTRAINT_CHECK(mode.px_size.x > 0 && mode.px_size.y > 0);
-}
-
-static inline void _maru_validate_resetMonitorMetrics(MARU_Monitor *monitor) {
-  MARU_CONSTRAINT_CHECK(monitor != NULL);
-  _maru_validate_thread(((const MARU_Monitor_Base *)monitor)->ctx_base);
 }
 
 static inline void _maru_validate_getWaylandContextHandle(MARU_Context *context) {

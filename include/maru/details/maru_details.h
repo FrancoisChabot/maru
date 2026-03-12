@@ -42,7 +42,6 @@ typedef struct MARU_ImageExposed {
 typedef struct MARU_CursorExposed {
   void* userdata;
   uint64_t flags;
-  const MARU_CursorMetrics* metrics;
 } MARU_CursorExposed;
 
 /** @brief Internal representation of MARU_Monitor.
@@ -52,7 +51,6 @@ typedef struct MARU_MonitorExposed {
   void* userdata;
   MARU_Context* context;
   uint64_t flags;
-  const MARU_MonitorMetrics* metrics;
   const char* name;
   MARU_Vec2Mm physical_size;
   MARU_VideoMode current_mode;
@@ -69,7 +67,6 @@ typedef struct MARU_WindowExposed {
   void* userdata;
   MARU_Context* context;
   uint64_t flags;
-  const MARU_WindowMetrics* metrics;
   MARU_CursorMode cursor_mode;
   const MARU_Cursor* current_cursor;
   const char* title;
@@ -84,7 +81,6 @@ typedef struct MARU_ControllerExposed {
   void* userdata;
   MARU_Context* context;
   uint64_t flags;
-  const MARU_ControllerMetrics* metrics;
   const char* name;
   uint16_t vendor_id;
   uint16_t product_id;
@@ -199,11 +195,6 @@ static inline bool maru_isCursorSystem(const MARU_Cursor* cursor) {
           MARU_CURSOR_FLAG_SYSTEM) != 0;
 }
 
-static inline const MARU_CursorMetrics*
-maru_getCursorMetrics(const MARU_Cursor* cursor) {
-  return ((const MARU_CursorExposed*)cursor)->metrics;
-}
-
 static inline void* maru_getMonitorUserdata(const MARU_Monitor* monitor) {
   return ((const MARU_MonitorExposed*)monitor)->userdata;
 }
@@ -221,11 +212,6 @@ maru_getMonitorContext(const MARU_Monitor* monitor) {
 static inline bool maru_isMonitorLost(const MARU_Monitor* monitor) {
   return (((const MARU_MonitorExposed*)monitor)->flags &
           MARU_MONITOR_STATE_LOST) != 0;
-}
-
-static inline const MARU_MonitorMetrics*
-maru_getMonitorMetrics(const MARU_Monitor* monitor) {
-  return ((const MARU_MonitorExposed*)monitor)->metrics;
 }
 
 static inline const char* maru_getMonitorName(const MARU_Monitor* monitor) {
@@ -321,11 +307,6 @@ static inline bool maru_isWindowDecorated(const MARU_Window* window) {
           MARU_WINDOW_STATE_DECORATED) != 0;
 }
 
-static inline const MARU_WindowMetrics*
-maru_getWindowMetrics(const MARU_Window* window) {
-  return ((const MARU_WindowExposed*)window)->metrics;
-}
-
 static inline MARU_CursorMode
 maru_getWindowCursorMode(const MARU_Window* window) {
   return ((const MARU_WindowExposed*)window)->cursor_mode;
@@ -358,11 +339,6 @@ maru_getControllerContext(const MARU_Controller* controller) {
 static inline bool maru_isControllerLost(const MARU_Controller* controller) {
   return (((const MARU_ControllerExposed*)controller)->flags &
           MARU_CONTROLLER_STATE_LOST) != 0;
-}
-
-static inline const MARU_ControllerMetrics*
-maru_getControllerMetrics(const MARU_Controller* controller) {
-  return ((const MARU_ControllerExposed*)controller)->metrics;
 }
 
 static inline const char*

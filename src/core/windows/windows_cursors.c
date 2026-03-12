@@ -124,7 +124,6 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
   cur->hcursor = hcursor;
   cur->is_system = is_system;
   cur->base.pub.userdata = create_info->userdata;
-  cur->base.pub.metrics = &cur->base.metrics;
 
   if (hcursors) {
     cur->hcursors = hcursors;
@@ -181,12 +180,5 @@ MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor) {
     }
   }
   maru_context_free(&ctx->base, cur);
-  return MARU_SUCCESS;
-}
-
-MARU_Status maru_resetCursorMetrics_Windows(MARU_Cursor *cursor) {
-  MARU_Cursor_Windows *cur = (MARU_Cursor_Windows *)cursor;
-  if (!cur) return MARU_FAILURE;
-  memset(&cur->base.metrics, 0, sizeof(cur->base.metrics));
   return MARU_SUCCESS;
 }

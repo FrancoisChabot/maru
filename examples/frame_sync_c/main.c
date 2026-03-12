@@ -39,8 +39,8 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
     keep_running = false;
   } else if (type == MARU_EVENT_WINDOW_RESIZED) {
     vulkan_renderer_on_resized(&renderer,
-                               (uint32_t)event->resized.geometry.px_size.x,
-                               (uint32_t)event->resized.geometry.px_size.y);
+                               (uint32_t)event->window_resized.geometry.px_size.x,
+                               (uint32_t)event->window_resized.geometry.px_size.y);
   } else if (type == MARU_EVENT_WINDOW_READY) {
     window_ready = true;
   } else if (type == MARU_EVENT_WINDOW_FRAME) {

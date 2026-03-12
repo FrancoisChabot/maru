@@ -52,15 +52,15 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       break;
     case MARU_EVENT_CLOSE_REQUESTED:
       if constexpr (std::invocable<F_raw, CloseRequestedEvent>)
-        f(CloseRequestedEvent{window, evt.close_requested});
+        f(CloseRequestedEvent{window, evt.window_close_requested});
       break;
     case MARU_EVENT_WINDOW_RESIZED:
       if constexpr (std::invocable<F_raw, WindowResizedEvent>)
-        f(WindowResizedEvent{window, evt.resized});
+        f(WindowResizedEvent{window, evt.window_resized});
       break;
     case MARU_EVENT_WINDOW_STATE_CHANGED:
       if constexpr (std::invocable<F_raw, WindowStateChangedEvent>)
-        f(WindowStateChangedEvent{window, evt.state_changed});
+        f(WindowStateChangedEvent{window, evt.window_state_changed});
       break;
     case MARU_EVENT_KEY_CHANGED:
       if constexpr (std::invocable<F_raw, KeyChangedEvent>) 
@@ -132,7 +132,7 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       break;
     case MARU_EVENT_WINDOW_FRAME:
       if constexpr (std::invocable<F_raw, WindowFrameEvent>)
-        f(WindowFrameEvent{window, evt.frame});
+        f(WindowFrameEvent{window, evt.window_frame});
       break;
     case MARU_EVENT_TEXT_EDIT_STARTED:
       if constexpr (std::invocable<F_raw, TextEditStartedEvent>)

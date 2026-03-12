@@ -63,11 +63,6 @@ static void maru_releaseController_X11(MARU_Controller *controller) {
   }
 }
 
-static MARU_Status maru_resetControllerMetrics_X11(MARU_Controller *controller) {
-  (void)controller;
-  return MARU_SUCCESS;
-}
-
 static MARU_Status maru_getControllerInfo_X11(const MARU_Controller *controller,
                                               MARU_ControllerInfo *out_info) {
   MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
@@ -122,7 +117,6 @@ const MARU_Backend maru_backend_X11 = {
   .getControllers = maru_getControllers_X11,
   .retainController = maru_retainController_X11,
   .releaseController = maru_releaseController_X11,
-  .resetControllerMetrics = maru_resetControllerMetrics_X11,
   .getControllerInfo = maru_getControllerInfo_X11,
   .setControllerHapticLevels = maru_setControllerHapticLevels_X11,
   .announceData = maru_announceData_X11,
@@ -134,7 +128,6 @@ const MARU_Backend maru_backend_X11 = {
   .releaseMonitor = maru_releaseMonitor_X11,
   .getMonitorModes = maru_getMonitorModes_X11,
   .setMonitorMode = maru_setMonitorMode_X11,
-  .resetMonitorMetrics = maru_resetMonitorMetrics_X11,
   .getContextNativeHandle = maru_getContextNativeHandle_X11,
   .getWindowNativeHandle = maru_getWindowNativeHandle_X11_internal,
   .getVkExtensions = maru_getVkExtensions_X11,
@@ -235,13 +228,6 @@ MARU_API void maru_releaseController(MARU_Controller *controller) {
   maru_releaseController_X11(controller);
 }
 
-MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
-  MARU_API_VALIDATE(resetControllerMetrics, controller);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(resetControllerMetrics, controller);
-  return maru_resetControllerMetrics_X11(controller);
-}
-
 MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
                                             MARU_ControllerInfo *out_info) {
   MARU_API_VALIDATE(getControllerInfo, controller, out_info);
@@ -302,12 +288,6 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
   return maru_getAvailableMIMETypes_X11(window, target, out_list);
 }
 
-MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
-  MARU_API_VALIDATE(resetCursorMetrics, cursor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_cursor_context_lost(cursor));
-  return maru_resetCursorMetrics_X11(cursor);
-}
-
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
   MARU_API_VALIDATE(requestWindowFocus, window);
   MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
@@ -363,13 +343,6 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
   MARU_API_VALIDATE_LIVE(setMonitorMode, monitor, mode);
   return maru_setMonitorMode_X11(monitor, mode);
-}
-
-MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
-  MARU_API_VALIDATE_LIVE(resetMonitorMetrics, monitor);
-  return maru_resetMonitorMetrics_X11(monitor);
 }
 
 MARU_API MARU_X11ContextHandle maru_getX11ContextHandle(MARU_Context *context) {

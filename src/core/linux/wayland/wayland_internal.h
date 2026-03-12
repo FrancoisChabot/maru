@@ -448,7 +448,6 @@ MARU_Status maru_updateMonitors_WL(MARU_Context *context);
 MARU_Status maru_getMonitorModes_WL(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_WL(const MARU_Monitor *monitor,
                                     MARU_VideoMode mode);
-MARU_Status maru_resetMonitorMetrics_WL(MARU_Monitor *monitor);
 
 MARU_Status maru_getVkExtensions_WL(const MARU_Context *context,
                                    MARU_VkExtensionList *out_list);
@@ -466,7 +465,6 @@ MARU_Status maru_getControllers_WL(MARU_Context *context,
                                    MARU_ControllerList *out_list);
 void maru_retainController_WL(MARU_Controller *controller);
 void maru_releaseController_WL(MARU_Controller *controller);
-MARU_Status maru_resetControllerMetrics_WL(MARU_Controller *controller);
 MARU_Status maru_getControllerInfo_WL(const MARU_Controller *controller,
                                       MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_WL(MARU_Controller *controller,

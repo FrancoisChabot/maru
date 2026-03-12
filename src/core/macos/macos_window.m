@@ -167,7 +167,6 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     win->base.ctx_base = &ctx_cocoa->base;
     win->base.pub.userdata = create_info->userdata;
     win->base.pub.context = context;
-    win->base.pub.metrics = &win->base.metrics;
     win->base.attrs_requested = create_info->attributes;
     win->base.attrs_effective = create_info->attributes;
     win->base.attrs_dirty_mask = 0;

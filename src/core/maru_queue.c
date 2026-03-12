@@ -88,7 +88,7 @@ static void _maru_queue_coalesce_latest(MARU_EventId type, MARU_Event *dst, cons
             dst->mouse_scrolled.modifiers = src->mouse_scrolled.modifiers;
             break;
         case MARU_EVENT_WINDOW_RESIZED:
-            dst->resized.geometry = src->resized.geometry;
+            dst->window_resized.geometry = src->window_resized.geometry;
             break;
         default:
             *dst = *src;

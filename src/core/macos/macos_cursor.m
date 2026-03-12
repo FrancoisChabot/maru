@@ -212,7 +212,6 @@ MARU_Status maru_createCursor_Cocoa(MARU_Context *context,
 
     memset(cursor, 0, sizeof(MARU_Cursor_Cocoa));
     cursor->base.ctx_base = ctx_base;
-    cursor->base.pub.metrics = &cursor->base.metrics;
     cursor->base.pub.userdata = create_info->userdata;
 
 #ifdef MARU_INDIRECT_BACKEND
@@ -319,12 +318,5 @@ MARU_Status maru_destroyCursor_Cocoa(MARU_Cursor *cursor) {
         [cur->ns_image release];
     }
     maru_context_free(cur->base.ctx_base, cur);
-    return MARU_SUCCESS;
-}
-
-MARU_Status maru_resetCursorMetrics_Cocoa(MARU_Cursor *cursor) {
-    if (!cursor) return MARU_FAILURE;
-    MARU_Cursor_Cocoa *cur = (MARU_Cursor_Cocoa *)cursor;
-    memset(&cur->base.metrics, 0, sizeof(MARU_CursorMetrics));
     return MARU_SUCCESS;
 }

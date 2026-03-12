@@ -267,7 +267,6 @@ void _maru_wayland_bind_output(MARU_Context_WL *ctx, uint32_t name, uint32_t ver
   memset(monitor, 0, sizeof(MARU_Monitor_WL));
   monitor->base.ctx_base = &ctx->base;
   monitor->base.pub.context = (MARU_Context *)ctx;
-  monitor->base.pub.metrics = &monitor->base.metrics;
   atomic_init(&monitor->base.ref_count, 1u);
   monitor->base.is_active = true;
 #ifdef MARU_INDIRECT_BACKEND

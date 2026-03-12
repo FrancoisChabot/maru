@@ -127,17 +127,6 @@ MARU_API void maru_releaseController(MARU_Controller *controller) {
   }
 }
 
-MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
-  MARU_API_VALIDATE(resetControllerMetrics, controller);
-  MARU_RETURN_IF_CONTEXT_LOST(
-      _maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(resetControllerMetrics, controller);
-  MARU_ControllerExposed *ctrl = (MARU_ControllerExposed *)controller;
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
-  if (!ctx_base->backend->resetControllerMetrics) return MARU_FAILURE;
-  return ctx_base->backend->resetControllerMetrics(controller);
-}
-
 MARU_API MARU_Status maru_announceData(MARU_Window *window,
                                        MARU_DataExchangeTarget target,
                                        const char **mime_types, uint32_t count,
@@ -259,14 +248,6 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   return cur_base->backend->destroyCursor(cursor);
 }
 
-MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
-  MARU_API_VALIDATE(resetCursorMetrics, cursor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_cursor_context_lost(cursor));
-  MARU_Cursor_Base *cur_base = (MARU_Cursor_Base *)cursor;
-  memset(&cur_base->metrics, 0, sizeof(MARU_CursorMetrics));
-  return MARU_SUCCESS;
-}
-
 MARU_API MARU_Status maru_createImage(MARU_Context *context,
                                       const MARU_ImageCreateInfo *create_info,
                                       MARU_Image **out_image) {
@@ -364,14 +345,6 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   MARU_API_VALIDATE_LIVE(setMonitorMode, monitor, mode);
   const MARU_Monitor_Base *mon_base = (const MARU_Monitor_Base *)monitor;
   return mon_base->backend->setMonitorMode(monitor, mode);
-}
-
-MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
-  MARU_API_VALIDATE_LIVE(resetMonitorMetrics, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  return mon_base->backend->resetMonitorMetrics(monitor);
 }
 
 static void *_maru_getContextNativeHandleRaw(MARU_Context *context) {

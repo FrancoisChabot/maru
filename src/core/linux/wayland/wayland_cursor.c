@@ -205,7 +205,6 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
   extern const MARU_Backend maru_backend_WL;
   cursor->base.backend = &maru_backend_WL;
 #endif
-  cursor->base.pub.metrics = &cursor->base.metrics;
   cursor->base.pub.userdata = create_info->userdata;
 
   if (system_cursor) {

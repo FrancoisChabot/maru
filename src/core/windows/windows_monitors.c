@@ -34,7 +34,6 @@ static BOOL CALLBACK _maru_windows_monitor_enum_proc(HMONITOR hmonitor, HDC hdc,
     memset(monitor, 0, sizeof(*monitor));
     monitor->base.ctx_base = &ctx->base;
     monitor->base.pub.context = (MARU_Context *)ctx;
-    monitor->base.pub.metrics = &monitor->base.metrics;
     monitor->base.pub.scale = (MARU_Scalar)1.0;
     atomic_init(&monitor->base.ref_count, 1u);
 #ifdef MARU_INDIRECT_BACKEND
@@ -187,12 +186,6 @@ MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
     return MARU_FAILURE;
   }
 
-  return MARU_SUCCESS;
-}
-
-MARU_Status maru_resetMonitorMetrics_Windows(MARU_Monitor *monitor) {
-  MARU_Monitor_Windows *win_mon = (MARU_Monitor_Windows *)monitor;
-  (void)ChangeDisplaySettingsExW(win_mon->device_name, NULL, NULL, 0, NULL);
   return MARU_SUCCESS;
 }
 

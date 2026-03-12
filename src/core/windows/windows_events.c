@@ -175,7 +175,7 @@ static void _maru_windows_dispatch_pending_frames(MARU_Context_Windows *ctx) {
       win->pending_frame_request = false;
 
       MARU_Event evt = {0};
-      evt.frame.timestamp_ms = (uint32_t)now_ms;
+      evt.window_frame.timestamp_ms = (uint32_t)now_ms;
       _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME,
                            (MARU_Window *)win, &evt);
     }

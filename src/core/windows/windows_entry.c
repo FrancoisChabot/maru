@@ -120,12 +120,6 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor *cursor) {
   return maru_destroyCursor_Windows(cursor);
 }
 
-MARU_API MARU_Status maru_resetCursorMetrics(MARU_Cursor *cursor) {
-  MARU_API_VALIDATE(resetCursorMetrics, cursor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_cursor_context_lost(cursor));
-  return maru_resetCursorMetrics_Windows(cursor);
-}
-
 // --- Monitors (monitors.h) ---
 
 MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
@@ -180,13 +174,6 @@ MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_Video
   return maru_setMonitorMode_Windows(monitor, mode);
 }
 
-MARU_API MARU_Status maru_resetMonitorMetrics(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(resetMonitorMetrics, monitor);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
-  MARU_API_VALIDATE_LIVE(resetMonitorMetrics, monitor);
-  return maru_resetMonitorMetrics_Windows(monitor);
-}
-
 // --- Controllers (controllers.h) ---
 
 MARU_API MARU_Status maru_getControllers(MARU_Context *context, MARU_ControllerList *out_list) {
@@ -203,13 +190,6 @@ MARU_API void maru_retainController(MARU_Controller *controller) {
 MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
   maru_releaseController_Windows(controller);
-}
-
-MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller *controller) {
-  MARU_API_VALIDATE(resetControllerMetrics, controller);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(resetControllerMetrics, controller);
-  return maru_resetControllerMetrics_Windows(controller);
 }
 
 MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller, MARU_ControllerInfo *out_info) {

@@ -312,8 +312,8 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
             io.AddInputCharactersUTF8(committed.c_str());
         }
     } else if (type == MARU_EVENT_WINDOW_STATE_CHANGED) {
-        if ((event->state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_FOCUSED) != 0u) {
-            io.AddFocusEvent(event->state_changed.focused);
+        if ((event->window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_FOCUSED) != 0u) {
+            io.AddFocusEvent(event->window_state_changed.focused);
         }
     }
 }

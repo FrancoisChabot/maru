@@ -106,8 +106,6 @@ typedef struct MARU_Window_Base {
   MARU_Context_Base *ctx_base;
   MARU_Window_Base *ctx_prev;
   MARU_Window_Base *ctx_next;
-  
-  MARU_WindowMetrics metrics;
 
   MARU_WindowAttributes attrs_requested;
   MARU_WindowAttributes attrs_effective;
@@ -126,7 +124,6 @@ struct MARU_Cursor_Base {
 #endif
 
   MARU_Context_Base *ctx_base;
-  MARU_CursorMetrics metrics;
   const uint32_t *anim_frame_delays_ms;
   const MARU_CursorAnimationCallbacks *anim_callbacks;
   MARU_Cursor_Base *anim_prev;
@@ -162,8 +159,7 @@ typedef struct MARU_Monitor_Base {
 #endif
 
   MARU_Context_Base *ctx_base;
-  MARU_MonitorMetrics metrics;
-  
+
   _Atomic uint32_t ref_count;
   bool is_active; // If false, the monitor was disconnected but is still retained.
 } MARU_Monitor_Base;
@@ -175,8 +171,7 @@ typedef struct MARU_Controller_Base {
 #endif
 
   MARU_Context_Base *ctx_base;
-  MARU_ControllerMetrics metrics;
-  
+
   _Atomic uint32_t ref_count;
   bool is_active;
 } MARU_Controller_Base;
