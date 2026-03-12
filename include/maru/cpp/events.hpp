@@ -27,7 +27,8 @@ struct Event {
 typedef Event<MARU_WindowReadyEvent> WindowReadyEvent;
 typedef Event<MARU_WindowCloseEvent> WindowCloseEvent;
 typedef Event<MARU_WindowResizedEvent> WindowResizedEvent;
-typedef Event<MARU_WindowPresentationChangedEvent> WindowPresentationChangedEvent;
+typedef Event<MARU_WindowStateChangedEvent> WindowStateChangedEvent;
+typedef WindowStateChangedEvent WindowPresentationChangedEvent;
 typedef Event<MARU_KeyboardEvent> KeyboardEvent;
 typedef Event<MARU_MouseMotionEvent> MouseMotionEvent;
 typedef Event<MARU_MouseButtonEvent> MouseButtonEvent;

@@ -432,7 +432,7 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       (width == 0 && height == 0 && !is_activated && !is_maximized &&
        !is_fullscreen);
   if (effective->minimized != inferred_minimized) {
-    uint32_t changed = MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+    uint32_t changed = MARU_WINDOW_STATE_CHANGED_MINIMIZED;
     const bool was_visible =
         (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
 
@@ -442,18 +442,18 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
       effective->visible = false;
       if (was_visible) {
-        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+        changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
       window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
       effective->visible = true;
       if (!was_visible) {
-        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+        changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
     }
 
-    _maru_wayland_dispatch_presentation_changed(window, changed);
+    _maru_wayland_dispatch_state_changed(window, changed);
   }
 
   if (effective->maximized != is_maximized) {
@@ -463,8 +463,8 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
     }
-    _maru_wayland_dispatch_presentation_changed(
-        window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED);
+    _maru_wayland_dispatch_state_changed(
+        window, MARU_WINDOW_STATE_CHANGED_MAXIMIZED);
   }
 
   effective->fullscreen = is_fullscreen;
@@ -935,7 +935,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       const bool was_maximized = (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
       if (requested->maximized) {
           if (!was_maximized) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
           }
           window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
           if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
@@ -945,7 +945,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           }
       } else {
           if (was_maximized) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
           }
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
           if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
@@ -1093,10 +1093,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           effective->visible = true;
           effective->minimized = false;
           if (!was_visible) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
           }
           if (was_minimized) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
           }
           (void)maru_requestWindowFocus_WL(window_handle);
       } else {
@@ -1105,10 +1105,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           effective->visible = false;
           effective->minimized = true;
           if (was_visible) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
           }
           if (!was_minimized) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
           }
           struct xdg_toplevel *toplevel = window->xdg.toplevel;
           if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
@@ -1135,10 +1135,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           effective->minimized = true;
           effective->visible = false;
           if (!was_minimized) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
           }
           if (was_visible) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
           }
           struct xdg_toplevel *toplevel = window->xdg.toplevel;
           if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
@@ -1157,10 +1157,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           effective->minimized = false;
           effective->visible = true;
           if (was_minimized) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
           }
           if (!was_visible) {
-              presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+              presentation_changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
           }
           (void)maru_requestWindowFocus_WL(window_handle);
       }
@@ -1169,13 +1169,13 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   if (field_mask & MARU_WINDOW_ATTR_ICON) {
       requested->icon = attributes->icon;
       effective->icon = attributes->icon;
-      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_ICON;
+      presentation_changed |= MARU_WINDOW_STATE_CHANGED_ICON;
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "Wayland taskbar/dock icon is compositor-shell managed; window icon request stored as intent only");
   }
 
   if (presentation_changed != 0u) {
-      _maru_wayland_dispatch_presentation_changed(window, presentation_changed);
+      _maru_wayland_dispatch_state_changed(window, presentation_changed);
   }
 
   maru_getWindowGeometry_WL(window_handle, NULL);

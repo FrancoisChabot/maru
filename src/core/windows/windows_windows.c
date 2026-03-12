@@ -5,16 +5,16 @@
 #include "maru_mem_internal.h"
 #include <string.h>
 
-static void _maru_windows_dispatch_presentation_event(MARU_Window_Windows *win, uint32_t changed_fields) {
+static void _maru_windows_dispatch_state_event(MARU_Window_Windows *win, uint32_t changed_fields) {
     MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
     MARU_Event evt = {0};
-    evt.presentation.changed_fields = changed_fields;
-    evt.presentation.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-    evt.presentation.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-    evt.presentation.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-    evt.presentation.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-    evt.presentation.icon_changed = (changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_ICON) != 0;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_CHANGED, (MARU_Window *)win, &evt);
+    evt.state_changed.changed_fields = changed_fields;
+    evt.state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+    evt.state_changed.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+    evt.state_changed.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+    evt.state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    evt.state_changed.icon_changed = (changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) != 0;
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &evt);
 }
 
 static void _maru_windows_set_window_icon(MARU_Window_Windows *win, const MARU_Image *icon) {
@@ -391,23 +391,23 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
           if (!(win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED)) {
               win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
               win->base.pub.flags &= ~MARU_WINDOW_STATE_MINIMIZED;
-              changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED | MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+              changed_fields = MARU_WINDOW_STATE_CHANGED_MAXIMIZED | MARU_WINDOW_STATE_CHANGED_MINIMIZED;
           }
       } else if (wParam == SIZE_MINIMIZED) {
           if (!(win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED)) {
               win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
               win->base.pub.flags &= ~MARU_WINDOW_STATE_MAXIMIZED;
-              changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED | MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+              changed_fields = MARU_WINDOW_STATE_CHANGED_MAXIMIZED | MARU_WINDOW_STATE_CHANGED_MINIMIZED;
           }
       } else if (wParam == SIZE_RESTORED) {
           if ((win->base.pub.flags & (MARU_WINDOW_STATE_MAXIMIZED | MARU_WINDOW_STATE_MINIMIZED))) {
               win->base.pub.flags &= ~(MARU_WINDOW_STATE_MAXIMIZED | MARU_WINDOW_STATE_MINIMIZED);
-              changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED | MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+              changed_fields = MARU_WINDOW_STATE_CHANGED_MAXIMIZED | MARU_WINDOW_STATE_CHANGED_MINIMIZED;
           }
       }
 
       if (changed_fields) {
-          _maru_windows_dispatch_presentation_event(win, changed_fields);
+          _maru_windows_dispatch_state_event(win, changed_fields);
       }
 
       MARU_Event evt = {0};
@@ -432,7 +432,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         }
         _maru_update_cursor_mode_windows(win);
 
-        _maru_windows_dispatch_presentation_event(win, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
+        _maru_windows_dispatch_state_event(win, MARU_WINDOW_STATE_CHANGED_FOCUSED);
         return 0;
     }
 
@@ -823,7 +823,7 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       } else {
           win->base.pub.flags &= ~MARU_WINDOW_STATE_FULLSCREEN;
       }
-      _maru_windows_dispatch_presentation_event(win, MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE);
+      _maru_windows_dispatch_state_event(win, MARU_WINDOW_STATE_CHANGED_VISIBLE);
   }
 
   if (!win->is_fullscreen) {

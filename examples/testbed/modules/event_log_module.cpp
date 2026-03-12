@@ -68,13 +68,13 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
            << " Text: '" << committed << "'";
     } else if (type == MARU_EVENT_TEXT_EDIT_ENDED) {
         ss << "IME End: Session=" << e.text_edit_ended.session_id << " Canceled: " << (e.text_edit_ended.canceled ? "YES" : "NO");
-    } else if (type == MARU_EVENT_WINDOW_PRESENTATION_CHANGED) {
-        ss << "ChangedMask=0x" << std::hex << e.presentation.changed_fields << std::dec
-           << " Visible: " << (e.presentation.visible ? "YES" : "NO")
-           << " Minimized: " << (e.presentation.minimized ? "YES" : "NO")
-           << " Maximized: " << (e.presentation.maximized ? "YES" : "NO")
-           << " Focused: " << (e.presentation.focused ? "YES" : "NO")
-           << " Icon: " << (e.presentation.icon_changed ? "YES" : "NO");
+    } else if (type == MARU_EVENT_WINDOW_STATE_CHANGED) {
+        ss << "ChangedMask=0x" << std::hex << e.state_changed.changed_fields << std::dec
+           << " Visible: " << (e.state_changed.visible ? "YES" : "NO")
+           << " Minimized: " << (e.state_changed.minimized ? "YES" : "NO")
+           << " Maximized: " << (e.state_changed.maximized ? "YES" : "NO")
+           << " Focused: " << (e.state_changed.focused ? "YES" : "NO")
+           << " Icon: " << (e.state_changed.icon_changed ? "YES" : "NO");
     } else if (type == MARU_EVENT_MONITOR_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_changed.monitor << " Connected: " << (e.monitor_changed.connected ? "YES" : "NO");
     } else if (type == MARU_EVENT_DROP_ENTERED) {
@@ -210,7 +210,7 @@ const char* EventLogModule::typeToString(MARU_EventId type) {
     if (type == MARU_EVENT_MONITOR_CHANGED) return "MONITOR_CHANGED";
     if (type == MARU_EVENT_MONITOR_MODE_CHANGED) return "MONITOR_MODE_CHANGED";
     if (type == MARU_EVENT_WINDOW_FRAME) return "WINDOW_FRAME";
-    if (type == MARU_EVENT_WINDOW_PRESENTATION_CHANGED) return "WINDOW_PRESENTATION_CHANGED";
+    if (type == MARU_EVENT_WINDOW_STATE_CHANGED) return "WINDOW_STATE_CHANGED";
     if (type == MARU_EVENT_TEXT_EDIT_STARTED) return "TEXT_EDIT_STARTED";
     if (type == MARU_EVENT_TEXT_EDIT_UPDATED) return "TEXT_EDIT_UPDATED";
     if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) return "TEXT_EDIT_COMMITTED";

@@ -98,6 +98,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   }
   ctx->base.tuning = create_info->tuning;
   _maru_init_context_base(&ctx->base);
+  ctx->base.pub.userdata = create_info->userdata;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_X11;

@@ -219,12 +219,11 @@ typedef struct MARU_ContextTuning {
   } x11;
 } MARU_ContextTuning;
 
-#define MARU_CONTEXT_TUNING_DEFAULT                                            \
-  {                                                                            \
-      .user_event_queue_size = 256,                                            \
-      .cursor_policy = MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK,           \
-      .wayland = {.decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO},       \
-      .x11 = {.idle_poll_interval_ms = 250, .selection_query_timeout_ms = 50}, \
+#define MARU_CONTEXT_TUNING_DEFAULT                                                              \
+  {                                                                                              \
+    .user_event_queue_size = 256, .cursor_policy = MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK, \
+    .wayland = {.decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO},                           \
+    .x11 = {.idle_poll_interval_ms = 250, .selection_query_timeout_ms = 50},                     \
   }
 
 /* ----- Public handles ----- */
@@ -425,7 +424,8 @@ typedef enum MARU_EventId {
   MARU_EVENT_MONITOR_CHANGED = 8,
   MARU_EVENT_MONITOR_MODE_CHANGED = 9,
   MARU_EVENT_WINDOW_FRAME = 10,
-  MARU_EVENT_WINDOW_PRESENTATION_CHANGED = 11,
+  MARU_EVENT_WINDOW_STATE_CHANGED = 11,
+  MARU_EVENT_WINDOW_PRESENTATION_CHANGED = MARU_EVENT_WINDOW_STATE_CHANGED,
   MARU_EVENT_TEXT_EDIT_STARTED = 12,
   MARU_EVENT_TEXT_EDIT_UPDATED = 13,
   MARU_EVENT_TEXT_EDIT_COMMITTED = 14,
@@ -471,8 +471,8 @@ typedef enum MARU_EventId {
 #define MARU_MASK_MONITOR_CHANGED MARU_EVENT_MASK(MARU_EVENT_MONITOR_CHANGED)
 #define MARU_MASK_MONITOR_MODE_CHANGED MARU_EVENT_MASK(MARU_EVENT_MONITOR_MODE_CHANGED)
 #define MARU_MASK_WINDOW_FRAME MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME)
-#define MARU_MASK_WINDOW_PRESENTATION_CHANGED \
-  MARU_EVENT_MASK(MARU_EVENT_WINDOW_PRESENTATION_CHANGED)
+#define MARU_MASK_WINDOW_STATE_CHANGED MARU_EVENT_MASK(MARU_EVENT_WINDOW_STATE_CHANGED)
+#define MARU_MASK_WINDOW_PRESENTATION_CHANGED MARU_MASK_WINDOW_STATE_CHANGED
 #define MARU_MASK_TEXT_EDIT_STARTED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED)
 #define MARU_MASK_TEXT_EDIT_UPDATED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_UPDATED)
 #define MARU_MASK_TEXT_EDIT_COMMITTED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_COMMITTED)
@@ -522,7 +522,7 @@ static inline bool maru_isKnownEventId(MARU_EventId id) {
     case MARU_EVENT_MONITOR_CHANGED:
     case MARU_EVENT_MONITOR_MODE_CHANGED:
     case MARU_EVENT_WINDOW_FRAME:
-    case MARU_EVENT_WINDOW_PRESENTATION_CHANGED:
+    case MARU_EVENT_WINDOW_STATE_CHANGED:
     case MARU_EVENT_TEXT_EDIT_STARTED:
     case MARU_EVENT_TEXT_EDIT_UPDATED:
     case MARU_EVENT_TEXT_EDIT_COMMITTED:
@@ -571,22 +571,32 @@ typedef struct MARU_WindowResizedEvent {
   MARU_WindowGeometry geometry;
 } MARU_WindowResizedEvent;
 
-typedef enum MARU_WindowPresentationChangedBits {
-  MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE = MARU_BIT(0),
-  MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED = MARU_BIT(1),
-  MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED = MARU_BIT(2),
-  MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED = MARU_BIT(3),
-  MARU_WINDOW_PRESENTATION_CHANGED_ICON = MARU_BIT(4),
-} MARU_WindowPresentationChangedBits;
+typedef enum MARU_WindowStateChangedBits {
+  MARU_WINDOW_STATE_CHANGED_VISIBLE = MARU_BIT(0),
+  MARU_WINDOW_STATE_CHANGED_MINIMIZED = MARU_BIT(1),
+  MARU_WINDOW_STATE_CHANGED_MAXIMIZED = MARU_BIT(2),
+  MARU_WINDOW_STATE_CHANGED_FOCUSED = MARU_BIT(3),
+  MARU_WINDOW_STATE_CHANGED_ICON = MARU_BIT(4),
+} MARU_WindowStateChangedBits;
 
-typedef struct MARU_WindowPresentationChangedEvent {
+typedef MARU_WindowStateChangedBits MARU_WindowPresentationChangedBits;
+
+#define MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE MARU_WINDOW_STATE_CHANGED_VISIBLE
+#define MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED MARU_WINDOW_STATE_CHANGED_MINIMIZED
+#define MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED MARU_WINDOW_STATE_CHANGED_MAXIMIZED
+#define MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED MARU_WINDOW_STATE_CHANGED_FOCUSED
+#define MARU_WINDOW_PRESENTATION_CHANGED_ICON MARU_WINDOW_STATE_CHANGED_ICON
+
+typedef struct MARU_WindowStateChangedEvent {
   uint32_t changed_fields;
   bool visible;
   bool minimized;
   bool maximized;
   bool focused;
   bool icon_changed;
-} MARU_WindowPresentationChangedEvent;
+} MARU_WindowStateChangedEvent;
+
+typedef MARU_WindowStateChangedEvent MARU_WindowPresentationChangedEvent;
 
 typedef struct MARU_KeyboardEvent {
   MARU_Key raw_key;
@@ -766,6 +776,7 @@ typedef struct MARU_Event {
     MARU_WindowReadyEvent window_ready;
     MARU_WindowCloseEvent close_requested;
     MARU_WindowResizedEvent resized;
+    MARU_WindowStateChangedEvent state_changed;
     MARU_WindowPresentationChangedEvent presentation;
     MARU_KeyboardEvent key;
     MARU_MouseMotionEvent mouse_motion;
@@ -797,13 +808,19 @@ MARU_STATIC_ASSERT(sizeof(MARU_Event) <= 64, "MARU_Event ABI Violation: Size exc
 MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 64,
                    "MARU_UserDefinedEvent ABI Violation: Expected 64 bytes.");
 
-typedef void (*MARU_EventCallback)(MARU_EventId type, MARU_Window* window, const MARU_Event* evt,
+typedef void (*MARU_EventCallback)(MARU_EventId type,
+                                   MARU_Window* window,
+                                   const MARU_Event* evt,
                                    void* userdata);
 
-MARU_API MARU_Status maru_pumpEvents(MARU_Context* context, uint32_t timeout_ms,
-                                     MARU_EventMask mask, MARU_EventCallback callback,
+MARU_API MARU_Status maru_pumpEvents(MARU_Context* context,
+                                     uint32_t timeout_ms,
+                                     MARU_EventMask mask,
+                                     MARU_EventCallback callback,
                                      void* userdata);
-MARU_API MARU_Status maru_postEvent(MARU_Context* context, MARU_EventId type, MARU_Window* window,
+MARU_API MARU_Status maru_postEvent(MARU_Context* context,
+                                    MARU_EventId type,
+                                    MARU_Window* window,
                                     MARU_UserDefinedEvent evt);
 MARU_API MARU_Status maru_wakeContext(MARU_Context* context);
 
@@ -850,25 +867,27 @@ typedef struct MARU_ContextCreateInfo {
   MARU_BackendType backend;
   MARU_ContextAttributes attributes;
   MARU_ContextTuning tuning;
+  void* userdata;
 } MARU_ContextCreateInfo;
 
-#define MARU_CONTEXT_CREATE_INFO_DEFAULT                                                      \
-  {                                                                                           \
-      .allocator = {.alloc_cb = NULL, .realloc_cb = NULL, .free_cb = NULL, .userdata = NULL}, \
-      .backend = MARU_BACKEND_UNKNOWN,                                                        \
-      .attributes = {.diagnostic_cb = NULL,                                                   \
-                     .diagnostic_userdata = NULL,                                             \
-                     .default_cursor = NULL,                                                  \
-                     .inhibit_idle = false,                                                   \
-                     .idle_timeout_ms = 0},                                                   \
-      .tuning = MARU_CONTEXT_TUNING_DEFAULT,                                                  \
+#define MARU_CONTEXT_CREATE_INFO_DEFAULT                                                    \
+  {                                                                                         \
+    .allocator = {.alloc_cb = NULL, .realloc_cb = NULL, .free_cb = NULL, .userdata = NULL}, \
+    .backend = MARU_BACKEND_UNKNOWN,                                                        \
+    .attributes = {.diagnostic_cb = NULL,                                                   \
+                   .diagnostic_userdata = NULL,                                             \
+                   .default_cursor = NULL,                                                  \
+                   .inhibit_idle = false,                                                   \
+                   .idle_timeout_ms = 0},                                                   \
+    .tuning = MARU_CONTEXT_TUNING_DEFAULT,                                                  \
+    .userdata = NULL,                                                                       \
   }
 
-MARU_API
-MARU_Status maru_createContext(const MARU_ContextCreateInfo* create_info,
-                               MARU_Context** out_context);
+MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo* create_info,
+                                        MARU_Context** out_context);
 MARU_API MARU_Status maru_destroyContext(MARU_Context* context);
-MARU_API MARU_Status maru_updateContext(MARU_Context* context, uint64_t field_mask,
+MARU_API MARU_Status maru_updateContext(MARU_Context* context,
+                                        uint64_t field_mask,
                                         const MARU_ContextAttributes* attributes);
 MARU_API MARU_Status maru_resetContextMetrics(MARU_Context* context);
 
@@ -1065,28 +1084,32 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 
 typedef struct MARU_WindowAttributes {
   const char* title;
+  MARU_Image* icon;
+
   MARU_Vec2Dip dip_size;
+  MARU_Vec2Dip dip_position;
+  MARU_Vec2Dip viewport_dip_size;
   bool fullscreen;
-  bool maximized;
-  MARU_CursorMode cursor_mode;
-  MARU_Cursor* cursor;
   MARU_Monitor* monitor;
   MARU_Vec2Dip min_dip_size;
   MARU_Vec2Dip max_dip_size;
-  MARU_Vec2Dip dip_position;
   MARU_Fraction aspect_ratio;
+
+  bool visible;
+  bool minimized;
+  bool maximized;
   bool resizable;
   bool accept_drop;
+
+  MARU_CursorMode cursor_mode;
+  MARU_Cursor* cursor;
+
   MARU_TextInputType text_input_type;
   MARU_RectDip text_input_rect;
   bool primary_selection;
-  MARU_Vec2Dip viewport_dip_size;
   const char* surrounding_text;
   uint32_t surrounding_cursor_byte;
   uint32_t surrounding_anchor_byte;
-  bool visible;
-  bool minimized;
-  MARU_Image* icon;
 } MARU_WindowAttributes;
 
 typedef struct MARU_WindowCreateInfo {
@@ -1097,40 +1120,45 @@ typedef struct MARU_WindowCreateInfo {
   void* userdata;
 } MARU_WindowCreateInfo;
 
-#define MARU_WINDOW_CREATE_INFO_DEFAULT                         \
-  {.attributes = {.title = "MARU Window",                       \
-                  .dip_size = {800, 600},                       \
-                  .fullscreen = false,                          \
-                  .maximized = false,                           \
-                  .cursor_mode = MARU_CURSOR_NORMAL,            \
-                  .cursor = NULL,                               \
-                  .monitor = NULL,                              \
-                  .min_dip_size = {0, 0},                       \
-                  .max_dip_size = {0, 0},                       \
-                  .dip_position = {0, 0},                       \
-                  .aspect_ratio = {0, 0},                       \
-                  .resizable = true,                            \
-                  .accept_drop = false,                         \
-                  .text_input_type = MARU_TEXT_INPUT_TYPE_NONE, \
-                  .text_input_rect = {{0, 0}, {0, 0}},          \
-                  .primary_selection = true,                    \
-                  .viewport_dip_size = {0, 0},                  \
-                  .surrounding_text = NULL,                     \
-                  .surrounding_cursor_byte = 0,                 \
-                  .surrounding_anchor_byte = 0,                 \
-                  .visible = true,                              \
-                  .minimized = false,                           \
-                  .icon = NULL},                                \
-   .app_id = "maru.app",                                        \
-   .content_type = MARU_CONTENT_TYPE_NONE,                      \
-   .decorated = true,                                           \
-   .userdata = NULL}
+#define MARU_WINDOW_CREATE_INFO_DEFAULT                                              \
+  {                                                                                  \
+    .attributes = {.title = "MARU Window",                                           \
+                   .icon = NULL,                                                     \
+                                                                                     \
+                   .dip_size = {800, 600},                                           \
+                   .dip_position = {0, 0},                                           \
+                   .viewport_dip_size = {0, 0},                                      \
+                   .fullscreen = false,                                              \
+                   .monitor = NULL,                                                  \
+                   .min_dip_size = {0, 0},                                           \
+                   .max_dip_size = {0, 0},                                           \
+                   .aspect_ratio = {0, 0},                                           \
+                                                                                     \
+                   .visible = true,                                                  \
+                   .minimized = false,                                               \
+                   .maximized = false,                                               \
+                   .resizable = true,                                                \
+                   .accept_drop = false,                                             \
+                                                                                     \
+                   .cursor_mode = MARU_CURSOR_NORMAL,                                \
+                   .cursor = NULL,                                                   \
+                                                                                     \
+                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE,                     \
+                   .text_input_rect = {{0, 0}, {0, 0}},                              \
+                   .primary_selection = true,                                        \
+                   .surrounding_text = NULL,                                         \
+                   .surrounding_cursor_byte = 0,                                     \
+                   .surrounding_anchor_byte = 0},                                    \
+    .app_id = "maru.app", .content_type = MARU_CONTENT_TYPE_NONE, .decorated = true, \
+    .userdata = NULL                                                                 \
+  }
 
 MARU_API MARU_Status maru_createWindow(MARU_Context* context,
                                        const MARU_WindowCreateInfo* create_info,
                                        MARU_Window** out_window);
 MARU_API MARU_Status maru_destroyWindow(MARU_Window* window);
-MARU_API MARU_Status maru_updateWindow(MARU_Window* window, uint64_t field_mask,
+MARU_API MARU_Status maru_updateWindow(MARU_Window* window,
+                                       uint64_t field_mask,
                                        const MARU_WindowAttributes* attributes);
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window* window);
 MARU_API MARU_Status maru_requestWindowFrame(MARU_Window* window);
@@ -1224,19 +1252,27 @@ MARU_API MARU_Status maru_resetControllerMetrics(MARU_Controller* controller);
 MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller* controller,
                                             MARU_ControllerInfo* out_info);
 MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller* controller,
-                                                    uint32_t first_haptic, uint32_t count,
+                                                    uint32_t first_haptic,
+                                                    uint32_t count,
                                                     const MARU_Scalar* intensities);
 
 /* ----- Data exchange ----- */
 
-MARU_API MARU_Status maru_announceData(MARU_Window* window, MARU_DataExchangeTarget target,
-                                       const char** mime_types, uint32_t count,
+MARU_API MARU_Status maru_announceData(MARU_Window* window,
+                                       MARU_DataExchangeTarget target,
+                                       const char** mime_types,
+                                       uint32_t count,
                                        MARU_DropActionMask allowed_actions);
-MARU_API MARU_Status maru_provideData(MARU_DataRequest* request, const void* data, size_t size,
+MARU_API MARU_Status maru_provideData(MARU_DataRequest* request,
+                                      const void* data,
+                                      size_t size,
                                       MARU_DataProvideFlags flags);
-MARU_API MARU_Status maru_requestData(MARU_Window* window, MARU_DataExchangeTarget target,
-                                      const char* mime_type, void* userdata);
-MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window* window, MARU_DataExchangeTarget target,
+MARU_API MARU_Status maru_requestData(MARU_Window* window,
+                                      MARU_DataExchangeTarget target,
+                                      const char* mime_type,
+                                      void* userdata);
+MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window* window,
+                                                MARU_DataExchangeTarget target,
                                                 MARU_MIMETypeList* out_list);
 
 static inline void maru_setDropSessionAction(MARU_DropSession* session, MARU_DropAction action);
@@ -1260,7 +1296,8 @@ typedef struct MARU_VkExtensionList {
 
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context* context,
                                           MARU_VkExtensionList* out_list);
-MARU_API MARU_Status maru_createVkSurface(MARU_Window* window, VkInstance instance,
+MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
+                                          VkInstance instance,
                                           MARU_VkGetInstanceProcAddrFunc vk_loader,
                                           VkSurfaceKHR* out_surface);
 
@@ -1297,10 +1334,14 @@ typedef struct MARU_QueueMetrics {
 
 MARU_API MARU_Status maru_createQueue(MARU_Context* ctx, uint32_t capacity, MARU_Queue** out_queue);
 MARU_API void maru_destroyQueue(MARU_Queue* queue);
-MARU_API MARU_Status maru_pushQueue(MARU_Queue* queue, MARU_EventId type, MARU_Window* window,
+MARU_API MARU_Status maru_pushQueue(MARU_Queue* queue,
+                                    MARU_EventId type,
+                                    MARU_Window* window,
                                     const MARU_Event* event);
 MARU_API MARU_Status maru_commitQueue(MARU_Queue* queue);
-MARU_API void maru_scanQueue(MARU_Queue* queue, MARU_EventMask mask, MARU_EventCallback callback,
+MARU_API void maru_scanQueue(MARU_Queue* queue,
+                             MARU_EventMask mask,
+                             MARU_EventCallback callback,
                              void* userdata);
 MARU_API void maru_setQueueCoalesceMask(MARU_Queue* queue, MARU_EventMask mask);
 MARU_API void maru_getQueueMetrics(const MARU_Queue* queue, MARU_QueueMetrics* out_metrics);
@@ -1328,12 +1369,15 @@ static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool ena
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, MARU_Image* icon);
-static inline MARU_Status maru_requestText(MARU_Window* window, MARU_DataExchangeTarget target,
+static inline MARU_Status maru_requestText(MARU_Window* window,
+                                           MARU_DataExchangeTarget target,
                                            void* user_tag);
 static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window* window,
                                                               MARU_TextInputType type);
-static inline bool maru_applyTextEditCommitUtf8(char* buffer, uint32_t capacity_bytes,
-                                                uint32_t* inout_length, uint32_t* inout_cursor_byte,
+static inline bool maru_applyTextEditCommitUtf8(char* buffer,
+                                                uint32_t capacity_bytes,
+                                                uint32_t* inout_length,
+                                                uint32_t* inout_cursor_byte,
                                                 const MARU_TextEditCommittedEvent* commit);
 static inline const MARU_UserEventMetrics* maru_getContextEventMetrics(const MARU_Context* context);
 static inline const char* maru_getDiagnosticString(MARU_Diagnostic diagnostic);

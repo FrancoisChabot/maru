@@ -16,7 +16,7 @@ consteval MARU_EventMask generateMask() {
   if constexpr (std::invocable<F, WindowReadyEvent>) mask |= MARU_MASK_WINDOW_READY;
   if constexpr (std::invocable<F, WindowCloseEvent>) mask |= MARU_MASK_CLOSE_REQUESTED;
   if constexpr (std::invocable<F, WindowResizedEvent>) mask |= MARU_MASK_WINDOW_RESIZED;
-  if constexpr (std::invocable<F, WindowPresentationChangedEvent>) mask |= MARU_MASK_WINDOW_PRESENTATION_CHANGED;
+  if constexpr (std::invocable<F, WindowStateChangedEvent>) mask |= MARU_MASK_WINDOW_STATE_CHANGED;
   if constexpr (std::invocable<F, KeyboardEvent>) mask |= MARU_MASK_KEY_CHANGED;
   if constexpr (std::invocable<F, MouseMotionEvent>) mask |= MARU_MASK_MOUSE_MOVED;
   if constexpr (std::invocable<F, MouseButtonEvent>) mask |= MARU_MASK_MOUSE_BUTTON_CHANGED;
@@ -58,9 +58,9 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       if constexpr (std::invocable<F_raw, WindowResizedEvent>)
         f(WindowResizedEvent{window, evt.resized});
       break;
-    case MARU_EVENT_WINDOW_PRESENTATION_CHANGED:
-      if constexpr (std::invocable<F_raw, WindowPresentationChangedEvent>)
-        f(WindowPresentationChangedEvent{window, evt.presentation});
+    case MARU_EVENT_WINDOW_STATE_CHANGED:
+      if constexpr (std::invocable<F_raw, WindowStateChangedEvent>)
+        f(WindowStateChangedEvent{window, evt.state_changed});
       break;
     case MARU_EVENT_KEY_CHANGED:
       if constexpr (std::invocable<F_raw, KeyboardEvent>) 

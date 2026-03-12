@@ -311,9 +311,9 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
                                         event->text_edit_committed.committed_length);
             io.AddInputCharactersUTF8(committed.c_str());
         }
-    } else if (type == MARU_EVENT_WINDOW_PRESENTATION_CHANGED) {
-        if ((event->presentation.changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED) != 0u) {
-            io.AddFocusEvent(event->presentation.focused);
+    } else if (type == MARU_EVENT_WINDOW_STATE_CHANGED) {
+        if ((event->state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_FOCUSED) != 0u) {
+            io.AddFocusEvent(event->state_changed.focused);
         }
     }
 }

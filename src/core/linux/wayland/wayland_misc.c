@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void _maru_wayland_dispatch_presentation_changed(MARU_Window_WL *window,
+void _maru_wayland_dispatch_state_changed(MARU_Window_WL *window,
                                                uint32_t changed_fields) {
   if (changed_fields == 0u) {
     return;
@@ -17,14 +17,14 @@ void _maru_wayland_dispatch_presentation_changed(MARU_Window_WL *window,
   const uint64_t flags = window->base.pub.flags;
 
   MARU_Event evt = {0};
-  evt.presentation.changed_fields = changed_fields;
-  evt.presentation.visible = (flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-  evt.presentation.minimized = (flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-  evt.presentation.maximized = (flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-  evt.presentation.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-  evt.presentation.icon_changed =
-      (changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_ICON) != 0;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_CHANGED,
+  evt.state_changed.changed_fields = changed_fields;
+  evt.state_changed.visible = (flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+  evt.state_changed.minimized = (flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
+  evt.state_changed.maximized = (flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+  evt.state_changed.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+  evt.state_changed.icon_changed =
+      (changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) != 0;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
 }
 

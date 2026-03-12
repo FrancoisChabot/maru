@@ -25,7 +25,7 @@ template <typename T>
 concept PartialEventVisitor = std::invocable<std::remove_cvref_t<T>, WindowReadyEvent> ||
                               std::invocable<std::remove_cvref_t<T>, WindowCloseEvent> ||
                               std::invocable<std::remove_cvref_t<T>, WindowResizedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, WindowPresentationChangedEvent> ||
+                              std::invocable<std::remove_cvref_t<T>, WindowStateChangedEvent> ||
                               std::invocable<std::remove_cvref_t<T>, KeyboardEvent> ||
                               std::invocable<std::remove_cvref_t<T>, MouseMotionEvent> ||
                               std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||

@@ -733,8 +733,8 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
             }
         }
         
-        _maru_wayland_dispatch_presentation_changed(
-            window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
+        _maru_wayland_dispatch_state_changed(
+            window, MARU_WINDOW_STATE_CHANGED_FOCUSED);
     }
 }
 
@@ -749,8 +749,8 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
         // Clear keyboard state on focus loss
         memset(ctx->base.keyboard_state, 0, sizeof(ctx->base.keyboard_state));
 
-        _maru_wayland_dispatch_presentation_changed(
-            window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
+        _maru_wayland_dispatch_state_changed(
+            window, MARU_WINDOW_STATE_CHANGED_FOCUSED);
         ctx->linux_common.xkb.focused_window = NULL;
     }
 

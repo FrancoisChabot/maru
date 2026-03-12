@@ -42,7 +42,7 @@ void EventModule::render(MARU_Context* ctx, MARU_Window* window) {
         event_checkbox("MONITOR_CHANGED", MARU_MASK_MONITOR_CHANGED);
         event_checkbox("MONITOR_MODE_CHANGED", MARU_MASK_MONITOR_MODE_CHANGED);
         event_checkbox("WINDOW_FRAME", MARU_MASK_WINDOW_FRAME);
-        event_checkbox("WINDOW_PRESENTATION_CHANGED", MARU_MASK_WINDOW_PRESENTATION_CHANGED);
+        event_checkbox("WINDOW_STATE_CHANGED", MARU_MASK_WINDOW_STATE_CHANGED);
         event_checkbox("TEXT_EDIT_STARTED", MARU_MASK_TEXT_EDIT_STARTED);
         event_checkbox("TEXT_EDIT_UPDATED", MARU_MASK_TEXT_EDIT_UPDATED);
         event_checkbox("TEXT_EDIT_COMMITTED", MARU_MASK_TEXT_EDIT_COMMITTED);

@@ -83,7 +83,7 @@ _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   }
 
   if (effective->minimized != is_minimized) {
-    uint32_t changed = MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+    uint32_t changed = MARU_WINDOW_STATE_CHANGED_MINIMIZED;
     const bool was_visible =
         (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
     effective->minimized = is_minimized;
@@ -92,17 +92,17 @@ _libdecor_frame_handle_configure(struct libdecor_frame *frame,
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
       effective->visible = false;
       if (was_visible) {
-        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+        changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
       window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
       effective->visible = true;
       if (!was_visible) {
-        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+        changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
     }
-    _maru_wayland_dispatch_presentation_changed(window, changed);
+    _maru_wayland_dispatch_state_changed(window, changed);
   }
 
   if (effective->maximized != is_maximized) {
@@ -112,8 +112,8 @@ _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
     }
-    _maru_wayland_dispatch_presentation_changed(
-        window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED);
+    _maru_wayland_dispatch_state_changed(
+        window, MARU_WINDOW_STATE_CHANGED_MAXIMIZED);
   }
 
   effective->fullscreen = is_fullscreen;

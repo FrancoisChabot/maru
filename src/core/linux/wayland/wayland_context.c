@@ -301,8 +301,8 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
     if ((window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0) {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
       memset(ctx->base.keyboard_state, 0, sizeof(ctx->base.keyboard_state));
-      _maru_wayland_dispatch_presentation_changed(
-          window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
+      _maru_wayland_dispatch_state_changed(
+          window, MARU_WINDOW_STATE_CHANGED_FOCUSED);
     }
 
     if (window->ext.text_input) {
@@ -559,6 +559,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   }
 
   _maru_init_context_base(&ctx->base);
+  ctx->base.pub.userdata = create_info->userdata;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_WL;

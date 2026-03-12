@@ -178,22 +178,22 @@ void _maru_x11_apply_size_hints_local(MARU_Context_X11 *ctx,
   ctx->x11_lib.XSetWMNormalHints(ctx->display, win->handle, &hints);
 }
 
-static void _maru_x11_dispatch_presentation_changed(MARU_Window_X11 *window,
+static void _maru_x11_dispatch_state_changed(MARU_Window_X11 *window,
                                                   uint32_t changed_fields) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)window->base.ctx_base;
   MARU_Event evt = {0};
-  evt.presentation.changed_fields = changed_fields;
-  evt.presentation.visible =
+  evt.state_changed.changed_fields = changed_fields;
+  evt.state_changed.visible =
       (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-  evt.presentation.minimized =
+  evt.state_changed.minimized =
       (window->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-  evt.presentation.maximized =
+  evt.state_changed.maximized =
       (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-  evt.presentation.focused =
+  evt.state_changed.focused =
       (window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-  evt.presentation.icon_changed =
-      (changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_ICON) != 0;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_CHANGED,
+  evt.state_changed.icon_changed =
+      (changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) != 0;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
 }
 
@@ -207,7 +207,7 @@ static bool _maru_x11_window_has_state_atom(const Atom *atoms,
   return false;
 }
 
-static void _maru_x11_reconcile_wm_presentation_changed(MARU_Context_X11 *ctx,
+static void _maru_x11_reconcile_wm_state_changed(MARU_Context_X11 *ctx,
                                                        MARU_Window_X11 *win,
                                                        uint32_t changed_seed) {
   uint32_t changed = changed_seed;
@@ -295,14 +295,14 @@ static void _maru_x11_reconcile_wm_presentation_changed(MARU_Context_X11 *ctx,
   win->base.attrs_effective.fullscreen = new_fullscreen;
 
   if (old_minimized != new_minimized) {
-    changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+    changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
   }
   if (old_maximized != new_maximized) {
-    changed |= MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED;
+    changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
   }
 
   if (changed != 0) {
-    _maru_x11_dispatch_presentation_changed(win, changed);
+    _maru_x11_dispatch_state_changed(win, changed);
   }
 }
 
@@ -449,7 +449,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     effective->maximized =
         (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
     if (was_maximized != effective->maximized) {
-      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED;
+      presentation_changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
     }
   }
 
@@ -613,7 +613,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     if (!_maru_x11_apply_icon(ctx, win, attributes->icon)) {
       status = MARU_FAILURE;
     }
-    presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_ICON;
+    presentation_changed |= MARU_WINDOW_STATE_CHANGED_ICON;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
@@ -636,10 +636,10 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
 
     if (was_visible != effective->visible) {
-      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+      presentation_changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
     }
     if (was_minimized != effective->minimized) {
-      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+      presentation_changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
     }
   }
 
@@ -665,15 +665,15 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
 
     if (was_minimized != effective->minimized) {
-      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED;
+      presentation_changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
     }
     if (was_visible != effective->visible) {
-      presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+      presentation_changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
     }
   }
 
   if (presentation_changed != 0) {
-    _maru_x11_dispatch_presentation_changed(win, presentation_changed);
+    _maru_x11_dispatch_state_changed(win, presentation_changed);
   }
 
   maru_getWindowGeometry_X11((MARU_Window *)win, NULL);
@@ -942,7 +942,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
   case ConfigureNotify: {
     MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xconfigure.window);
     if (win) {
-      _maru_x11_reconcile_wm_presentation_changed(ctx, win, 0);
+      _maru_x11_reconcile_wm_state_changed(ctx, win, 0);
       const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
       const MARU_Scalar new_w = (MARU_Scalar)ev->xconfigure.width;
       const MARU_Scalar new_h = (MARU_Scalar)ev->xconfigure.height;
@@ -1012,7 +1012,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
       win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
       win->base.attrs_effective.visible = true;
       if (!was_visible) {
-        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+        changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
 
       if (win->pending_maximize_request && win->base.attrs_effective.maximized) {
@@ -1021,7 +1021,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
                                           ctx->net_wm_state_maximized_vert,
                                           ctx->net_wm_state_maximized_horz);
       }
-      _maru_x11_reconcile_wm_presentation_changed(ctx, win, changed);
+      _maru_x11_reconcile_wm_state_changed(ctx, win, changed);
     }
     return true;
   }
@@ -1034,9 +1034,9 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
       win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
       win->base.attrs_effective.visible = false;
       if (was_visible) {
-        changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
+        changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
-      _maru_x11_reconcile_wm_presentation_changed(ctx, win, changed);
+      _maru_x11_reconcile_wm_state_changed(ctx, win, changed);
     }
     return true;
   }
@@ -1047,7 +1047,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
     }
     if (ev->xproperty.atom == ctx->net_wm_state ||
         ev->xproperty.atom == ctx->wm_state) {
-      _maru_x11_reconcile_wm_presentation_changed(ctx, win, 0);
+      _maru_x11_reconcile_wm_state_changed(ctx, win, 0);
       return true;
     }
     return false;
@@ -1060,11 +1060,11 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
       (void)_maru_x11_apply_window_cursor_mode(ctx, win);
       _maru_x11_refresh_text_input_state(ctx, win);
       MARU_Event mevt = {0};
-      mevt.presentation.changed_fields =
-          MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
-      mevt.presentation.focused = true;
+      mevt.state_changed.changed_fields =
+          MARU_WINDOW_STATE_CHANGED_FOCUSED;
+      mevt.state_changed.focused = true;
       _maru_dispatch_event(&ctx->base,
-                           MARU_EVENT_WINDOW_PRESENTATION_CHANGED,
+                           MARU_EVENT_WINDOW_STATE_CHANGED,
                            (MARU_Window *)win, &mevt);
     }
     return true;
@@ -1082,11 +1082,11 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
         ctx->linux_common.xkb.focused_window = NULL;
       }
       MARU_Event mevt = {0};
-      mevt.presentation.changed_fields =
-          MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
-      mevt.presentation.focused = false;
+      mevt.state_changed.changed_fields =
+          MARU_WINDOW_STATE_CHANGED_FOCUSED;
+      mevt.state_changed.focused = false;
       _maru_dispatch_event(&ctx->base,
-                           MARU_EVENT_WINDOW_PRESENTATION_CHANGED,
+                           MARU_EVENT_WINDOW_STATE_CHANGED,
                            (MARU_Window *)win, &mevt);
     }
     return true;
