@@ -261,7 +261,7 @@ Instead, you `retain()` a reference. If the device is disconnected, Maru flags i
 #### Eat Your Veggies: Proper Text Input
 **"How am I supposed to use MARU_TextEditCommittedEvent correctly?"**
 
-Maru only provides a full IME-capable text input mechanism. It forces you to "eat your veggies" because quick-and-dirty keyboard-to-text hacks (like using `MARU_KeyboardEvent`) fail on internationalization, keyboard layouts, and OS-level repeats.
+Maru only provides a full IME-capable text input mechanism. It forces you to "eat your veggies" because quick-and-dirty keyboard-to-text hacks (like using `MARU_KeyChangedEvent`) fail on internationalization, keyboard layouts, and OS-level repeats.
 
 Use the `maru_applyTextEditCommitUtf8()` convenience function to apply commits to a buffer. If you also update `MARU_WINDOW_ATTR_TEXT_INPUT_RECT`, you'll get proper Japanese/Korean/etc. support out-of-the-box.
 

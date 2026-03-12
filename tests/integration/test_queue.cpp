@@ -83,7 +83,7 @@ TEST_CASE("Queue C++ API - C++20 Visitor Scan") {
 
     queue.scan(maru::overloads{
         [&](maru::WindowReadyEvent) { ready_count++; },
-        [&](maru::WindowCloseEvent) { close_count++; }
+        [&](maru::CloseRequestedEvent) { close_count++; }
     });
 
     CHECK(ready_count == 1);

@@ -367,7 +367,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
   MARU_WindowAttributes *requested = &win->base.attrs_requested;
   MARU_WindowAttributes *effective = &win->base.attrs_effective;
   MARU_Status status = MARU_SUCCESS;
-  uint32_t presentation_changed = 0u;
+  uint32_t state_changed_mask = 0u;
 
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
     if (win->base.title_storage) {
@@ -449,7 +449,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     effective->maximized =
         (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
     if (was_maximized != effective->maximized) {
-      presentation_changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
+      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
     }
   }
 
@@ -613,7 +613,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     if (!_maru_x11_apply_icon(ctx, win, attributes->icon)) {
       status = MARU_FAILURE;
     }
-    presentation_changed |= MARU_WINDOW_STATE_CHANGED_ICON;
+    state_changed_mask |= MARU_WINDOW_STATE_CHANGED_ICON;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
@@ -636,10 +636,10 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
 
     if (was_visible != effective->visible) {
-      presentation_changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
+      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
     }
     if (was_minimized != effective->minimized) {
-      presentation_changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
+      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
     }
   }
 
@@ -665,15 +665,15 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
 
     if (was_minimized != effective->minimized) {
-      presentation_changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
+      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
     }
     if (was_visible != effective->visible) {
-      presentation_changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
+      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
     }
   }
 
-  if (presentation_changed != 0) {
-    _maru_x11_dispatch_state_changed(win, presentation_changed);
+  if (state_changed_mask != 0) {
+    _maru_x11_dispatch_state_changed(win, state_changed_mask);
   }
 
   maru_getWindowGeometry_X11((MARU_Window *)win, NULL);

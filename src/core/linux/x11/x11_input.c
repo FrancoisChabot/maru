@@ -581,19 +581,19 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
               (MARU_Scalar)(ev->xmotion.y - win->lock_center_y);
           if (dx != (MARU_Scalar)0.0 || dy != (MARU_Scalar)0.0) {
             MARU_Event mevt = {0};
-            mevt.mouse_motion.dip_position.x = (MARU_Scalar)ctx->linux_common.pointer.x;
-            mevt.mouse_motion.dip_position.y = (MARU_Scalar)ctx->linux_common.pointer.y;
-            mevt.mouse_motion.dip_delta.x = dx;
-            mevt.mouse_motion.dip_delta.y = dy;
+            mevt.mouse_moved.dip_position.x = (MARU_Scalar)ctx->linux_common.pointer.x;
+            mevt.mouse_moved.dip_position.y = (MARU_Scalar)ctx->linux_common.pointer.y;
+            mevt.mouse_moved.dip_delta.x = dx;
+            mevt.mouse_moved.dip_delta.y = dy;
             if (ctx->locked_raw_pending) {
-              mevt.mouse_motion.raw_dip_delta.x = ctx->locked_raw_dx_accum;
-              mevt.mouse_motion.raw_dip_delta.y = ctx->locked_raw_dy_accum;
+              mevt.mouse_moved.raw_dip_delta.x = ctx->locked_raw_dx_accum;
+              mevt.mouse_moved.raw_dip_delta.y = ctx->locked_raw_dy_accum;
             } else {
-              mevt.mouse_motion.raw_dip_delta.x = dx;
-              mevt.mouse_motion.raw_dip_delta.y = dy;
+              mevt.mouse_moved.raw_dip_delta.x = dx;
+              mevt.mouse_moved.raw_dip_delta.y = dy;
             }
             _maru_x11_clear_locked_raw_accum(ctx);
-            mevt.mouse_motion.modifiers = _maru_x11_get_modifiers(ev->xmotion.state);
+            mevt.mouse_moved.modifiers = _maru_x11_get_modifiers(ev->xmotion.state);
             _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED,
                                  (MARU_Window *)win, &mevt);
             _maru_x11_recenter_locked_pointer(ctx, win);
@@ -606,15 +606,15 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
         MARU_Event mevt = {0};
         const MARU_Scalar x = (MARU_Scalar)ev->xmotion.x;
         const MARU_Scalar y = (MARU_Scalar)ev->xmotion.y;
-        mevt.mouse_motion.dip_position.x = x;
-        mevt.mouse_motion.dip_position.y = y;
+        mevt.mouse_moved.dip_position.x = x;
+        mevt.mouse_moved.dip_position.y = y;
         if (ctx->linux_common.pointer.focused_window == (MARU_Window *)win) {
-          mevt.mouse_motion.dip_delta.x = x - (MARU_Scalar)ctx->linux_common.pointer.x;
-          mevt.mouse_motion.dip_delta.y = y - (MARU_Scalar)ctx->linux_common.pointer.y;
+          mevt.mouse_moved.dip_delta.x = x - (MARU_Scalar)ctx->linux_common.pointer.x;
+          mevt.mouse_moved.dip_delta.y = y - (MARU_Scalar)ctx->linux_common.pointer.y;
         }
-        mevt.mouse_motion.raw_dip_delta.x = (MARU_Scalar)0.0;
-        mevt.mouse_motion.raw_dip_delta.y = (MARU_Scalar)0.0;
-        mevt.mouse_motion.modifiers = _maru_x11_get_modifiers(ev->xmotion.state);
+        mevt.mouse_moved.raw_dip_delta.x = (MARU_Scalar)0.0;
+        mevt.mouse_moved.raw_dip_delta.y = (MARU_Scalar)0.0;
+        mevt.mouse_moved.modifiers = _maru_x11_get_modifiers(ev->xmotion.state);
 
         ctx->linux_common.pointer.focused_window = (MARU_Window *)win;
         ctx->linux_common.pointer.x = (double)x;
@@ -652,19 +652,19 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
       if (is_press && (btn >= 4 && btn <= 7)) {
         MARU_Event mevt = {0};
-        mevt.mouse_scroll.modifiers = _maru_x11_get_modifiers(ev->xbutton.state);
+        mevt.mouse_scrolled.modifiers = _maru_x11_get_modifiers(ev->xbutton.state);
         if (btn == 4) {
-          mevt.mouse_scroll.dip_delta.y = (MARU_Scalar)1.0;
-          mevt.mouse_scroll.steps.y = 1;
+          mevt.mouse_scrolled.dip_delta.y = (MARU_Scalar)1.0;
+          mevt.mouse_scrolled.steps.y = 1;
         } else if (btn == 5) {
-          mevt.mouse_scroll.dip_delta.y = (MARU_Scalar)-1.0;
-          mevt.mouse_scroll.steps.y = -1;
+          mevt.mouse_scrolled.dip_delta.y = (MARU_Scalar)-1.0;
+          mevt.mouse_scrolled.steps.y = -1;
         } else if (btn == 6) {
-          mevt.mouse_scroll.dip_delta.x = (MARU_Scalar)-1.0;
-          mevt.mouse_scroll.steps.x = -1;
+          mevt.mouse_scrolled.dip_delta.x = (MARU_Scalar)-1.0;
+          mevt.mouse_scrolled.steps.x = -1;
         } else {
-          mevt.mouse_scroll.dip_delta.x = (MARU_Scalar)1.0;
-          mevt.mouse_scroll.steps.x = 1;
+          mevt.mouse_scrolled.dip_delta.x = (MARU_Scalar)1.0;
+          mevt.mouse_scrolled.steps.x = 1;
         }
         _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)win, &mevt);
         return true;
@@ -681,9 +681,9 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
       ctx->base.mouse_button_states[button_id] = (MARU_ButtonState8)state;
 
       MARU_Event mevt = {0};
-      mevt.mouse_button.button_id = button_id;
-      mevt.mouse_button.state = state;
-      mevt.mouse_button.modifiers = _maru_x11_get_modifiers(ev->xbutton.state);
+      mevt.mouse_button_changed.button_id = button_id;
+      mevt.mouse_button_changed.state = state;
+      mevt.mouse_button_changed.modifiers = _maru_x11_get_modifiers(ev->xbutton.state);
       _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_CHANGED, (MARU_Window *)win, &mevt);
       return true;
     }
@@ -746,9 +746,9 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
       if (!is_repeat) {
         MARU_Event mevt = {0};
-        mevt.key.raw_key = key;
-        mevt.key.state = state;
-        mevt.key.modifiers = _maru_x11_get_modifiers(ev->xkey.state);
+        mevt.key_changed.raw_key = key;
+        mevt.key_changed.state = state;
+        mevt.key_changed.modifiers = _maru_x11_get_modifiers(ev->xkey.state);
         _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_CHANGED, (MARU_Window *)win, &mevt);
       }
 

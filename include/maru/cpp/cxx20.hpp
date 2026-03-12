@@ -22,32 +22,33 @@ template <class... Ts>
 overloads(Ts...) -> overloads<Ts...>;
 
 template <typename T>
-concept PartialEventVisitor = std::invocable<std::remove_cvref_t<T>, WindowReadyEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, WindowCloseEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, WindowResizedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, WindowStateChangedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, KeyboardEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, MouseMotionEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, IdleEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, MonitorChangedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, MonitorModeEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, DropEnterEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, DropHoverEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, DropLeaveEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, DropEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, DataReceivedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, DataRequestEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, DataConsumedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, DragFinishedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, ControllerChangedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, ControllerButtonChangedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, WindowFrameEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, TextEditStartedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, TextEditUpdatedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, TextEditCommittedEvent> ||
-                              std::invocable<std::remove_cvref_t<T>, TextEditEndedEvent>;
+concept PartialEventVisitor =
+  std::invocable<std::remove_cvref_t<T>, WindowReadyEvent> ||
+  std::invocable<std::remove_cvref_t<T>, CloseRequestedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, WindowResizedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, WindowStateChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, KeyChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, MouseMovedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, MouseButtonChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, MouseScrolledEvent> ||
+  std::invocable<std::remove_cvref_t<T>, IdleEvent> ||
+  std::invocable<std::remove_cvref_t<T>, MonitorChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, MonitorModeEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DropEnteredEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DropHoveredEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DropExitedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DropDroppedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DataReceivedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DataRequestEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DataConsumedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DragFinishedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, ControllerChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, ControllerButtonChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, WindowFrameEvent> ||
+  std::invocable<std::remove_cvref_t<T>, TextEditStartedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, TextEditUpdatedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, TextEditCommittedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, TextEditEndedEvent>;
 
 /**
  * A helper class that can be used as event_userdata to dispatch events to visitors.

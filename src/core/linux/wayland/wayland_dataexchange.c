@@ -752,12 +752,12 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
   };
 
   MARU_Event evt = {0};
-  evt.drop_enter.dip_position.x = wl_fixed_to_double(x);
-  evt.drop_enter.dip_position.y = wl_fixed_to_double(y);
-  evt.drop_enter.session = (MARU_DropSession *)&session_exposed;
-  evt.drop_enter.available_types.mime_types = meta->mime_types;
-  evt.drop_enter.available_types.count = meta->mime_count;
-  evt.drop_enter.modifiers = _maru_wayland_get_modifiers(ctx);
+  evt.drop_entered.dip_position.x = wl_fixed_to_double(x);
+  evt.drop_entered.dip_position.y = wl_fixed_to_double(y);
+  evt.drop_entered.session = (MARU_DropSession *)&session_exposed;
+  evt.drop_entered.available_types.mime_types = meta->mime_types;
+  evt.drop_entered.available_types.count = meta->mime_count;
+  evt.drop_entered.modifiers = _maru_wayland_get_modifiers(ctx);
 
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_ENTERED, (MARU_Window *)window, &evt);
 
@@ -788,7 +788,7 @@ static void _clipboard_data_device_leave(void *data, struct wl_data_device *data
     };
 
     MARU_Event evt = {0};
-    evt.drop_leave.session = (MARU_DropSession *)&session_exposed;
+    evt.drop_exited.session = (MARU_DropSession *)&session_exposed;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_EXITED, (MARU_Window *)window, &evt);  }
   ctx->clipboard.dnd_offer = NULL;
   ctx->clipboard.dnd_serial = 0;
@@ -818,12 +818,12 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   };
 
   MARU_Event evt = {0};
-  evt.drop_hover.dip_position.x = wl_fixed_to_double(x);
-  evt.drop_hover.dip_position.y = wl_fixed_to_double(y);
-  evt.drop_hover.session = (MARU_DropSession *)&session_exposed;
-  evt.drop_hover.available_types.mime_types = meta->mime_types;
-  evt.drop_hover.available_types.count = meta->mime_count;
-  evt.drop_hover.modifiers = _maru_wayland_get_modifiers(ctx);
+  evt.drop_hovered.dip_position.x = wl_fixed_to_double(x);
+  evt.drop_hovered.dip_position.y = wl_fixed_to_double(y);
+  evt.drop_hovered.session = (MARU_DropSession *)&session_exposed;
+  evt.drop_hovered.available_types.mime_types = meta->mime_types;
+  evt.drop_hovered.available_types.count = meta->mime_count;
+  evt.drop_hovered.modifiers = _maru_wayland_get_modifiers(ctx);
 
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_HOVERED, (MARU_Window *)window, &evt);
 
@@ -877,14 +877,14 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
     };
 
     MARU_Event evt = {0};
-    evt.drop.dip_position.x = ctx->linux_common.pointer.x;
-    evt.drop.dip_position.y = ctx->linux_common.pointer.y;
-    evt.drop.session = (MARU_DropSession *)&session_exposed;
-    evt.drop.available_types.mime_types = meta->mime_types;
-    evt.drop.available_types.count = meta->mime_count;
-    evt.drop.modifiers = _maru_wayland_get_modifiers(ctx);
-    evt.drop.paths = NULL;
-    evt.drop.path_count = 0;
+    evt.drop_dropped.dip_position.x = ctx->linux_common.pointer.x;
+    evt.drop_dropped.dip_position.y = ctx->linux_common.pointer.y;
+    evt.drop_dropped.session = (MARU_DropSession *)&session_exposed;
+    evt.drop_dropped.available_types.mime_types = meta->mime_types;
+    evt.drop_dropped.available_types.count = meta->mime_count;
+    evt.drop_dropped.modifiers = _maru_wayland_get_modifiers(ctx);
+    evt.drop_dropped.paths = NULL;
+    evt.drop_dropped.path_count = 0;
 
     _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED, (MARU_Window *)window, &evt);
     maru_wl_data_offer_finish(ctx, ctx->clipboard.dnd_offer);
@@ -1438,14 +1438,14 @@ void _maru_wayland_dataexchange_handle_internal_transfer_complete(
     };
 
     MARU_Event drop_evt = {0};
-    drop_evt.drop.dip_position = ctx->clipboard.dnd_drop.dip_position;
-    drop_evt.drop.session = (MARU_DropSession *)&session_exposed;
-    drop_evt.drop.modifiers = ctx->clipboard.dnd_drop.modifiers;
-    drop_evt.drop.paths = paths;
-    drop_evt.drop.path_count = (uint16_t)path_count;
+    drop_evt.drop_dropped.dip_position = ctx->clipboard.dnd_drop.dip_position;
+    drop_evt.drop_dropped.session = (MARU_DropSession *)&session_exposed;
+    drop_evt.drop_dropped.modifiers = ctx->clipboard.dnd_drop.modifiers;
+    drop_evt.drop_dropped.paths = paths;
+    drop_evt.drop_dropped.path_count = path_count;
     if (meta) {
-      drop_evt.drop.available_types.mime_types = meta->mime_types;
-      drop_evt.drop.available_types.count = meta->mime_count;
+      drop_evt.drop_dropped.available_types.mime_types = meta->mime_types;
+      drop_evt.drop_dropped.available_types.count = meta->mime_count;
     }
 
     ctx->clipboard.dnd_drop.pending = false;

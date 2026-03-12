@@ -1006,14 +1006,14 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
     };
 
     MARU_Event drop_evt = {0};
-    drop_evt.drop.dip_position = ctx->dnd_session.dip_position;
-    drop_evt.drop.session = (MARU_DropSession *)&session_exposed;
-    drop_evt.drop.available_types.mime_types =
+    drop_evt.drop_dropped.dip_position = ctx->dnd_session.dip_position;
+    drop_evt.drop_dropped.session = (MARU_DropSession *)&session_exposed;
+    drop_evt.drop_dropped.available_types.mime_types =
         (const char *const *)ctx->dnd_session.offered_mimes;
-    drop_evt.drop.available_types.count = ctx->dnd_session.offered_count;
-    drop_evt.drop.modifiers = 0;
-    drop_evt.drop.paths = paths;
-    drop_evt.drop.path_count = (uint16_t)path_count;
+    drop_evt.drop_dropped.available_types.count = ctx->dnd_session.offered_count;
+    drop_evt.drop_dropped.modifiers = 0;
+    drop_evt.drop_dropped.paths = paths;
+    drop_evt.drop_dropped.path_count = path_count;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED,
                          (MARU_Window *)ctx->dnd_session.target_window, &drop_evt);
 
@@ -1049,14 +1049,14 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
     };
 
     MARU_Event drop_evt = {0};
-    drop_evt.drop.dip_position = ctx->dnd_session.dip_position;
-    drop_evt.drop.session = (MARU_DropSession *)&session_exposed;
-    drop_evt.drop.available_types.mime_types =
+    drop_evt.drop_dropped.dip_position = ctx->dnd_session.dip_position;
+    drop_evt.drop_dropped.session = (MARU_DropSession *)&session_exposed;
+    drop_evt.drop_dropped.available_types.mime_types =
         (const char *const *)ctx->dnd_session.offered_mimes;
-    drop_evt.drop.available_types.count = ctx->dnd_session.offered_count;
-    drop_evt.drop.modifiers = 0;
-    drop_evt.drop.paths = NULL;
-    drop_evt.drop.path_count = 0;
+    drop_evt.drop_dropped.available_types.count = ctx->dnd_session.offered_count;
+    drop_evt.drop_dropped.modifiers = 0;
+    drop_evt.drop_dropped.paths = NULL;
+    drop_evt.drop_dropped.path_count = 0;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED,
                          (MARU_Window *)ctx->dnd_session.target_window,
                          &drop_evt);
@@ -2009,14 +2009,14 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
             .session_userdata = &session->session_userdata,
         };
         MARU_Event enter_evt = {0};
-        enter_evt.drop_enter.dip_position = session->dip_position;
-        enter_evt.drop_enter.session = (MARU_DropSession *)&session_exposed;
-        enter_evt.drop_enter.available_types.mime_types =
+        enter_evt.drop_entered.dip_position = session->dip_position;
+        enter_evt.drop_entered.session = (MARU_DropSession *)&session_exposed;
+        enter_evt.drop_entered.available_types.mime_types =
             (const char *const *)session->offered_mimes;
-        enter_evt.drop_enter.available_types.count = session->offered_count;
-        enter_evt.drop_enter.modifiers = 0;
-        enter_evt.drop_enter.paths = NULL;
-        enter_evt.drop_enter.path_count = 0;
+        enter_evt.drop_entered.available_types.count = session->offered_count;
+        enter_evt.drop_entered.modifiers = 0;
+        enter_evt.drop_entered.paths = NULL;
+        enter_evt.drop_entered.path_count = 0;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_ENTERED, (MARU_Window *)win,
                              &enter_evt);
 
@@ -2051,14 +2051,14 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
             .session_userdata = &session->session_userdata,
         };
         MARU_Event hover_evt = {0};
-        hover_evt.drop_hover.dip_position = session->dip_position;
-        hover_evt.drop_hover.session = (MARU_DropSession *)&session_exposed;
-        hover_evt.drop_hover.available_types.mime_types =
+        hover_evt.drop_hovered.dip_position = session->dip_position;
+        hover_evt.drop_hovered.session = (MARU_DropSession *)&session_exposed;
+        hover_evt.drop_hovered.available_types.mime_types =
             (const char *const *)session->offered_mimes;
-        hover_evt.drop_hover.available_types.count = session->offered_count;
-        hover_evt.drop_hover.modifiers = 0;
-        hover_evt.drop_hover.paths = NULL;
-        hover_evt.drop_hover.path_count = 0;
+        hover_evt.drop_hovered.available_types.count = session->offered_count;
+        hover_evt.drop_hovered.modifiers = 0;
+        hover_evt.drop_hovered.paths = NULL;
+        hover_evt.drop_hovered.path_count = 0;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_HOVERED,
                              (MARU_Window *)session->target_window, &hover_evt);
 
@@ -2089,7 +2089,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
               .session_userdata = &session->session_userdata,
           };
           MARU_Event leave_evt = {0};
-          leave_evt.drop_leave.session = (MARU_DropSession *)&session_exposed;
+          leave_evt.drop_exited.session = (MARU_DropSession *)&session_exposed;
           _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_EXITED,
                                (MARU_Window *)session->target_window, &leave_evt);
         }
@@ -2136,14 +2136,14 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
         };
 
         MARU_Event drop_evt = {0};
-        drop_evt.drop.dip_position = session->dip_position;
-        drop_evt.drop.session = (MARU_DropSession *)&session_exposed;
-        drop_evt.drop.available_types.mime_types =
+        drop_evt.drop_dropped.dip_position = session->dip_position;
+        drop_evt.drop_dropped.session = (MARU_DropSession *)&session_exposed;
+        drop_evt.drop_dropped.available_types.mime_types =
             (const char *const *)ctx->dnd_session.offered_mimes;
-        drop_evt.drop.available_types.count = ctx->dnd_session.offered_count;
-        drop_evt.drop.modifiers = 0;
-        drop_evt.drop.paths = NULL;
-        drop_evt.drop.path_count = 0;
+        drop_evt.drop_dropped.available_types.count = ctx->dnd_session.offered_count;
+        drop_evt.drop_dropped.modifiers = 0;
+        drop_evt.drop_dropped.paths = NULL;
+        drop_evt.drop_dropped.path_count = 0;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_DROPPED,
                              (MARU_Window *)session->target_window, &drop_evt);
 

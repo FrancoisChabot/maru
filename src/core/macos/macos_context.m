@@ -137,9 +137,9 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             window->base.ctx_base->keyboard_state[key] = (MARU_ButtonState8)state;
 
             MARU_Event event = {0};
-            event.key.raw_key = key;
-            event.key.state = state;
-            event.key.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
+            event.key_changed.raw_key = key;
+            event.key_changed.state = state;
+            event.key_changed.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
                                               MARU_EVENT_KEY_CHANGED, &event);
@@ -162,9 +162,9 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             window->base.ctx_base->keyboard_state[key] = pressed ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
 
             MARU_Event event = {0};
-            event.key.raw_key = key;
-            event.key.state = pressed ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
-            event.key.modifiers = _maru_cocoa_translate_modifiers(new_mods);
+            event.key_changed.raw_key = key;
+            event.key_changed.state = pressed ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+            event.key_changed.modifiers = _maru_cocoa_translate_modifiers(new_mods);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
                                               MARU_EVENT_KEY_CHANGED, &event);
@@ -186,9 +186,9 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             }
 
             MARU_Event event = {0};
-            event.mouse_button.button_id = channel;
-            event.mouse_button.state = state;
-            event.mouse_button.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
+            event.mouse_button_changed.button_id = channel;
+            event.mouse_button_changed.state = state;
+            event.mouse_button_changed.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
                                               MARU_EVENT_MOUSE_BUTTON_CHANGED,
@@ -204,13 +204,13 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             NSRect contentRect = [window->ns_window contentRectForFrameRect:[window->ns_window frame]];
             
             MARU_Event event = {0};
-            event.mouse_motion.dip_position.x = (MARU_Scalar)p.x;
-            event.mouse_motion.dip_position.y = (MARU_Scalar)(contentRect.dip_size.height - p.y);
-            event.mouse_motion.dip_delta.x = (MARU_Scalar)[nsEvent deltaX];
-            event.mouse_motion.dip_delta.y = (MARU_Scalar)[nsEvent deltaY];
-            event.mouse_motion.raw_dip_delta.x = (MARU_Scalar)[nsEvent deltaX];
-            event.mouse_motion.raw_dip_delta.y = (MARU_Scalar)[nsEvent deltaY];
-            event.mouse_motion.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
+            event.mouse_moved.dip_position.x = (MARU_Scalar)p.x;
+            event.mouse_moved.dip_position.y = (MARU_Scalar)(contentRect.size.height - p.y);
+            event.mouse_moved.dip_delta.x = (MARU_Scalar)[nsEvent deltaX];
+            event.mouse_moved.dip_delta.y = (MARU_Scalar)[nsEvent deltaY];
+            event.mouse_moved.raw_dip_delta.x = (MARU_Scalar)[nsEvent deltaX];
+            event.mouse_moved.raw_dip_delta.y = (MARU_Scalar)[nsEvent deltaY];
+            event.mouse_moved.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
                                               MARU_EVENT_MOUSE_MOVED, &event);
@@ -219,14 +219,14 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
         case NSEventTypeScrollWheel: {
             if (!window) break;
             MARU_Event event = {0};
-            event.mouse_scroll.dip_delta.x = (MARU_Scalar)[nsEvent scrollingDeltaX];
-            event.mouse_scroll.dip_delta.y = (MARU_Scalar)[nsEvent scrollingDeltaY];
+            event.mouse_scrolled.dip_delta.x = (MARU_Scalar)[nsEvent scrollingDeltaX];
+            event.mouse_scrolled.dip_delta.y = (MARU_Scalar)[nsEvent scrollingDeltaY];
             
             if (![nsEvent hasPreciseScrollingDeltas]) {
-                event.mouse_scroll.dip_delta.x *= (MARU_Scalar)10.0;
-                event.mouse_scroll.dip_delta.y *= (MARU_Scalar)10.0;
+                event.mouse_scrolled.dip_delta.x *= (MARU_Scalar)10.0;
+                event.mouse_scrolled.dip_delta.y *= (MARU_Scalar)10.0;
             }
-            event.mouse_scroll.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
+            event.mouse_scrolled.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
                                               MARU_EVENT_MOUSE_SCROLLED, &event);

@@ -9,19 +9,43 @@
  *
  * MARU follows a "single-owner, multiple-reader" model:
  *
- * 1. The thread that creates a MARU_Context is its owner thread.
+ * 1. The thread that creates a MARU_Context is its owner thread. For the
+ *    broadest cross-platform parity, make this your main thread.
  * 2. Unless documented otherwise, functions returning MARU_Status are owner-
  *    thread APIs and must be called from that thread.
  * 3. Direct-return accessors can be called from any thread with external
  *    synchronization to guarantee visibility with the owner thread.
  * 4. maru_postEvent(), maru_wakeContext(), maru_retain*(), maru_release*(),
  *    and maru_getVersion() are globally thread-safe.
+ * 5. Backends may use internal helper threads for blocking OS work. These
+ *    helpers never invoke your MARU_EventCallback directly; event callbacks are
+ *    still only dispatched inline from maru_pumpEvents() on the owner thread.
  *
  * Handle layout note
  *
  * Public handles are API-opaque. Internal details headers expose a stable
  * prefix used to implement low-overhead inline accessors. Do not downcast the
  * handles yourself; use the public accessors below.
+ *
+ * Ownership and lifetime model
+ *
+ * 1. Handle arguments are borrowed references. MARU does not take ownership of
+ *    passed-in handles unless an API explicitly says so.
+ * 2. Text and pixel payloads that MARU persists after a successful call are
+ *    copied before that call returns.
+ * 3. Lists, strings, and buffers returned by getters or exposed through event
+ *    payloads are borrowed views. Copy what you need if it must outlive the
+ *    documented lifetime.
+ *
+ * Validation and build configuration note
+ *
+ * This header includes a generated maru_config.h exposing the build-time
+ * feature macros used for this build, such as MARU_VALIDATE_API_CALLS,
+ * MARU_ENABLE_DIAGNOSTICS, and MARU_GATHER_METRICS.
+ *
+ * When MARU_VALIDATE_API_CALLS is enabled, invalid API usage is treated as a
+ * contract violation and MARU may fail fast with abort() rather than trying to
+ * return a recoverable MARU_Status.
  */
 
 #include <stdbool.h>
@@ -64,12 +88,33 @@ typedef uint64_t MARU_EventMask;
 
 #define MARU_BIT(n) ((uint64_t)1 << (n))
 
+/**
+ * Note: MARU_Status is not meant to tell you what went wrong, but rather what you can do about it.
+ * It's a control flow mechanism, not a debugging tool. Use a diagnostic callback to get root cause
+ * information.
+ *
+ * Invoking an api method on a lost context is **NOT** an API violation, but is guaranteed to be a
+ * no-op. You do not need to explictly check for MARU_ERROR_CONTEXT_LOST everywhere. Doing it on the
+ * result of maru_pumpEvents() is often plenty.
+ *
+ * Handles owned by a lost context should be treated as inert. Status-returning
+ * APIs on those child handles will typically short-circuit with
+ * MARU_ERROR_CONTEXT_LOST; destroy the context rather than trying to tear down
+ * attached child objects one by one.
+ */
 typedef enum MARU_Status {
-  MARU_SUCCESS = 0,
-  MARU_FAILURE = 1,
-  MARU_ERROR_CONTEXT_LOST = 2,
+  MARU_SUCCESS = 0,             // The operation succeeded
+  MARU_FAILURE = 1,             // The operatoin failed, but the backend is still healthy
+  MARU_ERROR_CONTEXT_LOST = 2,  // The context is dead and now inert. You will have to rebuild it
 } MARU_Status;
 
+/*
+ * MARU_BACKEND_UNKNOWN lets MARU pick the native backend automatically.
+ *
+ * On Linux builds that include both backends, this prefers Wayland and falls
+ * back to X11 if Wayland is unavailable. On other platforms, UNKNOWN selects
+ * the platform-default native backend.
+ */
 typedef enum MARU_BackendType {
   MARU_BACKEND_UNKNOWN = 0,
   MARU_BACKEND_WAYLAND = 1,
@@ -219,11 +264,12 @@ typedef struct MARU_ContextTuning {
   } x11;
 } MARU_ContextTuning;
 
-#define MARU_CONTEXT_TUNING_DEFAULT                                                              \
-  {                                                                                              \
-    .user_event_queue_size = 256, .cursor_policy = MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK, \
-    .wayland = {.decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO},                           \
-    .x11 = {.idle_poll_interval_ms = 250, .selection_query_timeout_ms = 50},                     \
+#define MARU_CONTEXT_TUNING_DEFAULT                                            \
+  {                                                                            \
+      .user_event_queue_size = 256,                                            \
+      .cursor_policy = MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK,           \
+      .wayland = {.decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO},       \
+      .x11 = {.idle_poll_interval_ms = 250, .selection_query_timeout_ms = 50}, \
   }
 
 /* ----- Public handles ----- */
@@ -425,7 +471,6 @@ typedef enum MARU_EventId {
   MARU_EVENT_MONITOR_MODE_CHANGED = 9,
   MARU_EVENT_WINDOW_FRAME = 10,
   MARU_EVENT_WINDOW_STATE_CHANGED = 11,
-  MARU_EVENT_WINDOW_PRESENTATION_CHANGED = MARU_EVENT_WINDOW_STATE_CHANGED,
   MARU_EVENT_TEXT_EDIT_STARTED = 12,
   MARU_EVENT_TEXT_EDIT_UPDATED = 13,
   MARU_EVENT_TEXT_EDIT_COMMITTED = 14,
@@ -472,7 +517,6 @@ typedef enum MARU_EventId {
 #define MARU_MASK_MONITOR_MODE_CHANGED MARU_EVENT_MASK(MARU_EVENT_MONITOR_MODE_CHANGED)
 #define MARU_MASK_WINDOW_FRAME MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME)
 #define MARU_MASK_WINDOW_STATE_CHANGED MARU_EVENT_MASK(MARU_EVENT_WINDOW_STATE_CHANGED)
-#define MARU_MASK_WINDOW_PRESENTATION_CHANGED MARU_MASK_WINDOW_STATE_CHANGED
 #define MARU_MASK_TEXT_EDIT_STARTED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED)
 #define MARU_MASK_TEXT_EDIT_UPDATED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_UPDATED)
 #define MARU_MASK_TEXT_EDIT_COMMITTED MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_COMMITTED)
@@ -559,9 +603,9 @@ typedef struct MARU_WindowReadyEvent {
   MARU_WindowGeometry geometry;
 } MARU_WindowReadyEvent;
 
-typedef struct MARU_WindowCloseEvent {
+typedef struct MARU_CloseRequestedEvent {
   char _unused;
-} MARU_WindowCloseEvent;
+} MARU_CloseRequestedEvent;
 
 typedef struct MARU_WindowFrameEvent {
   uint32_t timestamp_ms;
@@ -579,14 +623,6 @@ typedef enum MARU_WindowStateChangedBits {
   MARU_WINDOW_STATE_CHANGED_ICON = MARU_BIT(4),
 } MARU_WindowStateChangedBits;
 
-typedef MARU_WindowStateChangedBits MARU_WindowPresentationChangedBits;
-
-#define MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE MARU_WINDOW_STATE_CHANGED_VISIBLE
-#define MARU_WINDOW_PRESENTATION_CHANGED_MINIMIZED MARU_WINDOW_STATE_CHANGED_MINIMIZED
-#define MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED MARU_WINDOW_STATE_CHANGED_MAXIMIZED
-#define MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED MARU_WINDOW_STATE_CHANGED_FOCUSED
-#define MARU_WINDOW_PRESENTATION_CHANGED_ICON MARU_WINDOW_STATE_CHANGED_ICON
-
 typedef struct MARU_WindowStateChangedEvent {
   uint32_t changed_fields;
   bool visible;
@@ -596,35 +632,33 @@ typedef struct MARU_WindowStateChangedEvent {
   bool icon_changed;
 } MARU_WindowStateChangedEvent;
 
-typedef MARU_WindowStateChangedEvent MARU_WindowPresentationChangedEvent;
-
-typedef struct MARU_KeyboardEvent {
+typedef struct MARU_KeyChangedEvent {
   MARU_Key raw_key;
   MARU_ButtonState state;
   MARU_ModifierFlags modifiers;
-} MARU_KeyboardEvent;
+} MARU_KeyChangedEvent;
 
-typedef struct MARU_MouseMotionEvent {
+typedef struct MARU_MouseMovedEvent {
   MARU_Vec2Dip dip_position;
   MARU_Vec2Dip dip_delta;
   MARU_Vec2Dip raw_dip_delta;
   MARU_ModifierFlags modifiers;
-} MARU_MouseMotionEvent;
+} MARU_MouseMovedEvent;
 
-typedef struct MARU_MouseButtonEvent {
+typedef struct MARU_MouseButtonChangedEvent {
   uint32_t button_id;
   MARU_ButtonState state;
   MARU_ModifierFlags modifiers;
-} MARU_MouseButtonEvent;
+} MARU_MouseButtonChangedEvent;
 
-typedef struct MARU_MouseScrollEvent {
+typedef struct MARU_MouseScrolledEvent {
   MARU_Vec2Dip dip_delta;
   struct {
     int32_t x;
     int32_t y;
   } steps;
   MARU_ModifierFlags modifiers;
-} MARU_MouseScrollEvent;
+} MARU_MouseScrolledEvent;
 
 typedef struct MARU_IdleChangedEvent {
   uint32_t timeout_ms;
@@ -632,11 +666,13 @@ typedef struct MARU_IdleChangedEvent {
 } MARU_IdleChangedEvent;
 
 typedef struct MARU_MonitorChangedEvent {
+  /* Transient handle. Retain it if it must outlive the current pump cycle. */
   MARU_Monitor* monitor;
   bool connected;
 } MARU_MonitorChangedEvent;
 
 typedef struct MARU_MonitorModeChangedEvent {
+  /* Transient handle. Retain it if it must outlive the current pump cycle. */
   MARU_Monitor* monitor;
 } MARU_MonitorModeChangedEvent;
 
@@ -665,41 +701,45 @@ typedef enum MARU_DataProvideFlags {
   MARU_DATA_PROVIDE_FLAG_ZERO_COPY = MARU_BIT(0),
 } MARU_DataProvideFlags;
 
-typedef struct MARU_DropEnterEvent {
+typedef struct MARU_DropEnteredEvent {
   MARU_Vec2Dip dip_position;
   MARU_DropSession* session;
+  /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   const char** paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
-  uint16_t path_count;
-} MARU_DropEnterEvent;
+  uint32_t path_count;
+} MARU_DropEnteredEvent;
 
-typedef struct MARU_DropHoverEvent {
+typedef struct MARU_DropHoveredEvent {
   MARU_Vec2Dip dip_position;
   MARU_DropSession* session;
+  /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   const char** paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
-  uint16_t path_count;
-} MARU_DropHoverEvent;
+  uint32_t path_count;
+} MARU_DropHoveredEvent;
 
-typedef struct MARU_DropLeaveEvent {
+typedef struct MARU_DropExitedEvent {
   MARU_DropSession* session;
-} MARU_DropLeaveEvent;
+} MARU_DropExitedEvent;
 
-typedef struct MARU_DropEvent {
+typedef struct MARU_DropDroppedEvent {
   MARU_Vec2Dip dip_position;
   MARU_DropSession* session;
+  /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   const char** paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
-  uint16_t path_count;
-} MARU_DropEvent;
+  uint32_t path_count;
+} MARU_DropDroppedEvent;
 
 typedef struct MARU_DataReceivedEvent {
   void* userdata;
   MARU_Status status;
   MARU_DataExchangeTarget target;
+  /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   const char* mime_type;
   const void* data;
   size_t size;
@@ -707,12 +747,17 @@ typedef struct MARU_DataReceivedEvent {
 
 typedef struct MARU_DataRequestEvent {
   MARU_DataExchangeTarget target;
+  /*
+   * `request` and `mime_type` are only valid for the duration of the
+   * MARU_EVENT_DATA_REQUESTED callback that delivered them.
+   */
   const char* mime_type;
   MARU_DataRequest* request;
 } MARU_DataRequestEvent;
 
 typedef struct MARU_DataConsumedEvent {
   MARU_DataExchangeTarget target;
+  /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   const char* mime_type;
   const void* data;
   size_t size;
@@ -724,11 +769,13 @@ typedef struct MARU_DragFinishedEvent {
 } MARU_DragFinishedEvent;
 
 typedef struct MARU_ControllerChangedEvent {
+  /* Transient handle. Retain it if it must outlive the current pump cycle. */
   MARU_Controller* controller;
   bool connected;
 } MARU_ControllerChangedEvent;
 
 typedef struct MARU_ControllerButtonChangedEvent {
+  /* Transient handle. Retain it if it must outlive the current pump cycle. */
   MARU_Controller* controller;
   MARU_ButtonState state;
   uint32_t button_id;
@@ -745,6 +792,7 @@ typedef struct MARU_TextEditStartedEvent {
 
 typedef struct MARU_TextEditUpdatedEvent {
   uint64_t session_id;
+  /* Borrowed callback-scoped UTF-8. Copy what you need before returning. */
   const char* preedit_utf8;
   uint32_t preedit_length;
   MARU_TextRangeUtf8 caret;
@@ -755,6 +803,7 @@ typedef struct MARU_TextEditCommittedEvent {
   uint64_t session_id;
   uint32_t delete_before_bytes;
   uint32_t delete_after_bytes;
+  /* Borrowed callback-scoped UTF-8. Copy what you need before returning. */
   const char* committed_utf8;
   uint32_t committed_length;
 } MARU_TextEditCommittedEvent;
@@ -774,21 +823,20 @@ typedef struct MARU_UserDefinedEvent {
 typedef struct MARU_Event {
   union {
     MARU_WindowReadyEvent window_ready;
-    MARU_WindowCloseEvent close_requested;
+    MARU_CloseRequestedEvent close_requested;
     MARU_WindowResizedEvent resized;
     MARU_WindowStateChangedEvent state_changed;
-    MARU_WindowPresentationChangedEvent presentation;
-    MARU_KeyboardEvent key;
-    MARU_MouseMotionEvent mouse_motion;
-    MARU_MouseButtonEvent mouse_button;
-    MARU_MouseScrollEvent mouse_scroll;
+    MARU_KeyChangedEvent key_changed;
+    MARU_MouseMovedEvent mouse_moved;
+    MARU_MouseButtonChangedEvent mouse_button_changed;
+    MARU_MouseScrolledEvent mouse_scrolled;
     MARU_IdleChangedEvent idle_changed;
     MARU_MonitorChangedEvent monitor_changed;
     MARU_MonitorModeChangedEvent monitor_mode_changed;
-    MARU_DropEnterEvent drop_enter;
-    MARU_DropHoverEvent drop_hover;
-    MARU_DropLeaveEvent drop_leave;
-    MARU_DropEvent drop;
+    MARU_DropEnteredEvent drop_entered;
+    MARU_DropHoveredEvent drop_hovered;
+    MARU_DropExitedEvent drop_exited;
+    MARU_DropDroppedEvent drop_dropped;
     MARU_DataReceivedEvent data_received;
     MARU_DataRequestEvent data_requested;
     MARU_DataConsumedEvent data_consumed;
@@ -808,16 +856,35 @@ MARU_STATIC_ASSERT(sizeof(MARU_Event) <= 64, "MARU_Event ABI Violation: Size exc
 MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 64,
                    "MARU_UserDefinedEvent ABI Violation: Expected 64 bytes.");
 
+/*
+ * Direct pump callback. Matching events are delivered synchronously and inline
+ * from maru_pumpEvents().
+ *
+ * `window` is NULL for context-scoped events such as monitor/controller
+ * changes, and for posted user events that do not target a window.
+ *
+ * Any borrowed pointer reachable through `evt` is only guaranteed to remain
+ * valid for the duration of the callback unless a specific event says
+ * otherwise.
+ */
 typedef void (*MARU_EventCallback)(MARU_EventId type,
                                    MARU_Window* window,
                                    const MARU_Event* evt,
                                    void* userdata);
 
+/*
+ * Pumps backend events and synchronously dispatches matching callbacks inline.
+ *
+ * User events posted with maru_postEvent() are drained near the start of a
+ * pump. Events posted from inside a callback are queued for a later pump and
+ * are never delivered reentrantly from the same maru_pumpEvents() call.
+ */
 MARU_API MARU_Status maru_pumpEvents(MARU_Context* context,
                                      uint32_t timeout_ms,
                                      MARU_EventMask mask,
                                      MARU_EventCallback callback,
                                      void* userdata);
+/* Thread-safe user-event injection for a later pump cycle. */
 MARU_API MARU_Status maru_postEvent(MARU_Context* context,
                                     MARU_EventId type,
                                     MARU_Window* window,
@@ -870,21 +937,27 @@ typedef struct MARU_ContextCreateInfo {
   void* userdata;
 } MARU_ContextCreateInfo;
 
-#define MARU_CONTEXT_CREATE_INFO_DEFAULT                                                    \
-  {                                                                                         \
-    .allocator = {.alloc_cb = NULL, .realloc_cb = NULL, .free_cb = NULL, .userdata = NULL}, \
-    .backend = MARU_BACKEND_UNKNOWN,                                                        \
-    .attributes = {.diagnostic_cb = NULL,                                                   \
-                   .diagnostic_userdata = NULL,                                             \
-                   .default_cursor = NULL,                                                  \
-                   .inhibit_idle = false,                                                   \
-                   .idle_timeout_ms = 0},                                                   \
-    .tuning = MARU_CONTEXT_TUNING_DEFAULT,                                                  \
-    .userdata = NULL,                                                                       \
+#define MARU_CONTEXT_CREATE_INFO_DEFAULT                                                      \
+  {                                                                                           \
+      .allocator = {.alloc_cb = NULL, .realloc_cb = NULL, .free_cb = NULL, .userdata = NULL}, \
+      .backend = MARU_BACKEND_UNKNOWN,                                                        \
+      .attributes = {.diagnostic_cb = NULL,                                                   \
+                     .diagnostic_userdata = NULL,                                             \
+                     .default_cursor = NULL,                                                  \
+                     .inhibit_idle = false,                                                   \
+                     .idle_timeout_ms = 0},                                                   \
+      .tuning = MARU_CONTEXT_TUNING_DEFAULT,                                                  \
+      .userdata = NULL,                                                                       \
   }
 
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo* create_info,
                                         MARU_Context** out_context);
+/*
+ * Destroys the context and tears down any child objects still attached to it.
+ *
+ * You do not need to destroy windows, cursors, images, queues, or other
+ * context-owned child objects one by one before destroying the context.
+ */
 MARU_API MARU_Status maru_destroyContext(MARU_Context* context);
 MARU_API MARU_Status maru_updateContext(MARU_Context* context,
                                         uint64_t field_mask,
@@ -895,6 +968,7 @@ MARU_API MARU_Status maru_resetContextMetrics(MARU_Context* context);
 
 typedef struct MARU_ImageCreateInfo {
   MARU_Vec2Px px_size;
+  /* Copied into MARU-owned storage before maru_createImage() returns. */
   const uint32_t* pixels;
   uint32_t stride_bytes;
   void* userdata;
@@ -945,6 +1019,10 @@ typedef struct MARU_CursorFrame {
 typedef struct MARU_CursorCreateInfo {
   MARU_CursorSource source;
   MARU_CursorShape system_shape;
+  /*
+   * For custom cursors, the referenced image pixels are copied into
+   * cursor-owned frames during maru_createCursor().
+   */
   const MARU_CursorFrame* frames;
   uint32_t frame_count;
   void* userdata;
@@ -971,6 +1049,10 @@ typedef struct MARU_VideoModeList {
 } MARU_VideoModeList;
 
 typedef struct MARU_MonitorList {
+  /*
+   * Borrowed snapshot valid until the next maru_pumpEvents() call on the same
+   * context. Retain handles you need to keep beyond that pump cycle.
+   */
   MARU_Monitor* const* monitors;
   uint32_t count;
 } MARU_MonitorList;
@@ -1082,6 +1164,13 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
    MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE |               \
    MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED | MARU_WINDOW_ATTR_ICON)
 
+/*
+ * `title` and `surrounding_text` are copied by maru_createWindow() and
+ * maru_updateWindow().
+ *
+ * `icon`, `cursor`, and `monitor` are borrowed same-context handles. They are
+ * not retained by the window.
+ */
 typedef struct MARU_WindowAttributes {
   const char* title;
   MARU_Image* icon;
@@ -1114,45 +1203,54 @@ typedef struct MARU_WindowAttributes {
 
 typedef struct MARU_WindowCreateInfo {
   MARU_WindowAttributes attributes;
+  /* Consumed during maru_createWindow(); it need only outlive that call. */
   const char* app_id;
   MARU_ContentType content_type;
   bool decorated;
   void* userdata;
 } MARU_WindowCreateInfo;
 
-#define MARU_WINDOW_CREATE_INFO_DEFAULT                                              \
-  {                                                                                  \
-    .attributes = {.title = "MARU Window",                                           \
-                   .icon = NULL,                                                     \
-                                                                                     \
-                   .dip_size = {800, 600},                                           \
-                   .dip_position = {0, 0},                                           \
-                   .viewport_dip_size = {0, 0},                                      \
-                   .fullscreen = false,                                              \
-                   .monitor = NULL,                                                  \
-                   .min_dip_size = {0, 0},                                           \
-                   .max_dip_size = {0, 0},                                           \
-                   .aspect_ratio = {0, 0},                                           \
-                                                                                     \
-                   .visible = true,                                                  \
-                   .minimized = false,                                               \
-                   .maximized = false,                                               \
-                   .resizable = true,                                                \
-                   .accept_drop = false,                                             \
-                                                                                     \
-                   .cursor_mode = MARU_CURSOR_NORMAL,                                \
-                   .cursor = NULL,                                                   \
-                                                                                     \
-                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE,                     \
-                   .text_input_rect = {{0, 0}, {0, 0}},                              \
-                   .primary_selection = true,                                        \
-                   .surrounding_text = NULL,                                         \
-                   .surrounding_cursor_byte = 0,                                     \
-                   .surrounding_anchor_byte = 0},                                    \
-    .app_id = "maru.app", .content_type = MARU_CONTENT_TYPE_NONE, .decorated = true, \
-    .userdata = NULL                                                                 \
-  }
+#define MARU_WINDOW_CREATE_INFO_DEFAULT                         \
+  {.attributes = {.title = "MARU Window",                       \
+                  .icon = NULL,                                 \
+                                                                \
+                  .dip_size = {800, 600},                       \
+                  .dip_position = {0, 0},                       \
+                  .viewport_dip_size = {0, 0},                  \
+                  .fullscreen = false,                          \
+                  .monitor = NULL,                              \
+                  .min_dip_size = {0, 0},                       \
+                  .max_dip_size = {0, 0},                       \
+                  .aspect_ratio = {0, 0},                       \
+                                                                \
+                  .visible = true,                              \
+                  .minimized = false,                           \
+                  .maximized = false,                           \
+                  .resizable = true,                            \
+                  .accept_drop = false,                         \
+                                                                \
+                  .cursor_mode = MARU_CURSOR_NORMAL,            \
+                  .cursor = NULL,                               \
+                                                                \
+                  .text_input_type = MARU_TEXT_INPUT_TYPE_NONE, \
+                  .text_input_rect = {{0, 0}, {0, 0}},          \
+                  .primary_selection = true,                    \
+                  .surrounding_text = NULL,                     \
+                  .surrounding_cursor_byte = 0,                 \
+                  .surrounding_anchor_byte = 0},                \
+   .app_id = "maru.app",                                        \
+   .content_type = MARU_CONTENT_TYPE_NONE,                      \
+   .decorated = true,                                           \
+   .userdata = NULL}
 
+/*
+ * The returned handle may exist before the native window is ready for use.
+ * Wait for MARU_EVENT_WINDOW_READY or maru_isWindowReady(window) before using
+ * APIs that require a realized native window, such as maru_updateWindow(),
+ * maru_requestWindowFocus(), maru_requestWindowFrame(),
+ * maru_requestWindowAttention(), data exchange APIs, native window getters,
+ * and maru_createVkSurface().
+ */
 MARU_API MARU_Status maru_createWindow(MARU_Context* context,
                                        const MARU_WindowCreateInfo* create_info,
                                        MARU_Window** out_window);
@@ -1161,6 +1259,7 @@ MARU_API MARU_Status maru_updateWindow(MARU_Window* window,
                                        uint64_t field_mask,
                                        const MARU_WindowAttributes* attributes);
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window* window);
+/* Backends may coalesce redundant requests; treat this as an edge-triggered hint. */
 MARU_API MARU_Status maru_requestWindowFrame(MARU_Window* window);
 MARU_API MARU_Status maru_requestWindowAttention(MARU_Window* window);
 MARU_API MARU_Status maru_resetWindowMetrics(MARU_Window* window);
@@ -1214,6 +1313,11 @@ typedef enum MARU_ControllerHaptic {
 } MARU_ControllerHaptic;
 
 typedef struct MARU_ControllerList {
+  /*
+   * Borrowed snapshot whose storage may be reused by a later
+   * maru_getControllers() call or by a later pump cycle. Retain handles you
+   * need to keep.
+   */
   MARU_Controller* const* controllers;
   uint32_t count;
 } MARU_ControllerList;
@@ -1258,19 +1362,38 @@ MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller* controller,
 
 /* ----- Data exchange ----- */
 
+/*
+ * `mime_types` strings are copied before maru_announceData() returns
+ * successfully.
+ */
 MARU_API MARU_Status maru_announceData(MARU_Window* window,
                                        MARU_DataExchangeTarget target,
                                        const char** mime_types,
                                        uint32_t count,
                                        MARU_DropActionMask allowed_actions);
+/*
+ * Fulfills a callback-scoped MARU_EVENT_DATA_REQUESTED request.
+ *
+ * If `flags` contains MARU_DATA_PROVIDE_FLAG_ZERO_COPY, `data` must remain
+ * readable until the matching MARU_EVENT_DATA_CONSUMED callback fires or the
+ * owning context is destroyed. Otherwise, the payload is copied before
+ * maru_provideData() returns successfully.
+ */
 MARU_API MARU_Status maru_provideData(MARU_DataRequest* request,
                                       const void* data,
                                       size_t size,
                                       MARU_DataProvideFlags flags);
+/* `mime_type` is copied before maru_requestData() returns successfully. */
 MARU_API MARU_Status maru_requestData(MARU_Window* window,
                                       MARU_DataExchangeTarget target,
                                       const char* mime_type,
                                       void* userdata);
+/*
+ * Returns a borrowed snapshot of the currently available MIME types for the
+ * requested target. The snapshot is invalidated by the next
+ * maru_getAvailableMIMETypes() call on the same context/target, and may also
+ * be replaced by a later pump cycle that changes the underlying offer.
+ */
 MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window* window,
                                                 MARU_DataExchangeTarget target,
                                                 MARU_MIMETypeList* out_list);
@@ -1294,8 +1417,14 @@ typedef struct MARU_VkExtensionList {
   uint32_t count;
 } MARU_VkExtensionList;
 
+/*
+ * Returns a borrowed extension-name array. Backends may point this at static
+ * storage; treat it as read-only and valid for at least the lifetime of the
+ * context.
+ */
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context* context,
                                           MARU_VkExtensionList* out_list);
+/* Requires a ready, non-lost window. */
 MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
                                           VkInstance instance,
                                           MARU_VkGetInstanceProcAddrFunc vk_loader,
@@ -1303,22 +1432,26 @@ MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
 
 /* ----- Event queue helper ----- */
 
-#define MARU_QUEUE_SAFE_EVENT_MASK                                                               \
-  (MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_RESIZED) |    \
-   MARU_EVENT_MASK(MARU_EVENT_KEY_CHANGED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_READY) |          \
-   MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED) | MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_CHANGED) |  \
-   MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED) | MARU_EVENT_MASK(MARU_EVENT_IDLE_CHANGED) |       \
-   MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME) |                                                    \
-   MARU_EVENT_MASK(MARU_EVENT_WINDOW_PRESENTATION_CHANGED) |                                     \
-   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED) | MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_ENDED) | \
-   MARU_EVENT_MASK(MARU_EVENT_USER_0) | MARU_EVENT_MASK(MARU_EVENT_USER_1) |                     \
-   MARU_EVENT_MASK(MARU_EVENT_USER_2) | MARU_EVENT_MASK(MARU_EVENT_USER_3) |                     \
-   MARU_EVENT_MASK(MARU_EVENT_USER_4) | MARU_EVENT_MASK(MARU_EVENT_USER_5) |                     \
-   MARU_EVENT_MASK(MARU_EVENT_USER_6) | MARU_EVENT_MASK(MARU_EVENT_USER_7) |                     \
-   MARU_EVENT_MASK(MARU_EVENT_USER_8) | MARU_EVENT_MASK(MARU_EVENT_USER_9) |                     \
-   MARU_EVENT_MASK(MARU_EVENT_USER_10) | MARU_EVENT_MASK(MARU_EVENT_USER_11) |                   \
-   MARU_EVENT_MASK(MARU_EVENT_USER_12) | MARU_EVENT_MASK(MARU_EVENT_USER_13) |                   \
-   MARU_EVENT_MASK(MARU_EVENT_USER_14) | MARU_EVENT_MASK(MARU_EVENT_USER_15))
+/*
+ * Events excluded from this mask carry transient handles or borrowed pointer
+ * payloads that are not safe to snapshot into a MARU_Queue without additional
+ * copying or retention by the application.
+ */
+#define MARU_QUEUE_SAFE_EVENT_MASK                                                              \
+  (MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_RESIZED) |   \
+   MARU_EVENT_MASK(MARU_EVENT_KEY_CHANGED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_READY) |         \
+   MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED) | MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_CHANGED) | \
+   MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED) | MARU_EVENT_MASK(MARU_EVENT_IDLE_CHANGED) |      \
+   MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME) | MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED) |   \
+   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_ENDED) | MARU_EVENT_MASK(MARU_EVENT_USER_0) |           \
+   MARU_EVENT_MASK(MARU_EVENT_USER_1) | MARU_EVENT_MASK(MARU_EVENT_USER_2) |                    \
+   MARU_EVENT_MASK(MARU_EVENT_USER_3) | MARU_EVENT_MASK(MARU_EVENT_USER_4) |                    \
+   MARU_EVENT_MASK(MARU_EVENT_USER_5) | MARU_EVENT_MASK(MARU_EVENT_USER_6) |                    \
+   MARU_EVENT_MASK(MARU_EVENT_USER_7) | MARU_EVENT_MASK(MARU_EVENT_USER_8) |                    \
+   MARU_EVENT_MASK(MARU_EVENT_USER_9) | MARU_EVENT_MASK(MARU_EVENT_USER_10) |                   \
+   MARU_EVENT_MASK(MARU_EVENT_USER_11) | MARU_EVENT_MASK(MARU_EVENT_USER_12) |                  \
+   MARU_EVENT_MASK(MARU_EVENT_USER_13) | MARU_EVENT_MASK(MARU_EVENT_USER_14) |                  \
+   MARU_EVENT_MASK(MARU_EVENT_USER_15))
 
 static inline bool maru_isQueueSafeEventId(MARU_EventId type) {
   return maru_eventMaskHas(MARU_QUEUE_SAFE_EVENT_MASK, type);

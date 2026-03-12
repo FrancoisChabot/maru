@@ -74,16 +74,16 @@ int main() {
 
   // setup our event handler
   auto event_handler = maru::makeDispatcher(
-      [&](maru::WindowCloseEvent) { 
+      [&](maru::CloseRequestedEvent) { 
         keep_running = false; 
       },
       [&](maru::WindowResizedEvent e) {
         renderer.on_resized(e->geometry);
       },
-      [&](maru::MouseMotionEvent e) {
+      [&](maru::MouseMovedEvent e) {
         std::cout << "mouse movement: (" << e->dip_position.x << ", " << e->dip_position.y << ")\n";
       },
-      [&](maru::KeyboardEvent e) {
+      [&](maru::KeyChangedEvent e) {
         std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";
       },
       [&](maru::ControllerButtonChangedEvent e) {

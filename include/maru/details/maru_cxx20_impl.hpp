@@ -14,20 +14,20 @@ template <typename F>
 consteval MARU_EventMask generateMask() {
   MARU_EventMask mask = 0;
   if constexpr (std::invocable<F, WindowReadyEvent>) mask |= MARU_MASK_WINDOW_READY;
-  if constexpr (std::invocable<F, WindowCloseEvent>) mask |= MARU_MASK_CLOSE_REQUESTED;
+  if constexpr (std::invocable<F, CloseRequestedEvent>) mask |= MARU_MASK_CLOSE_REQUESTED;
   if constexpr (std::invocable<F, WindowResizedEvent>) mask |= MARU_MASK_WINDOW_RESIZED;
   if constexpr (std::invocable<F, WindowStateChangedEvent>) mask |= MARU_MASK_WINDOW_STATE_CHANGED;
-  if constexpr (std::invocable<F, KeyboardEvent>) mask |= MARU_MASK_KEY_CHANGED;
-  if constexpr (std::invocable<F, MouseMotionEvent>) mask |= MARU_MASK_MOUSE_MOVED;
-  if constexpr (std::invocable<F, MouseButtonEvent>) mask |= MARU_MASK_MOUSE_BUTTON_CHANGED;
-  if constexpr (std::invocable<F, MouseScrollEvent>) mask |= MARU_MASK_MOUSE_SCROLLED;
+  if constexpr (std::invocable<F, KeyChangedEvent>) mask |= MARU_MASK_KEY_CHANGED;
+  if constexpr (std::invocable<F, MouseMovedEvent>) mask |= MARU_MASK_MOUSE_MOVED;
+  if constexpr (std::invocable<F, MouseButtonChangedEvent>) mask |= MARU_MASK_MOUSE_BUTTON_CHANGED;
+  if constexpr (std::invocable<F, MouseScrolledEvent>) mask |= MARU_MASK_MOUSE_SCROLLED;
   if constexpr (std::invocable<F, IdleEvent>) mask |= MARU_MASK_IDLE_CHANGED;
   if constexpr (std::invocable<F, MonitorChangedEvent>) mask |= MARU_MASK_MONITOR_CHANGED;
   if constexpr (std::invocable<F, MonitorModeEvent>) mask |= MARU_MASK_MONITOR_MODE_CHANGED;
-  if constexpr (std::invocable<F, DropEnterEvent>) mask |= MARU_MASK_DROP_ENTERED;
-  if constexpr (std::invocable<F, DropHoverEvent>) mask |= MARU_MASK_DROP_HOVERED;
-  if constexpr (std::invocable<F, DropLeaveEvent>) mask |= MARU_MASK_DROP_EXITED;
-  if constexpr (std::invocable<F, DropEvent>) mask |= MARU_MASK_DROP_DROPPED;
+  if constexpr (std::invocable<F, DropEnteredEvent>) mask |= MARU_MASK_DROP_ENTERED;
+  if constexpr (std::invocable<F, DropHoveredEvent>) mask |= MARU_MASK_DROP_HOVERED;
+  if constexpr (std::invocable<F, DropExitedEvent>) mask |= MARU_MASK_DROP_EXITED;
+  if constexpr (std::invocable<F, DropDroppedEvent>) mask |= MARU_MASK_DROP_DROPPED;
   if constexpr (std::invocable<F, DataReceivedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_RECEIVED);
   if constexpr (std::invocable<F, DataRequestEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_REQUESTED);
   if constexpr (std::invocable<F, DataConsumedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_CONSUMED);
@@ -51,8 +51,8 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
         f(WindowReadyEvent{window, evt.window_ready});
       break;
     case MARU_EVENT_CLOSE_REQUESTED:
-      if constexpr (std::invocable<F_raw, WindowCloseEvent>)
-        f(WindowCloseEvent{window, evt.close_requested});
+      if constexpr (std::invocable<F_raw, CloseRequestedEvent>)
+        f(CloseRequestedEvent{window, evt.close_requested});
       break;
     case MARU_EVENT_WINDOW_RESIZED:
       if constexpr (std::invocable<F_raw, WindowResizedEvent>)
@@ -63,20 +63,20 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
         f(WindowStateChangedEvent{window, evt.state_changed});
       break;
     case MARU_EVENT_KEY_CHANGED:
-      if constexpr (std::invocable<F_raw, KeyboardEvent>) 
-        f(KeyboardEvent{window, evt.key});
+      if constexpr (std::invocable<F_raw, KeyChangedEvent>) 
+        f(KeyChangedEvent{window, evt.key_changed});
       break;
     case MARU_EVENT_MOUSE_MOVED:
-      if constexpr (std::invocable<F_raw, MouseMotionEvent>)
-        f(MouseMotionEvent{window, evt.mouse_motion});
+      if constexpr (std::invocable<F_raw, MouseMovedEvent>)
+        f(MouseMovedEvent{window, evt.mouse_moved});
       break;
     case MARU_EVENT_MOUSE_BUTTON_CHANGED:
-      if constexpr (std::invocable<F_raw, MouseButtonEvent>)
-        f(MouseButtonEvent{window, evt.mouse_button});
+      if constexpr (std::invocable<F_raw, MouseButtonChangedEvent>)
+        f(MouseButtonChangedEvent{window, evt.mouse_button_changed});
       break;
     case MARU_EVENT_MOUSE_SCROLLED:
-      if constexpr (std::invocable<F_raw, MouseScrollEvent>)
-        f(MouseScrollEvent{window, evt.mouse_scroll});
+      if constexpr (std::invocable<F_raw, MouseScrolledEvent>)
+        f(MouseScrolledEvent{window, evt.mouse_scrolled});
       break;
     case MARU_EVENT_IDLE_CHANGED:
       if constexpr (std::invocable<F_raw, IdleEvent>) 
@@ -91,20 +91,20 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
         f(MonitorModeEvent{window, evt.monitor_mode_changed});
       break;
     case MARU_EVENT_DROP_ENTERED:
-      if constexpr (std::invocable<F_raw, DropEnterEvent>)
-        f(DropEnterEvent{window, evt.drop_enter});
+      if constexpr (std::invocable<F_raw, DropEnteredEvent>)
+        f(DropEnteredEvent{window, evt.drop_entered});
       break;
     case MARU_EVENT_DROP_HOVERED:
-      if constexpr (std::invocable<F_raw, DropHoverEvent>)
-        f(DropHoverEvent{window, evt.drop_hover});
+      if constexpr (std::invocable<F_raw, DropHoveredEvent>)
+        f(DropHoveredEvent{window, evt.drop_hovered});
       break;
     case MARU_EVENT_DROP_EXITED:
-      if constexpr (std::invocable<F_raw, DropLeaveEvent>)
-        f(DropLeaveEvent{window, evt.drop_leave});
+      if constexpr (std::invocable<F_raw, DropExitedEvent>)
+        f(DropExitedEvent{window, evt.drop_exited});
       break;
     case MARU_EVENT_DROP_DROPPED:
-      if constexpr (std::invocable<F_raw, DropEvent>)
-        f(DropEvent{window, evt.drop});
+      if constexpr (std::invocable<F_raw, DropDroppedEvent>)
+        f(DropDroppedEvent{window, evt.drop_dropped});
       break;
     case MARU_EVENT_DATA_RECEIVED:
       if constexpr (std::invocable<F_raw, DataReceivedEvent>)

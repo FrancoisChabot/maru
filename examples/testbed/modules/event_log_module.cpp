@@ -30,24 +30,24 @@ static std::string formatModifiers(MARU_ModifierFlags mods) {
 
 void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Event& e) {
     if (!enabled_) return;
-    if (hide_mouse_motion_ && type == MARU_EVENT_MOUSE_MOVED) return;
+    if (hide_mouse_moved_ && type == MARU_EVENT_MOUSE_MOVED) return;
     
     std::stringstream ss;
     if (type == MARU_EVENT_WINDOW_RESIZED) {
         ss << "Size: " << e.resized.geometry.dip_size.x << "x" << e.resized.geometry.dip_size.y 
            << " (Pix: " << e.resized.geometry.px_size.x << "x" << e.resized.geometry.px_size.y << ")";
     } else if (type == MARU_EVENT_KEY_CHANGED) {
-        ss << "Key: " << (int)e.key.raw_key << " State: " << (e.key.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
-           << " Mods: " << formatModifiers(e.key.modifiers);
+        ss << "Key: " << (int)e.key_changed.raw_key << " State: " << (e.key_changed.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
+           << " Mods: " << formatModifiers(e.key_changed.modifiers);
     } else if (type == MARU_EVENT_MOUSE_MOVED) {
-        ss << "Pos: (" << e.mouse_motion.dip_position.x << "," << e.mouse_motion.dip_position.y << ")"
-           << " Delta: (" << e.mouse_motion.dip_delta.x << "," << e.mouse_motion.dip_delta.y << ")"
-           << " Raw: (" << e.mouse_motion.raw_dip_delta.x << "," << e.mouse_motion.raw_dip_delta.y << ")";
+        ss << "Pos: (" << e.mouse_moved.dip_position.x << "," << e.mouse_moved.dip_position.y << ")"
+           << " Delta: (" << e.mouse_moved.dip_delta.x << "," << e.mouse_moved.dip_delta.y << ")"
+           << " Raw: (" << e.mouse_moved.raw_dip_delta.x << "," << e.mouse_moved.raw_dip_delta.y << ")";
     } else if (type == MARU_EVENT_MOUSE_BUTTON_CHANGED) {
-        ss << "Button: " << (int)e.mouse_button.button_id << " State: " << (e.mouse_button.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
-           << " Mods: " << formatModifiers(e.mouse_button.modifiers);
+        ss << "Button: " << (int)e.mouse_button_changed.button_id << " State: " << (e.mouse_button_changed.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
+           << " Mods: " << formatModifiers(e.mouse_button_changed.modifiers);
     } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
-        ss << "Delta: (" << e.mouse_scroll.dip_delta.x << "," << e.mouse_scroll.dip_delta.y << ")" << "Steps: (" << e.mouse_scroll.steps.x << "," << e.mouse_scroll.steps.y << ")";
+        ss << "Delta: (" << e.mouse_scrolled.dip_delta.x << "," << e.mouse_scrolled.dip_delta.y << ")" << "Steps: (" << e.mouse_scrolled.steps.x << "," << e.mouse_scrolled.steps.y << ")";
     } else if (type == MARU_EVENT_IDLE_CHANGED) {
         ss << "Idle: " << (e.idle_changed.is_idle ? "YES" : "NO") << " Timeout: " << e.idle_changed.timeout_ms << "ms";
     } else if (type == MARU_EVENT_TEXT_EDIT_STARTED) {
@@ -78,13 +78,13 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
     } else if (type == MARU_EVENT_MONITOR_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_changed.monitor << " Connected: " << (e.monitor_changed.connected ? "YES" : "NO");
     } else if (type == MARU_EVENT_DROP_ENTERED) {
-        ss << "Drop Enter: (" << e.drop_enter.dip_position.x << "," << e.drop_enter.dip_position.y << ") Count=" << e.drop_enter.available_types.count;
+        ss << "Drop Enter: (" << e.drop_entered.dip_position.x << "," << e.drop_entered.dip_position.y << ") Count=" << e.drop_entered.available_types.count;
     } else if (type == MARU_EVENT_DROP_HOVERED) {
-        ss << "Drop Hover: (" << e.drop_hover.dip_position.x << "," << e.drop_hover.dip_position.y << ") Count=" << e.drop_hover.available_types.count;
+        ss << "Drop Hover: (" << e.drop_hovered.dip_position.x << "," << e.drop_hovered.dip_position.y << ") Count=" << e.drop_hovered.available_types.count;
     } else if (type == MARU_EVENT_DROP_EXITED) {
         ss << "Drop Exit";
     } else if (type == MARU_EVENT_DROP_DROPPED) {
-        ss << "Drop Dropped: (" << e.drop.dip_position.x << "," << e.drop.dip_position.y << ") Count=" << e.drop.available_types.count;
+        ss << "Drop Dropped: (" << e.drop_dropped.dip_position.x << "," << e.drop_dropped.dip_position.y << ") Count=" << e.drop_dropped.available_types.count;
     } else if (type == MARU_EVENT_DATA_RECEIVED) {
         ss << "Data Received: Status=" << (int)e.data_received.status << " Mime=" << (e.data_received.mime_type ? e.data_received.mime_type : "N/A") << " Size=" << e.data_received.size;
     } else if (type == MARU_EVENT_DATA_REQUESTED) {
@@ -149,7 +149,7 @@ void EventLogModule::render(MARU_Context* ctx, MARU_Window* window) {
     ImGui::SameLine();
     ImGui::Checkbox("Frame Events", &log_frame_events_);
     ImGui::SameLine();
-    ImGui::Checkbox("Hide Mouse Motion", &hide_mouse_motion_);
+    ImGui::Checkbox("Hide Mouse Moved", &hide_mouse_moved_);
 
     ImGui::Separator();
 

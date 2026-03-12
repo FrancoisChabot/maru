@@ -30,8 +30,8 @@ void handle_event(MARU_EventId type, MARU_Window *window, const MARU_Event *even
 
 ```c
 if (type == MARU_EVENT_MOUSE_MOVED) {
-    float x = event->mouse_motion.dip_position.x;
-    float y = event->mouse_motion.dip_position.y;
+    float x = event->mouse_moved.dip_position.x;
+    float y = event->mouse_moved.dip_position.y;
 }
 ```
 

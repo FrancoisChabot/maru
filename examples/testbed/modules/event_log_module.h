@@ -40,7 +40,7 @@ private:
     bool auto_scroll_ = true;
     bool show_details_ = true;
     bool log_frame_events_ = false;
-    bool hide_mouse_motion_ = false;
+    bool hide_mouse_moved_ = false;
 
     const char* typeToString(MARU_EventId type);
 };

@@ -607,15 +607,15 @@ void _maru_x11_process_event(MARU_Context_X11 *ctx, XEvent *ev) {
                 &root_x, &root_y, &win_x, &win_y, &state);
 
             MARU_Event mevt = {0};
-            mevt.mouse_motion.dip_position.x =
+            mevt.mouse_moved.dip_position.x =
                 (MARU_Scalar)ctx->linux_common.pointer.x;
-            mevt.mouse_motion.dip_position.y =
+            mevt.mouse_moved.dip_position.y =
                 (MARU_Scalar)ctx->linux_common.pointer.y;
-            mevt.mouse_motion.dip_delta.x = raw_dx;
-            mevt.mouse_motion.dip_delta.y = raw_dy;
-            mevt.mouse_motion.raw_dip_delta.x = raw_dx;
-            mevt.mouse_motion.raw_dip_delta.y = raw_dy;
-            mevt.mouse_motion.modifiers = _maru_x11_get_modifiers(state);
+            mevt.mouse_moved.dip_delta.x = raw_dx;
+            mevt.mouse_moved.dip_delta.y = raw_dy;
+            mevt.mouse_moved.raw_dip_delta.x = raw_dx;
+            mevt.mouse_moved.raw_dip_delta.y = raw_dy;
+            mevt.mouse_moved.modifiers = _maru_x11_get_modifiers(state);
             ctx->linux_common.pointer.focused_window =
                 (MARU_Window *)locked_window;
             _maru_x11_clear_locked_raw_accum(ctx);

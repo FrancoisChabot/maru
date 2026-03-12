@@ -105,16 +105,16 @@ int main() {
     // 3. Scan the stable buffer with a visitor. 
     // Implicit event mask will be generated from the lambdas.
     queue.scan(maru::overloads{
-      [&](maru::WindowCloseEvent) { 
+      [&](maru::CloseRequestedEvent) { 
         keep_running = false; 
       },
       [&](maru::WindowResizedEvent e) {
         renderer.on_resized(e->geometry);
       },
-      [&](maru::MouseMotionEvent e) {
+      [&](maru::MouseMovedEvent e) {
         std::cout << "mouse movement: (" << e->dip_position.x << ", (" << e->dip_position.y << ")\n";
       },
-      [&](maru::KeyboardEvent e) {
+      [&](maru::KeyChangedEvent e) {
         std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";
       },
       [&](maru::WindowReadyEvent e) {

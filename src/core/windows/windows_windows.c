@@ -187,9 +187,9 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         }
 
         MARU_Event evt = {0};
-        evt.key.raw_key = key;
-        evt.key.state = state;
-        evt.key.modifiers = _maru_get_modifiers_windows();
+        evt.key_changed.raw_key = key;
+        evt.key_changed.state = state;
+        evt.key_changed.modifiers = _maru_get_modifiers_windows();
         _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_CHANGED, (MARU_Window *)win, &evt);
       }
       return 0;
@@ -323,33 +323,33 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         MARU_Scalar centerX = (MARU_Scalar)(rect.right - rect.left) / 2.0f;
         MARU_Scalar centerY = (MARU_Scalar)(rect.bottom - rect.top) / 2.0f;
 
-        evt.mouse_motion.dip_delta.x = pos.x - centerX;
-        evt.mouse_motion.dip_delta.y = pos.y - centerY;
+        evt.mouse_moved.dip_delta.x = pos.x - centerX;
+        evt.mouse_moved.dip_delta.y = pos.y - centerY;
 
-        if (evt.mouse_motion.dip_delta.x != 0 || evt.mouse_motion.dip_delta.y != 0) {
-          win->virtual_cursor_pos.x += evt.mouse_motion.dip_delta.x;
-          win->virtual_cursor_pos.y += evt.mouse_motion.dip_delta.y;
+        if (evt.mouse_moved.dip_delta.x != 0 || evt.mouse_moved.dip_delta.y != 0) {
+          win->virtual_cursor_pos.x += evt.mouse_moved.dip_delta.x;
+          win->virtual_cursor_pos.y += evt.mouse_moved.dip_delta.y;
 
           POINT pt = {(int)centerX, (int)centerY};
           ClientToScreen(win->hwnd, &pt);
           SetCursorPos(pt.x, pt.y);
         }
-        evt.mouse_motion.dip_position = win->virtual_cursor_pos;
+        evt.mouse_moved.dip_position = win->virtual_cursor_pos;
       } else {
-        evt.mouse_motion.dip_position = pos;
+        evt.mouse_moved.dip_position = pos;
         if (win->last_mouse_pos_valid) {
-          evt.mouse_motion.dip_delta.x = pos.x - win->last_mouse_pos.x;
-          evt.mouse_motion.dip_delta.y = pos.y - win->last_mouse_pos.y;
+          evt.mouse_moved.dip_delta.x = pos.x - win->last_mouse_pos.x;
+          evt.mouse_moved.dip_delta.y = pos.y - win->last_mouse_pos.y;
         } else {
-          evt.mouse_motion.dip_delta.x = 0;
-          evt.mouse_motion.dip_delta.y = 0;
+          evt.mouse_moved.dip_delta.x = 0;
+          evt.mouse_moved.dip_delta.y = 0;
         }
         win->last_mouse_pos = pos;
         win->last_mouse_pos_valid = true;
       }
 
-      evt.mouse_motion.raw_dip_delta = evt.mouse_motion.delta; // TODO: handle raw input
-      evt.mouse_motion.modifiers = _maru_get_modifiers_windows();
+      evt.mouse_moved.raw_dip_delta = evt.mouse_moved.dip_delta; // TODO: handle raw input
+      evt.mouse_moved.modifiers = _maru_get_modifiers_windows();
 
       _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)win, &evt);
       return 0;
@@ -369,13 +369,13 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       MARU_Scalar value = (MARU_Scalar)delta / (MARU_Scalar)WHEEL_DELTA;
 
       if (uMsg == WM_MOUSEWHEEL) {
-        evt.mouse_scroll.steps.y = (int32_t)value;
-        evt.mouse_scroll.dip_delta.y = value * 10.0f; // TODO: use system settings
+        evt.mouse_scrolled.steps.y = (int32_t)value;
+        evt.mouse_scrolled.dip_delta.y = value * 10.0f; // TODO: use system settings
       } else {
-        evt.mouse_scroll.steps.x = (int32_t)value;
-        evt.mouse_scroll.dip_delta.x = value * 10.0f; // TODO: use system settings
+        evt.mouse_scrolled.steps.x = (int32_t)value;
+        evt.mouse_scrolled.dip_delta.x = value * 10.0f; // TODO: use system settings
       }
-      evt.mouse_scroll.modifiers = _maru_get_modifiers_windows();
+      evt.mouse_scrolled.modifiers = _maru_get_modifiers_windows();
 
       _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_SCROLLED, (MARU_Window *)win, &evt);
       return 0;

@@ -285,24 +285,24 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
     
     ImGuiIO& io = ImGui::GetIO();
     if (type == MARU_EVENT_MOUSE_MOVED) {
-        io.AddMousePosEvent((float)event->mouse_motion.dip_position.x, (float)event->mouse_motion.dip_position.y);
+        io.AddMousePosEvent((float)event->mouse_moved.dip_position.x, (float)event->mouse_moved.dip_position.y);
     } else if (type == MARU_EVENT_MOUSE_BUTTON_CHANGED) {
         int mouse_button = -1;
-        if (event->mouse_button.button_id == 0) mouse_button = 0;
-        if (event->mouse_button.button_id == 1) mouse_button = 1;
-        if (event->mouse_button.button_id == 2) mouse_button = 2;
+        if (event->mouse_button_changed.button_id == 0) mouse_button = 0;
+        if (event->mouse_button_changed.button_id == 1) mouse_button = 1;
+        if (event->mouse_button_changed.button_id == 2) mouse_button = 2;
         if (mouse_button != -1)
-            io.AddMouseButtonEvent(mouse_button, event->mouse_button.state == MARU_BUTTON_STATE_PRESSED);
+            io.AddMouseButtonEvent(mouse_button, event->mouse_button_changed.state == MARU_BUTTON_STATE_PRESSED);
     } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
-        io.AddMouseWheelEvent((float)event->mouse_scroll.dip_delta.x, (float)event->mouse_scroll.dip_delta.y);
+        io.AddMouseWheelEvent((float)event->mouse_scrolled.dip_delta.x, (float)event->mouse_scrolled.dip_delta.y);
     } else if (type == MARU_EVENT_KEY_CHANGED) {
-        ImGuiKey key = ImGui_ImplMaru_KeyToImGuiKey(event->key.raw_key);
+        ImGuiKey key = ImGui_ImplMaru_KeyToImGuiKey(event->key_changed.raw_key);
         if (key != ImGuiKey_None) {
-            io.AddKeyEvent(key, event->key.state == MARU_BUTTON_STATE_PRESSED);
-            io.AddKeyEvent(ImGuiMod_Ctrl, (event->key.modifiers & MARU_MODIFIER_CONTROL) != 0);
-            io.AddKeyEvent(ImGuiMod_Shift, (event->key.modifiers & MARU_MODIFIER_SHIFT) != 0);
-            io.AddKeyEvent(ImGuiMod_Alt, (event->key.modifiers & MARU_MODIFIER_ALT) != 0);
-            io.AddKeyEvent(ImGuiMod_Super, (event->key.modifiers & MARU_MODIFIER_META) != 0);
+            io.AddKeyEvent(key, event->key_changed.state == MARU_BUTTON_STATE_PRESSED);
+            io.AddKeyEvent(ImGuiMod_Ctrl, (event->key_changed.modifiers & MARU_MODIFIER_CONTROL) != 0);
+            io.AddKeyEvent(ImGuiMod_Shift, (event->key_changed.modifiers & MARU_MODIFIER_SHIFT) != 0);
+            io.AddKeyEvent(ImGuiMod_Alt, (event->key_changed.modifiers & MARU_MODIFIER_ALT) != 0);
+            io.AddKeyEvent(ImGuiMod_Super, (event->key_changed.modifiers & MARU_MODIFIER_META) != 0);
         }
     } else if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) {
         if (event->text_edit_committed.committed_utf8 &&
