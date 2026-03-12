@@ -49,6 +49,12 @@ _maru_status_if_request_context_lost(MARU_DataRequest *request) {
   return _maru_status_if_context_lost((const MARU_Context *)handle->ctx_base);
 }
 
+static inline MARU_Status
+_maru_status_if_queue_context_lost(const MARU_Queue *queue) {
+  return _maru_status_if_context_lost(
+      (const MARU_Context *)((const MARU_Queue_Base *)queue)->ctx_base);
+}
+
 #define MARU_RETURN_IF_CONTEXT_LOST(expr)                                      \
   do {                                                                         \
     const MARU_Status _maru_status = (expr);                                   \
@@ -314,6 +320,63 @@ static inline void _maru_validate_requestWindowAttention(MARU_Window *window) {
 static inline void _maru_validate_resetContextMetrics(MARU_Context *context) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   _maru_validate_thread((const MARU_Context_Base *)context);
+}
+
+static inline void
+_maru_validate_createQueue(MARU_Context *ctx, uint32_t capacity, MARU_Queue **out_queue) {
+  MARU_CONSTRAINT_CHECK(ctx != NULL);
+  MARU_CONSTRAINT_CHECK(capacity > 0);
+  MARU_CONSTRAINT_CHECK(out_queue != NULL);
+  _maru_validate_thread((const MARU_Context_Base *)ctx);
+}
+
+static inline void _maru_validate_destroyQueue(MARU_Queue *queue) {
+  MARU_CONSTRAINT_CHECK(queue != NULL);
+  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
+}
+
+static inline void _maru_validate_pushQueue(MARU_Queue *queue, MARU_EventId type, MARU_Window *window, const MARU_Event *event) {
+  MARU_CONSTRAINT_CHECK(queue != NULL);
+  MARU_CONSTRAINT_CHECK(event != NULL);
+  MARU_CONSTRAINT_CHECK(maru_isKnownEventId(type));
+  MARU_CONSTRAINT_CHECK(maru_isQueueSafeEventId(type));
+  const MARU_Context_Base *ctx_base = ((const MARU_Queue_Base *)queue)->ctx_base;
+  _maru_validate_thread(ctx_base);
+  if (window != NULL) {
+    MARU_CONSTRAINT_CHECK(((const MARU_Window_Base *)window)->ctx_base == ctx_base);
+  }
+}
+
+static inline void _maru_validate_commitQueue(MARU_Queue *queue) {
+  MARU_CONSTRAINT_CHECK(queue != NULL);
+  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
+}
+
+static inline void _maru_validate_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback callback, void *userdata) {
+  MARU_CONSTRAINT_CHECK(queue != NULL);
+  if (mask != 0) {
+    MARU_CONSTRAINT_CHECK(callback != NULL);
+  }
+  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
+  (void)mask;
+  (void)userdata;
+}
+
+static inline void _maru_validate_setQueueCoalesceMask(MARU_Queue *queue, MARU_EventMask mask) {
+  MARU_CONSTRAINT_CHECK(queue != NULL);
+  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
+  (void)mask;
+}
+
+static inline void _maru_validate_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metrics) {
+  MARU_CONSTRAINT_CHECK(queue != NULL);
+  MARU_CONSTRAINT_CHECK(out_metrics != NULL);
+  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
+}
+
+static inline void _maru_validate_resetQueueMetrics(MARU_Queue *queue) {
+  MARU_CONSTRAINT_CHECK(queue != NULL);
+  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
 }
 
 static inline void

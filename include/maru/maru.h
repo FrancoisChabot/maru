@@ -104,7 +104,7 @@ typedef uint64_t MARU_EventMask;
  */
 typedef enum MARU_Status {
   MARU_SUCCESS = 0,             // The operation succeeded
-  MARU_FAILURE = 1,             // The operatoin failed, but the backend is still healthy
+  MARU_FAILURE = 1,             // The operation failed, but the backend is still healthy
   MARU_ERROR_CONTEXT_LOST = 2,  // The context is dead and now inert. You will have to rebuild it
 } MARU_Status;
 
@@ -537,20 +537,20 @@ typedef enum MARU_EventId {
 #define MARU_MASK_USER_13 MARU_EVENT_MASK(MARU_EVENT_USER_13)
 #define MARU_MASK_USER_14 MARU_EVENT_MASK(MARU_EVENT_USER_14)
 #define MARU_MASK_USER_15 MARU_EVENT_MASK(MARU_EVENT_USER_15)
-#define MARU_ALL_EVENTS                                                                           \
-  MARU_MASK_CLOSE_REQUESTED | MARU_MASK_WINDOW_RESIZED | MARU_MASK_KEY_CHANGED |                  \
-      MARU_MASK_WINDOW_READY | MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_BUTTON_CHANGED |           \
-      MARU_MASK_MOUSE_SCROLLED | MARU_MASK_IDLE_CHANGED | MARU_MASK_MONITOR_CHANGED |             \
-      MARU_MASK_MONITOR_MODE_CHANGED | MARU_MASK_WINDOW_FRAME | MARU_MASK_WINDOW_STATE_CHANGED |  \
-      MARU_MASK_TEXT_EDIT_STARTED | MARU_MASK_TEXT_EDIT_UPDATED | MARU_MASK_TEXT_EDIT_COMMITTED | \
-      MARU_MASK_TEXT_EDIT_ENDED | MARU_MASK_DROP_ENTERED | MARU_MASK_DROP_HOVERED |               \
-      MARU_MASK_DROP_EXITED | MARU_MASK_DROP_DROPPED | MARU_MASK_DATA_RECEIVED |                  \
-      MARU_MASK_DATA_REQUESTED | MARU_MASK_DATA_CONSUMED | MARU_MASK_DRAG_FINISHED |              \
-      MARU_MASK_CONTROLLER_CHANGED | MARU_MASK_CONTROLLER_BUTTON_CHANGED | MARU_MASK_USER_0 |     \
-      MARU_MASK_USER_1 | MARU_MASK_USER_2 | MARU_MASK_USER_3 | MARU_MASK_USER_4 |                 \
-      MARU_MASK_USER_5 | MARU_MASK_USER_6 | MARU_MASK_USER_7 | MARU_MASK_USER_8 |                 \
-      MARU_MASK_USER_9 | MARU_MASK_USER_10 | MARU_MASK_USER_11 | MARU_MASK_USER_12 |              \
-      MARU_MASK_USER_13 | MARU_MASK_USER_14 | MARU_MASK_USER_15
+#define MARU_ALL_EVENTS                                                                            \
+  (MARU_MASK_CLOSE_REQUESTED | MARU_MASK_WINDOW_RESIZED | MARU_MASK_KEY_CHANGED |                  \
+   MARU_MASK_WINDOW_READY | MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_BUTTON_CHANGED |               \
+   MARU_MASK_MOUSE_SCROLLED | MARU_MASK_IDLE_CHANGED | MARU_MASK_MONITOR_CHANGED |                 \
+   MARU_MASK_MONITOR_MODE_CHANGED | MARU_MASK_WINDOW_FRAME | MARU_MASK_WINDOW_STATE_CHANGED |      \
+   MARU_MASK_TEXT_EDIT_STARTED | MARU_MASK_TEXT_EDIT_UPDATED | MARU_MASK_TEXT_EDIT_COMMITTED |     \
+   MARU_MASK_TEXT_EDIT_ENDED | MARU_MASK_DROP_ENTERED | MARU_MASK_DROP_HOVERED |                   \
+   MARU_MASK_DROP_EXITED | MARU_MASK_DROP_DROPPED | MARU_MASK_DATA_RECEIVED |                      \
+   MARU_MASK_DATA_REQUESTED | MARU_MASK_DATA_CONSUMED | MARU_MASK_DRAG_FINISHED |                  \
+   MARU_MASK_CONTROLLER_CHANGED | MARU_MASK_CONTROLLER_BUTTON_CHANGED | MARU_MASK_USER_0 |         \
+   MARU_MASK_USER_1 | MARU_MASK_USER_2 | MARU_MASK_USER_3 | MARU_MASK_USER_4 | MARU_MASK_USER_5 |  \
+   MARU_MASK_USER_6 | MARU_MASK_USER_7 | MARU_MASK_USER_8 | MARU_MASK_USER_9 | MARU_MASK_USER_10 | \
+   MARU_MASK_USER_11 | MARU_MASK_USER_12 | MARU_MASK_USER_13 | MARU_MASK_USER_14 |                 \
+   MARU_MASK_USER_15)
 
 static inline bool maru_isUserEventId(MARU_EventId id) {
   return id >= MARU_EVENT_USER_0 && id <= MARU_EVENT_USER_15;
@@ -1180,6 +1180,11 @@ typedef struct MARU_WindowCreateInfo {
   /* Consumed during maru_createWindow(); it need only outlive that call. */
   const char* app_id;
   MARU_ContentType content_type;
+
+  /* 
+   * Decoration mode cannot be changed after creation in all backends, so it's
+   * a creation-time only property.
+   */
   bool decorated;
   void* userdata;
 } MARU_WindowCreateInfo;

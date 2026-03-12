@@ -49,6 +49,10 @@ typedef struct MARU_DataRequestHandleBase {
   struct MARU_Context_Base *ctx_base;
 } MARU_DataRequestHandleBase;
 
+typedef struct MARU_Queue_Base {
+  struct MARU_Context_Base *ctx_base;
+} MARU_Queue_Base;
+
 typedef struct MARU_CursorAnimationCallbacks {
   void (*select_frame)(MARU_Cursor_Base *cursor, uint32_t frame_index);
   bool (*reapply)(MARU_Cursor_Base *cursor);

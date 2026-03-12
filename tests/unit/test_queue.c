@@ -132,20 +132,6 @@ UTEST(QueueTest, QueueSafeMaskHelper) {
     EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_CONTROLLER_CHANGED));
 }
 
-UTEST(QueueTest, PushRejectsNullPayload) {
-    MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-    MARU_Context *context = maru_test_createContext(&create_info);
-
-    MARU_Queue *queue = NULL;
-    maru_createQueue(context, 16, &queue);
-
-    EXPECT_EQ(maru_pushQueue(queue, MARU_EVENT_USER_0, NULL, NULL),
-              (MARU_Status)MARU_FAILURE);
-
-    maru_destroyQueue(queue);
-    maru_destroyContext(context);
-}
-
 struct CoalesceResult {
     int count;
     MARU_Vec2Dip dip_pos;

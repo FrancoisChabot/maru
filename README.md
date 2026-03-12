@@ -240,7 +240,8 @@ maru_createContext(&create_info, &context);
 *   The thread that creates a `MARU_Context` is its owner thread. 
 *   For true cross-platform parity, this should be your main thread. As much as we'd like to provide isolated concurent contexts, it's just not possible on every backend.
 *   Functions that return `MARU_Status` must be called from the owner thread.
-*   Functions that do not return `MARU_Status` (like `maru_postEvent`, `maru_wakeContext`, and reference counting) are internally synchronized and can be called from any thread.
+*   Functions that do not return `MARU_Status` can be called from any thread, as long as they are externally synchronized.
+*   `maru_postEvent()`, `maru_wakeContext()`, `maru_*retain()` and `maru_*release()` can be safely called from anywhere at any time. (The safety is provided via atomic operations, not locks).
 
 #### Volatile Hardware, Stable Threads
 **"Why do Controllers and Monitors use a retain/release system?"**

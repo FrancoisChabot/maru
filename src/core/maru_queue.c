@@ -281,6 +281,9 @@ static void _maru_queue_buffer_cleanup(MARU_Context_Base *ctx_base, MARU_QueueBu
 }
 
 MARU_Status maru_createQueue(MARU_Context *ctx, uint32_t capacity, MARU_Queue **out_queue) {
+    MARU_API_VALIDATE(createQueue, ctx, capacity, out_queue);
+    MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(ctx));
+
     if (!ctx || !out_queue || capacity == 0) {
         return MARU_FAILURE;
     }
@@ -317,6 +320,7 @@ MARU_Status maru_createQueue(MARU_Context *ctx, uint32_t capacity, MARU_Queue **
 }
 
 void maru_destroyQueue(MARU_Queue *queue) {
+    MARU_API_VALIDATE(destroyQueue, queue);
     if (!queue) return;
     
     MARU_Context_Base *ctx_base = queue->ctx_base;
@@ -327,13 +331,10 @@ void maru_destroyQueue(MARU_Queue *queue) {
 
 MARU_Status maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
                             MARU_Window *window, const MARU_Event *event) {
-    if (!queue || !event) return MARU_FAILURE;
+    MARU_API_VALIDATE(pushQueue, queue, type, window, event);
+    MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_queue_context_lost(queue));
 
-#ifdef MARU_VALIDATE_API_CALLS
-    _maru_validate_thread(queue->ctx_base);
-    MARU_CONSTRAINT_CHECK(maru_isKnownEventId(type));
-    MARU_CONSTRAINT_CHECK(maru_isQueueSafeEventId(type));
-#endif
+    if (!queue || !event) return MARU_FAILURE;
 
     return _maru_queue_push_internal(queue, type, window, event)
                ? MARU_SUCCESS
@@ -341,11 +342,10 @@ MARU_Status maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
 }
 
 MARU_Status maru_commitQueue(MARU_Queue *queue) {
-    if (!queue) return MARU_FAILURE;
+    MARU_API_VALIDATE(commitQueue, queue);
+    MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_queue_context_lost(queue));
 
-#ifdef MARU_VALIDATE_API_CALLS
-    _maru_validate_thread(queue->ctx_base);
-#endif
+    if (!queue) return MARU_FAILURE;
 
     // O(1) swap
     MARU_QueueBuffer tmp_buf = queue->active;
@@ -360,6 +360,7 @@ MARU_Status maru_commitQueue(MARU_Queue *queue) {
 }
 
 void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback callback, void *userdata) {
+    MARU_API_VALIDATE(scanQueue, queue, mask, callback, userdata);
     if (!queue || !callback) return;
 
     MARU_QueueBuffer stable = queue->stable;
@@ -373,12 +374,14 @@ void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback c
 }
 
 void maru_setQueueCoalesceMask(MARU_Queue *queue, MARU_EventMask mask) {
+    MARU_API_VALIDATE(setQueueCoalesceMask, queue, mask);
     if (queue) {
         queue->coalesce_mask = mask;
     }
 }
 
 void maru_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metrics) {
+    MARU_API_VALIDATE(getQueueMetrics, queue, out_metrics);
     if (!out_metrics) return;
 
     if (!queue) {
@@ -396,6 +399,7 @@ void maru_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metric
 }
 
 void maru_resetQueueMetrics(MARU_Queue *queue) {
+    MARU_API_VALIDATE(resetQueueMetrics, queue);
     if (!queue) return;
     _maru_queue_reset_metrics_internal(queue);
 }
