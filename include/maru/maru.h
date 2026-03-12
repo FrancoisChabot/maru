@@ -880,11 +880,10 @@ MARU_API MARU_Status maru_wakeContext(MARU_Context* context);
 #define MARU_NEVER UINT32_MAX
 #define MARU_CONTEXT_ATTR_INHIBIT_IDLE MARU_BIT(0)
 #define MARU_CONTEXT_ATTR_DIAGNOSTICS MARU_BIT(1)
-#define MARU_CONTEXT_ATTR_DEFAULT_CURSOR MARU_BIT(2)
-#define MARU_CONTEXT_ATTR_IDLE_TIMEOUT MARU_BIT(3)
+#define MARU_CONTEXT_ATTR_IDLE_TIMEOUT MARU_BIT(2)
 #define MARU_CONTEXT_ATTR_ALL                                       \
   (MARU_CONTEXT_ATTR_INHIBIT_IDLE | MARU_CONTEXT_ATTR_DIAGNOSTICS | \
-   MARU_CONTEXT_ATTR_DEFAULT_CURSOR | MARU_CONTEXT_ATTR_IDLE_TIMEOUT)
+   MARU_CONTEXT_ATTR_IDLE_TIMEOUT)
 
 static inline void* maru_getContextUserdata(const MARU_Context* context);
 static inline void maru_setContextUserdata(MARU_Context* context, void* userdata);
@@ -905,7 +904,6 @@ static inline bool maru_isContextMouseButtonPressed(const MARU_Context* context,
 typedef struct MARU_ContextAttributes {
   MARU_DiagnosticCallback diagnostic_cb;
   void* diagnostic_userdata;
-  MARU_Cursor* default_cursor;
   bool inhibit_idle;
   uint32_t idle_timeout_ms;
 } MARU_ContextAttributes;
@@ -924,7 +922,6 @@ typedef struct MARU_ContextCreateInfo {
       .backend = MARU_BACKEND_UNKNOWN,                                                        \
       .attributes = {.diagnostic_cb = NULL,                                                   \
                      .diagnostic_userdata = NULL,                                             \
-                     .default_cursor = NULL,                                                  \
                      .inhibit_idle = false,                                                   \
                      .idle_timeout_ms = 0},                                                   \
       .tuning = MARU_CONTEXT_TUNING_DEFAULT,                                                  \

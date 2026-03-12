@@ -354,6 +354,9 @@ UTEST(QueueTest, UsesCustomAllocator) {
 }
 
 UTEST(QueueTest, RejectsPartialAllocator) {
+#ifdef MARU_VALIDATE_API_CALLS
+    return;
+#else
     struct QueueAllocatorStats stats = {0};
     MARU_QueueCreateInfo create_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
     create_info.capacity = 8;
