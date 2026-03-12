@@ -38,7 +38,7 @@ typedef struct MARU_Monitor MARU_Monitor;
 
 /** @brief A video mode supported by a monitor. */
 typedef struct MARU_VideoMode {
-  MARU_Vec2Px size;
+  MARU_Vec2Px px_size;
   uint32_t refresh_rate_millihz;
 } MARU_VideoMode;
 
@@ -86,11 +86,11 @@ static inline MARU_Vec2Mm maru_getMonitorPhysicalSize(const MARU_Monitor *monito
 /** @brief Retrieves the current video mode of the monitor. */
 static inline MARU_VideoMode maru_getMonitorCurrentMode(const MARU_Monitor *monitor);
 
-/** @brief Retrieves the logical position of the monitor in the virtual desktop. */
-static inline MARU_Vec2Dip maru_getMonitorLogicalPosition(const MARU_Monitor *monitor);
+/** @brief Retrieves the dip dip_position of the monitor in the virtual desktop. */
+static inline MARU_Vec2Dip maru_getMonitorDipPosition(const MARU_Monitor *monitor);
 
-/** @brief Retrieves the logical dimensions of the monitor. */
-static inline MARU_Vec2Dip maru_getMonitorLogicalSize(const MARU_Monitor *monitor);
+/** @brief Retrieves the dip dimensions of the monitor. */
+static inline MARU_Vec2Dip maru_getMonitorDipSize(const MARU_Monitor *monitor);
 
 /** @brief Checks if this is the primary system monitor. */
 static inline bool maru_isMonitorPrimary(const MARU_Monitor *monitor);

@@ -24,7 +24,7 @@ typedef struct MARU_Image MARU_Image;
 
 /** @brief Parameters for maru_createImage(). */
 typedef struct MARU_ImageCreateInfo {
-  MARU_Vec2Px size;
+  MARU_Vec2Px px_size;
   const uint32_t *pixels;
   uint32_t stride_bytes;
   void *userdata;

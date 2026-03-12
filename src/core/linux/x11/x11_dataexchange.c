@@ -394,7 +394,7 @@ void _maru_x11_clear_pending_request(MARU_Context_X11 *ctx,
   }
   request->incr_size = 0;
   request->incr_capacity = 0;
-  request->user_tag = NULL;
+  request->userdata = NULL;
 }
 
 bool _maru_x11_set_dnd_selected_mime(MARU_Context_X11 *ctx,
@@ -560,8 +560,8 @@ void _maru_x11_dnd_set_position_from_packed(MARU_Context_X11 *ctx,
         ctx->display, ctx->root, session->target_window->handle, (int)x_root,
         (int)y_root, &x_local, &y_local, &child);
   }
-  session->position.x = (MARU_Scalar)x_local;
-  session->position.y = (MARU_Scalar)y_local;
+  session->dip_position.x = (MARU_Scalar)x_local;
+  session->dip_position.y = (MARU_Scalar)y_local;
 }
 
 const char *_maru_x11_dnd_first_mime(const MARU_X11DnDSession *session,
@@ -957,7 +957,7 @@ static void _maru_x11_dispatch_data_received(MARU_Context_X11 *ctx,
                                              const void *data, size_t size,
                                              MARU_Status status) {
   MARU_Event evt = {0};
-  evt.data_received.user_tag = request->user_tag;
+  evt.data_received.userdata = request->userdata;
   evt.data_received.status = status;
   evt.data_received.target = target;
   evt.data_received.mime_type = request->mime_type ? request->mime_type : "";
@@ -988,7 +988,7 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
                                           const void *data, size_t size) {
   const bool is_internal_dnd_prefetch =
       (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) &&
-      (request->user_tag == (void *)1);
+      (request->userdata == (void *)1);
 
   if (status == MARU_SUCCESS && is_internal_dnd_prefetch && ctx->dnd_session.active &&
       ctx->dnd_session.drop_pending && ctx->dnd_session.target_window) {
@@ -1006,7 +1006,7 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
     };
 
     MARU_Event drop_evt = {0};
-    drop_evt.drop.position = ctx->dnd_session.position;
+    drop_evt.drop.dip_position = ctx->dnd_session.dip_position;
     drop_evt.drop.session = (MARU_DropSession *)&session_exposed;
     drop_evt.drop.available_types.mime_types =
         (const char *const *)ctx->dnd_session.offered_mimes;
@@ -1049,7 +1049,7 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
     };
 
     MARU_Event drop_evt = {0};
-    drop_evt.drop.position = ctx->dnd_session.position;
+    drop_evt.drop.dip_position = ctx->dnd_session.dip_position;
     drop_evt.drop.session = (MARU_DropSession *)&session_exposed;
     drop_evt.drop.available_types.mime_types =
         (const char *const *)ctx->dnd_session.offered_mimes;
@@ -1424,7 +1424,7 @@ MARU_Status _maru_x11_announceData(MARU_Window *window,
 
 MARU_Status _maru_x11_requestData(MARU_Window *window,
                                   MARU_DataExchangeTarget target,
-                                  const char *mime_type, void *user_tag) {
+                                  const char *mime_type, void *userdata) {
   MARU_Window_X11 *win = (MARU_Window_X11 *)window;
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)win->base.ctx_base;
   if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
@@ -1455,7 +1455,7 @@ MARU_Status _maru_x11_requestData(MARU_Window *window,
   request->target_atom = target_atom;
   request->property_atom = None;
   request->incr_active = false;
-  request->user_tag = user_tag;
+  request->userdata = userdata;
   Time request_time = CurrentTime;
   if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP &&
       ctx->dnd_session.last_position_time != CurrentTime) {
@@ -1775,8 +1775,8 @@ maru_provideData_X11(MARU_DataRequest *request, const void *data,
 
 MARU_Status maru_requestData_X11(MARU_Window *window,
                                         MARU_DataExchangeTarget target,
-                                        const char *mime_type, void *user_tag) {
-  return _maru_x11_requestData(window, target, mime_type, user_tag);
+                                        const char *mime_type, void *userdata) {
+  return _maru_x11_requestData(window, target, mime_type, userdata);
 }
 
 MARU_Status maru_getAvailableMIMETypes_X11(
@@ -1978,7 +1978,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
         session->version =
             (uint32_t)(((unsigned long)ev->xclient.data.l[1] >> 24) & 0xfful);
         session->selected_action = MARU_DROP_ACTION_COPY;
-        session->position = (MARU_Vec2Dip){0};
+        session->dip_position = (MARU_Vec2Dip){0};
         session->last_position_time = CurrentTime;
 
         if (win->base.attrs_effective.accept_drop) {
@@ -2009,7 +2009,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
             .session_userdata = &session->session_userdata,
         };
         MARU_Event enter_evt = {0};
-        enter_evt.drop_enter.position = session->position;
+        enter_evt.drop_enter.dip_position = session->dip_position;
         enter_evt.drop_enter.session = (MARU_DropSession *)&session_exposed;
         enter_evt.drop_enter.available_types.mime_types =
             (const char *const *)session->offered_mimes;
@@ -2051,7 +2051,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
             .session_userdata = &session->session_userdata,
         };
         MARU_Event hover_evt = {0};
-        hover_evt.drop_hover.position = session->position;
+        hover_evt.drop_hover.dip_position = session->dip_position;
         hover_evt.drop_hover.session = (MARU_DropSession *)&session_exposed;
         hover_evt.drop_hover.available_types.mime_types =
             (const char *const *)session->offered_mimes;
@@ -2136,7 +2136,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
         };
 
         MARU_Event drop_evt = {0};
-        drop_evt.drop.position = session->position;
+        drop_evt.drop.dip_position = session->dip_position;
         drop_evt.drop.session = (MARU_DropSession *)&session_exposed;
         drop_evt.drop.available_types.mime_types =
             (const char *const *)ctx->dnd_session.offered_mimes;

@@ -44,16 +44,16 @@ typedef struct MARU_Vec2Mm {
   MARU_Scalar y;
 } MARU_Vec2Mm;
 
-/** @brief 2D vector in logical coordinates. */
+/** @brief 2D vector in dip coordinates. */
 typedef struct MARU_Vec2Dip {
   MARU_Scalar x;
   MARU_Scalar y;
 } MARU_Vec2Dip;
 
-/** @brief Represents a rectangular area in logical coordinates. */
+/** @brief Represents a rectangular area in dip coordinates. */
 typedef struct MARU_RectDip {
-  MARU_Vec2Dip origin;
-  MARU_Vec2Dip size;
+  MARU_Vec2Dip dip_origin;
+  MARU_Vec2Dip dip_size;
 } MARU_RectDip;
 
 /** @brief Orientation/flip transform for a window buffer. */
@@ -70,15 +70,15 @@ typedef enum MARU_BufferTransform {
 
 /** @brief Snapshot of window geometry state.
  *
- * `origin` is a best-effort logical window position in a global desktop space
+ * `dip_origin` is a best-effort dip window dip_position in a global desktop space
  * when the platform exposes one. On platforms where global placement is
- * compositor/OS-controlled or not observable, `origin` is guaranteed to be
+ * compositor/OS-controlled or not observable, `dip_origin` is guaranteed to be
  * `{0, 0}`.
  */
 typedef struct MARU_WindowGeometry {
-  MARU_Vec2Dip origin;
-  MARU_Vec2Dip logical_size;
-  MARU_Vec2Px pixel_size;
+  MARU_Vec2Dip dip_origin;
+  MARU_Vec2Dip dip_size;
+  MARU_Vec2Px px_size;
   MARU_Scalar scale;
   MARU_BufferTransform buffer_transform;
 } MARU_WindowGeometry;

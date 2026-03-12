@@ -34,20 +34,20 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
     
     std::stringstream ss;
     if (type == MARU_EVENT_WINDOW_RESIZED) {
-        ss << "Size: " << e.resized.geometry.logical_size.x << "x" << e.resized.geometry.logical_size.y 
-           << " (Pix: " << e.resized.geometry.pixel_size.x << "x" << e.resized.geometry.pixel_size.y << ")";
+        ss << "Size: " << e.resized.geometry.dip_size.x << "x" << e.resized.geometry.dip_size.y 
+           << " (Pix: " << e.resized.geometry.px_size.x << "x" << e.resized.geometry.px_size.y << ")";
     } else if (type == MARU_EVENT_KEY_STATE_CHANGED) {
         ss << "Key: " << (int)e.key.raw_key << " State: " << (e.key.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
            << " Mods: " << formatModifiers(e.key.modifiers);
     } else if (type == MARU_EVENT_MOUSE_MOVED) {
-        ss << "Pos: (" << e.mouse_motion.position.x << "," << e.mouse_motion.position.y << ")"
-           << " Delta: (" << e.mouse_motion.delta.x << "," << e.mouse_motion.delta.y << ")"
-           << " Raw: (" << e.mouse_motion.raw_delta.x << "," << e.mouse_motion.raw_delta.y << ")";
+        ss << "Pos: (" << e.mouse_motion.dip_position.x << "," << e.mouse_motion.dip_position.y << ")"
+           << " Delta: (" << e.mouse_motion.dip_delta.x << "," << e.mouse_motion.dip_delta.y << ")"
+           << " Raw: (" << e.mouse_motion.raw_dip_delta.x << "," << e.mouse_motion.raw_dip_delta.y << ")";
     } else if (type == MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED) {
         ss << "Button: " << (int)e.mouse_button.button_id << " State: " << (e.mouse_button.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
            << " Mods: " << formatModifiers(e.mouse_button.modifiers);
     } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
-        ss << "Delta: (" << e.mouse_scroll.delta.x << "," << e.mouse_scroll.delta.y << ")" << "Steps: (" << e.mouse_scroll.steps.x << "," << e.mouse_scroll.steps.y << ")";
+        ss << "Delta: (" << e.mouse_scroll.dip_delta.x << "," << e.mouse_scroll.dip_delta.y << ")" << "Steps: (" << e.mouse_scroll.steps.x << "," << e.mouse_scroll.steps.y << ")";
     } else if (type == MARU_EVENT_IDLE_STATE_CHANGED) {
         ss << "Idle: " << (e.idle.is_idle ? "YES" : "NO") << " Timeout: " << e.idle.timeout_ms << "ms";
     } else if (type == MARU_EVENT_TEXT_EDIT_START) {
@@ -74,17 +74,17 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
            << " Minimized: " << (e.presentation.minimized ? "YES" : "NO")
            << " Maximized: " << (e.presentation.maximized ? "YES" : "NO")
            << " Focused: " << (e.presentation.focused ? "YES" : "NO")
-           << " Icon: " << (e.presentation.icon ? "YES" : "NO");
+           << " Icon: " << (e.presentation.icon_changed ? "YES" : "NO");
     } else if (type == MARU_EVENT_MONITOR_CONNECTION_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_connection.monitor << " Connected: " << (e.monitor_connection.connected ? "YES" : "NO");
     } else if (type == MARU_EVENT_DROP_ENTERED) {
-        ss << "Drop Enter: (" << e.drop_enter.position.x << "," << e.drop_enter.position.y << ") Count=" << e.drop_enter.available_types.count;
+        ss << "Drop Enter: (" << e.drop_enter.dip_position.x << "," << e.drop_enter.dip_position.y << ") Count=" << e.drop_enter.available_types.count;
     } else if (type == MARU_EVENT_DROP_HOVERED) {
-        ss << "Drop Hover: (" << e.drop_hover.position.x << "," << e.drop_hover.position.y << ") Count=" << e.drop_hover.available_types.count;
+        ss << "Drop Hover: (" << e.drop_hover.dip_position.x << "," << e.drop_hover.dip_position.y << ") Count=" << e.drop_hover.available_types.count;
     } else if (type == MARU_EVENT_DROP_EXITED) {
         ss << "Drop Exit";
     } else if (type == MARU_EVENT_DROP_DROPPED) {
-        ss << "Drop Dropped: (" << e.drop.position.x << "," << e.drop.position.y << ") Count=" << e.drop.available_types.count;
+        ss << "Drop Dropped: (" << e.drop.dip_position.x << "," << e.drop.dip_position.y << ") Count=" << e.drop.available_types.count;
     } else if (type == MARU_EVENT_DATA_RECEIVED) {
         ss << "Data Received: Status=" << (int)e.data_received.status << " Mime=" << (e.data_received.mime_type ? e.data_received.mime_type : "N/A") << " Size=" << e.data_received.size;
     } else if (type == MARU_EVENT_DATA_REQUESTED) {

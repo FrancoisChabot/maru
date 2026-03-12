@@ -88,7 +88,7 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         if (event.drop_hover.session && maru_getDropSessionUserdata(event.drop_hover.session)) {
             session_msg = (const char*)maru_getDropSessionUserdata(event.drop_hover.session);
         }
-        _dnd_info = "Drop Hovered at " + std::to_string(event.drop_hover.position.x) + ", " + std::to_string(event.drop_hover.position.y) + " Session: " + session_msg;
+        _dnd_info = "Drop Hovered at " + std::to_string(event.drop_hover.dip_position.x) + ", " + std::to_string(event.drop_hover.dip_position.y) + " Session: " + session_msg;
         
         dnd_mime_types_.clear();
         for (uint32_t i = 0; i < event.drop_hover.available_types.count; ++i) {
@@ -149,7 +149,7 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
 
     if (type == MARU_EVENT_DATA_RECEIVED) {
         const MARU_DataReceivedEvent* recv = &event.data_received;
-        if (!recv || recv->user_tag != this) return;
+        if (!recv || recv->userdata != this) return;
         last_status_ = recv->status;
         last_received_target_ = recv->target;
         has_received_target_ = true;

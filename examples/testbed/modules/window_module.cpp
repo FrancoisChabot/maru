@@ -23,8 +23,8 @@ WindowModule::WindowModule(MARU_Window* primary_window, VkInstance instance, VkP
         primary_title_buf_[sizeof(primary_title_buf_) - 1] = '\0';
     }
     MARU_WindowGeometry geometry = maru_getWindowGeometry(primary_window_);
-    primary_size_[0] = (int)geometry.logical_size.x;
-    primary_size_[1] = (int)geometry.logical_size.y;
+    primary_size_[0] = (int)geometry.dip_size.x;
+    primary_size_[1] = (int)geometry.dip_size.y;
 }
 
 WindowModule::~WindowModule() {
@@ -81,8 +81,8 @@ void WindowModule::onContextRecreated(MARU_Context* ctx, MARU_Window* window) {
         primary_title_buf_[sizeof(primary_title_buf_) - 1] = '\0';
     }
     MARU_WindowGeometry geometry = maru_getWindowGeometry(primary_window_);
-    primary_size_[0] = (int)geometry.logical_size.x;
-    primary_size_[1] = (int)geometry.logical_size.y;
+    primary_size_[0] = (int)geometry.dip_size.x;
+    primary_size_[1] = (int)geometry.dip_size.y;
 
     handling_window_teardown_ = true;
     for (auto& sw : secondary_windows_) {
@@ -128,15 +128,15 @@ void WindowModule::update(MARU_Context* ctx, MARU_Window* window) {
         }
 
         MARU_WindowGeometry geom = maru_getWindowGeometry(sw->window);
-        if (geom.pixel_size.x <= 0 || geom.pixel_size.y <= 0) {
+        if (geom.px_size.x <= 0 || geom.px_size.y <= 0) {
             continue;
         }
 
         if (sw->surface != VK_NULL_HANDLE) {
-            if (geom.pixel_size.x > 0 && geom.pixel_size.y > 0 &&
-                (sw->swapchain_rebuild || sw->wd.Width != (int)geom.pixel_size.x || sw->wd.Height != (int)geom.pixel_size.y)) {
+            if (geom.px_size.x > 0 && geom.px_size.y > 0 &&
+                (sw->swapchain_rebuild || sw->wd.Width != (int)geom.px_size.x || sw->wd.Height != (int)geom.px_size.y)) {
                 ImGui_ImplVulkanH_CreateOrResizeWindow(
-                    instance_, physical_device_, device_, &sw->wd, queue_family_, nullptr, (int)geom.pixel_size.x, (int)geom.pixel_size.y, 2, 0);
+                    instance_, physical_device_, device_, &sw->wd, queue_family_, nullptr, (int)geom.px_size.x, (int)geom.px_size.y, 2, 0);
                 sw->wd.FrameIndex = 0;
                 sw->swapchain_rebuild = false;
             }
@@ -156,9 +156,9 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
 
     MARU_WindowCreateInfo win_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
     win_info.attributes.title = title.c_str();
-    win_info.attributes.logical_size = {
-        (MARU_Scalar)secondary_create_.logical_size[0],
-        (MARU_Scalar)secondary_create_.logical_size[1]
+    win_info.attributes.dip_size = {
+        (MARU_Scalar)secondary_create_.size[0],
+        (MARU_Scalar)secondary_create_.size[1]
     };
     win_info.attributes.fullscreen = secondary_create_.fullscreen;
     win_info.attributes.maximized = secondary_create_.maximized;
@@ -205,11 +205,11 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow& sw) {
         sw.wd.PresentMode = ImGui_ImplVulkanH_SelectPresentMode(physical_device_, sw.wd.Surface, &present_modes[0], IM_ARRAYSIZE(present_modes));
 
         MARU_WindowGeometry geom = maru_getWindowGeometry(sw.window);
-        if (geom.pixel_size.x <= 0 || geom.pixel_size.y <= 0) {
+        if (geom.px_size.x <= 0 || geom.px_size.y <= 0) {
             return;
         }
         ImGui_ImplVulkanH_CreateOrResizeWindow(
-            instance_, physical_device_, device_, &sw.wd, queue_family_, nullptr, (int)geom.pixel_size.x, (int)geom.pixel_size.y, 2, 0);
+            instance_, physical_device_, device_, &sw.wd, queue_family_, nullptr, (int)geom.px_size.x, (int)geom.px_size.y, 2, 0);
         sw.vk_window_initialized = true;
     }
 
@@ -323,7 +323,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
     if (ImGui::CollapsingHeader("Secondary Create Info", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::InputText("Create Title", secondary_create_.title, sizeof(secondary_create_.title));
         ImGui::InputText("Create App ID", secondary_create_.app_id, sizeof(secondary_create_.app_id));
-        ImGui::InputInt2("Create Logical Size", secondary_create_.logical_size);
+        ImGui::InputInt2("Create Dip Size", secondary_create_.size);
         ImGui::Checkbox("Create Decorated", &secondary_create_.decorated);
         ImGui::Checkbox("Create Maximized", &secondary_create_.maximized);
         ImGui::SameLine();
@@ -335,8 +335,8 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
 
         if (secondary_create_.content_type < 0) secondary_create_.content_type = 0;
         if (secondary_create_.content_type > 3) secondary_create_.content_type = 3;
-        if (secondary_create_.logical_size[0] < 1) secondary_create_.logical_size[0] = 1;
-        if (secondary_create_.logical_size[1] < 1) secondary_create_.logical_size[1] = 1;
+        if (secondary_create_.size[0] < 1) secondary_create_.size[0] = 1;
+        if (secondary_create_.size[1] < 1) secondary_create_.size[1] = 1;
     }
 
     if (ImGui::Button("Create Secondary Window")) {
@@ -356,9 +356,9 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                         maru_isWindowMaximized(target) ? "[Maximized] " : "",
                         maru_isWindowFullscreen(target) ? "[Fullscreen] " : "",
                         maru_isWindowLost(target) ? "[LOST] " : "");
-            ImGui::Text("Origin:  %.1f, %.1f", geometry.origin.x, geometry.origin.y);
-            ImGui::Text("Logical: %.1f x %.1f", geometry.logical_size.x, geometry.logical_size.y);
-            ImGui::Text("Pixel:   %d x %d", geometry.pixel_size.x, geometry.pixel_size.y);
+            ImGui::Text("Origin:  %.1f, %.1f", geometry.dip_origin.x, geometry.dip_origin.y);
+            ImGui::Text("Dip: %.1f x %.1f", geometry.dip_size.x, geometry.dip_size.y);
+            ImGui::Text("Px:   %d x %d", geometry.px_size.x, geometry.px_size.y);
 
             if (ImGui::InputText("Title", primary_title_buf_, sizeof(primary_title_buf_))) {
             }
@@ -368,11 +368,11 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                 maru_updateWindow(target, MARU_WINDOW_ATTR_TITLE, &attrs);
             }
 
-            ImGui::InputInt2("Logical Size", primary_size_);
+            ImGui::InputInt2("Dip Size", primary_size_);
             if (ImGui::Button("Set Size")) {
                 MARU_WindowAttributes attrs = {};
-                attrs.logical_size = {(MARU_Scalar)primary_size_[0], (MARU_Scalar)primary_size_[1]};
-                maru_updateWindow(target, MARU_WINDOW_ATTR_LOGICAL_SIZE, &attrs);
+                attrs.dip_size = {(MARU_Scalar)primary_size_[0], (MARU_Scalar)primary_size_[1]};
+                maru_updateWindow(target, MARU_WINDOW_ATTR_DIP_SIZE, &attrs);
             }
 
             bool is_max = maru_isWindowMaximized(target);
@@ -407,10 +407,10 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             ImGui::InputInt2("Aspect Fraction (num/den)", &primary_aspect_ratio_.num);
             if (ImGui::Button("Commit Constraints")) {
                 MARU_WindowAttributes attrs = {};
-                attrs.min_size = primary_min_size_;
-                attrs.max_size = primary_max_size_;
+                attrs.min_dip_size = primary_min_size_;
+                attrs.max_dip_size = primary_max_size_;
                 attrs.aspect_ratio = primary_aspect_ratio_;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
+                maru_updateWindow(target, MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
             }
 
             if (ImGui::Button("Request Focus")) {
@@ -427,7 +427,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                     for (int i = 0; i < 32 * 32; ++i) pixels[i] = 0xFFFF0000; // Red
                     
                     MARU_ImageCreateInfo img_info = {};
-                    img_info.size = {32, 32};
+                    img_info.px_size = {32, 32};
                     img_info.pixels = pixels;
                     maru_createImage(maru_getWindowContext(target), &img_info, &test_icon_);
                 }
@@ -470,9 +470,9 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                             maru_isWindowMaximized(sw.window) ? "[Maximized] " : "",
                             maru_isWindowFullscreen(sw.window) ? "[Fullscreen] " : "",
                             maru_isWindowLost(sw.window) ? "[LOST] " : "");
-                ImGui::Text("Origin:  %.1f, %.1f", geometry.origin.x, geometry.origin.y);
-                ImGui::Text("Logical: %.1f x %.1f", geometry.logical_size.x, geometry.logical_size.y);
-                ImGui::Text("Pixel:   %d x %d", geometry.pixel_size.x, geometry.pixel_size.y);
+                ImGui::Text("Origin:  %.1f, %.1f", geometry.dip_origin.x, geometry.dip_origin.y);
+                ImGui::Text("Dip: %.1f x %.1f", geometry.dip_size.x, geometry.dip_size.y);
+                ImGui::Text("Px:   %d x %d", geometry.px_size.x, geometry.px_size.y);
             } else if (sw.window) {
                 ImGui::Text("Handle: %p", (void*)sw.window);
                 ImGui::TextUnformatted("State: Waiting for WINDOW_READY");
@@ -508,17 +508,17 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
 #else
             const ImGuiDataType scalar_type = ImGuiDataType_Double;
 #endif
-            ImGui::InputScalarN("Min Size", scalar_type, &sw.min_size.x, 2, nullptr, nullptr, "%.0f");
-            ImGui::InputScalarN("Max Size", scalar_type, &sw.max_size.x, 2, nullptr, nullptr, "%.0f");
+            ImGui::InputScalarN("Min Size", scalar_type, &sw.min_dip_size.x, 2, nullptr, nullptr, "%.0f");
+            ImGui::InputScalarN("Max Size", scalar_type, &sw.max_dip_size.x, 2, nullptr, nullptr, "%.0f");
             ImGui::InputInt2("Aspect Fraction (num/den)", &sw.aspect_ratio.num);
 
             if (ImGui::Button("Commit") && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
                 attrs.title = sw.title.c_str();
-                attrs.min_size = sw.min_size;
-                attrs.max_size = sw.max_size;
+                attrs.min_dip_size = sw.min_dip_size;
+                attrs.max_dip_size = sw.max_dip_size;
                 attrs.aspect_ratio = sw.aspect_ratio;
-                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
+                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
             }
 
             ImGui::ColorEdit4("Clear Color", (float*)&sw.clear_color);

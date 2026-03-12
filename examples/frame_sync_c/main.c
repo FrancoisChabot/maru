@@ -42,8 +42,8 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
     keep_running = false;
   } else if (type == MARU_EVENT_WINDOW_RESIZED) {
     vulkan_renderer_on_resized(&renderer,
-                               (uint32_t)event->resized.geometry.pixel_size.x,
-                               (uint32_t)event->resized.geometry.pixel_size.y);
+                               (uint32_t)event->resized.geometry.px_size.x,
+                               (uint32_t)event->resized.geometry.px_size.y);
   } else if (type == MARU_EVENT_WINDOW_READY) {
     window_ready = true;
   } else if (type == MARU_EVENT_WINDOW_FRAME) {
@@ -82,7 +82,7 @@ int main() {
 
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru Frame Sync Test";
-  window_info.attributes.logical_size = (MARU_Vec2Dip){800, 600};
+  window_info.attributes.dip_size = (MARU_Vec2Dip){800, 600};
   window_info.attributes.visible = true;
 
   if (maru_createWindow(context, &window_info, &window) != MARU_SUCCESS) {
@@ -107,8 +107,8 @@ int main() {
 
   MARU_WindowGeometry geometry = maru_getWindowGeometry(window);
   vulkan_renderer_setup_surface(&renderer, surface,
-                                (uint32_t)geometry.pixel_size.x,
-                                (uint32_t)geometry.pixel_size.y);
+                                (uint32_t)geometry.px_size.x,
+                                (uint32_t)geometry.px_size.y);
 
   last_stat_time = get_time_sec();
 

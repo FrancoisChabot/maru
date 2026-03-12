@@ -35,8 +35,8 @@ public:
     const char* getName() const;
     MARU_Vec2Mm getPhysicalSize() const;
     MARU_VideoMode getCurrentMode() const;
-    MARU_Vec2Dip getLogicalPosition() const;
-    MARU_Vec2Dip getLogicalSize() const;
+    MARU_Vec2Dip getDipPosition() const;
+    MARU_Vec2Dip getDipSize() const;
     bool isPrimary() const;
     MARU_Scalar getScale() const;
     bool isLost() const;

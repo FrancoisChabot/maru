@@ -132,15 +132,15 @@ typedef enum MARU_TextInputType {
 } MARU_TextInputType;
 
 #define MARU_WINDOW_ATTR_TITLE MARU_BIT(0)
-#define MARU_WINDOW_ATTR_LOGICAL_SIZE MARU_BIT(1)
+#define MARU_WINDOW_ATTR_DIP_SIZE MARU_BIT(1)
 #define MARU_WINDOW_ATTR_FULLSCREEN MARU_BIT(2)
 #define MARU_WINDOW_ATTR_CURSOR_MODE MARU_BIT(3)
 #define MARU_WINDOW_ATTR_CURSOR MARU_BIT(4)
 #define MARU_WINDOW_ATTR_MONITOR MARU_BIT(5)
 #define MARU_WINDOW_ATTR_MAXIMIZED MARU_BIT(6)
-#define MARU_WINDOW_ATTR_MIN_SIZE MARU_BIT(7)
-#define MARU_WINDOW_ATTR_MAX_SIZE MARU_BIT(8)
-#define MARU_WINDOW_ATTR_POSITION MARU_BIT(9)
+#define MARU_WINDOW_ATTR_MIN_DIP_SIZE MARU_BIT(7)
+#define MARU_WINDOW_ATTR_MAX_DIP_SIZE MARU_BIT(8)
+#define MARU_WINDOW_ATTR_DIP_POSITION MARU_BIT(9)
 #define MARU_WINDOW_ATTR_ASPECT_RATIO MARU_BIT(10)
 #define MARU_WINDOW_ATTR_RESIZABLE MARU_BIT(11)
 #define MARU_WINDOW_ATTR_ACCEPT_DROP MARU_BIT(12)
@@ -148,7 +148,7 @@ typedef enum MARU_TextInputType {
 #define MARU_WINDOW_ATTR_TEXT_INPUT_RECT MARU_BIT(14)
 #define MARU_WINDOW_ATTR_PRIMARY_SELECTION MARU_BIT(15)
 #define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(16)
-#define MARU_WINDOW_ATTR_VIEWPORT_SIZE MARU_BIT(17)
+#define MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE MARU_BIT(17)
 #define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(18)
 #define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(19)
 #define MARU_WINDOW_ATTR_VISIBLE MARU_BIT(20)
@@ -156,38 +156,38 @@ typedef enum MARU_TextInputType {
 #define MARU_WINDOW_ATTR_ICON MARU_BIT(22)
 
 #define MARU_WINDOW_ATTR_ALL                                                   \
-  (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_LOGICAL_SIZE |                    \
+  (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_DIP_SIZE |                        \
    MARU_WINDOW_ATTR_FULLSCREEN | MARU_WINDOW_ATTR_CURSOR_MODE |                \
    MARU_WINDOW_ATTR_CURSOR | MARU_WINDOW_ATTR_MONITOR |                        \
-   MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_MIN_SIZE |                    \
-   MARU_WINDOW_ATTR_MAX_SIZE | MARU_WINDOW_ATTR_POSITION |                     \
+   MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_MIN_DIP_SIZE |                \
+   MARU_WINDOW_ATTR_MAX_DIP_SIZE | MARU_WINDOW_ATTR_DIP_POSITION |             \
    MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE |                \
    MARU_WINDOW_ATTR_ACCEPT_DROP | MARU_WINDOW_ATTR_TEXT_INPUT_TYPE |           \
    MARU_WINDOW_ATTR_TEXT_INPUT_RECT | MARU_WINDOW_ATTR_PRIMARY_SELECTION |     \
    MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE |                                  \
-   MARU_WINDOW_ATTR_VIEWPORT_SIZE | MARU_WINDOW_ATTR_SURROUNDING_TEXT |        \
+   MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE | MARU_WINDOW_ATTR_SURROUNDING_TEXT |     \
    MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE | MARU_WINDOW_ATTR_VISIBLE |     \
    MARU_WINDOW_ATTR_MINIMIZED | MARU_WINDOW_ATTR_ICON)
 
 /** @brief Live-updatable window properties. */
 typedef struct MARU_WindowAttributes {
   const char *title;
-  MARU_Vec2Dip logical_size;
+  MARU_Vec2Dip dip_size;
   bool fullscreen;
   bool maximized;
   MARU_CursorMode cursor_mode;
   MARU_Cursor *cursor;
   MARU_Monitor *monitor;
-  MARU_Vec2Dip min_size;
-  MARU_Vec2Dip max_size;
-  MARU_Vec2Dip position;
+  MARU_Vec2Dip min_dip_size;
+  MARU_Vec2Dip max_dip_size;
+  MARU_Vec2Dip dip_position;
   MARU_Fraction aspect_ratio;
   bool resizable;
   bool accept_drop;
   MARU_TextInputType text_input_type;
   MARU_RectDip text_input_rect;
   bool primary_selection;
-  MARU_Vec2Dip viewport_size;
+  MARU_Vec2Dip viewport_dip_size;
   const char *surrounding_text;
   uint32_t surrounding_cursor_byte;
   uint32_t surrounding_anchor_byte;
@@ -208,22 +208,22 @@ typedef struct MARU_WindowCreateInfo {
 /** @brief Default initialization macro for MARU_WindowCreateInfo. */
 #define MARU_WINDOW_CREATE_INFO_DEFAULT                                        \
   {.attributes = {.title = "MARU Window",                                      \
-                  .logical_size = {800, 600},                                  \
+                  .dip_size = {800, 600},                                      \
                   .fullscreen = false,                                         \
                   .maximized = false,                                          \
                   .cursor_mode = MARU_CURSOR_NORMAL,                           \
                   .cursor = NULL,                                              \
                   .monitor = NULL,                                             \
-                  .min_size = {0, 0},                                          \
-                  .max_size = {0, 0},                                          \
-                  .position = {0, 0},                                          \
+                  .min_dip_size = {0, 0},                                      \
+                  .max_dip_size = {0, 0},                                      \
+                  .dip_position = {0, 0},                                      \
                   .aspect_ratio = {0, 0},                                      \
                   .resizable = true,                                           \
                   .accept_drop = false,                                        \
                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE,                \
                   .text_input_rect = {{0, 0}, {0, 0}},                         \
                   .primary_selection = true,                                   \
-                  .viewport_size = {0, 0},                                     \
+                  .viewport_dip_size = {0, 0},                                 \
                   .surrounding_text = NULL,                                    \
                   .surrounding_cursor_byte = 0,                                \
                   .surrounding_anchor_byte = 0,                                \

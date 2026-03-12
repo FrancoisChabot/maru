@@ -23,7 +23,7 @@ This page defines the user-facing behavior contract for Maru on Wayland.
 
 ### Window Position
 
-- Setting `MARU_WINDOW_ATTR_POSITION` is unsupported on Wayland.
+- Setting `MARU_WINDOW_ATTR_DIP_POSITION` is unsupported on Wayland.
 - Expected result: `MARU_FAILURE` + diagnostic.
 
 ### Monitor Targeting

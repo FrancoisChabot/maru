@@ -112,12 +112,12 @@ static bool _maru_wayland_create_owned_cursor_frame_from_pixels(
 
 static bool _maru_wayland_create_owned_cursor_frame(MARU_Context_WL *ctx,
                                                     const MARU_Image_Base *image,
-                                                    MARU_Vec2Px hot_spot,
+                                                    MARU_Vec2Px px_hot_spot,
                                                     uint32_t delay_ms,
                                                     MARU_WaylandCursorFrame *out_frame) {
   return _maru_wayland_create_owned_cursor_frame_from_pixels(
       ctx, image->pixels, (int32_t)image->width, (int32_t)image->height,
-      hot_spot.x, hot_spot.y, delay_ms, out_frame);
+      px_hot_spot.x, px_hot_spot.y, delay_ms, out_frame);
 }
 
 static void _maru_wayland_destroy_cursor_frames(MARU_Context_WL *ctx, MARU_Cursor_WL *cursor) {
@@ -235,7 +235,7 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
         maru_context_free(&ctx->base, cursor);
         return MARU_FAILURE;
       }
-      if (!_maru_wayland_create_owned_cursor_frame(ctx, image, frame->hot_spot,
+      if (!_maru_wayland_create_owned_cursor_frame(ctx, image, frame->px_hot_spot,
                                                    frame->delay_ms, &cursor->frames[i])) {
         _maru_wayland_destroy_cursor_frames(ctx, cursor);
         maru_context_free(&ctx->base, cursor);

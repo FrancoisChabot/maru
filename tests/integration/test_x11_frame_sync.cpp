@@ -46,7 +46,7 @@ TEST_CASE("X11.FrameSynchronizationThrottling") {
 
   MARU_WindowCreateInfo win_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   win_info.attributes.title = "Frame Sync Test";
-  win_info.attributes.logical_size = {100, 100};
+  win_info.attributes.dip_size = {100, 100};
   win_info.attributes.visible = true;
 
   MARU_Window *window = nullptr;

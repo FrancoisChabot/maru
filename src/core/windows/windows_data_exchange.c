@@ -40,15 +40,15 @@ static void _maru_windows_emit_data_received(MARU_Context_Base *ctx_base,
                                              MARU_Window *window,
                                              MARU_DataExchangeTarget target,
                                              const char *mime_type,
-                                             void *user_tag, MARU_Status status,
+                                             void *userdata, MARU_Status status,
                                              const void *data, size_t size) {
   MARU_Event evt = {0};
-  evt.data_received.user_tag = user_tag;
+  evt.data_received.userdata = userdata;
   evt.data_received.target = target;
   evt.data_received.mime_type = mime_type;
   evt.data_received.status = status;
   evt.data_received.data = data;
-  evt.data_received.size = size;
+  evt.data_received.dip_size = size;
   _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_RECEIVED, window, &evt);
 }
 
@@ -101,7 +101,7 @@ void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx) {
 
         _maru_windows_emit_data_received(
             &ctx->base, handle->window, handle->target, handle->mime_type,
-            handle->user_tag, handle->status, handle->provided_data,
+            handle->userdata, handle->status, handle->provided_data,
             handle->provided_size);
         if (handle->provided_data) {
           maru_context_free(&ctx->base, handle->provided_data);
@@ -114,8 +114,8 @@ void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx) {
     } else if (evt->kind == MARU_WINDOWS_DEFERRED_EVENT_DATA_RECEIVED) {
       _maru_windows_emit_data_received(
           &ctx->base, evt->window, evt->received.target,
-          evt->received.mime_type, evt->received.user_tag, evt->received.status,
-          evt->received.data, evt->received.size);
+          evt->received.mime_type, evt->received.userdata, evt->received.status,
+          evt->received.data, evt->received.dip_size);
       if (evt->received.data) {
         maru_context_free(&ctx->base, (void *)evt->received.data);
       }
@@ -232,7 +232,7 @@ MARU_Status maru_provideData_Windows(MARU_DataRequest *request,
 
 MARU_Status maru_requestData_Windows(MARU_Window *window,
                                      MARU_DataExchangeTarget target,
-                                     const char *mime_type, void *user_tag) {
+                                     const char *mime_type, void *userdata) {
   if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     return MARU_FAILURE;
   }
@@ -256,7 +256,7 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
     handle->format = format;
     handle->window = window;
     handle->target = target;
-    handle->user_tag = user_tag;
+    handle->userdata = userdata;
     handle->status = MARU_FAILURE;
     handle->mime_type = _maru_windows_copy_string(ctx_base, mime_type);
     if (!handle->mime_type) {
@@ -273,7 +273,7 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
                            &req_evt);
 
       _maru_windows_emit_data_received(
-          ctx_base, window, target, handle->mime_type, user_tag, handle->status,
+          ctx_base, window, target, handle->mime_type, userdata, handle->status,
           handle->provided_data, handle->provided_size);
       if (handle->provided_data) {
         maru_context_free(ctx_base, handle->provided_data);
@@ -342,7 +342,7 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
 
   if (ctx_base->pump_ctx) {
     _maru_windows_emit_data_received(ctx_base, window, target, mime_type,
-                                     user_tag, status, event_data, event_size);
+                                     userdata, status, event_data, event_size);
     if (event_data) {
       maru_context_free(ctx_base, (void *)event_data);
     }
@@ -369,9 +369,9 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
     deferred->window = window;
     deferred->received.target = target;
     deferred->received.mime_type = mime_copy;
-    deferred->received.user_tag = user_tag;
+    deferred->received.userdata = userdata;
     deferred->received.data = event_data;
-    deferred->received.size = event_size;
+    deferred->received.dip_size = event_size;
     deferred->received.status = status;
     _maru_windows_enqueue_deferred_event(ctx, deferred);
     return maru_wakeContext((MARU_Context *)ctx);

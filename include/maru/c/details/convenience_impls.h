@@ -36,12 +36,12 @@ static inline MARU_Status maru_setWindowTitle(MARU_Window *window,
   return maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE, &attrs);
 }
 
-static inline MARU_Status maru_setWindowSize(MARU_Window *window,
-                                             MARU_Vec2Dip size) {
+static inline MARU_Status maru_setWindowDipSize(MARU_Window *window,
+                                                MARU_Vec2Dip size) {
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
-  attrs.logical_size = size;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_LOGICAL_SIZE, &attrs);
+  attrs.dip_size = size;
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_DIP_SIZE, &attrs);
 }
 
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window *window,
@@ -84,20 +84,20 @@ static inline MARU_Status maru_setWindowMonitor(MARU_Window *window,
   return maru_updateWindow(window, MARU_WINDOW_ATTR_MONITOR, &attrs);
 }
 
-static inline MARU_Status maru_setWindowMinSize(MARU_Window *window,
-                                                MARU_Vec2Dip min_size) {
+static inline MARU_Status maru_setWindowMinDipSize(MARU_Window *window,
+                                                   MARU_Vec2Dip min_dip_size) {
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
-  attrs.min_size = min_size;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_MIN_SIZE, &attrs);
+  attrs.min_dip_size = min_dip_size;
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MIN_DIP_SIZE, &attrs);
 }
 
-static inline MARU_Status maru_setWindowMaxSize(MARU_Window *window,
-                                                MARU_Vec2Dip max_size) {
+static inline MARU_Status maru_setWindowMaxDipSize(MARU_Window *window,
+                                                   MARU_Vec2Dip max_dip_size) {
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
-  attrs.max_size = max_size;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_MAX_SIZE, &attrs);
+  attrs.max_dip_size = max_dip_size;
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MAX_DIP_SIZE, &attrs);
 }
 
 static inline MARU_Status

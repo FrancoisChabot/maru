@@ -149,8 +149,8 @@ UTEST(QueueTest, PushRejectsNullPayload) {
 
 struct CoalesceResult {
     int count;
-    MARU_Vec2Dip pos;
-    MARU_Vec2Dip delta;
+    MARU_Vec2Dip dip_pos;
+    MARU_Vec2Dip dip_delta;
 };
 
 static void on_coalesce_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
@@ -158,8 +158,8 @@ static void on_coalesce_event(MARU_EventId type, MARU_Window *window, const MARU
     (void)window;
     r->count++;
     if (type == MARU_EVENT_MOUSE_MOVED) {
-        r->pos = evt->mouse_motion.position;
-        r->delta = evt->mouse_motion.delta;
+        r->dip_pos = evt->mouse_motion.dip_position;
+        r->dip_delta = evt->mouse_motion.dip_delta;
     }
 }
 
@@ -174,18 +174,18 @@ UTEST(QueueTest, Coalescence) {
 
     // ev1
     MARU_Event ev1 = {0};
-    ev1.mouse_motion.position.x = (MARU_Scalar)10.0;
-    ev1.mouse_motion.position.y = (MARU_Scalar)10.0;
-    ev1.mouse_motion.delta.x = (MARU_Scalar)5.0;
-    ev1.mouse_motion.delta.y = (MARU_Scalar)5.0;
+    ev1.mouse_motion.dip_position.x = (MARU_Scalar)10.0;
+    ev1.mouse_motion.dip_position.y = (MARU_Scalar)10.0;
+    ev1.mouse_motion.dip_delta.x = (MARU_Scalar)5.0;
+    ev1.mouse_motion.dip_delta.y = (MARU_Scalar)5.0;
     maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev1);
 
     // ev2
     MARU_Event ev2 = {0};
-    ev2.mouse_motion.position.x = (MARU_Scalar)20.0;
-    ev2.mouse_motion.position.y = (MARU_Scalar)20.0;
-    ev2.mouse_motion.delta.x = (MARU_Scalar)10.0;
-    ev2.mouse_motion.delta.y = (MARU_Scalar)10.0;
+    ev2.mouse_motion.dip_position.x = (MARU_Scalar)20.0;
+    ev2.mouse_motion.dip_position.y = (MARU_Scalar)20.0;
+    ev2.mouse_motion.dip_delta.x = (MARU_Scalar)10.0;
+    ev2.mouse_motion.dip_delta.y = (MARU_Scalar)10.0;
     maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev2);
 
     maru_commitQueue(queue);
@@ -194,10 +194,10 @@ UTEST(QueueTest, Coalescence) {
     maru_scanQueue(queue, MARU_ALL_EVENTS, on_coalesce_event, &result);
 
     EXPECT_EQ(result.count, 1);
-    EXPECT_EQ(result.pos.x, (MARU_Scalar)20.0);
-    EXPECT_EQ(result.pos.y, (MARU_Scalar)20.0);
-    EXPECT_EQ(result.delta.x, (MARU_Scalar)15.0);
-    EXPECT_EQ(result.delta.y, (MARU_Scalar)15.0);
+    EXPECT_EQ(result.dip_pos.x, (MARU_Scalar)20.0);
+    EXPECT_EQ(result.dip_pos.y, (MARU_Scalar)20.0);
+    EXPECT_EQ(result.dip_delta.x, (MARU_Scalar)15.0);
+    EXPECT_EQ(result.dip_delta.y, (MARU_Scalar)15.0);
 
     maru_destroyQueue(queue);
     maru_destroyContext(context);
@@ -227,23 +227,23 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     maru_setQueueCoalesceMask(queue, MARU_MASK_MOUSE_MOVED);
 
     MARU_Event move_a = {0};
-    move_a.mouse_motion.position.x = (MARU_Scalar)10.0;
-    move_a.mouse_motion.position.y = (MARU_Scalar)10.0;
-    move_a.mouse_motion.delta.x = (MARU_Scalar)1.0;
-    move_a.mouse_motion.delta.y = (MARU_Scalar)2.0;
-    move_a.mouse_motion.raw_delta.x = (MARU_Scalar)3.0;
-    move_a.mouse_motion.raw_delta.y = (MARU_Scalar)4.0;
+    move_a.mouse_motion.dip_position.x = (MARU_Scalar)10.0;
+    move_a.mouse_motion.dip_position.y = (MARU_Scalar)10.0;
+    move_a.mouse_motion.dip_delta.x = (MARU_Scalar)1.0;
+    move_a.mouse_motion.dip_delta.y = (MARU_Scalar)2.0;
+    move_a.mouse_motion.raw_dip_delta.x = (MARU_Scalar)3.0;
+    move_a.mouse_motion.raw_dip_delta.y = (MARU_Scalar)4.0;
     maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_a);
 
     push_user_event(queue, MARU_EVENT_USER_0);
 
     MARU_Event move_b = {0};
-    move_b.mouse_motion.position.x = (MARU_Scalar)20.0;
-    move_b.mouse_motion.position.y = (MARU_Scalar)30.0;
-    move_b.mouse_motion.delta.x = (MARU_Scalar)5.0;
-    move_b.mouse_motion.delta.y = (MARU_Scalar)7.0;
-    move_b.mouse_motion.raw_delta.x = (MARU_Scalar)11.0;
-    move_b.mouse_motion.raw_delta.y = (MARU_Scalar)13.0;
+    move_b.mouse_motion.dip_position.x = (MARU_Scalar)20.0;
+    move_b.mouse_motion.dip_position.y = (MARU_Scalar)30.0;
+    move_b.mouse_motion.dip_delta.x = (MARU_Scalar)5.0;
+    move_b.mouse_motion.dip_delta.y = (MARU_Scalar)7.0;
+    move_b.mouse_motion.raw_dip_delta.x = (MARU_Scalar)11.0;
+    move_b.mouse_motion.raw_dip_delta.y = (MARU_Scalar)13.0;
     maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_b);
 
     push_user_event(queue, MARU_EVENT_USER_1);
@@ -257,12 +257,12 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     EXPECT_EQ(trace.types[1], (MARU_EventId)MARU_EVENT_MOUSE_MOVED);
     EXPECT_EQ(trace.types[2], (MARU_EventId)MARU_EVENT_USER_1);
 
-    EXPECT_EQ(trace.events[1].mouse_motion.position.x, (MARU_Scalar)20.0);
-    EXPECT_EQ(trace.events[1].mouse_motion.position.y, (MARU_Scalar)30.0);
-    EXPECT_EQ(trace.events[1].mouse_motion.delta.x, (MARU_Scalar)6.0);
-    EXPECT_EQ(trace.events[1].mouse_motion.delta.y, (MARU_Scalar)9.0);
-    EXPECT_EQ(trace.events[1].mouse_motion.raw_delta.x, (MARU_Scalar)14.0);
-    EXPECT_EQ(trace.events[1].mouse_motion.raw_delta.y, (MARU_Scalar)17.0);
+    EXPECT_EQ(trace.events[1].mouse_motion.dip_position.x, (MARU_Scalar)20.0);
+    EXPECT_EQ(trace.events[1].mouse_motion.dip_position.y, (MARU_Scalar)30.0);
+    EXPECT_EQ(trace.events[1].mouse_motion.dip_delta.x, (MARU_Scalar)6.0);
+    EXPECT_EQ(trace.events[1].mouse_motion.dip_delta.y, (MARU_Scalar)9.0);
+    EXPECT_EQ(trace.events[1].mouse_motion.raw_dip_delta.x, (MARU_Scalar)14.0);
+    EXPECT_EQ(trace.events[1].mouse_motion.raw_dip_delta.y, (MARU_Scalar)17.0);
 
     MARU_QueueMetrics metrics = {0};
     maru_getQueueMetrics(queue, &metrics);

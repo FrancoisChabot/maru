@@ -9,6 +9,14 @@
 
 #include "maru/c/details/maru_config.h"
 
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define MARU_STATIC_ASSERT _Static_assert
+#elif defined(__cplusplus) && __cplusplus >= 201103L
+#define MARU_STATIC_ASSERT static_assert
+#else
+#define MARU_STATIC_ASSERT(cond, msg)
+#endif
+
 #ifndef MARU_API
 #ifdef MARU_STATIC
 #define MARU_API

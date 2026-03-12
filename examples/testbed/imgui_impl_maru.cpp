@@ -141,7 +141,7 @@ static void ImGui_ImplMaru_SetImeData(ImGuiContext*, ImGuiViewport* viewport, Im
 
     MARU_WindowAttributes attrs = {};
     if (data->WantVisible) {
-        // ImGui provides an absolute position; Wayland text-input expects surface-local coordinates.
+        // ImGui provides an absolute dip_position; Wayland text-input expects surface-local coordinates.
         const float viewport_x = viewport ? viewport->Pos.x : 0.0f;
         const float viewport_y = viewport ? viewport->Pos.y : 0.0f;
         const float local_x = data->InputPos.x - viewport_x;
@@ -149,10 +149,10 @@ static void ImGui_ImplMaru_SetImeData(ImGuiContext*, ImGuiViewport* viewport, Im
         const float line_h = (data->InputLineHeight > 1.0f) ? data->InputLineHeight : 1.0f;
 
         attrs.text_input_type = MARU_TEXT_INPUT_TYPE_TEXT;
-        attrs.text_input_rect.origin.x = (MARU_Scalar)local_x;
-        attrs.text_input_rect.origin.y = (MARU_Scalar)local_y;
-        attrs.text_input_rect.size.x = (MARU_Scalar)1.0;
-        attrs.text_input_rect.size.y = (MARU_Scalar)line_h;
+        attrs.text_input_rect.dip_origin.x = (MARU_Scalar)local_x;
+        attrs.text_input_rect.dip_origin.y = (MARU_Scalar)local_y;
+        attrs.text_input_rect.dip_size.x = (MARU_Scalar)1.0;
+        attrs.text_input_rect.dip_size.y = (MARU_Scalar)line_h;
         maru_updateWindow(
             bd->Window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT, &attrs);
     } else {
@@ -266,9 +266,9 @@ void ImGui_ImplMaru_NewFrame() {
     ImGuiIO& io = ImGui::GetIO();
 
     MARU_WindowGeometry geometry = maru_getWindowGeometry(bd->Window);
-    io.DisplaySize = ImVec2((float)geometry.logical_size.x, (float)geometry.logical_size.y);
-    if (geometry.logical_size.x > 0 && geometry.logical_size.y > 0)
-        io.DisplayFramebufferScale = ImVec2((float)geometry.pixel_size.x / (float)geometry.logical_size.x, (float)geometry.pixel_size.y / (float)geometry.logical_size.y);
+    io.DisplaySize = ImVec2((float)geometry.dip_size.x, (float)geometry.dip_size.y);
+    if (geometry.dip_size.x > 0 && geometry.dip_size.y > 0)
+        io.DisplayFramebufferScale = ImVec2((float)geometry.px_size.x / (float)geometry.dip_size.x, (float)geometry.px_size.y / (float)geometry.dip_size.y);
 
     // Setup delta time
     auto now = std::chrono::steady_clock::now().time_since_epoch();
@@ -290,7 +290,7 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
     
     ImGuiIO& io = ImGui::GetIO();
     if (type == MARU_EVENT_MOUSE_MOVED) {
-        io.AddMousePosEvent((float)event->mouse_motion.position.x, (float)event->mouse_motion.position.y);
+        io.AddMousePosEvent((float)event->mouse_motion.dip_position.x, (float)event->mouse_motion.dip_position.y);
     } else if (type == MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED) {
         int mouse_button = -1;
         if (event->mouse_button.button_id == 0) mouse_button = 0;
@@ -299,7 +299,7 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
         if (mouse_button != -1)
             io.AddMouseButtonEvent(mouse_button, event->mouse_button.state == MARU_BUTTON_STATE_PRESSED);
     } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
-        io.AddMouseWheelEvent((float)event->mouse_scroll.delta.x, (float)event->mouse_scroll.delta.y);
+        io.AddMouseWheelEvent((float)event->mouse_scroll.dip_delta.x, (float)event->mouse_scroll.dip_delta.y);
     } else if (type == MARU_EVENT_KEY_STATE_CHANGED) {
         ImGuiKey key = ImGui_ImplMaru_KeyToImGuiKey(event->key.raw_key);
         if (key != ImGuiKey_None) {

@@ -68,7 +68,7 @@ typedef struct MARU_WindowsDataRequestHandle {
   struct MARU_Window *window;
   MARU_DataExchangeTarget target;
   char *mime_type;
-  void *user_tag;
+  void *userdata;
   void *provided_data;
   size_t provided_size;
   MARU_Status status;
@@ -88,7 +88,7 @@ typedef struct MARU_WindowsDeferredEvent {
     struct {
       MARU_DataExchangeTarget target;
       char *mime_type;
-      void *user_tag;
+      void *userdata;
       const void *data;
       size_t size;
       MARU_Status status;
@@ -271,7 +271,7 @@ void _maru_windows_process_raw_input(MARU_Context_Windows *ctx,
 // data_exchange.h
 MARU_Status maru_announceData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_Windows(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
-MARU_Status maru_requestData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag);
+MARU_Status maru_requestData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata);
 MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
 void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx);
 

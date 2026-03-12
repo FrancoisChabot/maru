@@ -66,7 +66,7 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output,
   MARU_Context_WL *ctx = (MARU_Context_WL *)monitor->base.ctx_base;
 
   MARU_VideoMode mode = {
-      .size = {.x = width, .y = height},
+      .px_size = {.x = width, .y = height},
       .refresh_rate_millihz = (uint32_t)refresh,
   };
 
@@ -74,7 +74,7 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output,
     const MARU_VideoMode prev_mode = monitor->base.pub.current_mode;
     monitor->base.pub.current_mode = mode;
     monitor->current_mode = mode;
-    if (prev_mode.size.x != mode.size.x || prev_mode.size.y != mode.size.y ||
+    if (prev_mode.px_size.x != mode.px_size.x || prev_mode.px_size.y != mode.px_size.y ||
         prev_mode.refresh_rate_millihz != mode.refresh_rate_millihz) {
       monitor->mode_changed_pending = true;
     }
@@ -82,7 +82,7 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output,
 
   for (uint32_t i = 0; i < monitor->mode_count; ++i) {
     const MARU_VideoMode existing = monitor->modes[i];
-    if (existing.size.x == mode.size.x && existing.size.y == mode.size.y &&
+    if (existing.px_size.x == mode.px_size.x && existing.px_size.y == mode.px_size.y &&
         existing.refresh_rate_millihz == mode.refresh_rate_millihz) {
       return;
     }
@@ -110,16 +110,16 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
   MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)data;
   MARU_Context_WL *ctx = (MARU_Context_WL *)monitor->base.ctx_base;
 
-  if (monitor->base.pub.logical_size.x == 0 &&
-      monitor->base.pub.current_mode.size.x > 0) {
+  if (monitor->base.pub.dip_size.x == 0 &&
+      monitor->base.pub.current_mode.px_size.x > 0) {
     const MARU_Scalar scale =
         (monitor->base.pub.scale > (MARU_Scalar)0.0)
             ? monitor->base.pub.scale
             : (MARU_Scalar)1.0;
-    monitor->base.pub.logical_size.x =
-        (MARU_Scalar)monitor->base.pub.current_mode.size.x / scale;
-    monitor->base.pub.logical_size.y =
-        (MARU_Scalar)monitor->base.pub.current_mode.size.y / scale;
+    monitor->base.pub.dip_size.x =
+        (MARU_Scalar)monitor->base.pub.current_mode.px_size.x / scale;
+    monitor->base.pub.dip_size.y =
+        (MARU_Scalar)monitor->base.pub.current_mode.px_size.y / scale;
   }
 
   MARU_Event evt = {0};
@@ -164,8 +164,8 @@ static void _xdg_output_handle_logical_position(void *data,
                                                 int32_t x, int32_t y) {
   (void)xdg_output;
   MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)data;
-  monitor->base.pub.logical_position.x = (MARU_Scalar)x;
-  monitor->base.pub.logical_position.y = (MARU_Scalar)y;
+  monitor->base.pub.dip_position.x = (MARU_Scalar)x;
+  monitor->base.pub.dip_position.y = (MARU_Scalar)y;
 }
 
 static void _xdg_output_handle_logical_size(void *data,
@@ -173,8 +173,8 @@ static void _xdg_output_handle_logical_size(void *data,
                                             int32_t width, int32_t height) {
   (void)xdg_output;
   MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)data;
-  monitor->base.pub.logical_size.x = (MARU_Scalar)width;
-  monitor->base.pub.logical_size.y = (MARU_Scalar)height;
+  monitor->base.pub.dip_size.x = (MARU_Scalar)width;
+  monitor->base.pub.dip_size.y = (MARU_Scalar)height;
 }
 
 static void _xdg_output_handle_done(void *data, struct zxdg_output_v1 *xdg_output) {

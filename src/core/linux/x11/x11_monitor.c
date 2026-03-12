@@ -132,10 +132,10 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
                                                    ? monitor_scale
                                                    : (MARU_Scalar)1.0);
       monitor->base.pub.scale = scale;
-      monitor->base.pub.logical_position.x = (MARU_Scalar)info->x / scale;
-      monitor->base.pub.logical_position.y = (MARU_Scalar)info->y / scale;
-      monitor->base.pub.logical_size.x = (MARU_Scalar)info->width / scale;
-      monitor->base.pub.logical_size.y = (MARU_Scalar)info->height / scale;
+      monitor->base.pub.dip_position.x = (MARU_Scalar)info->x / scale;
+      monitor->base.pub.dip_position.y = (MARU_Scalar)info->y / scale;
+      monitor->base.pub.dip_size.x = (MARU_Scalar)info->width / scale;
+      monitor->base.pub.dip_size.y = (MARU_Scalar)info->height / scale;
       monitor->base.pub.physical_size.x = (MARU_Scalar)info->mwidth;
       monitor->base.pub.physical_size.y = (MARU_Scalar)info->mheight;
 
@@ -177,11 +177,11 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
             }
             bool duplicate = false;
             const MARU_VideoMode candidate = {
-                .size = {(int32_t)mode_info->width, (int32_t)mode_info->height},
+                .px_size = {(int32_t)mode_info->width, (int32_t)mode_info->height},
                 .refresh_rate_millihz = _maru_x11_mode_refresh_millihz(mode_info)};
             for (uint32_t k = 0; k < monitor->mode_count; ++k) {
-              if (monitor->modes[k].size.x == candidate.size.x &&
-                  monitor->modes[k].size.y == candidate.size.y &&
+              if (monitor->modes[k].px_size.x == candidate.px_size.x &&
+                  monitor->modes[k].px_size.y == candidate.px_size.y &&
                   monitor->modes[k].refresh_rate_millihz == candidate.refresh_rate_millihz) {
                 duplicate = true;
                 break;
@@ -205,8 +205,8 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
           const XRRModeInfo *mode_info =
               _maru_x11_find_mode_info(resources, crtc_info->mode);
           if (mode_info) {
-            monitor->base.pub.current_mode.size.x = (int32_t)mode_info->width;
-            monitor->base.pub.current_mode.size.y = (int32_t)mode_info->height;
+            monitor->base.pub.current_mode.px_size.x = (int32_t)mode_info->width;
+            monitor->base.pub.current_mode.px_size.y = (int32_t)mode_info->height;
             monitor->base.pub.current_mode.refresh_rate_millihz =
                 _maru_x11_mode_refresh_millihz(mode_info);
           }
@@ -298,8 +298,8 @@ MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode 
     if (!mode_info) {
       continue;
     }
-    if ((int32_t)mode_info->width != mode.size.x ||
-        (int32_t)mode_info->height != mode.size.y) {
+    if ((int32_t)mode_info->width != mode.px_size.x ||
+        (int32_t)mode_info->height != mode.px_size.y) {
       continue;
     }
     const uint32_t refresh_millihz = _maru_x11_mode_refresh_millihz(mode_info);

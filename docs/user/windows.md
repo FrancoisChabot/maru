@@ -43,7 +43,7 @@ Use `maru_createWindow` to create a window. Like contexts, windows use a "Create
 ```c
 MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
 window_info.attributes.title = "My App";
-window_info.attributes.logical_size = (MARU_Vec2Dip){1280, 720};
+window_info.attributes.dip_size = (MARU_Vec2Dip){1280, 720};
 window_info.decorated = true;
 
 MARU_Window *window = NULL;
@@ -75,12 +75,12 @@ maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_FULLSCREEN, 
 
 ### Window Geometry
 
-`maru_getWindowGeometry` provides a snapshot of the window's size and position in both logical units (DIPs) and physical pixels.
+`maru_getWindowGeometry` provides a snapshot of the window's size and dip_position in both logical units (DIPs) and physical pixels.
 
 ```c
 MARU_WindowGeometry geometry = maru_getWindowGeometry(window);
 
-printf("Pixel size: %fx%f\n", geometry.pixel_size.x, geometry.pixel_size.y);
+printf("Pixel size: %fx%f\n", geometry.px_size.x, geometry.px_size.y);
 printf("Scale factor: %f\n", geometry.scale_factor);
 ```
 

@@ -20,7 +20,7 @@ typedef struct MARU_LinuxDataTransfer {
   MARU_Window *window;
   MARU_DataExchangeTarget target;
   const char *mime_type;
-  void *user_tag;
+  void *userdata;
   bool is_write;
   bool is_zero_copy;
   struct MARU_LinuxDataTransfer *next;
@@ -32,7 +32,7 @@ MARU_Status maru_linux_dataexchange_queueTransfer(MARU_Context_Base *ctx_base,
                                                   MARU_Window *window,
                                                   MARU_DataExchangeTarget target,
                                                   const char *mime_type,
-                                                  void *user_tag);
+                                                  void *userdata);
 
 MARU_Status maru_linux_dataexchange_queueWriteTransfer(MARU_Context_Base *ctx_base,
                                                        MARU_LinuxDataTransfer **head,

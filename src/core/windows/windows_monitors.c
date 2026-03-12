@@ -71,10 +71,10 @@ static BOOL CALLBACK _maru_windows_monitor_enum_proc(HMONITOR hmonitor, HDC hdc,
   }
   MARU_Scalar scale = (MARU_Scalar)dpi_x / 96.0;
 
-  monitor->base.pub.logical_position.x = (MARU_Scalar)info.rcMonitor.left / scale;
-  monitor->base.pub.logical_position.y = (MARU_Scalar)info.rcMonitor.top / scale;
-  monitor->base.pub.logical_size.x = (MARU_Scalar)width / scale;
-  monitor->base.pub.logical_size.y = (MARU_Scalar)height / scale;
+  monitor->base.pub.dip_position.x = (MARU_Scalar)info.rcMonitor.left / scale;
+  monitor->base.pub.dip_position.y = (MARU_Scalar)info.rcMonitor.top / scale;
+  monitor->base.pub.dip_size.x = (MARU_Scalar)width / scale;
+  monitor->base.pub.dip_size.y = (MARU_Scalar)height / scale;
   monitor->base.pub.scale = scale;
 
   // Windows doesn't easily give physical size in mm via GetMonitorInfo.
@@ -87,8 +87,8 @@ static BOOL CALLBACK _maru_windows_monitor_enum_proc(HMONITOR hmonitor, HDC hdc,
   DEVMODEW devmode;
   devmode.dmSize = sizeof(devmode);
   if (EnumDisplaySettingsW(monitor->device_name, ENUM_CURRENT_SETTINGS, &devmode)) {
-      monitor->base.pub.current_mode.size.x = devmode.dmPelsWidth;
-      monitor->base.pub.current_mode.size.y = devmode.dmPelsHeight;
+      monitor->base.pub.current_mode.px_size.x = devmode.dmPelsWidth;
+      monitor->base.pub.current_mode.px_size.y = devmode.dmPelsHeight;
       monitor->base.pub.current_mode.refresh_rate_millihz = devmode.dmDisplayFrequency * 1000;
   }
 
@@ -158,8 +158,8 @@ MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
     }
 
     MARU_VideoMode *m = &win_mon->modes[win_mon->mode_count++];
-    m->size.x = devmode.dmPelsWidth;
-    m->size.y = devmode.dmPelsHeight;
+    m->dip_size.x = devmode.dmPelsWidth;
+    m->dip_size.y = devmode.dmPelsHeight;
     m->refresh_rate_millihz = devmode.dmDisplayFrequency * 1000;
     
     mode_index++;
@@ -177,8 +177,8 @@ MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
   DEVMODEW devmode;
   memset(&devmode, 0, sizeof(devmode));
   devmode.dmSize = sizeof(devmode);
-  devmode.dmPelsWidth = mode.size.x;
-  devmode.dmPelsHeight = mode.size.y;
+  devmode.dmPelsWidth = mode.px_size.x;
+  devmode.dmPelsHeight = mode.px_size.y;
   devmode.dmDisplayFrequency = mode.refresh_rate_millihz / 1000;
   devmode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
 

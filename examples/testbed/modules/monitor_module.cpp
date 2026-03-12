@@ -81,20 +81,20 @@ void MonitorModule::render(MARU_Context* ctx, MARU_Window* window) {
             continue;
         }
 
-        const MARU_Vec2Dip pos = maru_getMonitorLogicalPosition(monitor);
-        const MARU_Vec2Dip size = maru_getMonitorLogicalSize(monitor);
+        const MARU_Vec2Dip pos = maru_getMonitorDipPosition(monitor);
+        const MARU_Vec2Dip size = maru_getMonitorDipSize(monitor);
         const MARU_Scalar scale = maru_getMonitorScale(monitor);
         const MARU_Vec2Mm phys_size = maru_getMonitorPhysicalSize(monitor);
 
         ImGui::Text("Handle: %p", (void*)monitor);
-        ImGui::Text("Logical Position: (%.1f, %.1f)", pos.x, pos.y);
-        ImGui::Text("Logical Size: (%.1f, %.1f)", size.x, size.y);
+        ImGui::Text("Dip Position: (%.1f, %.1f)", pos.x, pos.y);
+        ImGui::Text("Dip Size: (%.1f, %.1f)", size.x, size.y);
         ImGui::Text("Physical Size: (%.1f, %.1f) mm", phys_size.x, phys_size.y);
         ImGui::Text("Scale: %.2f", scale);
 
         const MARU_VideoMode current_mode = maru_getMonitorCurrentMode(monitor);
-        ImGui::Text("Current Mode: %dx%d @ %.2f Hz", current_mode.size.x,
-                    current_mode.size.y,
+        ImGui::Text("Current Mode: %dx%d @ %.2f Hz", current_mode.px_size.x,
+                    current_mode.px_size.y,
                     (double)current_mode.refresh_rate_millihz / 1000.0);
 
         MARU_VideoModeList modes = {};
@@ -112,7 +112,7 @@ void MonitorModule::render(MARU_Context* ctx, MARU_Window* window) {
                 for (uint32_t j = 0; j < modes.count; ++j) {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::Text("%dx%d", modes.modes[j].size.x, modes.modes[j].size.y);
+                    ImGui::Text("%dx%d", modes.modes[j].px_size.x, modes.modes[j].px_size.y);
                     ImGui::TableNextColumn();
                     ImGui::Text("%.2f Hz", (double)modes.modes[j].refresh_rate_millihz / 1000.0);
                     ImGui::TableNextColumn();

@@ -204,12 +204,12 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             NSRect contentRect = [window->ns_window contentRectForFrameRect:[window->ns_window frame]];
             
             MARU_Event event = {0};
-            event.mouse_motion.position.x = (MARU_Scalar)p.x;
-            event.mouse_motion.position.y = (MARU_Scalar)(contentRect.size.height - p.y);
-            event.mouse_motion.delta.x = (MARU_Scalar)[nsEvent deltaX];
-            event.mouse_motion.delta.y = (MARU_Scalar)[nsEvent deltaY];
-            event.mouse_motion.raw_delta.x = (MARU_Scalar)[nsEvent deltaX];
-            event.mouse_motion.raw_delta.y = (MARU_Scalar)[nsEvent deltaY];
+            event.mouse_motion.dip_position.x = (MARU_Scalar)p.x;
+            event.mouse_motion.dip_position.y = (MARU_Scalar)(contentRect.dip_size.height - p.y);
+            event.mouse_motion.dip_delta.x = (MARU_Scalar)[nsEvent deltaX];
+            event.mouse_motion.dip_delta.y = (MARU_Scalar)[nsEvent deltaY];
+            event.mouse_motion.raw_dip_delta.x = (MARU_Scalar)[nsEvent deltaX];
+            event.mouse_motion.raw_dip_delta.y = (MARU_Scalar)[nsEvent deltaY];
             event.mouse_motion.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
@@ -219,12 +219,12 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
         case NSEventTypeScrollWheel: {
             if (!window) break;
             MARU_Event event = {0};
-            event.mouse_scroll.delta.x = (MARU_Scalar)[nsEvent scrollingDeltaX];
-            event.mouse_scroll.delta.y = (MARU_Scalar)[nsEvent scrollingDeltaY];
+            event.mouse_scroll.dip_delta.x = (MARU_Scalar)[nsEvent scrollingDeltaX];
+            event.mouse_scroll.dip_delta.y = (MARU_Scalar)[nsEvent scrollingDeltaY];
             
             if (![nsEvent hasPreciseScrollingDeltas]) {
-                event.mouse_scroll.delta.x *= (MARU_Scalar)10.0;
-                event.mouse_scroll.delta.y *= (MARU_Scalar)10.0;
+                event.mouse_scroll.dip_delta.x *= (MARU_Scalar)10.0;
+                event.mouse_scroll.dip_delta.y *= (MARU_Scalar)10.0;
             }
             event.mouse_scroll.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             

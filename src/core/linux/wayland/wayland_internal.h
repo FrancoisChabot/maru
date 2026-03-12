@@ -61,7 +61,7 @@ typedef struct MARU_WaylandClipboardState {
 
   struct {
     bool pending;
-    MARU_Vec2Dip position;
+    MARU_Vec2Dip dip_position;
     MARU_ModifierFlags modifiers;
     struct wl_data_offer *offer;
   } dnd_drop;
@@ -480,7 +480,7 @@ MARU_Status maru_provideData_WL(MARU_DataRequest *request,
                                 const void *data, size_t size,
                                 MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
-                                const char *mime_type, void *user_tag);
+                                const char *mime_type, void *userdata);
 MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
                                           MARU_DataExchangeTarget target,
                                           MARU_MIMETypeList *out_list);
@@ -507,8 +507,8 @@ void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window);
 bool _maru_wayland_ensure_cursor_theme(MARU_Context_WL *ctx);
 const char *_maru_cursor_shape_to_name(MARU_CursorShape shape);
 void _maru_wayland_clear_cursor_animation(MARU_Context_WL *ctx);
-void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t changed_fields,
-                                               bool icon);void _maru_wayland_update_text_input(MARU_Window_WL *window);
+void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window,
+                                               uint32_t changed_fields);void _maru_wayland_update_text_input(MARU_Window_WL *window);
 void _maru_wayland_clear_text_input_pending(MARU_Window_WL *window);
 void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
                                         const MARU_Window_WL *window);

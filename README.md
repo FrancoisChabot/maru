@@ -127,7 +127,7 @@ int main() {
   MARU_Window *window = NULL;
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru Basic C Example";
-  window_info.attributes.logical_size = (MARU_Vec2Dip){800, 600};
+  window_info.attributes.dip_size = (MARU_Vec2Dip){800, 600};
   maru_createWindow(context, &window_info, &window);
 
   // Wait for the window to be ready
@@ -265,10 +265,10 @@ Maru only provides a full IME-capable text input mechanism. It forces you to "ea
 
 Use the `maru_applyTextEditCommitUtf8()` convenience function to apply commits to a buffer. If you also update `MARU_WINDOW_ATTR_TEXT_INPUT_RECT`, you'll get proper Japanese/Korean/etc. support out-of-the-box.
 
-#### High DPI: Logical vs. Pixel Space
-**"What's the difference between logical vectors and pixel vectors?"**
+#### High DPI: Dip vs. Px Space
+**"What's the difference between dip vectors and px vectors?"**
 
-All coordinate variables in Maru explicitly include `logical` or `pixel` in their name. In short: use **logical** units for UI layout and hit testing (to match OS scaling) and **pixel** units for your rendering viewport and swapchain.
+All coordinate variables in Maru explicitly include `dip` or `px` in their name. In short: use **dip** units for UI layout and hit testing (to match OS scaling) and **px** units for your rendering viewport and swapchain.
 
 #### Analog Inputs: Polling vs. Events
 **"Why is there a mouse motion event but no controller analog event?"**

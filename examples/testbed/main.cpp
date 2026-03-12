@@ -88,12 +88,12 @@ static uint64_t now_ms() {
 }
 
 static void set_window_viewport_size(MARU_Window *window,
-                                     MARU_Vec2Dip viewport_size) {
+                                     MARU_Vec2Dip viewport_dip_size) {
   if (!window)
     return;
   MARU_WindowAttributes attrs = {};
-  attrs.viewport_size = viewport_size;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_VIEWPORT_SIZE, &attrs);
+  attrs.viewport_dip_size = viewport_dip_size;
+  maru_updateWindow(window, MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE, &attrs);
 }
 
 static void handle_maru_diagnostic(const MARU_DiagnosticInfo *info,
@@ -120,7 +120,7 @@ static void handle_maru_event(MARU_EventId type, MARU_Window *window,
   else if (type == MARU_EVENT_WINDOW_RESIZED && window == g_PrimaryWindow) {
     g_PendingResize = true;
     g_LastResizeAtMs = now_ms();
-    g_PendingViewportSize = event->resized.geometry.logical_size;
+    g_PendingViewportSize = event->resized.geometry.dip_size;
     set_window_viewport_size(window, g_PendingViewportSize);
   }
 }
@@ -458,8 +458,8 @@ int main(int, char **) {
   const std::vector<uint32_t> icon_pixels =
       create_testbed_icon_pixels(icon_size);
   MARU_ImageCreateInfo icon_info = {};
-  icon_info.size.x = (int32_t)icon_size;
-  icon_info.size.y = (int32_t)icon_size;
+  icon_info.px_size.x = (int32_t)icon_size;
+  icon_info.px_size.y = (int32_t)icon_size;
   icon_info.pixels = icon_pixels.data();
   icon_info.stride_bytes = icon_size * 4u;
   if (maru_createImage(context, &icon_info, &window_icon) != MARU_SUCCESS) {
@@ -469,8 +469,8 @@ int main(int, char **) {
 
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "MARU Testbed";
-  window_info.attributes.logical_size.x = 1280;
-  window_info.attributes.logical_size.y = 800;
+  window_info.attributes.dip_size.x = 1280;
+  window_info.attributes.dip_size.y = 800;
   window_info.app_id = "org.birdsafe.maru.testbed";
   window_info.attributes.icon = window_icon;
   window_info.attributes.accept_drop = true;
@@ -526,8 +526,8 @@ int main(int, char **) {
 
   MARU_WindowGeometry geometry = maru_getWindowGeometry(window);
   ImGui_ImplVulkanH_Window *wd = &g_MainWindowData;
-  SetupVulkanWindow(wd, surface, (int)geometry.pixel_size.x,
-                    (int)geometry.pixel_size.y);
+  SetupVulkanWindow(wd, surface, (int)geometry.px_size.x,
+                    (int)geometry.px_size.y);
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -573,16 +573,16 @@ int main(int, char **) {
           g_PendingResize && (now >= g_LastResizeAtMs) &&
           ((now - g_LastResizeAtMs) >= g_ResizeDebounceMs);
       const bool need_rebuild = g_SwapChainRebuild || debounce_elapsed;
-      if (geometry.pixel_size.x > 0 && geometry.pixel_size.y > 0 &&
+      if (geometry.px_size.x > 0 && geometry.px_size.y > 0 &&
           need_rebuild) {
         const int target_width =
             (g_PendingResize && g_PendingViewportSize.x > 0)
                 ? (int)g_PendingViewportSize.x
-                : (int)geometry.pixel_size.x;
+                : (int)geometry.px_size.x;
         const int target_height =
             (g_PendingResize && g_PendingViewportSize.y > 0)
                 ? (int)g_PendingViewportSize.y
-                : (int)geometry.pixel_size.y;
+                : (int)geometry.px_size.y;
         ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
         ImGui_ImplVulkanH_CreateOrResizeWindow(
             g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily,

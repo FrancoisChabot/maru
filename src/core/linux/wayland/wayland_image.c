@@ -12,8 +12,8 @@ MARU_Status maru_createImage_WL(MARU_Context *context,
                                 MARU_Image **out_image) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
-  const uint32_t width = (uint32_t)create_info->size.x;
-  const uint32_t height = (uint32_t)create_info->size.y;
+  const uint32_t width = (uint32_t)create_info->px_size.x;
+  const uint32_t height = (uint32_t)create_info->px_size.y;
   const uint32_t min_stride = width * 4u;
   const uint32_t stride = (create_info->stride_bytes == 0) ? min_stride : create_info->stride_bytes;
 

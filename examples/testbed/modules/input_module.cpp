@@ -13,9 +13,9 @@ void InputModule::update(MARU_Context* ctx, MARU_Window* window) {
 void InputModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
     (void)window;
     if (type == MARU_EVENT_MOUSE_MOVED) {
-        mouse_pos_ = event.mouse_motion.position;
-        mouse_delta_ = event.mouse_motion.delta;
-        mouse_raw_delta_ = event.mouse_motion.raw_delta;
+        mouse_pos_ = event.mouse_motion.dip_position;
+        mouse_delta_ = event.mouse_motion.dip_delta;
+        mouse_raw_delta_ = event.mouse_motion.raw_dip_delta;
     }
 }
 

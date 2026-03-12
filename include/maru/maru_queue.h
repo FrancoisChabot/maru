@@ -166,7 +166,7 @@ MARU_API void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask,
  * will be combined into the existing one rather than being appended.
  *
  * Coalescing logic:
- * - MARU_EVENT_MOUSE_MOVED: Updates position, accumulates delta and raw_delta.
+ * - MARU_EVENT_MOUSE_MOVED: Updates dip_position, accumulates delta and raw_delta.
  * - MARU_EVENT_MOUSE_SCROLLED: Accumulates delta and steps.
  * - MARU_EVENT_WINDOW_RESIZED: Updates geometry.
  *

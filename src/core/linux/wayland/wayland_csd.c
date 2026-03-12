@@ -38,7 +38,8 @@ bool _maru_wayland_init_libdecor(MARU_Context_WL *ctx) {
     return false;
   }
 
-  ctx->libdecor_context = maru_libdecor_new(ctx, ctx->wl.display, &_libdecor_interface);
+  ctx->libdecor_context =
+      maru_libdecor_new(ctx, ctx->wl.display, &_libdecor_interface);
   if (!ctx->libdecor_context) {
     return false;
   }
@@ -58,9 +59,10 @@ void _maru_wayland_cleanup_libdecor(MARU_Context_WL *ctx) {
   }
 }
 
-static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
-                                              struct libdecor_configuration *configuration,
-                                              void *user_data) {
+static void
+_libdecor_frame_handle_configure(struct libdecor_frame *frame,
+                                 struct libdecor_configuration *configuration,
+                                 void *user_data) {
   MARU_Window_WL *window = (MARU_Window_WL *)user_data;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   MARU_WindowAttributes *effective = &window->base.attrs_effective;
@@ -71,7 +73,8 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   bool is_fullscreen = false;
   bool is_minimized = false;
 
-  if (maru_libdecor_configuration_get_window_state(ctx, configuration, &window_state)) {
+  if (maru_libdecor_configuration_get_window_state(ctx, configuration,
+                                                   &window_state)) {
     is_maximized = (window_state & LIBDECOR_WINDOW_STATE_MAXIMIZED) != 0;
     is_fullscreen = (window_state & LIBDECOR_WINDOW_STATE_FULLSCREEN) != 0;
 #ifdef LIBDECOR_WINDOW_STATE_MINIMIZED
@@ -99,7 +102,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
         changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
       }
     }
-    _maru_wayland_dispatch_presentation_state(window, changed, true);
+    _maru_wayland_dispatch_presentation_state(window, changed);
   }
 
   if (effective->maximized != is_maximized) {
@@ -110,7 +113,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
     }
     _maru_wayland_dispatch_presentation_state(
-        window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED, true);
+        window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED);
   }
 
   effective->fullscreen = is_fullscreen;
@@ -120,24 +123,29 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
   }
 
-  if (!maru_libdecor_configuration_get_content_size(ctx, configuration, frame, &width, &height)) {
-    width = (int)effective->logical_size.x;
-    height = (int)effective->logical_size.y;
+  if (!maru_libdecor_configuration_get_content_size(ctx, configuration, frame,
+                                                    &width, &height)) {
+    width = (int)effective->dip_size.x;
+    height = (int)effective->dip_size.y;
   }
 
-  uint32_t content_width = width > 0 ? (uint32_t)width : (uint32_t)effective->logical_size.x;
-  uint32_t content_height = height > 0 ? (uint32_t)height : (uint32_t)effective->logical_size.y;
+  uint32_t content_width =
+      width > 0 ? (uint32_t)width : (uint32_t)effective->dip_size.x;
+  uint32_t content_height =
+      height > 0 ? (uint32_t)height : (uint32_t)effective->dip_size.y;
 
   if (!is_maximized && !is_fullscreen) {
     _maru_wayland_enforce_aspect_ratio(&content_width, &content_height, window);
   }
-  const bool size_changed = (effective->logical_size.x != (MARU_Scalar)content_width) ||
-                            (effective->logical_size.y != (MARU_Scalar)content_height);
+  const bool size_changed =
+      (effective->dip_size.x != (MARU_Scalar)content_width) ||
+      (effective->dip_size.y != (MARU_Scalar)content_height);
 
-  effective->logical_size.x = (MARU_Scalar)content_width;
-  effective->logical_size.y = (MARU_Scalar)content_height;
+  effective->dip_size.x = (MARU_Scalar)content_width;
+  effective->dip_size.y = (MARU_Scalar)content_height;
 
-  struct libdecor_state *state = maru_libdecor_state_new(ctx, (int)content_width, (int)content_height);
+  struct libdecor_state *state =
+      maru_libdecor_state_new(ctx, (int)content_width, (int)content_height);
   if (!state) {
     return;
   }
@@ -147,8 +155,10 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   if (!maru_isWindowReady((MARU_Window *)window)) {
     window->base.pub.flags |= MARU_WINDOW_STATE_READY;
     MARU_Event evt = {0};
-    maru_getWindowGeometry_WL((MARU_Window *)window, &evt.window_ready.geometry);
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY, (MARU_Window *)window, &evt);
+    maru_getWindowGeometry_WL((MARU_Window *)window,
+                              &evt.window_ready.geometry);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_READY,
+                         (MARU_Window *)window, &evt);
   }
 
   if (size_changed) {
@@ -159,15 +169,18 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   maru_wl_surface_commit(ctx, window->wl.surface);
 }
 
-static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *user_data) {
+static void _libdecor_frame_handle_close(struct libdecor_frame *frame,
+                                         void *user_data) {
   MARU_Window_WL *window = (MARU_Window_WL *)user_data;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
   MARU_Event evt = {0};
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_CLOSE_REQUESTED, (MARU_Window *)window, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_CLOSE_REQUESTED,
+                       (MARU_Window *)window, &evt);
 }
 
-static void _libdecor_frame_handle_commit(struct libdecor_frame *frame, void *user_data) {
+static void _libdecor_frame_handle_commit(struct libdecor_frame *frame,
+                                          void *user_data) {
   MARU_Window_WL *window = (MARU_Window_WL *)user_data;
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
@@ -180,8 +193,8 @@ static struct libdecor_frame_interface _libdecor_frame_interface = {
     .commit = _libdecor_frame_handle_commit,
 };
 
-bool _maru_wayland_create_libdecor_frame(MARU_Window_WL *window,
-                                          const MARU_WindowCreateInfo *create_info) {
+bool _maru_wayland_create_libdecor_frame(
+    MARU_Window_WL *window, const MARU_WindowCreateInfo *create_info) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   const MARU_WindowAttributes *attrs = &window->base.attrs_effective;
 
@@ -189,20 +202,21 @@ bool _maru_wayland_create_libdecor_frame(MARU_Window_WL *window,
     return false;
   }
 
-  window->libdecor.frame = maru_libdecor_decorate(ctx, ctx->libdecor_context,
-                                                 window->wl.surface,
-                                                 &_libdecor_frame_interface,
-                                                 window);
+  window->libdecor.frame =
+      maru_libdecor_decorate(ctx, ctx->libdecor_context, window->wl.surface,
+                             &_libdecor_frame_interface, window);
   if (!window->libdecor.frame) {
     return false;
   }
 
   if (create_info->attributes.title) {
-    maru_libdecor_frame_set_title(ctx, window->libdecor.frame, create_info->attributes.title);
+    maru_libdecor_frame_set_title(ctx, window->libdecor.frame,
+                                  create_info->attributes.title);
   }
 
   if (create_info->app_id) {
-    maru_libdecor_frame_set_app_id(ctx, window->libdecor.frame, create_info->app_id);
+    maru_libdecor_frame_set_app_id(ctx, window->libdecor.frame,
+                                   create_info->app_id);
   }
 
   if (attrs->fullscreen) {
@@ -240,7 +254,8 @@ void _maru_wayland_destroy_libdecor_frame(MARU_Window_WL *window) {
   }
 }
 
-void _maru_wayland_libdecor_set_title(MARU_Window_WL *window, const char *title) {
+void _maru_wayland_libdecor_set_title(MARU_Window_WL *window,
+                                      const char *title) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   if (window->libdecor.frame) {
     maru_libdecor_frame_set_title(ctx, window->libdecor.frame, title);

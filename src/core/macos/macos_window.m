@@ -81,13 +81,13 @@
 static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame) {
     NSRect backing = [nsWindow convertRectToBacking:frame];
     MARU_WindowGeometry geo = {0};
-    geo.pixel_size.x = (int32_t)backing.size.width;
-    geo.pixel_size.y = (int32_t)backing.size.height;
-    geo.origin.x = (MARU_Scalar)frame.origin.x;
-    geo.origin.y = (MARU_Scalar)frame.origin.y;
-    geo.logical_size.x = (MARU_Scalar)frame.size.width;
-    geo.logical_size.y = (MARU_Scalar)frame.size.height;
-    geo.scale = (MARU_Scalar)(backing.size.width / frame.size.width); 
+    geo.px_size.x = (int32_t)backing.dip_size.width;
+    geo.px_size.y = (int32_t)backing.dip_size.height;
+    geo.dip_origin.x = (MARU_Scalar)frame.dip_origin.x;
+    geo.dip_origin.y = (MARU_Scalar)frame.dip_origin.y;
+    geo.dip_size.x = (MARU_Scalar)frame.dip_size.width;
+    geo.dip_size.y = (MARU_Scalar)frame.dip_size.height;
+    geo.scale = (MARU_Scalar)(backing.dip_size.width / frame.dip_size.width); 
     return geo;
 }
 
@@ -229,7 +229,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
 
     _maru_register_window(&ctx_cocoa->base, (MARU_Window *)win);
 
-    NSRect contentRect = NSMakeRect(0, 0, create_info->attributes.logical_size.x, create_info->attributes.logical_size.y);
+    NSRect contentRect = NSMakeRect(0, 0, create_info->attributes.dip_size.x, create_info->attributes.dip_size.y);
     NSUInteger styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable;
 
     NSWindow *nsWindow = [[NSWindow alloc] initWithContentRect:contentRect
@@ -249,7 +249,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     win->ns_window = nsWindow;
     win->ns_view = view;
     win->ns_layer = [view layer];
-    win->size = create_info->attributes.logical_size;
+    win->dip_size = create_info->attributes.dip_size;
     _maru_cocoa_associate_window(nsWindow, win);
 
     [nsWindow setContentView:view];
@@ -326,21 +326,21 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         [nsWindow setTitle:[NSString stringWithUTF8String:effective->title ? effective->title : ""]];
     }
 
-    if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
-        requested->logical_size = attributes->logical_size;
-        effective->logical_size = attributes->logical_size;
+    if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
+        requested->dip_size = attributes->dip_size;
+        effective->dip_size = attributes->dip_size;
         NSRect frame = [nsWindow contentRectForFrameRect:[nsWindow frame]];
-        frame.size.width = effective->logical_size.x;
-        frame.size.height = effective->logical_size.y;
+        frame.dip_size.width = effective->dip_size.x;
+        frame.dip_size.height = effective->dip_size.y;
         [nsWindow setFrame:[nsWindow frameRectForContentRect:frame] display:YES];
     }
 
-    if (field_mask & MARU_WINDOW_ATTR_POSITION) {
-        requested->position = attributes->position;
-        effective->position = attributes->position;
+    if (field_mask & MARU_WINDOW_ATTR_DIP_POSITION) {
+        requested->dip_position = attributes->dip_position;
+        effective->dip_position = attributes->dip_position;
         NSRect frame = [nsWindow frame];
-        frame.origin.x = effective->position.x;
-        frame.origin.y = effective->position.y;
+        frame.dip_origin.x = effective->dip_position.x;
+        frame.dip_origin.y = effective->dip_position.y;
         [nsWindow setFrame:frame display:YES];
     }
 

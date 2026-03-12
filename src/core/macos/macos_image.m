@@ -22,7 +22,7 @@ MARU_Status maru_createImage_Cocoa(MARU_Context *context,
         return MARU_FAILURE;
     }
 
-    if (create_info->size.x <= 0 || create_info->size.y <= 0) {
+    if (create_info->px_size.x <= 0 || create_info->px_size.y <= 0) {
         return MARU_FAILURE;
     }
 
@@ -32,8 +32,8 @@ MARU_Status maru_createImage_Cocoa(MARU_Context *context,
 
     memset(img, 0, sizeof(MARU_Image_Cocoa));
     img->base.ctx_base = ctx_base;
-    img->base.width = (uint32_t)create_info->size.x;
-    img->base.height = (uint32_t)create_info->size.y;
+    img->base.width = (uint32_t)create_info->px_size.x;
+    img->base.height = (uint32_t)create_info->px_size.y;
     const uint32_t min_stride = img->base.width * 4u;
     const uint32_t stride = create_info->stride_bytes ? create_info->stride_bytes : min_stride;
     if (stride < min_stride) {

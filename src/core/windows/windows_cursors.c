@@ -86,7 +86,7 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
 
       for (uint32_t i = 0; i < create_info->frame_count; ++i) {
         const MARU_Image_Windows *img = (const MARU_Image_Windows *)create_info->frames[i].image;
-        hcursors[i] = _maru_create_custom_cursor_windows(img, (int)create_info->frames[i].hot_spot.x, (int)create_info->frames[i].hot_spot.y);
+        hcursors[i] = _maru_create_custom_cursor_windows(img, (int)create_info->frames[i].px_hot_spot.x, (int)create_info->frames[i].px_hot_spot.y);
         delays[i] = _maru_cursor_frame_delay_ms(create_info->frames[i].delay_ms);
         if (!hcursors[i]) {
           for (uint32_t j = 0; j < i; ++j) DestroyCursor(hcursors[j]);
@@ -98,7 +98,7 @@ MARU_Status maru_createCursor_Windows(MARU_Context *context,
       hcursor = hcursors[0];
     } else {
       const MARU_Image_Windows *img = (const MARU_Image_Windows *)create_info->frames[0].image;
-      hcursor = _maru_create_custom_cursor_windows(img, (int)create_info->frames[0].hot_spot.x, (int)create_info->frames[0].hot_spot.y);
+      hcursor = _maru_create_custom_cursor_windows(img, (int)create_info->frames[0].px_hot_spot.x, (int)create_info->frames[0].px_hot_spot.y);
     }
   }
 

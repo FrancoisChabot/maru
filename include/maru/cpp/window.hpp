@@ -49,7 +49,7 @@ public:
 
     // Convenience setters
     MARU_Status setTitle(const char* title);
-    MARU_Status setLogicalSize(MARU_Vec2Dip size);
+    MARU_Status setDipSize(MARU_Vec2Dip size);
     MARU_Status setFullscreen(bool enabled);
     MARU_Status setMaximized(bool enabled);
     MARU_Status setVisible(bool enabled);

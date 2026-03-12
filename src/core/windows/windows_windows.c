@@ -13,7 +13,7 @@ static void _maru_windows_dispatch_presentation_event(MARU_Window_Windows *win, 
     evt.presentation.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
     evt.presentation.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
     evt.presentation.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-    evt.presentation.icon = (win->base.pub.icon != NULL);
+    evt.presentation.icon_changed = (changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_ICON) != 0;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)win, &evt);
 }
 
@@ -323,32 +323,32 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         MARU_Scalar centerX = (MARU_Scalar)(rect.right - rect.left) / 2.0f;
         MARU_Scalar centerY = (MARU_Scalar)(rect.bottom - rect.top) / 2.0f;
 
-        evt.mouse_motion.delta.x = pos.x - centerX;
-        evt.mouse_motion.delta.y = pos.y - centerY;
+        evt.mouse_motion.dip_delta.x = pos.x - centerX;
+        evt.mouse_motion.dip_delta.y = pos.y - centerY;
 
-        if (evt.mouse_motion.delta.x != 0 || evt.mouse_motion.delta.y != 0) {
-          win->virtual_cursor_pos.x += evt.mouse_motion.delta.x;
-          win->virtual_cursor_pos.y += evt.mouse_motion.delta.y;
+        if (evt.mouse_motion.dip_delta.x != 0 || evt.mouse_motion.dip_delta.y != 0) {
+          win->virtual_cursor_pos.x += evt.mouse_motion.dip_delta.x;
+          win->virtual_cursor_pos.y += evt.mouse_motion.dip_delta.y;
 
           POINT pt = {(int)centerX, (int)centerY};
           ClientToScreen(win->hwnd, &pt);
           SetCursorPos(pt.x, pt.y);
         }
-        evt.mouse_motion.position = win->virtual_cursor_pos;
+        evt.mouse_motion.dip_position = win->virtual_cursor_pos;
       } else {
-        evt.mouse_motion.position = pos;
+        evt.mouse_motion.dip_position = pos;
         if (win->last_mouse_pos_valid) {
-          evt.mouse_motion.delta.x = pos.x - win->last_mouse_pos.x;
-          evt.mouse_motion.delta.y = pos.y - win->last_mouse_pos.y;
+          evt.mouse_motion.dip_delta.x = pos.x - win->last_mouse_pos.x;
+          evt.mouse_motion.dip_delta.y = pos.y - win->last_mouse_pos.y;
         } else {
-          evt.mouse_motion.delta.x = 0;
-          evt.mouse_motion.delta.y = 0;
+          evt.mouse_motion.dip_delta.x = 0;
+          evt.mouse_motion.dip_delta.y = 0;
         }
         win->last_mouse_pos = pos;
         win->last_mouse_pos_valid = true;
       }
 
-      evt.mouse_motion.raw_delta = evt.mouse_motion.delta; // TODO: handle raw input
+      evt.mouse_motion.raw_dip_delta = evt.mouse_motion.delta; // TODO: handle raw input
       evt.mouse_motion.modifiers = _maru_get_modifiers_windows();
 
       _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)win, &evt);
@@ -370,10 +370,10 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
       if (uMsg == WM_MOUSEWHEEL) {
         evt.mouse_scroll.steps.y = (int32_t)value;
-        evt.mouse_scroll.delta.y = value * 10.0f; // TODO: use system settings
+        evt.mouse_scroll.dip_delta.y = value * 10.0f; // TODO: use system settings
       } else {
         evt.mouse_scroll.steps.x = (int32_t)value;
-        evt.mouse_scroll.delta.x = value * 10.0f; // TODO: use system settings
+        evt.mouse_scroll.dip_delta.x = value * 10.0f; // TODO: use system settings
       }
       evt.mouse_scroll.modifiers = _maru_get_modifiers_windows();
 
@@ -549,17 +549,17 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
 
   int x = CW_USEDEFAULT;
   int y = CW_USEDEFAULT;
-  int w = (int)(create_info->attributes.logical_size.x * scale);
-  int h = (int)(create_info->attributes.logical_size.y * scale);
+  int w = (int)(create_info->attributes.dip_size.x * scale);
+  int h = (int)(create_info->attributes.dip_size.y * scale);
 
   if (w == 0 || h == 0) {
       w = (int)(800.0 * scale);
       h = (int)(600.0 * scale);
   }
 
-  if (create_info->attributes.position.x != 0 || create_info->attributes.position.y != 0) {
-      x = (int)create_info->attributes.position.x;
-      y = (int)create_info->attributes.position.y;
+  if (create_info->attributes.dip_position.x != 0 || create_info->attributes.dip_position.y != 0) {
+      x = (int)create_info->attributes.dip_position.x;
+      y = (int)create_info->attributes.dip_position.y;
       
       POINT pt = {x, y};
       HMONITOR hmon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
@@ -568,10 +568,10 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
           scale = (MARU_Scalar)dpi_x / 96.0;
       }
 
-      x = (int)(create_info->attributes.position.x * scale);
-      y = (int)(create_info->attributes.position.y * scale);
-      w = (int)(create_info->attributes.logical_size.x * scale);
-      h = (int)(create_info->attributes.logical_size.y * scale);
+      x = (int)(create_info->attributes.dip_position.x * scale);
+      y = (int)(create_info->attributes.dip_position.y * scale);
+      w = (int)(create_info->attributes.dip_size.x * scale);
+      h = (int)(create_info->attributes.dip_size.y * scale);
       
       RECT rect = {x, y, x + w, y + h};
       AdjustWindowRectEx(&rect, style, FALSE, ex_style);
@@ -658,19 +658,19 @@ MARU_WindowGeometry maru_getWindowGeometry_Windows(MARU_Window *window_handle) {
   int w = rect.right - rect.left;
   int h = rect.bottom - rect.top;
 
-  geometry.pixel_size.x = (int32_t)w;
-  geometry.pixel_size.y = (int32_t)h;
+  geometry.px_size.x = (int32_t)w;
+  geometry.px_size.y = (int32_t)h;
   
   UINT dpi = ctx->GetDpiForWindow ? ctx->GetDpiForWindow(win->hwnd) : 96;
   geometry.scale = (MARU_Scalar)dpi / 96.0;
   
-  geometry.logical_size.x = (MARU_Scalar)w / geometry.scale;
-  geometry.logical_size.y = (MARU_Scalar)h / geometry.scale;
+  geometry.dip_size.x = (MARU_Scalar)w / geometry.scale;
+  geometry.dip_size.y = (MARU_Scalar)h / geometry.scale;
 
   POINT pt = {0, 0};
   ClientToScreen(win->hwnd, &pt);
-  geometry.origin.x = (MARU_Scalar)pt.x / geometry.scale;
-  geometry.origin.y = (MARU_Scalar)pt.y / geometry.scale;
+  geometry.dip_origin.x = (MARU_Scalar)pt.x / geometry.scale;
+  geometry.dip_origin.y = (MARU_Scalar)pt.y / geometry.scale;
   
   geometry.buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
   win->base.pub.geometry = geometry;
@@ -736,22 +736,22 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       win->base.pub.icon = attributes->icon;
   }
 
-  if (field_mask & (MARU_WINDOW_ATTR_LOGICAL_SIZE | MARU_WINDOW_ATTR_POSITION)) {
+  if (field_mask & (MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_DIP_POSITION)) {
       UINT dpi = ctx->GetDpiForWindow ? ctx->GetDpiForWindow(win->hwnd) : 96;
       MARU_Scalar scale = (MARU_Scalar)dpi / 96.0;
 
-      MARU_Scalar new_w = (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) ? attributes->logical_size.x : win->base.attrs_effective.logical_size.x;
-      MARU_Scalar new_h = (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) ? attributes->logical_size.y : win->base.attrs_effective.logical_size.y;
+      MARU_Scalar new_w = (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) ? attributes->dip_size.x : win->base.attrs_effective.dip_size.x;
+      MARU_Scalar new_h = (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) ? attributes->dip_size.y : win->base.attrs_effective.dip_size.y;
       
       MARU_Scalar new_x, new_y;
-      if (field_mask & MARU_WINDOW_ATTR_POSITION) {
-          new_x = attributes->position.x;
-          new_y = attributes->position.y;
+      if (field_mask & MARU_WINDOW_ATTR_DIP_POSITION) {
+          new_x = attributes->dip_position.x;
+          new_y = attributes->dip_position.y;
       } else {
           MARU_WindowGeometry geo;
           geo = maru_getWindowGeometry_Windows(window);
-          new_x = geo.origin.x;
-          new_y = geo.origin.y;
+          new_x = geo.dip_origin.x;
+          new_y = geo.dip_origin.y;
       }
 
       DWORD style = GetWindowLongW(win->hwnd, GWL_STYLE);
@@ -764,19 +764,19 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       };
       AdjustWindowRectEx(&rect, style, FALSE, ex_style);
       
-      if (!(field_mask & MARU_WINDOW_ATTR_POSITION) && (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE)) {
+      if (!(field_mask & MARU_WINDOW_ATTR_DIP_POSITION) && (field_mask & MARU_WINDOW_ATTR_DIP_SIZE)) {
           SetWindowPos(win->hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOMOVE);
-      } else if ((field_mask & MARU_WINDOW_ATTR_POSITION) && !(field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE)) {
+      } else if ((field_mask & MARU_WINDOW_ATTR_DIP_POSITION) && !(field_mask & MARU_WINDOW_ATTR_DIP_SIZE)) {
           SetWindowPos(win->hwnd, NULL, rect.left, rect.top, 0, 0, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSIZE);
       } else {
           SetWindowPos(win->hwnd, NULL, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE);
       }
       
-      if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
-          win->base.attrs_effective.logical_size = attributes->logical_size;
+      if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
+          win->base.attrs_effective.dip_size = attributes->dip_size;
       }
-      if (field_mask & MARU_WINDOW_ATTR_POSITION) {
-          win->base.attrs_effective.position = attributes->position;
+      if (field_mask & MARU_WINDOW_ATTR_DIP_POSITION) {
+          win->base.attrs_effective.dip_position = attributes->dip_position;
       }
   }
 

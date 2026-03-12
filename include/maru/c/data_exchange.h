@@ -60,7 +60,7 @@ MARU_API MARU_Status maru_provideData(MARU_DataRequest *request,
 /** @brief Asynchronously requests an arbitrary data payload from the OS. */
 MARU_API MARU_Status maru_requestData(MARU_Window *window,
                                       MARU_DataExchangeTarget target,
-                                      const char *mime_type, void *user_tag);
+                                      const char *mime_type, void *userdata);
 
 /** @brief Retrieves MIME types currently available in the system buffer.
 

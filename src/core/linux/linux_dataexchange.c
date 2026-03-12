@@ -26,7 +26,7 @@ MARU_Status maru_linux_dataexchange_queueTransfer(MARU_Context_Base *ctx_base,
                                                   MARU_Window *window,
                                                   MARU_DataExchangeTarget target,
                                                   const char *mime_type,
-                                                  void *user_tag) {
+                                                  void *userdata) {
   if (!ctx_base || !head || fd < 0 || !mime_type) {
     if (fd >= 0) close(fd);
     return MARU_FAILURE;
@@ -50,7 +50,7 @@ MARU_Status maru_linux_dataexchange_queueTransfer(MARU_Context_Base *ctx_base,
   transfer->fd = fd;
   transfer->window = window;
   transfer->target = target;
-  transfer->user_tag = user_tag;
+  transfer->userdata = userdata;
   transfer->next = *head;
   *head = transfer;
   return MARU_SUCCESS;
@@ -153,7 +153,7 @@ static void _maru_linux_dataexchange_dispatch_complete(MARU_Context_Base *ctx_ba
     return;
   }
 
-  if (transfer->user_tag == (void *)1) {
+  if (transfer->userdata == (void *)1) {
 #ifdef MARU_INDIRECT_BACKEND
     if (ctx_base->pub.backend_type == MARU_BACKEND_WAYLAND) {
       extern void _maru_wayland_dataexchange_handle_internal_transfer_complete(
@@ -169,7 +169,7 @@ static void _maru_linux_dataexchange_dispatch_complete(MARU_Context_Base *ctx_ba
   }
 
   MARU_Event evt = {0};
-  evt.data_received.user_tag = transfer->user_tag;
+  evt.data_received.userdata = transfer->userdata;
   evt.data_received.status = status;
   evt.data_received.target = transfer->target;
   evt.data_received.mime_type = transfer->mime_type;

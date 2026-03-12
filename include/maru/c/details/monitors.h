@@ -30,8 +30,8 @@ typedef struct MARU_MonitorExposed {
   const char *name;
   MARU_Vec2Mm physical_size;
   MARU_VideoMode current_mode;
-  MARU_Vec2Dip logical_position;
-  MARU_Vec2Dip logical_size;
+  MARU_Vec2Dip dip_position;
+  MARU_Vec2Dip dip_size;
   bool is_primary;
   MARU_Scalar scale;
 } MARU_MonitorExposed;
@@ -75,13 +75,13 @@ maru_getMonitorCurrentMode(const MARU_Monitor *monitor) {
 }
 
 static inline MARU_Vec2Dip
-maru_getMonitorLogicalPosition(const MARU_Monitor *monitor) {
-  return ((const MARU_MonitorExposed *)monitor)->logical_position;
+maru_getMonitorDipPosition(const MARU_Monitor *monitor) {
+  return ((const MARU_MonitorExposed *)monitor)->dip_position;
 }
 
 static inline MARU_Vec2Dip
-maru_getMonitorLogicalSize(const MARU_Monitor *monitor) {
-  return ((const MARU_MonitorExposed *)monitor)->logical_size;
+maru_getMonitorDipSize(const MARU_Monitor *monitor) {
+  return ((const MARU_MonitorExposed *)monitor)->dip_size;
 }
 
 static inline bool maru_isMonitorPrimary(const MARU_Monitor *monitor) {

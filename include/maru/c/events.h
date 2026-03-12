@@ -251,7 +251,7 @@ typedef struct MARU_WindowPresentationStateEvent {
   bool minimized;
   bool maximized;
   bool focused;
-  bool icon;
+  bool icon_changed;
 } MARU_WindowPresentationStateEvent;
 
 /** @brief Payload for MARU_EVENT_KEY_STATE_CHANGED. */
@@ -267,9 +267,9 @@ typedef struct MARU_KeyboardEvent {
 
 /** @brief Payload for MARU_EVENT_MOUSE_MOVED. */
 typedef struct MARU_MouseMotionEvent {
-  MARU_Vec2Dip position;
-  MARU_Vec2Dip delta;
-  MARU_Vec2Dip raw_delta;
+  MARU_Vec2Dip dip_position;
+  MARU_Vec2Dip dip_delta;
+  MARU_Vec2Dip raw_dip_delta;
   MARU_ModifierFlags modifiers;
 } MARU_MouseMotionEvent;
 
@@ -284,7 +284,7 @@ typedef struct MARU_MouseButtonEvent {
 
 /** @brief Payload for MARU_EVENT_MOUSE_SCROLLED. */
 typedef struct MARU_MouseScrollEvent {
-  MARU_Vec2Dip delta;
+  MARU_Vec2Dip dip_delta;
   struct {
     int32_t x;
     int32_t y;
@@ -344,7 +344,7 @@ typedef struct MARU_DropSession MARU_DropSession;
 
 /** @brief Payload for MARU_EVENT_DROP_ENTERED. */
 typedef struct MARU_DropEnterEvent {
-  MARU_Vec2Dip position;
+  MARU_Vec2Dip dip_position;
   MARU_DropSession *session;
   const char **paths;
   MARU_MIMETypeList available_types;
@@ -354,7 +354,7 @@ typedef struct MARU_DropEnterEvent {
 
 /** @brief Payload for MARU_EVENT_DROP_HOVERED. */
 typedef struct MARU_DropHoverEvent {
-  MARU_Vec2Dip position;
+  MARU_Vec2Dip dip_position;
   MARU_DropSession *session;
   const char **paths;
   MARU_MIMETypeList available_types;
@@ -369,7 +369,7 @@ typedef struct MARU_DropLeaveEvent {
 
 /** @brief Payload for MARU_EVENT_DROP_DROPPED. */
 typedef struct MARU_DropEvent {
-  MARU_Vec2Dip position;
+  MARU_Vec2Dip dip_position;
   MARU_DropSession *session;
   const char **paths;
   MARU_MIMETypeList available_types;
@@ -379,7 +379,7 @@ typedef struct MARU_DropEvent {
 
 /** @brief Payload for MARU_EVENT_DATA_RECEIVED. */
 typedef struct MARU_DataReceivedEvent {
-  void *user_tag;
+  void *userdata;
   MARU_Status status;
   MARU_DataExchangeTarget target;
   const char *mime_type;
@@ -511,6 +511,11 @@ typedef struct MARU_Event {
     MARU_UserDefinedEvent user;
   };
 } MARU_Event;
+
+MARU_STATIC_ASSERT(sizeof(MARU_Event) <= 64,
+                   "MARU_Event ABI Violation: Size exceeds 64 bytes.");
+MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 64,
+                   "MARU_UserDefinedEvent ABI Violation: Expected 64 bytes.");
 
 /** @brief Callback signature for event dispatching. */
 typedef void (*MARU_EventCallback)(MARU_EventId type, MARU_Window *window,

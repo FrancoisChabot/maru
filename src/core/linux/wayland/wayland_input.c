@@ -399,17 +399,17 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer,
     }
 
     MARU_Event evt = {0};
-    evt.mouse_motion.position.x = wl_fixed_to_double(sx);
-    evt.mouse_motion.position.y = wl_fixed_to_double(sy);
+    evt.mouse_motion.dip_position.x = wl_fixed_to_double(sx);
+    evt.mouse_motion.dip_position.y = wl_fixed_to_double(sy);
     
-    evt.mouse_motion.delta.x = evt.mouse_motion.position.x - ctx->linux_common.pointer.x;
-    evt.mouse_motion.delta.y = evt.mouse_motion.position.y - ctx->linux_common.pointer.y;
-    evt.mouse_motion.raw_delta.x = 0.0;
-    evt.mouse_motion.raw_delta.y = 0.0;
+    evt.mouse_motion.dip_delta.x = evt.mouse_motion.dip_position.x - ctx->linux_common.pointer.x;
+    evt.mouse_motion.dip_delta.y = evt.mouse_motion.dip_position.y - ctx->linux_common.pointer.y;
+    evt.mouse_motion.raw_dip_delta.x = 0.0;
+    evt.mouse_motion.raw_dip_delta.y = 0.0;
     evt.mouse_motion.modifiers = _maru_wayland_get_modifiers(ctx);
     
-    ctx->linux_common.pointer.x = evt.mouse_motion.position.x;
-    ctx->linux_common.pointer.y = evt.mouse_motion.position.y;
+    ctx->linux_common.pointer.x = evt.mouse_motion.dip_position.x;
+    ctx->linux_common.pointer.y = evt.mouse_motion.dip_position.y;
     
     _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)window, &evt);
 }
@@ -479,7 +479,7 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *wl_pointer) {
     if (ctx->scroll.active) {
         if (window) {
             MARU_Event evt = {0};
-            evt.mouse_scroll.delta = ctx->scroll.delta;
+            evt.mouse_scroll.dip_delta = ctx->scroll.delta;
             evt.mouse_scroll.steps.x = ctx->scroll.steps.x;
             evt.mouse_scroll.steps.y = ctx->scroll.steps.y;
             evt.mouse_scroll.modifiers = _maru_wayland_get_modifiers(ctx);
@@ -528,12 +528,12 @@ static void _relative_pointer_handle_relative_motion(void *data, struct zwp_rela
     MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
 
     MARU_Event evt = {0};
-    evt.mouse_motion.position.x = ctx->linux_common.pointer.x;
-    evt.mouse_motion.position.y = ctx->linux_common.pointer.y;
-    evt.mouse_motion.delta.x = wl_fixed_to_double(dx);
-    evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
-    evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
-    evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
+    evt.mouse_motion.dip_position.x = ctx->linux_common.pointer.x;
+    evt.mouse_motion.dip_position.y = ctx->linux_common.pointer.y;
+    evt.mouse_motion.dip_delta.x = wl_fixed_to_double(dx);
+    evt.mouse_motion.dip_delta.y = wl_fixed_to_double(dy);
+    evt.mouse_motion.raw_dip_delta.x = wl_fixed_to_double(dx_unaccel);
+    evt.mouse_motion.raw_dip_delta.y = wl_fixed_to_double(dy_unaccel);
     evt.mouse_motion.modifiers = _maru_wayland_get_modifiers(ctx);
 
     _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_MOVED, (MARU_Window *)window, &evt);
@@ -740,7 +740,7 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
         }
         
         _maru_wayland_dispatch_presentation_state(
-            window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED, true);
+            window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
     }
 }
 
@@ -756,7 +756,7 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
         memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
 
         _maru_wayland_dispatch_presentation_state(
-            window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED, true);
+            window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
         ctx->linux_common.xkb.focused_window = NULL;
     }
 

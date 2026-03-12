@@ -73,16 +73,16 @@ static void _maru_queue_count_drop(MARU_Queue *q, MARU_EventId type) {
 static void _maru_queue_coalesce_latest(MARU_EventId type, MARU_Event *dst, const MARU_Event *src) {
     switch (type) {
         case MARU_EVENT_MOUSE_MOVED:
-            dst->mouse_motion.position = src->mouse_motion.position;
-            dst->mouse_motion.delta.x += src->mouse_motion.delta.x;
-            dst->mouse_motion.delta.y += src->mouse_motion.delta.y;
-            dst->mouse_motion.raw_delta.x += src->mouse_motion.raw_delta.x;
-            dst->mouse_motion.raw_delta.y += src->mouse_motion.raw_delta.y;
+            dst->mouse_motion.dip_position = src->mouse_motion.dip_position;
+            dst->mouse_motion.dip_delta.x += src->mouse_motion.dip_delta.x;
+            dst->mouse_motion.dip_delta.y += src->mouse_motion.dip_delta.y;
+            dst->mouse_motion.raw_dip_delta.x += src->mouse_motion.raw_dip_delta.x;
+            dst->mouse_motion.raw_dip_delta.y += src->mouse_motion.raw_dip_delta.y;
             dst->mouse_motion.modifiers = src->mouse_motion.modifiers;
             break;
         case MARU_EVENT_MOUSE_SCROLLED:
-            dst->mouse_scroll.delta.x += src->mouse_scroll.delta.x;
-            dst->mouse_scroll.delta.y += src->mouse_scroll.delta.y;
+            dst->mouse_scroll.dip_delta.x += src->mouse_scroll.dip_delta.x;
+            dst->mouse_scroll.dip_delta.y += src->mouse_scroll.dip_delta.y;
             dst->mouse_scroll.steps.x += src->mouse_scroll.steps.x;
             dst->mouse_scroll.steps.y += src->mouse_scroll.steps.y;
             dst->mouse_scroll.modifiers = src->mouse_scroll.modifiers;
@@ -99,14 +99,14 @@ static void _maru_queue_coalesce_latest(MARU_EventId type, MARU_Event *dst, cons
 static void _maru_queue_fold_older_into_survivor(MARU_EventId type, const MARU_Event *older, MARU_Event *survivor) {
     switch (type) {
         case MARU_EVENT_MOUSE_MOVED:
-            survivor->mouse_motion.delta.x += older->mouse_motion.delta.x;
-            survivor->mouse_motion.delta.y += older->mouse_motion.delta.y;
-            survivor->mouse_motion.raw_delta.x += older->mouse_motion.raw_delta.x;
-            survivor->mouse_motion.raw_delta.y += older->mouse_motion.raw_delta.y;
+            survivor->mouse_motion.dip_delta.x += older->mouse_motion.dip_delta.x;
+            survivor->mouse_motion.dip_delta.y += older->mouse_motion.dip_delta.y;
+            survivor->mouse_motion.raw_dip_delta.x += older->mouse_motion.raw_dip_delta.x;
+            survivor->mouse_motion.raw_dip_delta.y += older->mouse_motion.raw_dip_delta.y;
             break;
         case MARU_EVENT_MOUSE_SCROLLED:
-            survivor->mouse_scroll.delta.x += older->mouse_scroll.delta.x;
-            survivor->mouse_scroll.delta.y += older->mouse_scroll.delta.y;
+            survivor->mouse_scroll.dip_delta.x += older->mouse_scroll.dip_delta.x;
+            survivor->mouse_scroll.dip_delta.y += older->mouse_scroll.dip_delta.y;
             survivor->mouse_scroll.steps.x += older->mouse_scroll.steps.x;
             survivor->mouse_scroll.steps.y += older->mouse_scroll.steps.y;
             break;

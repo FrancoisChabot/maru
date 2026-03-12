@@ -11,7 +11,7 @@ MARU_Status maru_provideData_Cocoa(MARU_DataRequest *request, const void *data, 
   return MARU_FAILURE;
 }
 
-MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag) {
+MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata) {
   return MARU_FAILURE;
 }
 

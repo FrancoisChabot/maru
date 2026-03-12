@@ -118,7 +118,7 @@ static inline bool _maru_validate_non_negative_vec2px(MARU_Vec2Px v) {
 }
 
 static inline bool _maru_validate_non_negative_rect(MARU_RectDip r) {
-  return r.size.x >= 0 && r.size.y >= 0;
+  return r.dip_size.x >= 0 && r.dip_size.y >= 0;
 }
 
 static inline bool _maru_validate_aspect_ratio(MARU_Fraction f) {
@@ -151,30 +151,30 @@ _maru_validate_attributes(const MARU_Context_Base *ctx_base,
         _maru_validate_aspect_ratio(attributes->aspect_ratio));
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
+  if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
     MARU_CONSTRAINT_CHECK(
-        _maru_validate_non_negative_vec2(attributes->logical_size));
+        _maru_validate_non_negative_vec2(attributes->dip_size));
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
+  if (field_mask & MARU_WINDOW_ATTR_MIN_DIP_SIZE) {
     MARU_CONSTRAINT_CHECK(
-        _maru_validate_non_negative_vec2(attributes->min_size));
+        _maru_validate_non_negative_vec2(attributes->min_dip_size));
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
+  if (field_mask & MARU_WINDOW_ATTR_MAX_DIP_SIZE) {
     MARU_CONSTRAINT_CHECK(
-        _maru_validate_non_negative_vec2(attributes->max_size));
+        _maru_validate_non_negative_vec2(attributes->max_dip_size));
   }
 
-  if ((field_mask & (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE)) ==
-      (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE)) {
-    const bool max_unbounded_x = attributes->max_size.x == 0;
-    const bool max_unbounded_y = attributes->max_size.y == 0;
+  if ((field_mask & (MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE)) ==
+      (MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE)) {
+    const bool max_unbounded_x = attributes->max_dip_size.x == 0;
+    const bool max_unbounded_y = attributes->max_dip_size.y == 0;
     if (!max_unbounded_x) {
-      MARU_CONSTRAINT_CHECK(attributes->max_size.x >= attributes->min_size.x);
+      MARU_CONSTRAINT_CHECK(attributes->max_dip_size.x >= attributes->min_dip_size.x);
     }
     if (!max_unbounded_y) {
-      MARU_CONSTRAINT_CHECK(attributes->max_size.y >= attributes->min_size.y);
+      MARU_CONSTRAINT_CHECK(attributes->max_dip_size.y >= attributes->min_dip_size.y);
     }
   }
 
@@ -183,9 +183,9 @@ _maru_validate_attributes(const MARU_Context_Base *ctx_base,
         _maru_validate_non_negative_rect(attributes->text_input_rect));
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
+  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE) {
     MARU_CONSTRAINT_CHECK(
-        _maru_validate_non_negative_vec2(attributes->viewport_size));
+        _maru_validate_non_negative_vec2(attributes->viewport_dip_size));
   }
 
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
@@ -345,10 +345,10 @@ _maru_validate_createCursor(MARU_Context *context,
           (const MARU_Image_Base *)create_info->frames[i].image;
       MARU_CONSTRAINT_CHECK(image_base->ctx_base == ctx_base);
       MARU_CONSTRAINT_CHECK(
-          _maru_validate_non_negative_vec2px(create_info->frames[i].hot_spot));
-      MARU_CONSTRAINT_CHECK((uint32_t)create_info->frames[i].hot_spot.x <
+          _maru_validate_non_negative_vec2px(create_info->frames[i].px_hot_spot));
+      MARU_CONSTRAINT_CHECK((uint32_t)create_info->frames[i].px_hot_spot.x <
                             image_base->width);
-      MARU_CONSTRAINT_CHECK((uint32_t)create_info->frames[i].hot_spot.y <
+      MARU_CONSTRAINT_CHECK((uint32_t)create_info->frames[i].px_hot_spot.y <
                             image_base->height);
     }
   } else {
@@ -377,9 +377,9 @@ _maru_validate_createImage(MARU_Context *context,
   MARU_CONSTRAINT_CHECK(out_image != NULL);
   _maru_validate_thread((const MARU_Context_Base *)context);
 
-  MARU_CONSTRAINT_CHECK(_maru_validate_positive_vec2px(create_info->size));
+  MARU_CONSTRAINT_CHECK(_maru_validate_positive_vec2px(create_info->px_size));
   MARU_CONSTRAINT_CHECK(create_info->pixels != NULL);
-  const uint64_t min_stride_u64 = (uint64_t)(uint32_t)create_info->size.x * 4u;
+  const uint64_t min_stride_u64 = (uint64_t)(uint32_t)create_info->px_size.x * 4u;
   MARU_CONSTRAINT_CHECK(min_stride_u64 <= UINT32_MAX);
   if (create_info->stride_bytes != 0) {
     MARU_CONSTRAINT_CHECK((uint64_t)create_info->stride_bytes >= min_stride_u64);
@@ -478,14 +478,14 @@ _maru_validate_provideData(MARU_DataRequest *request,
 static inline void _maru_validate_requestData(MARU_Window *window,
                                               MARU_DataExchangeTarget target,
                                               const char *mime_type,
-                                              void *user_tag) {
+                                              void *userdata) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
   MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
                         target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
   MARU_CONSTRAINT_CHECK(mime_type != NULL);
   MARU_CONSTRAINT_CHECK(mime_type[0] != '\0');
-  (void)user_tag;
+  (void)userdata;
 }
 
 static inline void
@@ -541,7 +541,7 @@ static inline void _maru_validate_setMonitorMode(const MARU_Monitor *monitor,
                                                  MARU_VideoMode mode) {
   MARU_CONSTRAINT_CHECK(monitor != NULL);
   _maru_validate_thread(((const MARU_Monitor_Base *)monitor)->ctx_base);
-  MARU_CONSTRAINT_CHECK(mode.size.x > 0 && mode.size.y > 0);
+  MARU_CONSTRAINT_CHECK(mode.px_size.x > 0 && mode.px_size.y > 0);
 }
 
 static inline void _maru_validate_resetMonitorMetrics(MARU_Monitor *monitor) {
@@ -705,10 +705,10 @@ static inline void _maru_validate_live_announceData(
 
 static inline void _maru_validate_live_requestData(
     MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type,
-    void *user_tag) {
+    void *userdata) {
   (void)target;
   (void)mime_type;
-  (void)user_tag;
+  (void)userdata;
   _maru_validate_window_ready(window);
   _maru_validate_window_not_lost(window);
 }

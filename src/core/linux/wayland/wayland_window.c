@@ -152,7 +152,7 @@ static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
     return;
   }
 
-  const MARU_Vec2Dip viewport_size = window->base.attrs_effective.viewport_size;
+  const MARU_Vec2Dip viewport_size = window->base.attrs_effective.viewport_dip_size;
   const bool disabled = (viewport_size.x <= (MARU_Scalar)0.0 ||
                          viewport_size.y <= (MARU_Scalar)0.0);
 
@@ -196,10 +196,10 @@ void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
   if (*width == 0 || *height == 0) return;
   if (attrs->aspect_ratio.num == 0 || attrs->aspect_ratio.denom == 0) return;
 
-  uint32_t min_width = attrs->min_size.x > 0 ? (uint32_t)attrs->min_size.x : 0u;
-  uint32_t min_height = attrs->min_size.y > 0 ? (uint32_t)attrs->min_size.y : 0u;
-  uint32_t max_width = attrs->max_size.x > 0 ? (uint32_t)attrs->max_size.x : UINT32_MAX;
-  uint32_t max_height = attrs->max_size.y > 0 ? (uint32_t)attrs->max_size.y : UINT32_MAX;
+  uint32_t min_width = attrs->min_dip_size.x > 0 ? (uint32_t)attrs->min_dip_size.x : 0u;
+  uint32_t min_height = attrs->min_dip_size.y > 0 ? (uint32_t)attrs->min_dip_size.y : 0u;
+  uint32_t max_width = attrs->max_dip_size.x > 0 ? (uint32_t)attrs->max_dip_size.x : UINT32_MAX;
+  uint32_t max_height = attrs->max_dip_size.y > 0 ? (uint32_t)attrs->max_dip_size.y : UINT32_MAX;
 
   if (max_width < min_width) max_width = min_width;
   if (max_height < min_height) max_height = min_height;
@@ -231,17 +231,17 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
 
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   MARU_WindowAttributes *attrs = &window->base.attrs_effective;
-  const MARU_Scalar old_width = attrs->logical_size.x;
-  const MARU_Scalar old_height = attrs->logical_size.y;
+  const MARU_Scalar old_width = attrs->dip_size.x;
+  const MARU_Scalar old_height = attrs->dip_size.y;
   bool size_changed = false;
-  int32_t min_w = (int32_t)attrs->min_size.x;
-  int32_t min_h = (int32_t)attrs->min_size.y;
-  int32_t max_w = (int32_t)attrs->max_size.x;
-  int32_t max_h = (int32_t)attrs->max_size.y;
+  int32_t min_w = (int32_t)attrs->min_dip_size.x;
+  int32_t min_h = (int32_t)attrs->min_dip_size.y;
+  int32_t max_w = (int32_t)attrs->max_dip_size.x;
+  int32_t max_h = (int32_t)attrs->max_dip_size.y;
 
   if ((window->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) == 0) {
-    int32_t fixed_w = (int32_t)attrs->logical_size.x;
-    int32_t fixed_h = (int32_t)attrs->logical_size.y;
+    int32_t fixed_w = (int32_t)attrs->dip_size.x;
+    int32_t fixed_h = (int32_t)attrs->dip_size.y;
     if (fixed_w > 0 && fixed_h > 0) {
       min_w = fixed_w;
       min_h = fixed_h;
@@ -252,12 +252,12 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
 
   if (((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) == 0) &&
       ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0)) {
-    uint32_t constrained_w = (uint32_t)((attrs->logical_size.x > 0) ? attrs->logical_size.x : 1);
-    uint32_t constrained_h = (uint32_t)((attrs->logical_size.y > 0) ? attrs->logical_size.y : 1);
+    uint32_t constrained_w = (uint32_t)((attrs->dip_size.x > 0) ? attrs->dip_size.x : 1);
+    uint32_t constrained_h = (uint32_t)((attrs->dip_size.y > 0) ? attrs->dip_size.y : 1);
     _maru_wayland_enforce_aspect_ratio(&constrained_w, &constrained_h, window);
-    attrs->logical_size.x = (MARU_Scalar)constrained_w;
-    attrs->logical_size.y = (MARU_Scalar)constrained_h;
-    size_changed = (attrs->logical_size.x != old_width || attrs->logical_size.y != old_height);
+    attrs->dip_size.x = (MARU_Scalar)constrained_w;
+    attrs->dip_size.y = (MARU_Scalar)constrained_h;
+    size_changed = (attrs->dip_size.x != old_width || attrs->dip_size.y != old_height);
   }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
@@ -277,7 +277,7 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
 
   if (window->xdg.surface) {
     maru_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
-                                         (int32_t)attrs->logical_size.x, (int32_t)attrs->logical_size.y);
+                                         (int32_t)attrs->dip_size.x, (int32_t)attrs->dip_size.y);
   }
 
   _maru_wayland_update_opaque_region(window);
@@ -286,7 +286,7 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
       ((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) == 0) &&
       ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0)) {
     struct libdecor_state *state = maru_libdecor_state_new(
-        ctx, (int)attrs->logical_size.x, (int)attrs->logical_size.y);
+        ctx, (int)attrs->dip_size.x, (int)attrs->dip_size.y);
     if (state) {
       maru_libdecor_frame_commit(ctx, window->libdecor.frame, state, NULL);
       maru_libdecor_state_free(ctx, state);
@@ -474,9 +474,9 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
     }
     const MARU_Scalar new_width = (MARU_Scalar)pending_width;
     const MARU_Scalar new_height = (MARU_Scalar)pending_height;
-    if (effective->logical_size.x != new_width || effective->logical_size.y != new_height) {
-      effective->logical_size.x = new_width;
-      effective->logical_size.y = new_height;
+    if (effective->dip_size.x != new_width || effective->dip_size.y != new_height) {
+      effective->dip_size.x = new_width;
+      effective->dip_size.y = new_height;
       _maru_wayland_dispatch_window_resized(window);
     }
   }
@@ -510,7 +510,7 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       }
     }
 
-    _maru_wayland_dispatch_presentation_state(window, changed, true);
+    _maru_wayland_dispatch_presentation_state(window, changed);
   }
 
   if (effective->maximized != is_maximized) {
@@ -521,7 +521,7 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
     }
     _maru_wayland_dispatch_presentation_state(
-        window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED, true);
+        window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED);
   }
 
   effective->fullscreen = is_fullscreen;
@@ -851,8 +851,8 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     const bool ime_requested =
         (attrs->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) ||
         (attrs->surrounding_text != NULL) ||
-        (attrs->text_input_rect.size.x > (MARU_Scalar)0.0) ||
-        (attrs->text_input_rect.size.y > (MARU_Scalar)0.0);
+        (attrs->text_input_rect.dip_size.x > (MARU_Scalar)0.0) ||
+        (attrs->text_input_rect.dip_size.y > (MARU_Scalar)0.0);
     if (ime_requested && !window->missing_text_input_v3_reported) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "zwp_text_input_manager_v3 unavailable; IME features running in fallback mode");
@@ -901,10 +901,10 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     maru_zwp_text_input_v3_enable(ctx, window->ext.text_input);
     maru_zwp_text_input_v3_set_content_type(ctx, window->ext.text_input, hint, purpose);
     maru_zwp_text_input_v3_set_cursor_rectangle(
-        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.text_input_rect.origin.x,
-        (int32_t)window->base.attrs_effective.text_input_rect.origin.y,
-        (int32_t)window->base.attrs_effective.text_input_rect.size.x,
-        (int32_t)window->base.attrs_effective.text_input_rect.size.y);
+        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.text_input_rect.dip_origin.x,
+        (int32_t)window->base.attrs_effective.text_input_rect.dip_origin.y,
+        (int32_t)window->base.attrs_effective.text_input_rect.dip_size.x,
+        (int32_t)window->base.attrs_effective.text_input_rect.dip_size.y);
     
     if (window->base.attrs_effective.surrounding_text) {
         maru_zwp_text_input_v3_set_surrounding_text(ctx, window->ext.text_input, 
@@ -928,7 +928,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   MARU_WindowAttributes *effective = &window->base.attrs_effective;
   MARU_Status status = MARU_SUCCESS;
   uint32_t presentation_changed = 0u;
-  bool icon = true;
 
   window->base.attrs_dirty_mask |= field_mask;
 
@@ -978,23 +977,23 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
-      requested->logical_size = attributes->logical_size;
-      effective->logical_size = attributes->logical_size;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
+      requested->dip_size = attributes->dip_size;
+      effective->dip_size = attributes->dip_size;
       if (window->xdg.surface) {
           maru_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
-                                               (int32_t)effective->logical_size.x, (int32_t)effective->logical_size.y);
+                                               (int32_t)effective->dip_size.x, (int32_t)effective->dip_size.y);
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
-      requested->min_size = attributes->min_size;
-      effective->min_size = attributes->min_size;
+  if (field_mask & MARU_WINDOW_ATTR_MIN_DIP_SIZE) {
+      requested->min_dip_size = attributes->min_dip_size;
+      effective->min_dip_size = attributes->min_dip_size;
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
-      requested->max_size = attributes->max_size;
-      effective->max_size = attributes->max_size;
+  if (field_mask & MARU_WINDOW_ATTR_MAX_DIP_SIZE) {
+      requested->max_dip_size = attributes->max_dip_size;
+      effective->max_dip_size = attributes->max_dip_size;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
@@ -1039,7 +1038,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_POSITION) {
+  if (field_mask & MARU_WINDOW_ATTR_DIP_POSITION) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "Window positioning is compositor-controlled on Wayland");
       status = MARU_FAILURE;
@@ -1132,9 +1131,9 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
-      requested->viewport_size = attributes->viewport_size;
-      effective->viewport_size = attributes->viewport_size;
+  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE) {
+      requested->viewport_dip_size = attributes->viewport_dip_size;
+      effective->viewport_dip_size = attributes->viewport_dip_size;
       _maru_wayland_apply_viewport_size(window);
   }
 
@@ -1148,8 +1147,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       effective->primary_selection = attributes->primary_selection;
   }
 
-  if (field_mask & (MARU_WINDOW_ATTR_LOGICAL_SIZE | MARU_WINDOW_ATTR_MIN_SIZE |
-                    MARU_WINDOW_ATTR_MAX_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO |
+  if (field_mask & (MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_MIN_DIP_SIZE |
+                    MARU_WINDOW_ATTR_MAX_DIP_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO |
                     MARU_WINDOW_ATTR_RESIZABLE)) {
       _maru_wayland_apply_size_constraints(window);
   }
@@ -1242,13 +1241,12 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       requested->icon = attributes->icon;
       effective->icon = attributes->icon;
       presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_ICON;
-      icon = false;
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "Wayland taskbar/dock icon is compositor-shell managed; window icon request stored as intent only");
   }
 
   if (presentation_changed != 0u) {
-      _maru_wayland_dispatch_presentation_state(window, presentation_changed, icon);
+      _maru_wayland_dispatch_presentation_state(window, presentation_changed);
   }
 
   maru_getWindowGeometry_WL(window_handle, NULL);
@@ -1412,10 +1410,10 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry) {
   MARU_Window_WL *window = (MARU_Window_WL *)window_handle;
   MARU_WindowGeometry geometry = {0};
-  geometry.logical_size = window->base.attrs_effective.logical_size;
+  geometry.dip_size = window->base.attrs_effective.dip_size;
   geometry.scale = (window->scale > (MARU_Scalar)0) ? window->scale : (MARU_Scalar)1.0;
-  geometry.pixel_size.x = (int32_t)(geometry.logical_size.x * geometry.scale);
-  geometry.pixel_size.y = (int32_t)(geometry.logical_size.y * geometry.scale);
+  geometry.px_size.x = (int32_t)(geometry.dip_size.x * geometry.scale);
+  geometry.px_size.y = (int32_t)(geometry.dip_size.y * geometry.scale);
   geometry.buffer_transform = window->preferred_buffer_transform;
   window->base.pub.geometry = geometry;
   if (out_geometry) {
@@ -1542,6 +1540,7 @@ MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
     maru_xdg_activation_token_v1_set_serial(
         ctx, token_obj, ctx->linux_common.pointer.enter_serial, ctx->protocols.opt.wl_seat);
   }
+  maru_xdg_activation_token_v1_set_surface(ctx, token_obj, window->wl.surface);
   maru_xdg_activation_token_v1_commit(ctx, token_obj);
 
   if (maru_wl_display_flush(ctx, ctx->wl.display) < 0 && errno != EAGAIN) {

@@ -42,7 +42,7 @@ The data will arrive later in a `MARU_EVENT_DATA_RECEIVED` event.
 
 ```c
 if (type == MARU_EVENT_DATA_RECEIVED) {
-    printf("Received: %.*s\n", (int)event->data_received.size, (char*)event->data_received.data);
+    printf("Received: %.*s\n", (int)event->data_received.dip_size, (char*)event->data_received.data);
 }
 ```
 

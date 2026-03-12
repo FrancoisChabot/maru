@@ -38,7 +38,7 @@ typedef struct MARU_X11DataRequestPending {
   unsigned char *incr_data;
   size_t incr_size;
   size_t incr_capacity;
-  void *user_tag;
+  void *userdata;
 } MARU_X11DataRequestPending;
 
 typedef struct MARU_X11DnDSession {
@@ -48,7 +48,7 @@ typedef struct MARU_X11DnDSession {
   MARU_Window_X11 *target_window;
   uint32_t version;
   Time last_position_time;
-  MARU_Vec2Dip position;
+  MARU_Vec2Dip dip_position;
   MARU_DropAction selected_action;
   Atom selected_target_atom;
   char *selected_mime;
@@ -198,7 +198,7 @@ struct MARU_Window_X11 {
   MARU_Window_Base base;
   Window handle;
   Colormap colormap;
-  MARU_Vec2Dip server_logical_size;
+  MARU_Vec2Dip server_size;
   
   bool is_fullscreen;
   bool is_maximized;
@@ -352,7 +352,7 @@ MARU_Status maru_resetMonitorMetrics_X11(MARU_Monitor *monitor);
 
 MARU_Status maru_announceData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_X11(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
-MARU_Status maru_requestData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *user_tag);
+MARU_Status maru_requestData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata);
 MARU_Status maru_getAvailableMIMETypes_X11(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
 
 MARU_Status maru_getVkExtensions_X11(const MARU_Context *context, MARU_VkExtensionList *out_list);
@@ -371,7 +371,7 @@ MARU_Status _maru_x11_announceData(MARU_Window *window, MARU_DataExchangeTarget 
 MARU_Status _maru_x11_provideData(MARU_DataRequest *request, const void *data,
                                   size_t size, MARU_DataProvideFlags flags);
 MARU_Status _maru_x11_requestData(MARU_Window *window, MARU_DataExchangeTarget target,
-                                  const char *mime_type, void *user_tag);
+                                  const char *mime_type, void *userdata);
 MARU_Status _maru_x11_getAvailableMIMETypes(MARU_Window *window,
                                             MARU_DataExchangeTarget target,
                                             MARU_MIMETypeList *out_list);

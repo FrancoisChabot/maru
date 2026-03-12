@@ -43,7 +43,7 @@ You can query various properties of a monitor:
 
 - **Name**: `maru_getMonitorName(monitor)`
 - **Scale Factor**: `maru_getMonitorScale(monitor)` (Useful for high-DPI handling).
-- **Logical Position/Size**: `maru_getMonitorLogicalPosition(monitor)` and `maru_getMonitorLogicalSize(monitor)`. These define the monitor's place in the virtual desktop.
+- **Dip Position/Size**: `maru_getMonitorDipPosition(monitor)` and `maru_getMonitorDipSize(monitor)`. These define the monitor's place in the virtual desktop.
 - **Physical Size**: `maru_getMonitorPhysicalSize(monitor)` (in millimeters).
 
 ---
@@ -58,7 +58,7 @@ maru_getMonitorModes(monitor, &modes);
 
 for (uint32_t i = 0; i < modes.count; ++i) {
     printf("Mode %d: %dx%d @ %.2fHz\n", i, 
-           (int)modes.modes[i].size.x, (int)modes.modes[i].size.y,
+           (int)modes.modes[i].dip_size.x, (int)modes.modes[i].dip_size.y,
            modes.modes[i].refresh_rate_millihz / 1000.0f);
 }
 ```

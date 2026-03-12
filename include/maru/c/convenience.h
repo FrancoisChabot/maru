@@ -27,14 +27,14 @@ static inline MARU_Status maru_setContextInhibitsSystemIdle(MARU_Context *contex
 // Window attribute setters
 // N.B. If you are calling a few of those in a row, consider using maru_updateWindow instead.
 static inline MARU_Status maru_setWindowTitle(MARU_Window *window, const char *title);
-static inline MARU_Status maru_setWindowSize(MARU_Window *window, MARU_Vec2Dip size);
+static inline MARU_Status maru_setWindowDipSize(MARU_Window *window, MARU_Vec2Dip size);
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowMaximized(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowCursorMode(MARU_Window *window, MARU_CursorMode mode);
 static inline MARU_Status maru_setWindowCursor(MARU_Window *window, MARU_Cursor *cursor);
 static inline MARU_Status maru_setWindowMonitor(MARU_Window *window, MARU_Monitor *monitor);
-static inline MARU_Status maru_setWindowMinSize(MARU_Window *window, MARU_Vec2Dip min_size);
-static inline MARU_Status maru_setWindowMaxSize(MARU_Window *window, MARU_Vec2Dip max_size);
+static inline MARU_Status maru_setWindowMinDipSize(MARU_Window *window, MARU_Vec2Dip min_dip_size);
+static inline MARU_Status maru_setWindowMaxDipSize(MARU_Window *window, MARU_Vec2Dip max_dip_size);
 static inline MARU_Status maru_setWindowAspectRatio(MARU_Window *window, MARU_Fraction aspect_ratio);
 static inline MARU_Status maru_setWindowResizable(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowTextInputType(MARU_Window *window, MARU_TextInputType type);

@@ -50,7 +50,7 @@ int main() {
     // Create a window with specific initial attributes
     MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
     window_info.attributes.title = "Basic Maru Window";
-    window_info.attributes.logical_size = (MARU_Vec2Dip){1280, 720};
+    window_info.attributes.dip_size = (MARU_Vec2Dip){1280, 720};
     window_info.attributes.resizable = true;
 
     MARU_Window *window = NULL;

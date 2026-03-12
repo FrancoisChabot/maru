@@ -77,7 +77,7 @@ static inline const MARU_CursorMetrics *maru_getCursorMetrics(const MARU_Cursor 
 /** @brief Parameters for creating a custom cursor from pixels. */
 typedef struct MARU_CursorFrame {
   const MARU_Image *image;
-  MARU_Vec2Px hot_spot;
+  MARU_Vec2Px px_hot_spot;
   uint32_t delay_ms;
 } MARU_CursorFrame;
 

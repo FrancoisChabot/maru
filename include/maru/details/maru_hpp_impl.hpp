@@ -92,8 +92,8 @@ inline void Monitor::setUserData(void* userdata) { maru_setMonitorUserdata(m_han
 inline const char* Monitor::getName() const { return maru_getMonitorName(m_handle); }
 inline MARU_Vec2Mm Monitor::getPhysicalSize() const { return maru_getMonitorPhysicalSize(m_handle); }
 inline MARU_VideoMode Monitor::getCurrentMode() const { return maru_getMonitorCurrentMode(m_handle); }
-inline MARU_Vec2Dip Monitor::getLogicalPosition() const { return maru_getMonitorLogicalPosition(m_handle); }
-inline MARU_Vec2Dip Monitor::getLogicalSize() const { return maru_getMonitorLogicalSize(m_handle); }
+inline MARU_Vec2Dip Monitor::getDipPosition() const { return maru_getMonitorDipPosition(m_handle); }
+inline MARU_Vec2Dip Monitor::getDipSize() const { return maru_getMonitorDipSize(m_handle); }
 inline bool Monitor::isPrimary() const { return maru_isMonitorPrimary(m_handle); }
 inline MARU_Scalar Monitor::getScale() const { return maru_getMonitorScale(m_handle); }
 inline bool Monitor::isLost() const { return maru_isMonitorLost(m_handle); }
@@ -225,10 +225,10 @@ inline MARU_Status Window::setTitle(const char* title) {
     return update(MARU_WINDOW_ATTR_TITLE, attrs);
 }
 
-inline MARU_Status Window::setLogicalSize(MARU_Vec2Dip size) {
-    MARU_WindowAttributes attrs = {};
-    attrs.logical_size = size;
-    return update(MARU_WINDOW_ATTR_LOGICAL_SIZE, attrs);
+inline MARU_Status Window::setDipSize(MARU_Vec2Dip size) {
+    MARU_WindowAttributes attrs;
+    attrs.dip_size = size;
+    return update(MARU_WINDOW_ATTR_DIP_SIZE, attrs);
 }
 
 inline MARU_Status Window::setFullscreen(bool enabled) {

@@ -47,8 +47,8 @@ static bool _maru_x11_create_pointer_barriers(MARU_Context_X11 *ctx,
     return false;
   }
 
-  const int32_t width = (int32_t)win->server_logical_size.x;
-  const int32_t height = (int32_t)win->server_logical_size.y;
+  const int32_t width = (int32_t)win->server_size.x;
+  const int32_t height = (int32_t)win->server_size.y;
   if (width < 3 || height < 3) {
     return false;
   }
@@ -151,8 +151,8 @@ bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *
       return false;
     }
 
-    const int32_t width = (int32_t)win->server_logical_size.x;
-    const int32_t height = (int32_t)win->server_logical_size.y;
+    const int32_t width = (int32_t)win->server_size.x;
+    const int32_t height = (int32_t)win->server_size.y;
     win->lock_center_x = (width > 0) ? (width / 2) : 0;
     win->lock_center_y = (height > 0) ? (height / 2) : 0;
 
@@ -268,8 +268,8 @@ static bool _maru_x11_create_custom_cursor_frame(MARU_Context_X11 *ctx,
     return false;
   }
 
-  xc_img->xhot = (XcursorDim)((frame->hot_spot.x < 0) ? 0 : frame->hot_spot.x);
-  xc_img->yhot = (XcursorDim)((frame->hot_spot.y < 0) ? 0 : frame->hot_spot.y);
+  xc_img->xhot = (XcursorDim)((frame->px_hot_spot.x < 0) ? 0 : frame->px_hot_spot.x);
+  xc_img->yhot = (XcursorDim)((frame->px_hot_spot.y < 0) ? 0 : frame->px_hot_spot.y);
   if (xc_img->xhot >= xc_img->width) {
     xc_img->xhot = xc_img->width ? (xc_img->width - 1u) : 0u;
   }
@@ -544,12 +544,12 @@ MARU_Status maru_createImage_X11(MARU_Context *context,
                                         const MARU_ImageCreateInfo *create_info,
                                         MARU_Image **out_image) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
-  if (!create_info->pixels || create_info->size.x <= 0 || create_info->size.y <= 0) {
+  if (!create_info->pixels || create_info->px_size.x <= 0 || create_info->px_size.y <= 0) {
     return MARU_FAILURE;
   }
 
-  const uint32_t width = (uint32_t)create_info->size.x;
-  const uint32_t height = (uint32_t)create_info->size.y;
+  const uint32_t width = (uint32_t)create_info->px_size.x;
+  const uint32_t height = (uint32_t)create_info->px_size.y;
   const uint32_t min_stride = width * 4u;
   const uint32_t stride = (create_info->stride_bytes == 0) ? min_stride : create_info->stride_bytes;
   if (stride < min_stride) {

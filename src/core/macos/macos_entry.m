@@ -224,11 +224,11 @@ MARU_API MARU_Status maru_provideData(
 MARU_API MARU_Status maru_requestData(MARU_Window *window,
                                MARU_DataExchangeTarget target,
                                const char *mime_type,
-                               void *user_tag) {
-  MARU_API_VALIDATE(requestData, window, target, mime_type, user_tag);
+                               void *userdata) {
+  MARU_API_VALIDATE(requestData, window, target, mime_type, userdata);
   MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(requestData, window, target, mime_type, user_tag);
-  return maru_requestData_Cocoa(window, target, mime_type, user_tag);
+  MARU_API_VALIDATE_LIVE(requestData, window, target, mime_type, userdata);
+  return maru_requestData_Cocoa(window, target, mime_type, userdata);
 }
 
 MARU_API MARU_Status maru_getAvailableMIMETypes(

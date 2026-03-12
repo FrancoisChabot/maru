@@ -21,14 +21,14 @@ public:
 
   void on_resized(const MARU_WindowGeometry& geometry) {
     vulkan_renderer_on_resized(&renderer,
-                                   (uint32_t)geometry.pixel_size.x,
-                                   (uint32_t)geometry.pixel_size.y);
+                                   (uint32_t)geometry.px_size.x,
+                                   (uint32_t)geometry.px_size.y);
   }
 
   void setup_surface(VkSurfaceKHR surface, const MARU_WindowGeometry& geometry) {
     vulkan_renderer_setup_surface(&renderer, surface,
-                                      (uint32_t)geometry.pixel_size.x,
-                                      (uint32_t)geometry.pixel_size.y);
+                                      (uint32_t)geometry.px_size.x,
+                                      (uint32_t)geometry.px_size.y);
   }
 
   VkInstance instance() {
@@ -63,7 +63,7 @@ int main() {
   // Create a window.
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "Maru Queue C++ Example";
-  window_info.attributes.logical_size = {800, 600};
+  window_info.attributes.dip_size = {800, 600};
   
   auto window_result = context.createWindow(window_info);
   if (!window_result) {
@@ -112,7 +112,7 @@ int main() {
         renderer.on_resized(e->geometry);
       },
       [&](maru::MouseMotionEvent e) {
-        std::cout << "mouse movement: (" << e->position.x << ", (" << e->position.y << ")\n";
+        std::cout << "mouse movement: (" << e->dip_position.x << ", (" << e->dip_position.y << ")\n";
       },
       [&](maru::KeyboardEvent e) {
         std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";

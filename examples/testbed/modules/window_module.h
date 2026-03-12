@@ -36,8 +36,8 @@ private:
         std::string title;
         bool is_resizable = true;
         bool primary_selection = true;
-        MARU_Vec2Dip min_size = {0, 0};
-        MARU_Vec2Dip max_size = {0, 0};
+        MARU_Vec2Dip min_dip_size = {0, 0};
+        MARU_Vec2Dip max_dip_size = {0, 0};
         MARU_Fraction aspect_ratio = {0, 0};
         ImVec4 clear_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
     };
@@ -65,7 +65,7 @@ private:
     struct SecondaryCreateConfig {
         char title[256] = "";
         char app_id[128] = "org.birdsafe.maru.testbed";
-        int logical_size[2] = {640, 480};
+        int size[2] = {640, 480};
         bool decorated = true;
         bool fullscreen = false;
         bool maximized = false;

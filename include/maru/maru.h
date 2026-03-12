@@ -64,6 +64,4 @@
 #include "maru/c/windows.h"
 #include "maru/maru_queue.h"
 
-#include "maru/c/details/maru_abi_checks.h"
-
 #endif

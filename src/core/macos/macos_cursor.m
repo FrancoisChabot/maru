@@ -255,7 +255,7 @@ MARU_Status maru_createCursor_Cocoa(MARU_Context *context,
                     return MARU_FAILURE;
                 }
                 cursor->ns_frame_images[i] = [img->ns_image retain];
-                NSPoint hotspot = NSMakePoint(frame->hot_spot.x, frame->hot_spot.y);
+                NSPoint hotspot = NSMakePoint(frame->px_hot_spot.x, frame->px_hot_spot.y);
                 cursor->ns_frame_cursors[i] =
                     [[NSCursor alloc] initWithImage:img->ns_image hotSpot:hotspot];
                 if (!cursor->ns_frame_cursors[i]) {
@@ -284,7 +284,7 @@ MARU_Status maru_createCursor_Cocoa(MARU_Context *context,
                 return MARU_FAILURE;
             }
             NSPoint hotspot =
-                NSMakePoint(create_info->frames[0].hot_spot.x, create_info->frames[0].hot_spot.y);
+                NSMakePoint(create_info->frames[0].px_hot_spot.x, create_info->frames[0].px_hot_spot.y);
             cursor->ns_image = [img->ns_image retain];
             cursor->ns_cursor = [[NSCursor alloc] initWithImage:img->ns_image hotSpot:hotspot];
         }

@@ -24,14 +24,14 @@ void handle_event(MARU_EventId type, MARU_Window *window, const MARU_Event *even
 
 ### Mouse Events
 
-- `MARU_EVENT_MOUSE_MOVED`: Contains current position and delta.
+- `MARU_EVENT_MOUSE_MOVED`: Contains current dip_position and delta.
 - `MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED`: Fired for clicks.
 - `MARU_EVENT_MOUSE_SCROLLED`: Fired for wheel or trackpad scrolling.
 
 ```c
 if (type == MARU_EVENT_MOUSE_MOVED) {
-    float x = event->mouse_motion.position.x;
-    float y = event->mouse_motion.position.y;
+    float x = event->mouse_motion.dip_position.x;
+    float y = event->mouse_motion.dip_position.y;
 }
 ```
 

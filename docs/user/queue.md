@@ -77,7 +77,7 @@ int main() {
 Coalescence is opt-in per event type via a bitmask.
 
 ### Supported Coalescence Logic
-- **`MARU_EVENT_MOUSE_MOVED`**: Updates the absolute position to the latest, and accumulates both `delta` and `raw_delta`.
+- **`MARU_EVENT_MOUSE_MOVED`**: Updates the absolute dip_position to the latest, and accumulates both `delta` and `raw_delta`.
 - **`MARU_EVENT_MOUSE_SCROLLED`**: Accumulates both `delta` and `steps`.
 - **`MARU_EVENT_WINDOW_RESIZED`**: Updates the geometry to the latest.
 - **Other events**: If opted-in, the existing event is overwritten by the latest one.

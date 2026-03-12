@@ -11,18 +11,18 @@ static int32_t _maru_x11_dip_to_px(MARU_Scalar dip, MARU_Scalar scale) {
   if (scale <= (MARU_Scalar)0.0) {
     scale = (MARU_Scalar)1.0;
   }
-  const MARU_Scalar px = dip * scale;
-  if (px <= (MARU_Scalar)0.0) {
+  const MARU_Scalar pixels = dip * scale;
+  if (pixels <= (MARU_Scalar)0.0) {
     return 1;
   }
-  return (int32_t)(px + (MARU_Scalar)0.5);
+  return (int32_t)(pixels + (MARU_Scalar)0.5);
 }
 
-static MARU_Scalar _maru_x11_px_to_dip(MARU_Scalar px, MARU_Scalar scale) {
+static MARU_Scalar _maru_x11_px_to_dip(MARU_Scalar pixels, MARU_Scalar scale) {
   if (scale <= (MARU_Scalar)0.0) {
     scale = (MARU_Scalar)1.0;
   }
-  return px / scale;
+  return pixels / scale;
 }
 
 static int32_t _maru_x11_optional_dip_to_px(MARU_Scalar dip, MARU_Scalar scale) {
@@ -141,17 +141,17 @@ void _maru_x11_apply_size_hints_local(MARU_Context_X11 *ctx,
   memset(&hints, 0, sizeof(hints));
 
   int32_t min_w =
-      _maru_x11_optional_dip_to_px(win->base.attrs_effective.min_size.x, scale);
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.min_dip_size.x, scale);
   int32_t min_h =
-      _maru_x11_optional_dip_to_px(win->base.attrs_effective.min_size.y, scale);
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.min_dip_size.y, scale);
   int32_t max_w =
-      _maru_x11_optional_dip_to_px(win->base.attrs_effective.max_size.x, scale);
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.max_dip_size.x, scale);
   int32_t max_h =
-      _maru_x11_optional_dip_to_px(win->base.attrs_effective.max_size.y, scale);
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.max_dip_size.y, scale);
 
   if ((win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) == 0) {
-    min_w = _maru_x11_dip_to_px(win->base.attrs_effective.logical_size.x, scale);
-    min_h = _maru_x11_dip_to_px(win->base.attrs_effective.logical_size.y, scale);
+    min_w = _maru_x11_dip_to_px(win->base.attrs_effective.dip_size.x, scale);
+    min_h = _maru_x11_dip_to_px(win->base.attrs_effective.dip_size.y, scale);
     max_w = min_w;
     max_h = min_h;
   }
@@ -179,8 +179,7 @@ void _maru_x11_apply_size_hints_local(MARU_Context_X11 *ctx,
 }
 
 static void _maru_x11_dispatch_presentation_state(MARU_Window_X11 *window,
-                                                  uint32_t changed_fields,
-                                                  bool icon) {
+                                                  uint32_t changed_fields) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)window->base.ctx_base;
   MARU_Event evt = {0};
   evt.presentation.changed_fields = changed_fields;
@@ -192,7 +191,8 @@ static void _maru_x11_dispatch_presentation_state(MARU_Window_X11 *window,
       (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
   evt.presentation.focused =
       (window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-  evt.presentation.icon = icon;
+  evt.presentation.icon_changed =
+      (changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_ICON) != 0;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
 }
@@ -302,7 +302,7 @@ static void _maru_x11_reconcile_wm_presentation_state(MARU_Context_X11 *ctx,
   }
 
   if (changed != 0) {
-    _maru_x11_dispatch_presentation_state(win, changed, true);
+    _maru_x11_dispatch_presentation_state(win, changed);
   }
 }
 
@@ -395,22 +395,22 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
                                                 : "MARU Window");
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_LOGICAL_SIZE) {
-    requested->logical_size = attributes->logical_size;
-    effective->logical_size = attributes->logical_size;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
+    requested->dip_size = attributes->dip_size;
+    effective->dip_size = attributes->dip_size;
     const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
-    const int32_t px_w = _maru_x11_dip_to_px(effective->logical_size.x, scale);
-    const int32_t px_h = _maru_x11_dip_to_px(effective->logical_size.y, scale);
+    const int32_t px_w = _maru_x11_dip_to_px(effective->dip_size.x, scale);
+    const int32_t px_h = _maru_x11_dip_to_px(effective->dip_size.y, scale);
     ctx->x11_lib.XResizeWindow(ctx->display, win->handle, (unsigned int)px_w,
                                (unsigned int)px_h);
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_POSITION) {
-    requested->position = attributes->position;
-    effective->position = attributes->position;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_POSITION) {
+    requested->dip_position = attributes->dip_position;
+    effective->dip_position = attributes->dip_position;
     ctx->x11_lib.XMoveWindow(ctx->display, win->handle,
-                             (int)effective->position.x,
-                             (int)effective->position.y);
+                             (int)effective->dip_position.x,
+                             (int)effective->dip_position.y);
   }
 
   if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
@@ -453,13 +453,13 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MIN_SIZE) {
-    requested->min_size = attributes->min_size;
-    effective->min_size = attributes->min_size;
+  if (field_mask & MARU_WINDOW_ATTR_MIN_DIP_SIZE) {
+    requested->min_dip_size = attributes->min_dip_size;
+    effective->min_dip_size = attributes->min_dip_size;
   }
-  if (field_mask & MARU_WINDOW_ATTR_MAX_SIZE) {
-    requested->max_size = attributes->max_size;
-    effective->max_size = attributes->max_size;
+  if (field_mask & MARU_WINDOW_ATTR_MAX_DIP_SIZE) {
+    requested->max_dip_size = attributes->max_dip_size;
+    effective->max_dip_size = attributes->max_dip_size;
   }
   if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
     requested->aspect_ratio = attributes->aspect_ratio;
@@ -475,7 +475,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
   }
   if (field_mask &
-      (MARU_WINDOW_ATTR_MIN_SIZE | MARU_WINDOW_ATTR_MAX_SIZE |
+      (MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE |
        MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE)) {
     _maru_x11_apply_size_hints_local(ctx, win);
   }
@@ -533,11 +533,11 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     if (attributes->monitor) {
       const MARU_Monitor_X11 *monitor =
           (const MARU_Monitor_X11 *)attributes->monitor;
-      const int x = (int)monitor->base.pub.logical_position.x;
-      const int y = (int)monitor->base.pub.logical_position.y;
+      const int x = (int)monitor->base.pub.dip_position.x;
+      const int y = (int)monitor->base.pub.dip_position.y;
       ctx->x11_lib.XMoveWindow(ctx->display, win->handle, x, y);
-      win->base.attrs_effective.position.x = (MARU_Scalar)x;
-      win->base.attrs_effective.position.y = (MARU_Scalar)y;
+      win->base.attrs_effective.dip_position.x = (MARU_Scalar)x;
+      win->base.attrs_effective.dip_position.y = (MARU_Scalar)y;
     }
   }
 
@@ -591,19 +591,19 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     _maru_x11_refresh_text_input_state(ctx, win);
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_SIZE) {
-    requested->viewport_size = attributes->viewport_size;
-    effective->viewport_size = attributes->viewport_size;
+  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE) {
+    requested->viewport_dip_size = attributes->viewport_dip_size;
+    effective->viewport_dip_size = attributes->viewport_dip_size;
     const bool viewport_disabled =
-        (effective->viewport_size.x <= (MARU_Scalar)0.0) ||
-        (effective->viewport_size.y <= (MARU_Scalar)0.0);
+        (effective->viewport_dip_size.x <= (MARU_Scalar)0.0) ||
+        (effective->viewport_dip_size.y <= (MARU_Scalar)0.0);
     if (viewport_disabled) {
       // When viewport override is disabled, consume the latest server size.
       const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
-      effective->logical_size.x =
-          _maru_x11_px_to_dip(win->server_logical_size.x, scale);
-      effective->logical_size.y =
-          _maru_x11_px_to_dip(win->server_logical_size.y, scale);
+      effective->dip_size.x =
+          _maru_x11_px_to_dip(win->server_size.x, scale);
+      effective->dip_size.y =
+          _maru_x11_px_to_dip(win->server_size.y, scale);
     }
   }
 
@@ -673,7 +673,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
   }
 
   if (presentation_changed != 0) {
-    _maru_x11_dispatch_presentation_state(win, presentation_changed, true);
+    _maru_x11_dispatch_presentation_state(win, presentation_changed);
   }
 
   maru_getWindowGeometry_X11((MARU_Window *)win, NULL);
@@ -688,9 +688,9 @@ void maru_getWindowGeometry_X11(MARU_Window *window,
   const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
   MARU_WindowGeometry geometry = {0};
 
-  geometry.logical_size = win->base.attrs_effective.logical_size;
-  geometry.pixel_size.x = (int32_t)win->server_logical_size.x;
-  geometry.pixel_size.y = (int32_t)win->server_logical_size.y;
+  geometry.dip_size = win->base.attrs_effective.dip_size;
+  geometry.px_size.x = (int32_t)win->server_size.x;
+  geometry.px_size.y = (int32_t)win->server_size.y;
   geometry.scale = scale;
   geometry.buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
   win->base.pub.geometry = geometry;
@@ -738,8 +738,8 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->base.backend = ctx->base.backend;
 #endif
 
-  MARU_Scalar create_logical_w = create_info->attributes.logical_size.x;
-  MARU_Scalar create_logical_h = create_info->attributes.logical_size.y;
+  MARU_Scalar create_logical_w = create_info->attributes.dip_size.x;
+  MARU_Scalar create_logical_h = create_info->attributes.dip_size.y;
   if (create_logical_w <= (MARU_Scalar)0.0) {
     create_logical_w = (MARU_Scalar)640.0;
   }
@@ -816,12 +816,12 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   }
   _maru_x11_apply_decorations_local(ctx, win);
 
-  win->server_logical_size.x = (MARU_Scalar)width;
-  win->server_logical_size.y = (MARU_Scalar)height;
-  win->base.attrs_effective.logical_size.x =
-      _maru_x11_px_to_dip(win->server_logical_size.x, scale);
-  win->base.attrs_effective.logical_size.y =
-      _maru_x11_px_to_dip(win->server_logical_size.y, scale);
+  win->server_size.x = (MARU_Scalar)width;
+  win->server_size.y = (MARU_Scalar)height;
+  win->base.attrs_effective.dip_size.x =
+      _maru_x11_px_to_dip(win->server_size.x, scale);
+  win->base.attrs_effective.dip_size.y =
+      _maru_x11_px_to_dip(win->server_size.y, scale);
 
   MARU_Status status = _maru_x11_apply_attributes(win, MARU_WINDOW_ATTR_ALL,
                                                   &create_info->attributes);
@@ -954,13 +954,13 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
       const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
       const MARU_Scalar new_w = (MARU_Scalar)ev->xconfigure.width;
       const MARU_Scalar new_h = (MARU_Scalar)ev->xconfigure.height;
-      const bool size_changed = (win->server_logical_size.x != new_w) ||
-                                (win->server_logical_size.y != new_h);
+      const bool size_changed = (win->server_size.x != new_w) ||
+                                (win->server_size.y != new_h);
       const bool scale_changed = (win->base.pub.geometry.scale != scale);
 
       if (size_changed) {
-        win->server_logical_size.x = new_w;
-        win->server_logical_size.y = new_h;
+        win->server_size.x = new_w;
+        win->server_size.y = new_h;
         if (win->base.pub.cursor_mode == MARU_CURSOR_LOCKED &&
             ctx->locked_window == win) {
           win->lock_center_x = ev->xconfigure.width / 2;
@@ -969,23 +969,23 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
         }
 
         const bool viewport_active =
-            (win->base.attrs_effective.viewport_size.x > (MARU_Scalar)0.0) &&
-            (win->base.attrs_effective.viewport_size.y > (MARU_Scalar)0.0);
+            (win->base.attrs_effective.viewport_dip_size.x > (MARU_Scalar)0.0) &&
+            (win->base.attrs_effective.viewport_dip_size.y > (MARU_Scalar)0.0);
         if (!viewport_active) {
-          win->base.attrs_effective.logical_size.x =
-              _maru_x11_px_to_dip(win->server_logical_size.x, scale);
-          win->base.attrs_effective.logical_size.y =
-              _maru_x11_px_to_dip(win->server_logical_size.y, scale);
+          win->base.attrs_effective.dip_size.x =
+              _maru_x11_px_to_dip(win->server_size.x, scale);
+          win->base.attrs_effective.dip_size.y =
+              _maru_x11_px_to_dip(win->server_size.y, scale);
         }
       } else if (scale_changed) {
         const bool viewport_active =
-            (win->base.attrs_effective.viewport_size.x > (MARU_Scalar)0.0) &&
-            (win->base.attrs_effective.viewport_size.y > (MARU_Scalar)0.0);
+            (win->base.attrs_effective.viewport_dip_size.x > (MARU_Scalar)0.0) &&
+            (win->base.attrs_effective.viewport_dip_size.y > (MARU_Scalar)0.0);
         if (!viewport_active) {
-          win->base.attrs_effective.logical_size.x =
-              _maru_x11_px_to_dip(win->server_logical_size.x, scale);
-          win->base.attrs_effective.logical_size.y =
-              _maru_x11_px_to_dip(win->server_logical_size.y, scale);
+          win->base.attrs_effective.dip_size.x =
+              _maru_x11_px_to_dip(win->server_size.x, scale);
+          win->base.attrs_effective.dip_size.y =
+              _maru_x11_px_to_dip(win->server_size.y, scale);
         }
       }
 
