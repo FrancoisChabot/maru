@@ -22,8 +22,8 @@ private:
         double timestamp;
         MARU_Diagnostic diagnostic;
         std::string message;
-        MARU_Context* context;
-        MARU_Window* window;
+        const MARU_Context* context;
+        const MARU_Window* window;
     };
 
     std::vector<LogEntry> logs_;

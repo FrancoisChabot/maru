@@ -183,14 +183,14 @@ MARU_API MARU_Status maru_setControllerHapticLevels(
 }
 
 MARU_API MARU_Status maru_announceData(MARU_Window *window,
-                                MARU_DataExchangeTarget target,
-                                const char **mime_types,
-                                uint32_t count,
-                                MARU_DropActionMask allowed_actions) {
-  MARU_API_VALIDATE(announceData, window, target, mime_types, count, allowed_actions);
+                                       MARU_DataExchangeTarget target,
+                                       MARU_MIMETypeList mime_types,
+                                       MARU_DropActionMask allowed_actions) {
+  MARU_API_VALIDATE(announceData, window, target, mime_types, allowed_actions);
   MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(announceData, window, target, mime_types, count, allowed_actions);
-  return maru_announceData_Cocoa(window, target, mime_types, count, allowed_actions);
+  MARU_API_VALIDATE_LIVE(announceData, window, target, mime_types,
+                         allowed_actions);
+  return maru_announceData_Cocoa(window, target, mime_types, allowed_actions);
 }
 
 MARU_API MARU_Status maru_provideData(

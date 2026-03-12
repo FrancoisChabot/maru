@@ -97,7 +97,7 @@ void maru_releaseController_Cocoa(MARU_Controller *controller);
 MARU_Status maru_getControllerInfo_Cocoa(const MARU_Controller *controller, MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_Cocoa(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
 
-MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions);
+MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList mime_types, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_Cocoa(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata);
 MARU_Status maru_getAvailableMIMETypes_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);

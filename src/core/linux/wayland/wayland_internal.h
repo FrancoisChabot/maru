@@ -472,7 +472,7 @@ MARU_Status maru_setControllerHapticLevels_WL(MARU_Controller *controller,
                                               uint32_t count,
                                               const MARU_Scalar *intensities);
 MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
-                                 const char **mime_types, uint32_t count,
+                                 MARU_MIMETypeList mime_types,
                                  MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_WL(MARU_DataRequest *request,
                                 const void *data, size_t size,

@@ -117,8 +117,8 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         _dnd_info = std::string("Drop Dropped. Session was: ") + session_msg;
         
         dropped_paths_.clear();
-        for (uint32_t i = 0; i < event.drop_dropped.path_count; ++i) {
-            dropped_paths_.emplace_back(event.drop_dropped.paths[i]);
+        for (uint32_t i = 0; i < event.drop_dropped.paths.count; ++i) {
+            dropped_paths_.push_back(event.drop_dropped.paths.paths[i]);
         }
 
         dnd_mime_types_.clear();
@@ -182,7 +182,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
             clipboard_serves_large_payload_ = false;
             large_clipboard_payload_.clear();
             last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                             clipboard_mimes, 2, 0);
+                                             {clipboard_mimes, 2}, 0);
             owns_clipboard_ = (last_status_ == MARU_SUCCESS);
         }
         ImGui::SameLine();
@@ -190,7 +190,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
             large_clipboard_payload_ = _build_large_clipboard_payload();
             clipboard_serves_large_payload_ = true;
             last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                             clipboard_mimes, 2, 0);
+                                             {clipboard_mimes, 2}, 0);
             owns_clipboard_ = (last_status_ == MARU_SUCCESS);
             if (last_status_ != MARU_SUCCESS) {
                 clipboard_serves_large_payload_ = false;
@@ -200,7 +200,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         ImGui::SameLine();
         if (ImGui::Button("Clear Clipboard Ownership")) {
             last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                             NULL, 0, 0);
+                                             {NULL, 0}, 0);
             owns_clipboard_ = false;
             clipboard_serves_large_payload_ = false;
             large_clipboard_payload_.clear();
@@ -236,13 +236,13 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         ImGui::Separator();
         if (ImGui::Button("Announce Primary Selection Text")) {
             last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_PRIMARY,
-                                             clipboard_mimes, 2, 0);
+                                             {clipboard_mimes, 2}, 0);
             owns_primary_selection_ = (last_status_ == MARU_SUCCESS);
         }
         ImGui::SameLine();
         if (ImGui::Button("Clear Primary Selection Ownership")) {
             last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_PRIMARY,
-                                             NULL, 0, 0);
+                                             {NULL, 0}, 0);
             owns_primary_selection_ = false;
         }
         ImGui::Text("Primary ownership: %s", owns_primary_selection_ ? "announced" : "none");
@@ -319,7 +319,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
             if (!is_dragging_) {
                  last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
-                                             clipboard_mimes, 2, MARU_DROP_ACTION_COPY);
+                                             {clipboard_mimes, 2}, MARU_DROP_ACTION_COPY);
                  if (last_status_ == MARU_SUCCESS) {
                      is_dragging_ = true;
                  }

@@ -3,7 +3,11 @@
 
 #import "macos_internal.h"
 
-MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types, uint32_t count, MARU_DropActionMask allowed_actions) {
+MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList mime_types, MARU_DropActionMask allowed_actions) {
+  (void)window;
+  (void)target;
+  (void)mime_types;
+  (void)allowed_actions;
   return MARU_FAILURE;
 }
 

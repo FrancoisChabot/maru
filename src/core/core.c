@@ -47,7 +47,7 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
   if (ctx_base && ctx_base->diagnostic_cb) {
     MARU_DiagnosticInfo info = {.diagnostic = diag,
                                 .message = msg,
-                                .context = (MARU_Context *)ctx,
+                                .context = ctx,
                                 .window = NULL};
     ctx_base->diagnostic_cb(&info, ctx_base->diagnostic_userdata);
   }
@@ -59,7 +59,7 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
   if (ctx_base && ctx_base->diagnostic_cb) {
     MARU_DiagnosticInfo info = {.diagnostic = diag,
                                 .message = msg,
-                                .context = (MARU_Context *)ctx,
+                                .context = ctx,
                                 .window = NULL};
     ctx_base->diagnostic_cb(&info, ctx_base->diagnostic_userdata);
   }

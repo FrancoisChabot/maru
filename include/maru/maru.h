@@ -295,8 +295,8 @@ typedef enum MARU_Diagnostic {
 typedef struct MARU_DiagnosticInfo {
   MARU_Diagnostic diagnostic;
   const char* message;
-  MARU_Context* context;
-  MARU_Window* window;
+  const MARU_Context* context;
+  const MARU_Window* window;
 } MARU_DiagnosticInfo;
 
 typedef void (*MARU_DiagnosticCallback)(const MARU_DiagnosticInfo* info, void* userdata);
@@ -668,6 +668,11 @@ typedef struct MARU_MIMETypeList {
   uint32_t count;
 } MARU_MIMETypeList;
 
+typedef struct MARU_PathList {
+  const char* const* paths;
+  uint32_t count;
+} MARU_PathList;
+
 typedef enum MARU_DataProvideFlags {
   MARU_DATA_PROVIDE_FLAG_NONE = 0,
   MARU_DATA_PROVIDE_FLAG_ZERO_COPY = MARU_BIT(0),
@@ -677,20 +682,18 @@ typedef struct MARU_DropEnteredEvent {
   MARU_Vec2Dip dip_position;
   MARU_DropSession* session;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
-  const char** paths;
+  MARU_PathList paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
-  uint32_t path_count;
 } MARU_DropEnteredEvent;
 
 typedef struct MARU_DropHoveredEvent {
   MARU_Vec2Dip dip_position;
   MARU_DropSession* session;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
-  const char** paths;
+  MARU_PathList paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
-  uint32_t path_count;
 } MARU_DropHoveredEvent;
 
 typedef struct MARU_DropExitedEvent {
@@ -701,10 +704,9 @@ typedef struct MARU_DropDroppedEvent {
   MARU_Vec2Dip dip_position;
   MARU_DropSession* session;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
-  const char** paths;
+  MARU_PathList paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
-  uint32_t path_count;
 } MARU_DropDroppedEvent;
 
 typedef struct MARU_DataReceivedEvent {
@@ -1343,8 +1345,7 @@ MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller* controller,
  */
 MARU_API MARU_Status maru_announceData(MARU_Window* window,
                                        MARU_DataExchangeTarget target,
-                                       const char** mime_types,
-                                       uint32_t count,
+                                       MARU_MIMETypeList mime_types,
                                        MARU_DropActionMask allowed_actions);
 /*
  * Fulfills a callback-scoped MARU_EVENT_DATA_REQUESTED request.

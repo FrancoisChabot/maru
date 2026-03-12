@@ -483,7 +483,7 @@ _maru_validate_setControllerHapticLevels(MARU_Controller *controller,
 
 static inline void
 _maru_validate_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
-                            const char **mime_types, uint32_t count,
+                            MARU_MIMETypeList mime_types,
                             MARU_DropActionMask allowed_actions) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
@@ -492,11 +492,11 @@ _maru_validate_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
   const MARU_DropActionMask known_actions = (MARU_DropActionMask)(
       MARU_DROP_ACTION_COPY | MARU_DROP_ACTION_MOVE | MARU_DROP_ACTION_LINK);
   MARU_CONSTRAINT_CHECK((allowed_actions & ~known_actions) == 0);
-  if (count > 0) {
-    MARU_CONSTRAINT_CHECK(mime_types != NULL);
-    for (uint32_t i = 0; i < count; ++i) {
-      MARU_CONSTRAINT_CHECK(mime_types[i] != NULL);
-      MARU_CONSTRAINT_CHECK(mime_types[i][0] != '\0');
+  if (mime_types.count > 0) {
+    MARU_CONSTRAINT_CHECK(mime_types.mime_types != NULL);
+    for (uint32_t i = 0; i < mime_types.count; ++i) {
+      MARU_CONSTRAINT_CHECK(mime_types.mime_types[i] != NULL);
+      MARU_CONSTRAINT_CHECK(mime_types.mime_types[i][0] != '\0');
     }
   }
 }
@@ -736,11 +736,10 @@ static inline void _maru_validate_live_setControllerHapticLevels(
 }
 
 static inline void _maru_validate_live_announceData(
-    MARU_Window *window, MARU_DataExchangeTarget target, const char **mime_types,
-    uint32_t count, MARU_DropActionMask allowed_actions) {
+    MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList mime_types,
+    MARU_DropActionMask allowed_actions) {
   (void)target;
   (void)mime_types;
-  (void)count;
   (void)allowed_actions;
   _maru_validate_window_ready(window);
   _maru_validate_window_not_lost(window);

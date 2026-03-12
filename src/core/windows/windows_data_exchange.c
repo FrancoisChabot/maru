@@ -130,8 +130,10 @@ void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx) {
 
 MARU_Status maru_announceData_Windows(MARU_Window *window,
                                       MARU_DataExchangeTarget target,
-                                      const char **mime_types, uint32_t count,
+                                      MARU_MIMETypeList mime_types,
                                       MARU_DropActionMask allowed_actions) {
+  const char **mime_types_ptr = (const char **)mime_types.mime_types;
+  uint32_t count = mime_types.count;
   if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     return MARU_FAILURE;
   }
@@ -148,7 +150,7 @@ MARU_Status maru_announceData_Windows(MARU_Window *window,
   }
 
   for (uint32_t i = 0; i < count; ++i) {
-    UINT format = _maru_mime_to_clipboard_format(mime_types[i]);
+    UINT format = _maru_mime_to_clipboard_format(mime_types.mime_types[i]);
     if (format == 0 || !SetClipboardData(format, NULL)) {
       CloseClipboard();
       return MARU_FAILURE;

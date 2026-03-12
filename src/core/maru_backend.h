@@ -31,7 +31,9 @@ typedef struct MARU_Backend {
   __typeof__(maru_getControllerInfo) *getControllerInfo;
   __typeof__(maru_setControllerHapticLevels) *setControllerHapticLevels;
 
-  __typeof__(maru_announceData) *announceData;
+  MARU_Status (*announceData)(MARU_Window *window, MARU_DataExchangeTarget target,
+                             MARU_MIMETypeList mime_types,
+                             MARU_DropActionMask allowed_actions);
   __typeof__(maru_provideData) *provideData;
   __typeof__(maru_requestData) *requestData;
   __typeof__(maru_getAvailableMIMETypes) *getAvailableMIMETypes;

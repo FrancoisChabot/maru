@@ -17,8 +17,9 @@ Maru provides a unified API for exchanging data with the operating system and ot
 To put data on the clipboard, you first announce the available formats.
 
 ```c
-const char *mime_types[] = {"text/plain"};
-maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_types, 1, MARU_DROP_ACTION_NONE);
+const char *mimes[] = {"text/plain"};
+MARU_MIMETypeList mime_types = {mimes, 1};
+maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_types, MARU_DROP_ACTION_NONE);
 ```
 
 When another app wants to paste, Maru will fire a `MARU_EVENT_DATA_REQUESTED` event. You must respond with `maru_provideData`.
