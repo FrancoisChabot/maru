@@ -599,9 +599,9 @@ static inline MARU_Status maru_setWindowIcon(MARU_Window* window,
 
 static inline MARU_Status maru_requestText(MARU_Window* window,
                                            MARU_DataExchangeTarget target,
-                                           void* user_tag) {
+                                           void* userdata) {
   return maru_requestData(window, target, "text/plain; charset=utf-8",
-                          user_tag);
+                          userdata);
 }
 
 static inline MARU_Status

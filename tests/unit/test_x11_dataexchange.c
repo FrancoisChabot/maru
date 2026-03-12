@@ -46,7 +46,7 @@ UTEST(X11DataExchange, SelectionNotifyIgnoresUnknownSelectionAtoms) {
   ctx.dnd_request.window = &window;
   ctx.dnd_request.target_atom = 33;
   ctx.dnd_request.property_atom = None;
-  ctx.dnd_request.user_tag = (void *)0x1234;
+  ctx.dnd_request.userdata = (void *)0x1234;
   window.handle = 77;
 
   ev.type = SelectionNotify;
@@ -58,7 +58,7 @@ UTEST(X11DataExchange, SelectionNotifyIgnoresUnknownSelectionAtoms) {
   EXPECT_TRUE(ctx.dnd_request.pending);
   EXPECT_EQ(ctx.dnd_request.window, &window);
   EXPECT_EQ(ctx.dnd_request.property_atom, None);
-  EXPECT_EQ(ctx.dnd_request.user_tag, (void *)0x1234);
+  EXPECT_EQ(ctx.dnd_request.userdata, (void *)0x1234);
 }
 
 UTEST(X11DataExchange, SelectionRequestRejectsUnknownSelectionAtomsWithoutDndDispatch) {

@@ -1504,7 +1504,7 @@ static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool mini
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, MARU_Image* icon);
 static inline MARU_Status maru_requestText(MARU_Window* window,
                                            MARU_DataExchangeTarget target,
-                                           void* user_tag);
+                                           void* userdata);
 static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window* window,
                                                               MARU_TextInputType type);
 static inline bool maru_applyTextEditCommitUtf8(char* buffer,
