@@ -4,7 +4,6 @@
 #include "maru/maru.h"
 #include "maru_api_constraints.h"
 #include "maru_internal.h"
-#include "maru_mem_internal.h"
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,11 +16,10 @@ typedef struct MARU_QueueBuffer {
 } MARU_QueueBuffer;
 
 typedef struct MARU_Queue {
-    MARU_Context_Base *ctx_base;
-    
+    MARU_Allocator allocator;
     MARU_QueueBuffer active;
     MARU_QueueBuffer stable;
-    
+
     uint32_t active_count;
     uint32_t stable_count;
     uint32_t capacity;
@@ -32,8 +30,11 @@ typedef struct MARU_Queue {
     uint32_t overflow_compact_count;
     uint32_t overflow_events_compacted;
     uint32_t overflow_drop_count_by_event[MARU_EVENT_USER_15 + 1];
-    
+
     MARU_QueueBuffer buffers[2];
+#ifdef MARU_VALIDATE_API_CALLS
+    MARU_ThreadId creator_thread;
+#endif
 } MARU_Queue;
 
 #define MARU_QUEUE_COMPACT_MAP_CAPACITY 64u
@@ -46,6 +47,58 @@ typedef struct MARU_QueueCompactMapEntry {
     uint32_t survivor_idx;
     bool used;
 } MARU_QueueCompactMapEntry;
+
+static MARU_Allocator _maru_queue_resolve_allocator(const MARU_Allocator *allocator) {
+    if (allocator && allocator->alloc_cb) {
+        return *allocator;
+    }
+    return (MARU_Allocator){
+        .alloc_cb = _maru_default_alloc,
+        .realloc_cb = _maru_default_realloc,
+        .free_cb = _maru_default_free,
+        .userdata = NULL,
+    };
+}
+
+static void *_maru_queue_alloc_raw(const MARU_Allocator *allocator, size_t size) {
+    return allocator->alloc_cb(size, allocator->userdata);
+}
+
+static void _maru_queue_free_raw(const MARU_Allocator *allocator, void *ptr) {
+    if (ptr) {
+        allocator->free_cb(ptr, allocator->userdata);
+    }
+}
+
+static void *_maru_queue_alloc_aligned64(const MARU_Allocator *allocator, size_t size) {
+    const size_t alignment = 64u;
+    void *ptr = _maru_queue_alloc_raw(allocator, size + alignment + sizeof(void *));
+    if (!ptr) {
+        return NULL;
+    }
+
+    size_t addr = (size_t)ptr + sizeof(void *);
+    void *aligned_ptr = (void *)((addr + alignment - 1u) & ~(alignment - 1u));
+    ((void **)aligned_ptr)[-1] = ptr;
+    return aligned_ptr;
+}
+
+static void _maru_queue_free_aligned64(const MARU_Allocator *allocator, void *ptr) {
+    if (ptr) {
+        void *original_ptr = ((void **)ptr)[-1];
+        _maru_queue_free_raw(allocator, original_ptr);
+    }
+}
+
+#ifdef MARU_VALIDATE_API_CALLS
+static void _maru_queue_validate_thread(const MARU_Queue *queue) {
+    MARU_CONSTRAINT_CHECK(queue->creator_thread == _maru_getCurrentThreadId());
+}
+#else
+static void _maru_queue_validate_thread(const MARU_Queue *queue) {
+    (void)queue;
+}
+#endif
 
 static void _maru_queue_reset_metrics_internal(MARU_Queue *q) {
     q->peak_active_count = 0;
@@ -250,7 +303,7 @@ static bool _maru_queue_push_internal(MARU_Queue *q, MARU_EventId type,
     }
 }
 
-static bool _maru_queue_buffer_init(MARU_Context_Base *ctx_base, MARU_QueueBuffer *buf, uint32_t capacity) {
+static bool _maru_queue_buffer_init(const MARU_Allocator *allocator, MARU_QueueBuffer *buf, uint32_t capacity) {
     size_t types_size = sizeof(MARU_EventId) * capacity;
     size_t windows_size = sizeof(MARU_Window *) * capacity;
     size_t events_size = sizeof(MARU_Event) * capacity;
@@ -260,7 +313,7 @@ static bool _maru_queue_buffer_init(MARU_Context_Base *ctx_base, MARU_QueueBuffe
     size_t events_offset = (windows_offset + windows_size + 63) & ~(size_t)63;
     size_t total_size = events_offset + events_size;
 
-    void *ptr = maru_context_alloc_aligned64(ctx_base, total_size);
+    void *ptr = _maru_queue_alloc_aligned64(allocator, total_size);
     if (!ptr) {
         return false;
     }
@@ -273,42 +326,48 @@ static bool _maru_queue_buffer_init(MARU_Context_Base *ctx_base, MARU_QueueBuffe
     return true;
 }
 
-static void _maru_queue_buffer_cleanup(MARU_Context_Base *ctx_base, MARU_QueueBuffer *buf) {
+static void _maru_queue_buffer_cleanup(const MARU_Allocator *allocator, MARU_QueueBuffer *buf) {
     if (buf->bulk_ptr) {
-        maru_context_free_aligned64(ctx_base, buf->bulk_ptr);
+        _maru_queue_free_aligned64(allocator, buf->bulk_ptr);
         buf->bulk_ptr = NULL;
     }
 }
 
-MARU_Status maru_createQueue(MARU_Context *ctx, uint32_t capacity, MARU_Queue **out_queue) {
-    MARU_API_VALIDATE(createQueue, ctx, capacity, out_queue);
-    MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(ctx));
+MARU_Status maru_createQueue(const MARU_QueueCreateInfo *create_info, MARU_Queue **out_queue) {
+    MARU_API_VALIDATE(createQueue, create_info, out_queue);
 
-    if (!ctx || !out_queue || capacity == 0) {
+    if (!create_info || !out_queue || create_info->capacity == 0u) {
+        return MARU_FAILURE;
+    }
+    if (!_maru_validate_allocator_complete(create_info->allocator)) {
         return MARU_FAILURE;
     }
 
-    MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctx;
-    MARU_Queue *q = maru_context_alloc(ctx_base, sizeof(MARU_Queue));
+    MARU_Allocator allocator = _maru_queue_resolve_allocator(&create_info->allocator);
+    MARU_Queue *q = (MARU_Queue *)_maru_queue_alloc_raw(&allocator, sizeof(MARU_Queue));
     if (!q) {
         return MARU_FAILURE;
     }
 
-    q->ctx_base = ctx_base;
-    q->capacity = capacity;
+    memset(q, 0, sizeof(*q));
+    q->allocator = allocator;
+    q->capacity = create_info->capacity;
     q->active_count = 0;
     q->stable_count = 0;
     q->coalesce_mask = 0;
     _maru_queue_reset_metrics_internal(q);
+#ifdef MARU_VALIDATE_API_CALLS
+    q->creator_thread = _maru_getCurrentThreadId();
+#endif
 
-    if (!_maru_queue_buffer_init(ctx_base, &q->buffers[0], capacity)) {
-        maru_context_free(ctx_base, q);
+    if (!_maru_queue_buffer_init(&q->allocator, &q->buffers[0], q->capacity)) {
+        _maru_queue_free_raw(&q->allocator, q);
         return MARU_FAILURE;
     }
 
-    if (!_maru_queue_buffer_init(ctx_base, &q->buffers[1], capacity)) {
-        _maru_queue_buffer_cleanup(ctx_base, &q->buffers[0]);
-        maru_context_free(ctx_base, q);
+    if (!_maru_queue_buffer_init(&q->allocator, &q->buffers[1], q->capacity)) {
+        _maru_queue_buffer_cleanup(&q->allocator, &q->buffers[0]);
+        _maru_queue_free_raw(&q->allocator, q);
         return MARU_FAILURE;
     }
 
@@ -322,19 +381,20 @@ MARU_Status maru_createQueue(MARU_Context *ctx, uint32_t capacity, MARU_Queue **
 void maru_destroyQueue(MARU_Queue *queue) {
     MARU_API_VALIDATE(destroyQueue, queue);
     if (!queue) return;
-    
-    MARU_Context_Base *ctx_base = queue->ctx_base;
-    _maru_queue_buffer_cleanup(ctx_base, &queue->buffers[0]);
-    _maru_queue_buffer_cleanup(ctx_base, &queue->buffers[1]);
-    maru_context_free(ctx_base, queue);
+
+    _maru_queue_validate_thread(queue);
+    MARU_Allocator allocator = queue->allocator;
+    _maru_queue_buffer_cleanup(&queue->allocator, &queue->buffers[0]);
+    _maru_queue_buffer_cleanup(&queue->allocator, &queue->buffers[1]);
+    _maru_queue_free_raw(&allocator, queue);
 }
 
 MARU_Status maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
                             MARU_Window *window, const MARU_Event *event) {
     MARU_API_VALIDATE(pushQueue, queue, type, window, event);
-    MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_queue_context_lost(queue));
 
     if (!queue || !event) return MARU_FAILURE;
+    _maru_queue_validate_thread(queue);
 
     return _maru_queue_push_internal(queue, type, window, event)
                ? MARU_SUCCESS
@@ -343,9 +403,9 @@ MARU_Status maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
 
 MARU_Status maru_commitQueue(MARU_Queue *queue) {
     MARU_API_VALIDATE(commitQueue, queue);
-    MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_queue_context_lost(queue));
 
     if (!queue) return MARU_FAILURE;
+    _maru_queue_validate_thread(queue);
 
     // O(1) swap
     MARU_QueueBuffer tmp_buf = queue->active;
@@ -362,6 +422,7 @@ MARU_Status maru_commitQueue(MARU_Queue *queue) {
 void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback callback, void *userdata) {
     MARU_API_VALIDATE(scanQueue, queue, mask, callback, userdata);
     if (!queue || !callback) return;
+    _maru_queue_validate_thread(queue);
 
     MARU_QueueBuffer stable = queue->stable;
     uint32_t count = queue->stable_count;
@@ -376,6 +437,7 @@ void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback c
 void maru_setQueueCoalesceMask(MARU_Queue *queue, MARU_EventMask mask) {
     MARU_API_VALIDATE(setQueueCoalesceMask, queue, mask);
     if (queue) {
+        _maru_queue_validate_thread(queue);
         queue->coalesce_mask = mask;
     }
 }
@@ -388,6 +450,7 @@ void maru_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metric
         memset(out_metrics, 0, sizeof(*out_metrics));
         return;
     }
+    _maru_queue_validate_thread(queue);
 
     out_metrics->peak_active_count = queue->peak_active_count;
     out_metrics->overflow_drop_count = queue->overflow_drop_count;
@@ -401,5 +464,6 @@ void maru_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metric
 void maru_resetQueueMetrics(MARU_Queue *queue) {
     MARU_API_VALIDATE(resetQueueMetrics, queue);
     if (!queue) return;
+    _maru_queue_validate_thread(queue);
     _maru_queue_reset_metrics_internal(queue);
 }

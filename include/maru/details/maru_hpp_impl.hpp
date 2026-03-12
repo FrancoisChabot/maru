@@ -378,9 +378,18 @@ inline MARU_Status Context::wake() {
 
 /* --- Queue Implementations --- */
 
-inline expected<Queue> Queue::create(Context& ctx, uint32_t capacity_power_of_2) {
+inline expected<Queue> Queue::create(const MARU_QueueCreateInfo& create_info) {
     MARU_Queue* handle = nullptr;
-    MARU_Status status = maru_createQueue(ctx.get(), capacity_power_of_2, &handle);
+    MARU_Status status = maru_createQueue(&create_info, &handle);
+    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
+    return Queue(handle);
+}
+
+inline expected<Queue> Queue::create(uint32_t capacity) {
+    MARU_QueueCreateInfo create_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
+    create_info.capacity = capacity;
+    MARU_Queue* handle = nullptr;
+    MARU_Status status = maru_createQueue(&create_info, &handle);
     if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
     return Queue(handle);
 }

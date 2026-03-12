@@ -934,8 +934,8 @@ MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo* create_inf
 /*
  * Destroys the context and tears down any child objects still attached to it.
  *
- * You do not need to destroy windows, cursors, images, queues, or other
- * context-owned child objects one by one before destroying the context.
+ * You do not need to destroy windows, cursors, images, or other context-owned
+ * child objects one by one before destroying the context.
  */
 MARU_API MARU_Status maru_destroyContext(MARU_Context* context);
 MARU_API MARU_Status maru_updateContext(MARU_Context* context,
@@ -1440,7 +1440,26 @@ typedef struct MARU_QueueMetrics {
   uint32_t overflow_drop_count_by_event[MARU_EVENT_USER_15 + 1];
 } MARU_QueueMetrics;
 
-MARU_API MARU_Status maru_createQueue(MARU_Context* ctx, uint32_t capacity, MARU_Queue** out_queue);
+typedef struct MARU_QueueCreateInfo {
+  MARU_Allocator allocator;
+  uint32_t capacity;
+} MARU_QueueCreateInfo;
+
+#define MARU_QUEUE_CREATE_INFO_DEFAULT                                                              \
+  {                                                                                                 \
+      .allocator = {.alloc_cb = NULL, .realloc_cb = NULL, .free_cb = NULL, .userdata = NULL},     \
+      .capacity = 256u,                                                                             \
+  }
+
+/*
+ * Standalone event snapshot/coalescing helper.
+ *
+ * A MARU_Queue is not attached to a MARU_Context and is never destroyed
+ * implicitly by maru_destroyContext(). Queue APIs return queue-local status
+ * only; they never report MARU_ERROR_CONTEXT_LOST.
+ */
+MARU_API MARU_Status maru_createQueue(const MARU_QueueCreateInfo* create_info,
+                                      MARU_Queue** out_queue);
 MARU_API void maru_destroyQueue(MARU_Queue* queue);
 MARU_API MARU_Status maru_pushQueue(MARU_Queue* queue,
                                     MARU_EventId type,

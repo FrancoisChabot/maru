@@ -2,14 +2,7 @@
 #include "maru/maru.hpp"
 
 TEST_CASE("Queue C++ API - Basic") {
-    auto ctx_res = maru::Context::create();
-    if (!ctx_res.has_value()) {
-        MESSAGE("Context creation unavailable; skipping queue test.");
-        return;
-    }
-    maru::Context& ctx = *ctx_res;
-
-    auto queue_res = maru::Queue::create(ctx, 16);
+    auto queue_res = maru::Queue::create(16);
     REQUIRE(queue_res.has_value());
     maru::Queue& queue = *queue_res;
 
@@ -27,14 +20,7 @@ TEST_CASE("Queue C++ API - Basic") {
 }
 
 TEST_CASE("Queue C++ API - Overflow Metrics") {
-    auto ctx_res = maru::Context::create();
-    if (!ctx_res.has_value()) {
-        MESSAGE("Context creation unavailable; skipping queue test.");
-        return;
-    }
-    maru::Context& ctx = *ctx_res;
-
-    auto queue_res = maru::Queue::create(ctx, 2);
+    auto queue_res = maru::Queue::create(2);
     REQUIRE(queue_res.has_value());
     maru::Queue& queue = *queue_res;
 
@@ -60,14 +46,7 @@ TEST_CASE("Queue C++ API - Overflow Metrics") {
 
 #if __cplusplus >= 202002L
 TEST_CASE("Queue C++ API - C++20 Visitor Scan") {
-    auto ctx_res = maru::Context::create();
-    if (!ctx_res.has_value()) {
-        MESSAGE("Context creation unavailable; skipping queue test.");
-        return;
-    }
-    maru::Context& ctx = *ctx_res;
-
-    auto queue_res = maru::Queue::create(ctx, 16);
+    auto queue_res = maru::Queue::create(16);
     REQUIRE(queue_res.has_value());
     maru::Queue& queue = *queue_res;
 

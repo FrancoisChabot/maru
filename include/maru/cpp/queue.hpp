@@ -7,7 +7,6 @@
 #include "maru/maru.h"
 #include "maru/cpp/fwd.hpp"
 #include "maru/cpp/expected.hpp"
-#include "maru/cpp/context.hpp"
 
 namespace maru {
 
@@ -16,7 +15,8 @@ namespace maru {
  */
 class Queue {
 public:
-    [[nodiscard]] static expected<Queue> create(Context& ctx, uint32_t capacity_power_of_2);
+    [[nodiscard]] static expected<Queue> create(const MARU_QueueCreateInfo& create_info = MARU_QUEUE_CREATE_INFO_DEFAULT);
+    [[nodiscard]] static expected<Queue> create(uint32_t capacity);
 
     ~Queue();
 

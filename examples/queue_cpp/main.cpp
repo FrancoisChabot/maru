@@ -73,7 +73,7 @@ int main() {
   maru::Window& window = *window_result;
 
   // Create an event queue
-  auto queue_result = maru::Queue::create(context, 1024);
+  auto queue_result = maru::Queue::create(1024);
   if (!queue_result) {
     std::cerr << "Failed to create queue\n";
     return -1;

@@ -49,12 +49,6 @@ _maru_status_if_request_context_lost(MARU_DataRequest *request) {
   return _maru_status_if_context_lost((const MARU_Context *)handle->ctx_base);
 }
 
-static inline MARU_Status
-_maru_status_if_queue_context_lost(const MARU_Queue *queue) {
-  return _maru_status_if_context_lost(
-      (const MARU_Context *)((const MARU_Queue_Base *)queue)->ctx_base);
-}
-
 #define MARU_RETURN_IF_CONTEXT_LOST(expr)                                      \
   do {                                                                         \
     const MARU_Status _maru_status = (expr);                                   \
@@ -124,6 +118,16 @@ static inline bool _maru_validate_non_negative_vec2px(MARU_Vec2Px v) {
 
 static inline bool _maru_validate_non_negative_rect(MARU_RectDip r) {
   return r.dip_size.x >= 0 && r.dip_size.y >= 0;
+}
+
+static inline bool _maru_validate_allocator_complete(MARU_Allocator allocator) {
+  const bool any_custom = allocator.alloc_cb != NULL || allocator.realloc_cb != NULL ||
+                          allocator.free_cb != NULL;
+  if (!any_custom) {
+    return true;
+  }
+  return allocator.alloc_cb != NULL && allocator.realloc_cb != NULL &&
+         allocator.free_cb != NULL;
 }
 
 static inline bool _maru_validate_aspect_ratio(MARU_Fraction f) {
@@ -323,16 +327,17 @@ static inline void _maru_validate_resetContextMetrics(MARU_Context *context) {
 }
 
 static inline void
-_maru_validate_createQueue(MARU_Context *ctx, uint32_t capacity, MARU_Queue **out_queue) {
-  MARU_CONSTRAINT_CHECK(ctx != NULL);
-  MARU_CONSTRAINT_CHECK(capacity > 0);
+_maru_validate_createQueue(const MARU_QueueCreateInfo *create_info,
+                           MARU_Queue **out_queue) {
+  MARU_CONSTRAINT_CHECK(create_info != NULL);
   MARU_CONSTRAINT_CHECK(out_queue != NULL);
-  _maru_validate_thread((const MARU_Context_Base *)ctx);
+  MARU_CONSTRAINT_CHECK(create_info->capacity > 0u);
+  MARU_CONSTRAINT_CHECK(
+      _maru_validate_allocator_complete(create_info->allocator));
 }
 
 static inline void _maru_validate_destroyQueue(MARU_Queue *queue) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
-  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
 }
 
 static inline void _maru_validate_pushQueue(MARU_Queue *queue, MARU_EventId type, MARU_Window *window, const MARU_Event *event) {
@@ -340,16 +345,11 @@ static inline void _maru_validate_pushQueue(MARU_Queue *queue, MARU_EventId type
   MARU_CONSTRAINT_CHECK(event != NULL);
   MARU_CONSTRAINT_CHECK(maru_isKnownEventId(type));
   MARU_CONSTRAINT_CHECK(maru_isQueueSafeEventId(type));
-  const MARU_Context_Base *ctx_base = ((const MARU_Queue_Base *)queue)->ctx_base;
-  _maru_validate_thread(ctx_base);
-  if (window != NULL) {
-    MARU_CONSTRAINT_CHECK(((const MARU_Window_Base *)window)->ctx_base == ctx_base);
-  }
+  (void)window;
 }
 
 static inline void _maru_validate_commitQueue(MARU_Queue *queue) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
-  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
 }
 
 static inline void _maru_validate_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback callback, void *userdata) {
@@ -357,26 +357,22 @@ static inline void _maru_validate_scanQueue(MARU_Queue *queue, MARU_EventMask ma
   if (mask != 0) {
     MARU_CONSTRAINT_CHECK(callback != NULL);
   }
-  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
   (void)mask;
   (void)userdata;
 }
 
 static inline void _maru_validate_setQueueCoalesceMask(MARU_Queue *queue, MARU_EventMask mask) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
-  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
   (void)mask;
 }
 
 static inline void _maru_validate_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metrics) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
   MARU_CONSTRAINT_CHECK(out_metrics != NULL);
-  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
 }
 
 static inline void _maru_validate_resetQueueMetrics(MARU_Queue *queue) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
-  _maru_validate_thread(((const MARU_Queue_Base *)queue)->ctx_base);
 }
 
 static inline void

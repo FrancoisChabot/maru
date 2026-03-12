@@ -279,7 +279,7 @@ Unlike a mouse that rests completely still, analog joysticks constantly jitter a
 #### Zero-Latency Mouse Input & Coalescence
 **"How does Maru handle high-frequency mouse input?"**
 
-By default, every single mouse movement is dispatched to ensure zero-latency access to raw OS input. If your app cannot handle that volume, Maru provides a `MARU_Queue` utility that supports opt-in **event coalescence**. It combines high-frequency events (like motion or scrolling) into a single event with accumulated deltas while strictly preserving temporal ordering with other events.
+By default, every single mouse movement is dispatched to ensure zero-latency access to raw OS input. If your app cannot handle that volume, Maru provides a standalone `MARU_Queue` utility that supports opt-in **event coalescence**. It combines high-frequency events (like motion or scrolling) into a single event with accumulated deltas while strictly preserving temporal ordering with other events.
 
 ---
 
