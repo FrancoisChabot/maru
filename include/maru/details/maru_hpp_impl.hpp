@@ -198,6 +198,7 @@ inline bool Window::isMaximized() const { return maru_isWindowMaximized(m_handle
 inline bool Window::isFullscreen() const { return maru_isWindowFullscreen(m_handle); }
 inline bool Window::isVisible() const { return maru_isWindowVisible(m_handle); }
 inline bool Window::isMinimized() const { return maru_isWindowMinimized(m_handle); }
+inline MARU_WindowId Window::getId() const { return maru_getWindowId(m_handle); }
 inline const char* Window::getTitle() const { return maru_getWindowTitle(m_handle); }
 
 inline void Window::getGeometry(MARU_WindowGeometry& out_geometry) const {

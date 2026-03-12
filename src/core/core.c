@@ -126,6 +126,7 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
   ctx_base->monitor_cache = NULL;
   ctx_base->monitor_cache_count = 0;
   ctx_base->monitor_cache_capacity = 0;
+  ctx_base->next_window_id = 1;
 
 #ifdef MARU_VALIDATE_API_CALLS
   extern MARU_ThreadId _maru_getCurrentThreadId(void);
@@ -216,6 +217,7 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
 
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  win_base->pub.window_id = ctx_base->next_window_id++;
   win_base->ctx_prev = NULL;
   win_base->ctx_next = ctx_base->window_list_head;
   if (ctx_base->window_list_head) {

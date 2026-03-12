@@ -37,6 +37,7 @@ public:
     bool isVisible() const;
     bool isMinimized() const;
 
+    MARU_WindowId getId() const;
     const char* getTitle() const;
     void getGeometry(MARU_WindowGeometry& out_geometry) const;
 

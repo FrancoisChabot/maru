@@ -74,7 +74,7 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
            << " Minimized: " << (e.window_state_changed.minimized ? "YES" : "NO")
            << " Maximized: " << (e.window_state_changed.maximized ? "YES" : "NO")
            << " Focused: " << (e.window_state_changed.focused ? "YES" : "NO")
-           << " Icon: " << (e.window_state_changed.icon_changed ? "YES" : "NO");
+           << " Icon: " << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) ? "CHANGED" : "NO");
     } else if (type == MARU_EVENT_MONITOR_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_changed.monitor << " Connected: " << (e.monitor_changed.connected ? "YES" : "NO");
     } else if (type == MARU_EVENT_DROP_ENTERED) {

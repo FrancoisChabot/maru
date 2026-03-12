@@ -11,10 +11,10 @@ static void _maru_windows_dispatch_state_event(MARU_Window_Windows *win, uint32_
     evt.window_state_changed.changed_fields = changed_fields;
     evt.window_state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
     evt.window_state_changed.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-    evt.window_state_changed.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-    evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-    evt.window_state_changed.icon_changed = (changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) != 0;
+    evt.window_state_changed.maximized = (win->base.pub.window_state & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+    evt.window_state_changed.focused = (win->base.pub.window_state & MARU_WINDOW_STATE_FOCUSED) != 0;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &evt);
+
 }
 
 static void _maru_windows_set_window_icon(MARU_Window_Windows *win, const MARU_Image *icon) {

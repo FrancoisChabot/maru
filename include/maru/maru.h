@@ -85,8 +85,10 @@ extern "C" {
 
 typedef uint64_t MARU_Flags;
 typedef uint64_t MARU_EventMask;
+typedef uint64_t MARU_WindowId;
 
 #define MARU_BIT(n) ((uint64_t)1 << (n))
+#define MARU_WINDOW_ID_NONE ((MARU_WindowId)0)
 
 /**
  * Note: MARU_Status is not meant to tell you what went wrong, but rather what you can do about it.
@@ -601,7 +603,6 @@ typedef struct MARU_WindowStateChangedEvent {
   bool minimized;
   bool maximized;
   bool focused;
-  bool icon_changed;
 } MARU_WindowStateChangedEvent;
 
 typedef struct MARU_KeyChangedEvent {
@@ -955,6 +956,12 @@ typedef struct MARU_ImageCreateInfo {
 MARU_API MARU_Status maru_createImage(MARU_Context* context,
                                       const MARU_ImageCreateInfo* create_info,
                                       MARU_Image** out_image);
+/*
+ * Destroys an image and frees its resources.
+ *
+ * If the image is currently set as an icon for one or more windows, those
+ * windows will automatically revert to their default icon.
+ */
 MARU_API MARU_Status maru_destroyImage(MARU_Image* image);
 static inline void* maru_getImageUserdata(const MARU_Image* image);
 static inline void maru_setImageUserdata(MARU_Image* image, void* userdata);
@@ -1008,6 +1015,13 @@ typedef struct MARU_CursorCreateInfo {
 MARU_API MARU_Status maru_createCursor(MARU_Context* context,
                                        const MARU_CursorCreateInfo* create_info,
                                        MARU_Cursor** out_cursor);
+
+/*
+ * Destroys a cursor and frees its resources.
+ *
+ * If the cursor is currently active on one or more windows, those windows
+ * will automatically revert to the system default cursor.
+ */
 MARU_API MARU_Status maru_destroyCursor(MARU_Cursor* cursor);
 
 /* ----- Monitors ----- */
@@ -1088,6 +1102,7 @@ typedef enum MARU_TextInputType {
 static inline void* maru_getWindowUserdata(const MARU_Window* window);
 static inline void maru_setWindowUserdata(MARU_Window* window, void* userdata);
 static inline MARU_Context* maru_getWindowContext(const MARU_Window* window);
+static inline MARU_WindowId maru_getWindowId(const MARU_Window* window);
 static inline const char* maru_getWindowTitle(const MARU_Window* window);
 static inline bool maru_isWindowLost(const MARU_Window* window);
 static inline bool maru_isWindowReady(const MARU_Window* window);

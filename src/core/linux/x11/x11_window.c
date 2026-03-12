@@ -191,8 +191,6 @@ static void _maru_x11_dispatch_state_changed(MARU_Window_X11 *window,
       (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
   evt.window_state_changed.focused =
       (window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-  evt.window_state_changed.icon_changed =
-      (changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) != 0;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
 }

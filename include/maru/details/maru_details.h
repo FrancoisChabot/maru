@@ -66,6 +66,7 @@ typedef struct MARU_MonitorExposed {
 typedef struct MARU_WindowExposed {
   void* userdata;
   MARU_Context* context;
+  MARU_WindowId window_id;
   uint64_t flags;
   MARU_CursorMode cursor_mode;
   const MARU_Cursor* current_cursor;
@@ -256,6 +257,10 @@ static inline void maru_setWindowUserdata(MARU_Window* window, void* userdata) {
 
 static inline MARU_Context* maru_getWindowContext(const MARU_Window* window) {
   return ((const MARU_WindowExposed*)window)->context;
+}
+
+static inline MARU_WindowId maru_getWindowId(const MARU_Window* window) {
+  return ((const MARU_WindowExposed*)window)->window_id;
 }
 
 static inline const char* maru_getWindowTitle(const MARU_Window* window) {

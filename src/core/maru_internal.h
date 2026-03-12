@@ -85,6 +85,7 @@ typedef struct MARU_Context_Base {
   MARU_Window_Base *window_list_head;
   MARU_Cursor_Base *animated_cursor_head;
   uint32_t window_count;
+  MARU_WindowId next_window_id;
 
   MARU_EventQueue queued_events;
   MARU_ButtonState8 keyboard_state[MARU_KEY_COUNT];
