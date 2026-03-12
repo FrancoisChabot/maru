@@ -155,12 +155,6 @@ MARU_API MARU_Version maru_getVersion(void);
 
 /* ----- Geometry ----- */
 
-/**
- * You can switch this to float, but:
- *
- * - Make sure to rebuild Maru yourself.
- * - Understand that this will not be ABI-compatible with official Maru releases.
- */
 typedef double MARU_Scalar;
 
 typedef struct MARU_Fraction {
@@ -680,36 +674,18 @@ typedef enum MARU_DataProvideFlags {
   MARU_DATA_PROVIDE_FLAG_ZERO_COPY = MARU_BIT(0),
 } MARU_DataProvideFlags;
 
-typedef struct MARU_DropEnteredEvent {
+typedef struct MARU_DropEvent {
   MARU_Vec2Dip dip_position;
   MARU_DropSession* session;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   MARU_PathList paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
-} MARU_DropEnteredEvent;
-
-typedef struct MARU_DropHoveredEvent {
-  MARU_Vec2Dip dip_position;
-  MARU_DropSession* session;
-  /* Borrowed callback-scoped pointers. Copy what you need before returning. */
-  MARU_PathList paths;
-  MARU_MIMETypeList available_types;
-  MARU_ModifierFlags modifiers;
-} MARU_DropHoveredEvent;
+} MARU_DropEvent;
 
 typedef struct MARU_DropExitedEvent {
   MARU_DropSession* session;
 } MARU_DropExitedEvent;
-
-typedef struct MARU_DropDroppedEvent {
-  MARU_Vec2Dip dip_position;
-  MARU_DropSession* session;
-  /* Borrowed callback-scoped pointers. Copy what you need before returning. */
-  MARU_PathList paths;
-  MARU_MIMETypeList available_types;
-  MARU_ModifierFlags modifiers;
-} MARU_DropDroppedEvent;
 
 typedef struct MARU_DataReceivedEvent {
   void* userdata;
@@ -799,7 +775,7 @@ typedef struct MARU_UserDefinedEvent {
 typedef struct MARU_Event {
   union {
     MARU_WindowReadyEvent window_ready;
-    MARU_CloseRequestedEvent window_close_requested;
+    MARU_CloseRequestedEvent close_requested;
     MARU_WindowResizedEvent window_resized;
     MARU_WindowStateChangedEvent window_state_changed;
     MARU_KeyChangedEvent key_changed;
@@ -809,10 +785,10 @@ typedef struct MARU_Event {
     MARU_IdleChangedEvent idle_changed;
     MARU_MonitorChangedEvent monitor_changed;
     MARU_MonitorModeChangedEvent monitor_mode_changed;
-    MARU_DropEnteredEvent drop_entered;
-    MARU_DropHoveredEvent drop_hovered;
+    MARU_DropEvent drop_entered;
+    MARU_DropEvent drop_hovered;
     MARU_DropExitedEvent drop_exited;
-    MARU_DropDroppedEvent drop_dropped;
+    MARU_DropEvent drop_dropped;
     MARU_DataReceivedEvent data_received;
     MARU_DataRequestEvent data_requested;
     MARU_DataConsumedEvent data_consumed;

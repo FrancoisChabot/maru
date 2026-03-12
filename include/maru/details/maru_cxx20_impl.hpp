@@ -52,7 +52,7 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       break;
     case MARU_EVENT_CLOSE_REQUESTED:
       if constexpr (std::invocable<F_raw, CloseRequestedEvent>)
-        f(CloseRequestedEvent{window, evt.window_close_requested});
+        f(CloseRequestedEvent{window, evt.close_requested});
       break;
     case MARU_EVENT_WINDOW_RESIZED:
       if constexpr (std::invocable<F_raw, WindowResizedEvent>)
