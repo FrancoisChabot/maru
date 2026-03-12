@@ -218,7 +218,7 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
                                     MARU_EventMask mask,
                                     MARU_EventCallback callback,
                                     void *userdata);
-MARU_Status maru_wakeContext_Windows(MARU_Context *context);
+bool maru_wakeContext_Windows(MARU_Context *context);
 
 // windows.h
 MARU_Status maru_createWindow_Windows(MARU_Context *context,

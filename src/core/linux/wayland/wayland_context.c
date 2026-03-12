@@ -822,20 +822,17 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_wakeContext_WL(MARU_Context *context) {
+bool maru_wakeContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   if (maru_isContextLost(context)) {
-    return MARU_CONTEXT_LOST;
+    return false;
   }
   if (ctx->wake_fd < 0) {
-    return MARU_FAILURE;
+    return false;
   }
   const uint64_t one = 1;
   const ssize_t written = write(ctx->wake_fd, &one, sizeof(one));
-  if (written == (ssize_t)sizeof(one) || (written < 0 && errno == EAGAIN)) {
-    return MARU_SUCCESS;
-  }
-  return MARU_FAILURE;
+  return (written == (ssize_t)sizeof(one) || (written < 0 && errno == EAGAIN));
 }
 
 typedef struct MARU_WLPumpStepState {

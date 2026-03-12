@@ -365,13 +365,10 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_wakeContext_X11(MARU_Context *context) {
+bool maru_wakeContext_X11(MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   uint64_t val = 1;
-  if (write(ctx->linux_common.worker.event_fd, &val, sizeof(val)) < 0) {
-    return MARU_FAILURE;
-  }
-  return MARU_SUCCESS;
+  return write(ctx->linux_common.worker.event_fd, &val, sizeof(val)) >= 0;
 }
 
 bool _maru_x11_copy_string(MARU_Context_X11 *ctx, const char *src,

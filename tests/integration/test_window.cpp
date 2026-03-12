@@ -44,7 +44,7 @@ TEST_CASE("DesktopIntegration.CrossThreadPostEventWithoutWindow") {
 
   std::thread poster([&]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    maru_postEvent(ctx, test_type, nullptr, user_evt);
+    CHECK(maru_postEvent(ctx, test_type, nullptr, user_evt));
   });
 
   auto started = Clock::now();
@@ -80,7 +80,7 @@ TEST_CASE("DesktopIntegration.CrossThreadWakeContextWithoutWindow") {
   TestEventCallback cb;
   std::thread waker([&]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    maru_wakeContext(ctx);
+    CHECK(maru_wakeContext(ctx));
   });
 
   auto started = Clock::now();

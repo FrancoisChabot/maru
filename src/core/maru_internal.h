@@ -208,8 +208,8 @@ uint32_t _maru_adjust_timeout_for_cursor_animation(const MARU_Context_Base *ctx_
  *  events. System events originating from the main event loop SHOULD be dispatched
  *  directly using _maru_dispatch_event().
  */
-MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
-                                      MARU_Window *window, const MARU_Event *evt);
+bool _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
+                               MARU_Window *window, const MARU_Event *evt);
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor);
 void _maru_controller_free(MARU_Controller_Base *controller);

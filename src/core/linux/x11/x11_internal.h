@@ -325,7 +325,7 @@ MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask, c
 MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
                                 MARU_EventMask mask,
                                 MARU_EventCallback callback, void *userdata);
-MARU_Status maru_wakeContext_X11(MARU_Context *context);
+bool maru_wakeContext_X11(MARU_Context *context);
 void *maru_getContextNativeHandle_X11(MARU_Context *context);
 
 MARU_Status maru_createWindow_X11(MARU_Context *context, const MARU_WindowCreateInfo *create_info, MARU_Window **out_window);

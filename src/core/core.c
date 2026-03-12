@@ -398,19 +398,21 @@ void _maru_default_free(void *ptr, void *userdata) {
   free(ptr);
 }
 
-MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
-                                      MARU_Window *window, const MARU_Event *evt) {
+bool _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
+                                 MARU_Window *window, const MARU_Event *evt) {
   if (_maru_event_queue_push(&ctx_base->queued_events, type, window, *evt)) {
     return maru_wakeContext((MARU_Context *)ctx_base);
   }
-  return MARU_FAILURE;
+  return false;
 }
 
-MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
-                                      MARU_Window *window, MARU_UserDefinedEvent user_evt) {
+MARU_API bool maru_postEvent(MARU_Context *context, MARU_EventId type,
+                             MARU_Window *window, MARU_UserDefinedEvent user_evt) {
   MARU_API_VALIDATE(postEvent, context, type, window, user_evt);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+  if (maru_isContextLost(context)) {
+    return false;
+  }
   MARU_Event evt;
   evt.user = user_evt;
 

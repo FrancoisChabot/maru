@@ -16,7 +16,8 @@
  * 3. Direct-return accessors can be called from any thread with external
  *    synchronization to guarantee visibility with the owner thread.
  * 4. maru_postEvent(), maru_wakeContext(), maru_retain*(), maru_release*(),
- *    and maru_getVersion() are globally thread-safe.
+ *    and maru_getVersion() are globally thread-safe and can be called from
+ *    any thread without external synchronization.
  * 5. Backends may use internal helper threads for blocking OS work. These
  *    helpers never invoke your MARU_EventCallback directly; event callbacks are
  *    still only dispatched inline from maru_pumpEvents() on the owner thread.
@@ -864,14 +865,20 @@ MARU_API MARU_Status maru_pumpEvents(MARU_Context* context,
  * Thread-safe user-event injection for a later pump cycle.
  *
  * This will also implicitly wake the context.
+ *
+ * Returns true if the event was successfully queued, false otherwise.
  */
-MARU_API MARU_Status maru_postEvent(MARU_Context* context,
-                                    MARU_EventId type,
-                                    MARU_Window* window,
-                                    MARU_UserDefinedEvent evt);
+MARU_API bool maru_postEvent(MARU_Context* context,
+                             MARU_EventId type,
+                             MARU_Window* window,
+                             MARU_UserDefinedEvent evt);
 
-/* Thread-safe wakeup of a sleeping pump without having to post an event. */
-MARU_API MARU_Status maru_wakeContext(MARU_Context* context);
+/*
+ * Thread-safe wakeup of a sleeping pump without having to post an event.
+ *
+ * Returns true if the context was successfully woken, false otherwise.
+ */
+MARU_API bool maru_wakeContext(MARU_Context* context);
 
 /* ----- Contexts ----- */
 

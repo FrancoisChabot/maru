@@ -76,9 +76,8 @@ MARU_API MARU_Status maru_pumpEvents(MARU_Context *context, uint32_t timeout_ms,
   return maru_pumpEvents_Cocoa(context, timeout_ms, mask, callback, userdata);
 }
 
-MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
+MARU_API bool maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
   return maru_wakeContext_Cocoa(context);
 }
 

@@ -300,9 +300,9 @@ static inline MARU_Status _mock_updateContext(MARU_Context* context, uint64_t fi
     return MARU_SUCCESS;
 }
 
-static inline MARU_Status _mock_wakeContext(MARU_Context* context) {
+static inline bool _mock_wakeContext(MARU_Context* context) {
     (void)context;
-    return MARU_SUCCESS;
+    return true;
 }
 
 #ifdef MARU_INDIRECT_BACKEND

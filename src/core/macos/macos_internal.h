@@ -60,7 +60,7 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
                                    MARU_EventMask mask,
                                    MARU_EventCallback callback,
                                    void *userdata);
-MARU_Status maru_wakeContext_Cocoa(MARU_Context *context);
+bool maru_wakeContext_Cocoa(MARU_Context *context);
 void *_maru_getContextNativeHandle_Cocoa(MARU_Context *context);
 
 MARU_Status maru_createWindow_Cocoa(MARU_Context *context,

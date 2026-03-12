@@ -17,7 +17,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - The thread that creates a `MARU_Context` is the owner thread.
 - Unless a function is explicitly documented otherwise, `MARU_Status` APIs are owner-thread APIs.
 - Direct-return state access APIs may be called from other threads, but only with external synchronization against owner-thread operations on the same handle or context.
-- `maru_postEvent()` and `maru_wakeContext()` are globally thread-safe.
+- `maru_postEvent()` and `maru_wakeContext()` are globally thread-safe and return `bool`.
 - `maru_retainMonitor()` and `maru_releaseMonitor()` are globally thread-safe.
 
 ## Lifetime And Liveness
