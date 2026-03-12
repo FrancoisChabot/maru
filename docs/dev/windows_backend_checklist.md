@@ -25,7 +25,7 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Window Icon Support
 
 ## 3. Input & Events
-- [x] Keyboard Events (`MARU_EVENT_KEY_STATE_CHANGED` / `WM_KEYDOWN`, `WM_KEYUP`)
+- [x] Keyboard Events (`MARU_EVENT_KEY_CHANGED` / `WM_KEYDOWN`, `WM_KEYUP`)
 - [x] Key Translation Table (Virtual-Key codes to `MARU_Key`)
 - [x] Mouse Button Events (`WM_LBUTTONDOWN`, etc.)
 - [x] Mouse Motion Events (`WM_MOUSEMOVE` / `WM_INPUT` for raw)

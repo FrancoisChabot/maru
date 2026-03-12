@@ -129,8 +129,8 @@ UTEST(QueueTest, QueueSafeMaskHelper) {
     EXPECT_TRUE(maru_isQueueSafeEventId(MARU_EVENT_USER_0));
     EXPECT_TRUE(maru_isQueueSafeEventId(MARU_EVENT_WINDOW_FRAME));
     EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_DATA_REQUESTED));
-    EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_MONITOR_CONNECTION_CHANGED));
-    EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_CONTROLLER_CONNECTION_CHANGED));
+    EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_MONITOR_CHANGED));
+    EXPECT_FALSE(maru_isQueueSafeEventId(MARU_EVENT_CONTROLLER_CHANGED));
 }
 
 UTEST(QueueTest, PushRejectsNullPayload) {

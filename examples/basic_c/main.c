@@ -23,7 +23,7 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
                                (uint32_t)event->resized.geometry.px_size.y);
   } else if (type == MARU_EVENT_WINDOW_READY) {
     window_ready = true;
-  } else if (type == MARU_EVENT_KEY_STATE_CHANGED) {
+  } else if (type == MARU_EVENT_KEY_CHANGED) {
     if (event->key.raw_key == MARU_KEY_F && event->key.state == MARU_BUTTON_STATE_PRESSED) {
       maru_setWindowFullscreen(window, !maru_isWindowFullscreen(window));
     }

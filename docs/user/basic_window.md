@@ -25,7 +25,7 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
                          const MARU_Event *event, void *userdata) {
     if (type == MARU_EVENT_CLOSE_REQUESTED) {
         keep_running = false;
-    } else if (type == MARU_EVENT_KEY_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_KEY_CHANGED) {
         // Toggle fullscreen when 'F' is pressed
         if (event->key.raw_key == MARU_KEY_F && event->key.state == MARU_BUTTON_STATE_PRESSED) {
             bool is_fullscreen = maru_isWindowFullscreen(window);

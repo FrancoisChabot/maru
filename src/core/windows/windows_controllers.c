@@ -401,12 +401,12 @@ static void _maru_windows_init_xinput(MARU_Context_Windows *ctx) {
   }
 }
 
-static void _maru_windows_emit_controller_connection_event(
+static void _maru_windows_emit_controller_changed_event(
     MARU_Context_Windows *ctx, MARU_Controller_Windows *ctrl, bool connected) {
   MARU_Event evt = {0};
-  evt.controller_connection.controller = (MARU_Controller *)ctrl;
-  evt.controller_connection.connected = connected;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_CONTROLLER_CONNECTION_CHANGED,
+  evt.controller_changed.controller = (MARU_Controller *)ctrl;
+  evt.controller_changed.connected = connected;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_CONTROLLER_CHANGED,
                        NULL, &evt);
 }
 
@@ -414,10 +414,10 @@ static void _maru_windows_emit_controller_button_event(
     MARU_Context_Windows *ctx, MARU_Controller_Windows *ctrl, uint32_t button_id,
     MARU_ButtonState8 new_state) {
   MARU_Event evt = {0};
-  evt.controller_button_state_changed.controller = (MARU_Controller *)ctrl;
-  evt.controller_button_state_changed.button_id = button_id;
-  evt.controller_button_state_changed.state = (MARU_ButtonState)new_state;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED,
+  evt.controller_button_changed.controller = (MARU_Controller *)ctrl;
+  evt.controller_button_changed.button_id = button_id;
+  evt.controller_button_changed.state = (MARU_ButtonState)new_state;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_CONTROLLER_BUTTON_CHANGED,
                        NULL, &evt);
 }
 
@@ -1172,7 +1172,7 @@ static void _maru_windows_resync_rawinput_devices(MARU_Context_Windows *ctx) {
     }
 
     _maru_windows_append_controller(ctx, ctrl);
-    _maru_windows_emit_controller_connection_event(ctx, ctrl, true);
+    _maru_windows_emit_controller_changed_event(ctx, ctrl, true);
   }
 
   maru_context_free(&ctx->base, device_list);
@@ -1205,7 +1205,7 @@ void _maru_windows_resync_controllers(MARU_Context_Windows *ctx) {
               _maru_windows_controller_create_xinput(ctx, (uint32_t)i);
           if (ctrl) {
             _maru_windows_append_controller(ctx, ctrl);
-            _maru_windows_emit_controller_connection_event(ctx, ctrl, true);
+            _maru_windows_emit_controller_changed_event(ctx, ctrl, true);
           }
         }
       }
@@ -1238,7 +1238,7 @@ void _maru_windows_resync_controllers(MARU_Context_Windows *ctx) {
                   _maru_windows_controller_create_wgi(ctx, gamepad);
               if (ctrl) {
                 _maru_windows_append_controller(ctx, ctrl);
-                _maru_windows_emit_controller_connection_event(ctx, ctrl, true);
+                _maru_windows_emit_controller_changed_event(ctx, ctrl, true);
               }
             }
           }
@@ -1258,7 +1258,7 @@ void _maru_windows_resync_controllers(MARU_Context_Windows *ctx) {
       MARU_Controller_Windows *to_remove = *curr;
       *curr = to_remove->next;
       ctx->controller_count--;
-      _maru_windows_emit_controller_connection_event(ctx, to_remove, false);
+      _maru_windows_emit_controller_changed_event(ctx, to_remove, false);
       to_remove->base.is_active = false;
       to_remove->base.pub.flags |= MARU_CONTROLLER_STATE_LOST;
       to_remove->base.pub.flags &= ~MARU_CONTROLLER_FLAG_PENDING_REMOVAL;

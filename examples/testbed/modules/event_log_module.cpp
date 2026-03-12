@@ -36,47 +36,47 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
     if (type == MARU_EVENT_WINDOW_RESIZED) {
         ss << "Size: " << e.resized.geometry.dip_size.x << "x" << e.resized.geometry.dip_size.y 
            << " (Pix: " << e.resized.geometry.px_size.x << "x" << e.resized.geometry.px_size.y << ")";
-    } else if (type == MARU_EVENT_KEY_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_KEY_CHANGED) {
         ss << "Key: " << (int)e.key.raw_key << " State: " << (e.key.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
            << " Mods: " << formatModifiers(e.key.modifiers);
     } else if (type == MARU_EVENT_MOUSE_MOVED) {
         ss << "Pos: (" << e.mouse_motion.dip_position.x << "," << e.mouse_motion.dip_position.y << ")"
            << " Delta: (" << e.mouse_motion.dip_delta.x << "," << e.mouse_motion.dip_delta.y << ")"
            << " Raw: (" << e.mouse_motion.raw_dip_delta.x << "," << e.mouse_motion.raw_dip_delta.y << ")";
-    } else if (type == MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_MOUSE_BUTTON_CHANGED) {
         ss << "Button: " << (int)e.mouse_button.button_id << " State: " << (e.mouse_button.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
            << " Mods: " << formatModifiers(e.mouse_button.modifiers);
     } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
         ss << "Delta: (" << e.mouse_scroll.dip_delta.x << "," << e.mouse_scroll.dip_delta.y << ")" << "Steps: (" << e.mouse_scroll.steps.x << "," << e.mouse_scroll.steps.y << ")";
-    } else if (type == MARU_EVENT_IDLE_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_IDLE_CHANGED) {
         ss << "Idle: " << (e.idle.is_idle ? "YES" : "NO") << " Timeout: " << e.idle.timeout_ms << "ms";
-    } else if (type == MARU_EVENT_TEXT_EDIT_START) {
-        ss << "IME Start: Session=" << e.text_edit_start.session_id;
-    } else if (type == MARU_EVENT_TEXT_EDIT_UPDATE) {
-        ss << "IME Update: Session=" << e.text_edit_update.session_id 
-           << " Preedit: '" << (e.text_edit_update.preedit_utf8 ? e.text_edit_update.preedit_utf8 : "") << "'"
-           << " Caret: " << e.text_edit_update.caret.start_byte 
-           << " Sel: [" << e.text_edit_update.selection.start_byte << ", " << e.text_edit_update.selection.length_byte << "]";
-    } else if (type == MARU_EVENT_TEXT_EDIT_COMMIT) {
+    } else if (type == MARU_EVENT_TEXT_EDIT_STARTED) {
+        ss << "IME Start: Session=" << e.text_edit_started.session_id;
+    } else if (type == MARU_EVENT_TEXT_EDIT_UPDATED) {
+        ss << "IME Update: Session=" << e.text_edit_updated.session_id 
+           << " Preedit: '" << (e.text_edit_updated.preedit_utf8 ? e.text_edit_updated.preedit_utf8 : "") << "'"
+           << " Caret: " << e.text_edit_updated.caret.start_byte 
+           << " Sel: [" << e.text_edit_updated.selection.start_byte << ", " << e.text_edit_updated.selection.length_byte << "]";
+    } else if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) {
         const std::string committed =
-            (e.text_edit_commit.committed_utf8 && e.text_edit_commit.committed_length > 0)
-                ? std::string(e.text_edit_commit.committed_utf8,
-                              e.text_edit_commit.committed_length)
+            (e.text_edit_committed.committed_utf8 && e.text_edit_committed.committed_length > 0)
+                ? std::string(e.text_edit_committed.committed_utf8,
+                              e.text_edit_committed.committed_length)
                 : std::string();
-        ss << "IME Commit: Session=" << e.text_edit_commit.session_id
-           << " Del: (" << e.text_edit_commit.delete_before_bytes << ", " << e.text_edit_commit.delete_after_bytes << ")"
+        ss << "IME Commit: Session=" << e.text_edit_committed.session_id
+           << " Del: (" << e.text_edit_committed.delete_before_bytes << ", " << e.text_edit_committed.delete_after_bytes << ")"
            << " Text: '" << committed << "'";
-    } else if (type == MARU_EVENT_TEXT_EDIT_END) {
-        ss << "IME End: Session=" << e.text_edit_end.session_id << " Canceled: " << (e.text_edit_end.canceled ? "YES" : "NO");
-    } else if (type == MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_TEXT_EDIT_ENDED) {
+        ss << "IME End: Session=" << e.text_edit_ended.session_id << " Canceled: " << (e.text_edit_ended.canceled ? "YES" : "NO");
+    } else if (type == MARU_EVENT_WINDOW_PRESENTATION_CHANGED) {
         ss << "ChangedMask=0x" << std::hex << e.presentation.changed_fields << std::dec
            << " Visible: " << (e.presentation.visible ? "YES" : "NO")
            << " Minimized: " << (e.presentation.minimized ? "YES" : "NO")
            << " Maximized: " << (e.presentation.maximized ? "YES" : "NO")
            << " Focused: " << (e.presentation.focused ? "YES" : "NO")
            << " Icon: " << (e.presentation.icon_changed ? "YES" : "NO");
-    } else if (type == MARU_EVENT_MONITOR_CONNECTION_CHANGED) {
-        ss << "Monitor: " << (void*)e.monitor_connection.monitor << " Connected: " << (e.monitor_connection.connected ? "YES" : "NO");
+    } else if (type == MARU_EVENT_MONITOR_CHANGED) {
+        ss << "Monitor: " << (void*)e.monitor_changed.monitor << " Connected: " << (e.monitor_changed.connected ? "YES" : "NO");
     } else if (type == MARU_EVENT_DROP_ENTERED) {
         ss << "Drop Enter: (" << e.drop_enter.dip_position.x << "," << e.drop_enter.dip_position.y << ") Count=" << e.drop_enter.available_types.count;
     } else if (type == MARU_EVENT_DROP_HOVERED) {
@@ -93,10 +93,10 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
         ss << "Data Consumed: Mime=" << (e.data_consumed.mime_type ? e.data_consumed.mime_type : "N/A") << " Size=" << e.data_consumed.size;
     } else if (type == MARU_EVENT_DRAG_FINISHED) {
         ss << "Drag Finished: Action=" << (int)e.drag_finished.action;
-    } else if (type == MARU_EVENT_CONTROLLER_CONNECTION_CHANGED) {
-        ss << "Controller: " << (void*)e.controller_connection.controller << " Connected: " << (e.controller_connection.connected ? "YES" : "NO");
-    } else if (type == MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED) {
-        ss << "Controller: " << (void*)e.controller_button_state_changed.controller << " Button=" << e.controller_button_state_changed.button_id << " State=" << (e.controller_button_state_changed.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE");
+    } else if (type == MARU_EVENT_CONTROLLER_CHANGED) {
+        ss << "Controller: " << (void*)e.controller_changed.controller << " Connected: " << (e.controller_changed.connected ? "YES" : "NO");
+    } else if (type == MARU_EVENT_CONTROLLER_BUTTON_CHANGED) {
+        ss << "Controller: " << (void*)e.controller_button_changed.controller << " Button=" << e.controller_button_changed.button_id << " State=" << (e.controller_button_changed.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE");
     } else {
         ss << "No detailed payload parser";
     }
@@ -201,20 +201,20 @@ void EventLogModule::render(MARU_Context* ctx, MARU_Window* window) {
 const char* EventLogModule::typeToString(MARU_EventId type) {
     if (type == MARU_EVENT_CLOSE_REQUESTED) return "CLOSE_REQUESTED";
     if (type == MARU_EVENT_WINDOW_RESIZED) return "WINDOW_RESIZED";
-    if (type == MARU_EVENT_KEY_STATE_CHANGED) return "KEY_STATE_CHANGED";
+    if (type == MARU_EVENT_KEY_CHANGED) return "KEY_CHANGED";
     if (type == MARU_EVENT_WINDOW_READY) return "WINDOW_READY";
     if (type == MARU_EVENT_MOUSE_MOVED) return "MOUSE_MOVED";
-    if (type == MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED) return "MOUSE_BUTTON_STATE_CHANGED";
+    if (type == MARU_EVENT_MOUSE_BUTTON_CHANGED) return "MOUSE_BUTTON_STATE_CHANGED";
     if (type == MARU_EVENT_MOUSE_SCROLLED) return "MOUSE_SCROLLED";
-    if (type == MARU_EVENT_IDLE_STATE_CHANGED) return "IDLE_STATE_CHANGED";
-    if (type == MARU_EVENT_MONITOR_CONNECTION_CHANGED) return "MONITOR_CONNECTION_CHANGED";
+    if (type == MARU_EVENT_IDLE_CHANGED) return "IDLE_STATE_CHANGED";
+    if (type == MARU_EVENT_MONITOR_CHANGED) return "MONITOR_CHANGED";
     if (type == MARU_EVENT_MONITOR_MODE_CHANGED) return "MONITOR_MODE_CHANGED";
     if (type == MARU_EVENT_WINDOW_FRAME) return "WINDOW_FRAME";
-    if (type == MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED) return "WINDOW_PRESENTATION_STATE_CHANGED";
-    if (type == MARU_EVENT_TEXT_EDIT_START) return "TEXT_EDIT_START";
-    if (type == MARU_EVENT_TEXT_EDIT_UPDATE) return "TEXT_EDIT_UPDATE";
-    if (type == MARU_EVENT_TEXT_EDIT_COMMIT) return "TEXT_EDIT_COMMIT";
-    if (type == MARU_EVENT_TEXT_EDIT_END) return "TEXT_EDIT_END";
+    if (type == MARU_EVENT_WINDOW_PRESENTATION_CHANGED) return "WINDOW_PRESENTATION_CHANGED";
+    if (type == MARU_EVENT_TEXT_EDIT_STARTED) return "TEXT_EDIT_STARTED";
+    if (type == MARU_EVENT_TEXT_EDIT_UPDATED) return "TEXT_EDIT_UPDATED";
+    if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) return "TEXT_EDIT_COMMITTED";
+    if (type == MARU_EVENT_TEXT_EDIT_ENDED) return "TEXT_EDIT_ENDED";
     if (type == MARU_EVENT_DROP_ENTERED) return "DROP_ENTERED";
     if (type == MARU_EVENT_DROP_HOVERED) return "DROP_HOVERED";
     if (type == MARU_EVENT_DROP_EXITED) return "DROP_EXITED";
@@ -223,8 +223,8 @@ const char* EventLogModule::typeToString(MARU_EventId type) {
     if (type == MARU_EVENT_DATA_REQUESTED) return "DATA_REQUESTED";
     if (type == MARU_EVENT_DATA_CONSUMED) return "DATA_CONSUMED";
     if (type == MARU_EVENT_DRAG_FINISHED) return "DRAG_FINISHED";
-    if (type == MARU_EVENT_CONTROLLER_CONNECTION_CHANGED) return "CONTROLLER_CONNECTION_CHANGED";
-    if (type == MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED) return "CONTROLLER_BUTTON_STATE_CHANGED";
+    if (type == MARU_EVENT_CONTROLLER_CHANGED) return "CONTROLLER_CHANGED";
+    if (type == MARU_EVENT_CONTROLLER_BUTTON_CHANGED) return "CONTROLLER_BUTTON_CHANGED";
     if (type == MARU_EVENT_USER_0) return "USER_EVENT_0";
     return "UNKNOWN";
 }

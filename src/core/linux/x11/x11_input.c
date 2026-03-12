@@ -339,8 +339,8 @@ static bool _maru_x11_update_ic_spot(MARU_Context_X11 *ctx, MARU_Window_X11 *win
     return true;
   }
   XPoint spot;
-  spot.x = (short)win->base.attrs_effective.text_input_rect.dip_origin.x;
-  spot.y = (short)(win->base.attrs_effective.text_input_rect.dip_origin.y +
+  spot.x = (short)win->base.attrs_effective.text_input_rect.dip_position.x;
+  spot.y = (short)(win->base.attrs_effective.text_input_rect.dip_position.y +
                    win->base.attrs_effective.text_input_rect.dip_size.y);
 
   XVaNestedList preedit_attrs =
@@ -387,14 +387,14 @@ static void _maru_x11_dispatch_preedit_update(MARU_Context_X11 *ctx,
   }
 
   MARU_Event evt = {0};
-  evt.text_edit_update.session_id = win->text_input_session_id;
-  evt.text_edit_update.preedit_utf8 = preedit;
-  evt.text_edit_update.preedit_length = len;
-  evt.text_edit_update.caret.start_byte = caret;
-  evt.text_edit_update.caret.length_byte = 0;
-  evt.text_edit_update.selection.start_byte = caret;
-  evt.text_edit_update.selection.length_byte = 0;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_UPDATE, (MARU_Window *)win,
+  evt.text_edit_updated.session_id = win->text_input_session_id;
+  evt.text_edit_updated.preedit_utf8 = preedit;
+  evt.text_edit_updated.preedit_length = len;
+  evt.text_edit_updated.caret.start_byte = caret;
+  evt.text_edit_updated.caret.length_byte = 0;
+  evt.text_edit_updated.selection.start_byte = caret;
+  evt.text_edit_updated.selection.length_byte = 0;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_UPDATED, (MARU_Window *)win,
                        &evt);
 }
 
@@ -407,10 +407,10 @@ static void _maru_x11_emit_reset_commit(MARU_Context_X11 *ctx, MARU_Window_X11 *
     return;
   }
   MARU_Event evt = {0};
-  evt.text_edit_commit.session_id = win->text_input_session_id;
-  evt.text_edit_commit.committed_utf8 = committed;
-  evt.text_edit_commit.committed_length = (uint32_t)strlen(committed);
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win,
+  evt.text_edit_committed.session_id = win->text_input_session_id;
+  evt.text_edit_committed.committed_utf8 = committed;
+  evt.text_edit_committed.committed_length = (uint32_t)strlen(committed);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win,
                        &evt);
   ctx->x11_lib.XFree(committed);
 }
@@ -469,8 +469,8 @@ static void _maru_x11_begin_text_session(MARU_Context_X11 *ctx,
   win->ime_preedit_active = false;
 
   MARU_Event evt = {0};
-  evt.text_edit_start.session_id = win->text_input_session_id;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_START, (MARU_Window *)win,
+  evt.text_edit_started.session_id = win->text_input_session_id;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_STARTED, (MARU_Window *)win,
                        &evt);
 }
 
@@ -488,9 +488,9 @@ void _maru_x11_end_text_session(MARU_Context_X11 *ctx, MARU_Window_X11 *win,
   (void)_maru_x11_replace_utf8_storage(ctx, &win->ime_preedit_storage, "", 0);
 
   MARU_Event evt = {0};
-  evt.text_edit_end.session_id = win->text_input_session_id;
-  evt.text_edit_end.canceled = canceled;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_END, (MARU_Window *)win,
+  evt.text_edit_ended.session_id = win->text_input_session_id;
+  evt.text_edit_ended.canceled = canceled;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win,
                        &evt);
 }
 
@@ -520,8 +520,8 @@ void _maru_x11_refresh_text_input_state(MARU_Context_X11 *ctx, MARU_Window_X11 *
     done_cb.callback = (XIMProc)_maru_x11_xim_preedit_done;
 
     XPoint spot;
-    spot.x = (short)win->base.attrs_effective.text_input_rect.dip_origin.x;
-    spot.y = (short)(win->base.attrs_effective.text_input_rect.dip_origin.y +
+    spot.x = (short)win->base.attrs_effective.text_input_rect.dip_position.x;
+    spot.y = (short)(win->base.attrs_effective.text_input_rect.dip_position.y +
                      win->base.attrs_effective.text_input_rect.dip_size.y);
     XVaNestedList preedit_attrs = ctx->x11_lib.XVaCreateNestedList(
         0, XNSpotLocation, &spot, XNPreeditDrawCallback, &draw_cb,
@@ -684,7 +684,7 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
       mevt.mouse_button.button_id = button_id;
       mevt.mouse_button.state = state;
       mevt.mouse_button.modifiers = _maru_x11_get_modifiers(ev->xbutton.state);
-      _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)win, &mevt);
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_CHANGED, (MARU_Window *)win, &mevt);
       return true;
     }
     case KeyPress:
@@ -715,10 +715,10 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
             if (text_len > 0 &&
                 (lookup_status == XLookupChars || lookup_status == XLookupBoth)) {
               MARU_Event text_evt = {0};
-              text_evt.text_edit_commit.session_id = win->text_input_session_id;
-              text_evt.text_edit_commit.committed_utf8 = dyn_buf;
-              text_evt.text_edit_commit.committed_length = (uint32_t)text_len;
-              _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT,
+              text_evt.text_edit_committed.session_id = win->text_input_session_id;
+              text_evt.text_edit_committed.committed_utf8 = dyn_buf;
+              text_evt.text_edit_committed.committed_length = (uint32_t)text_len;
+              _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED,
                                    (MARU_Window *)win, &text_evt);
             }
             maru_context_free(&ctx->base, dyn_buf);
@@ -749,16 +749,16 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
         mevt.key.raw_key = key;
         mevt.key.state = state;
         mevt.key.modifiers = _maru_x11_get_modifiers(ev->xkey.state);
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)win, &mevt);
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_CHANGED, (MARU_Window *)win, &mevt);
       }
 
       if (emit_text && text_len > 0) {
         text_buf[text_len] = '\0';
         MARU_Event text_evt = {0};
-        text_evt.text_edit_commit.session_id = win->text_input_session_id;
-        text_evt.text_edit_commit.committed_utf8 = text_buf;
-        text_evt.text_edit_commit.committed_length = (uint32_t)text_len;
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win, &text_evt);
+        text_evt.text_edit_committed.session_id = win->text_input_session_id;
+        text_evt.text_edit_committed.committed_utf8 = text_buf;
+        text_evt.text_edit_committed.committed_length = (uint32_t)text_len;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win, &text_evt);
       }
       return true;
     }

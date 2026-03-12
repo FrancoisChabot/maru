@@ -178,7 +178,7 @@ void _maru_x11_apply_size_hints_local(MARU_Context_X11 *ctx,
   ctx->x11_lib.XSetWMNormalHints(ctx->display, win->handle, &hints);
 }
 
-static void _maru_x11_dispatch_presentation_state(MARU_Window_X11 *window,
+static void _maru_x11_dispatch_presentation_changed(MARU_Window_X11 *window,
                                                   uint32_t changed_fields) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)window->base.ctx_base;
   MARU_Event evt = {0};
@@ -193,7 +193,7 @@ static void _maru_x11_dispatch_presentation_state(MARU_Window_X11 *window,
       (window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
   evt.presentation.icon_changed =
       (changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_ICON) != 0;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_CHANGED,
                        (MARU_Window *)window, &evt);
 }
 
@@ -207,7 +207,7 @@ static bool _maru_x11_window_has_state_atom(const Atom *atoms,
   return false;
 }
 
-static void _maru_x11_reconcile_wm_presentation_state(MARU_Context_X11 *ctx,
+static void _maru_x11_reconcile_wm_presentation_changed(MARU_Context_X11 *ctx,
                                                        MARU_Window_X11 *win,
                                                        uint32_t changed_seed) {
   uint32_t changed = changed_seed;
@@ -302,7 +302,7 @@ static void _maru_x11_reconcile_wm_presentation_state(MARU_Context_X11 *ctx,
   }
 
   if (changed != 0) {
-    _maru_x11_dispatch_presentation_state(win, changed);
+    _maru_x11_dispatch_presentation_changed(win, changed);
   }
 }
 
@@ -673,7 +673,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
   }
 
   if (presentation_changed != 0) {
-    _maru_x11_dispatch_presentation_state(win, presentation_changed);
+    _maru_x11_dispatch_presentation_changed(win, presentation_changed);
   }
 
   maru_getWindowGeometry_X11((MARU_Window *)win, NULL);
@@ -950,7 +950,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
   case ConfigureNotify: {
     MARU_Window_X11 *win = _maru_x11_find_window(ctx, ev->xconfigure.window);
     if (win) {
-      _maru_x11_reconcile_wm_presentation_state(ctx, win, 0);
+      _maru_x11_reconcile_wm_presentation_changed(ctx, win, 0);
       const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
       const MARU_Scalar new_w = (MARU_Scalar)ev->xconfigure.width;
       const MARU_Scalar new_h = (MARU_Scalar)ev->xconfigure.height;
@@ -1029,7 +1029,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
                                           ctx->net_wm_state_maximized_vert,
                                           ctx->net_wm_state_maximized_horz);
       }
-      _maru_x11_reconcile_wm_presentation_state(ctx, win, changed);
+      _maru_x11_reconcile_wm_presentation_changed(ctx, win, changed);
     }
     return true;
   }
@@ -1044,7 +1044,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
       if (was_visible) {
         changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
       }
-      _maru_x11_reconcile_wm_presentation_state(ctx, win, changed);
+      _maru_x11_reconcile_wm_presentation_changed(ctx, win, changed);
     }
     return true;
   }
@@ -1055,7 +1055,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
     }
     if (ev->xproperty.atom == ctx->net_wm_state ||
         ev->xproperty.atom == ctx->wm_state) {
-      _maru_x11_reconcile_wm_presentation_state(ctx, win, 0);
+      _maru_x11_reconcile_wm_presentation_changed(ctx, win, 0);
       return true;
     }
     return false;
@@ -1072,7 +1072,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
           MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
       mevt.presentation.focused = true;
       _maru_dispatch_event(&ctx->base,
-                           MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
+                           MARU_EVENT_WINDOW_PRESENTATION_CHANGED,
                            (MARU_Window *)win, &mevt);
     }
     return true;
@@ -1094,7 +1094,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
           MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
       mevt.presentation.focused = false;
       _maru_dispatch_event(&ctx->base,
-                           MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
+                           MARU_EVENT_WINDOW_PRESENTATION_CHANGED,
                            (MARU_Window *)win, &mevt);
     }
     return true;

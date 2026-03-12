@@ -86,8 +86,8 @@ MARU_Status maru_getMonitors_Cocoa(MARU_Context *context, MARU_MonitorList *out_
         }
 
         NSRect frame = [screen frame];
-        mon->base.pub.dip_position.x = (MARU_Scalar)frame.dip_origin.x;
-        mon->base.pub.dip_position.y = (MARU_Scalar)frame.dip_origin.y; 
+        mon->base.pub.dip_position.x = (MARU_Scalar)frame.dip_position.x;
+        mon->base.pub.dip_position.y = (MARU_Scalar)frame.dip_position.y; 
         mon->base.pub.dip_size.x = (MARU_Scalar)frame.dip_size.width;
         mon->base.pub.dip_size.y = (MARU_Scalar)frame.dip_size.height;
         mon->base.pub.scale = [screen backingScaleFactor];

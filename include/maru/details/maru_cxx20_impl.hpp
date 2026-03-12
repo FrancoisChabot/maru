@@ -16,13 +16,13 @@ consteval MARU_EventMask generateMask() {
   if constexpr (std::invocable<F, WindowReadyEvent>) mask |= MARU_MASK_WINDOW_READY;
   if constexpr (std::invocable<F, WindowCloseEvent>) mask |= MARU_MASK_CLOSE_REQUESTED;
   if constexpr (std::invocable<F, WindowResizedEvent>) mask |= MARU_MASK_WINDOW_RESIZED;
-  if constexpr (std::invocable<F, WindowPresentationStateEvent>) mask |= MARU_MASK_WINDOW_PRESENTATION_STATE_CHANGED;
-  if constexpr (std::invocable<F, KeyboardEvent>) mask |= MARU_MASK_KEY_STATE_CHANGED;
+  if constexpr (std::invocable<F, WindowPresentationChangedEvent>) mask |= MARU_MASK_WINDOW_PRESENTATION_CHANGED;
+  if constexpr (std::invocable<F, KeyboardEvent>) mask |= MARU_MASK_KEY_CHANGED;
   if constexpr (std::invocable<F, MouseMotionEvent>) mask |= MARU_MASK_MOUSE_MOVED;
-  if constexpr (std::invocable<F, MouseButtonEvent>) mask |= MARU_MASK_MOUSE_BUTTON_STATE_CHANGED;
+  if constexpr (std::invocable<F, MouseButtonEvent>) mask |= MARU_MASK_MOUSE_BUTTON_CHANGED;
   if constexpr (std::invocable<F, MouseScrollEvent>) mask |= MARU_MASK_MOUSE_SCROLLED;
-  if constexpr (std::invocable<F, IdleEvent>) mask |= MARU_MASK_IDLE_STATE_CHANGED;
-  if constexpr (std::invocable<F, MonitorConnectionEvent>) mask |= MARU_MASK_MONITOR_CONNECTION_CHANGED;
+  if constexpr (std::invocable<F, IdleEvent>) mask |= MARU_MASK_IDLE_CHANGED;
+  if constexpr (std::invocable<F, MonitorChangedEvent>) mask |= MARU_MASK_MONITOR_CHANGED;
   if constexpr (std::invocable<F, MonitorModeEvent>) mask |= MARU_MASK_MONITOR_MODE_CHANGED;
   if constexpr (std::invocable<F, DropEnterEvent>) mask |= MARU_MASK_DROP_ENTERED;
   if constexpr (std::invocable<F, DropHoverEvent>) mask |= MARU_MASK_DROP_HOVERED;
@@ -32,13 +32,13 @@ consteval MARU_EventMask generateMask() {
   if constexpr (std::invocable<F, DataRequestEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_REQUESTED);
   if constexpr (std::invocable<F, DataConsumedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_CONSUMED);
   if constexpr (std::invocable<F, DragFinishedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_DRAG_FINISHED);
-  if constexpr (std::invocable<F, ControllerConnectionEvent>) mask |= MARU_MASK_CONTROLLER_CONNECTION_CHANGED;
-  if constexpr (std::invocable<F, ControllerButtonStateChangedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED);
+  if constexpr (std::invocable<F, ControllerChangedEvent>) mask |= MARU_MASK_CONTROLLER_CHANGED;
+  if constexpr (std::invocable<F, ControllerButtonChangedEvent>) mask |= MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_CHANGED);
   if constexpr (std::invocable<F, WindowFrameEvent>) mask |= MARU_MASK_WINDOW_FRAME;
-  if constexpr (std::invocable<F, TextEditStartEvent>) mask |= MARU_MASK_TEXT_EDIT_START;
-  if constexpr (std::invocable<F, TextEditUpdateEvent>) mask |= MARU_MASK_TEXT_EDIT_UPDATE;
-  if constexpr (std::invocable<F, TextEditCommitEvent>) mask |= MARU_MASK_TEXT_EDIT_COMMIT;
-  if constexpr (std::invocable<F, TextEditEndEvent>) mask |= MARU_MASK_TEXT_EDIT_END;
+  if constexpr (std::invocable<F, TextEditStartedEvent>) mask |= MARU_MASK_TEXT_EDIT_STARTED;
+  if constexpr (std::invocable<F, TextEditUpdatedEvent>) mask |= MARU_MASK_TEXT_EDIT_UPDATED;
+  if constexpr (std::invocable<F, TextEditCommittedEvent>) mask |= MARU_MASK_TEXT_EDIT_COMMITTED;
+  if constexpr (std::invocable<F, TextEditEndedEvent>) mask |= MARU_MASK_TEXT_EDIT_ENDED;
   return mask;
 }
 
@@ -58,11 +58,11 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       if constexpr (std::invocable<F_raw, WindowResizedEvent>)
         f(WindowResizedEvent{window, evt.resized});
       break;
-    case MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED:
-      if constexpr (std::invocable<F_raw, WindowPresentationStateEvent>)
-        f(WindowPresentationStateEvent{window, evt.presentation});
+    case MARU_EVENT_WINDOW_PRESENTATION_CHANGED:
+      if constexpr (std::invocable<F_raw, WindowPresentationChangedEvent>)
+        f(WindowPresentationChangedEvent{window, evt.presentation});
       break;
-    case MARU_EVENT_KEY_STATE_CHANGED:
+    case MARU_EVENT_KEY_CHANGED:
       if constexpr (std::invocable<F_raw, KeyboardEvent>) 
         f(KeyboardEvent{window, evt.key});
       break;
@@ -70,7 +70,7 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       if constexpr (std::invocable<F_raw, MouseMotionEvent>)
         f(MouseMotionEvent{window, evt.mouse_motion});
       break;
-    case MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED:
+    case MARU_EVENT_MOUSE_BUTTON_CHANGED:
       if constexpr (std::invocable<F_raw, MouseButtonEvent>)
         f(MouseButtonEvent{window, evt.mouse_button});
       break;
@@ -78,13 +78,13 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       if constexpr (std::invocable<F_raw, MouseScrollEvent>)
         f(MouseScrollEvent{window, evt.mouse_scroll});
       break;
-    case MARU_EVENT_IDLE_STATE_CHANGED:
+    case MARU_EVENT_IDLE_CHANGED:
       if constexpr (std::invocable<F_raw, IdleEvent>) 
         f(IdleEvent{window, evt.idle});
       break;
-    case MARU_EVENT_MONITOR_CONNECTION_CHANGED:
-      if constexpr (std::invocable<F_raw, MonitorConnectionEvent>)
-        f(MonitorConnectionEvent{window, evt.monitor_connection});
+    case MARU_EVENT_MONITOR_CHANGED:
+      if constexpr (std::invocable<F_raw, MonitorChangedEvent>)
+        f(MonitorChangedEvent{window, evt.monitor_changed});
       break;
     case MARU_EVENT_MONITOR_MODE_CHANGED:
       if constexpr (std::invocable<F_raw, MonitorModeEvent>)
@@ -122,33 +122,33 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       if constexpr (std::invocable<F_raw, DragFinishedEvent>)
         f(DragFinishedEvent{window, evt.drag_finished});
       break;
-    case MARU_EVENT_CONTROLLER_CONNECTION_CHANGED:
-      if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
-        f(ControllerConnectionEvent{window, evt.controller_connection});
+    case MARU_EVENT_CONTROLLER_CHANGED:
+      if constexpr (std::invocable<F_raw, ControllerChangedEvent>)
+        f(ControllerChangedEvent{window, evt.controller_changed});
       break;
-    case MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED:
-      if constexpr (std::invocable<F_raw, ControllerButtonStateChangedEvent>)
-        f(ControllerButtonStateChangedEvent{window, evt.controller_button_state_changed});
+    case MARU_EVENT_CONTROLLER_BUTTON_CHANGED:
+      if constexpr (std::invocable<F_raw, ControllerButtonChangedEvent>)
+        f(ControllerButtonChangedEvent{window, evt.controller_button_changed});
       break;
     case MARU_EVENT_WINDOW_FRAME:
       if constexpr (std::invocable<F_raw, WindowFrameEvent>)
         f(WindowFrameEvent{window, evt.frame});
       break;
-    case MARU_EVENT_TEXT_EDIT_START:
-      if constexpr (std::invocable<F_raw, TextEditStartEvent>)
-        f(TextEditStartEvent{window, evt.text_edit_start});
+    case MARU_EVENT_TEXT_EDIT_STARTED:
+      if constexpr (std::invocable<F_raw, TextEditStartedEvent>)
+        f(TextEditStartedEvent{window, evt.text_edit_started});
       break;
-    case MARU_EVENT_TEXT_EDIT_UPDATE:
-      if constexpr (std::invocable<F_raw, TextEditUpdateEvent>)
-        f(TextEditUpdateEvent{window, evt.text_edit_update});
+    case MARU_EVENT_TEXT_EDIT_UPDATED:
+      if constexpr (std::invocable<F_raw, TextEditUpdatedEvent>)
+        f(TextEditUpdatedEvent{window, evt.text_edit_updated});
       break;
-    case MARU_EVENT_TEXT_EDIT_COMMIT:
-      if constexpr (std::invocable<F_raw, TextEditCommitEvent>)
-        f(TextEditCommitEvent{window, evt.text_edit_commit});
+    case MARU_EVENT_TEXT_EDIT_COMMITTED:
+      if constexpr (std::invocable<F_raw, TextEditCommittedEvent>)
+        f(TextEditCommittedEvent{window, evt.text_edit_committed});
       break;
-    case MARU_EVENT_TEXT_EDIT_END:
-      if constexpr (std::invocable<F_raw, TextEditEndEvent>)
-        f(TextEditEndEvent{window, evt.text_edit_end});
+    case MARU_EVENT_TEXT_EDIT_ENDED:
+      if constexpr (std::invocable<F_raw, TextEditEndedEvent>)
+        f(TextEditEndedEvent{window, evt.text_edit_ended});
       break;
     default:
       break;

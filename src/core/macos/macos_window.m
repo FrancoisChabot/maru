@@ -83,8 +83,8 @@ static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame
     MARU_WindowGeometry geo = {0};
     geo.px_size.x = (int32_t)backing.dip_size.width;
     geo.px_size.y = (int32_t)backing.dip_size.height;
-    geo.dip_origin.x = (MARU_Scalar)frame.dip_origin.x;
-    geo.dip_origin.y = (MARU_Scalar)frame.dip_origin.y;
+    geo.dip_position.x = (MARU_Scalar)frame.dip_position.x;
+    geo.dip_position.y = (MARU_Scalar)frame.dip_position.y;
     geo.dip_size.x = (MARU_Scalar)frame.dip_size.width;
     geo.dip_size.y = (MARU_Scalar)frame.dip_size.height;
     geo.scale = (MARU_Scalar)(backing.dip_size.width / frame.dip_size.width); 
@@ -143,7 +143,7 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     MARU_Event event = {0};
     event.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
     event.presentation.focused = true;
-    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)self.window, &event);
+    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_PRESENTATION_CHANGED, (MARU_Window *)self.window, &event);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification {
@@ -151,7 +151,7 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     MARU_Event event = {0};
     event.presentation.changed_fields = MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED;
     event.presentation.focused = false;
-    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)self.window, &event);
+    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_PRESENTATION_CHANGED, (MARU_Window *)self.window, &event);
 }
 
 @end
@@ -339,8 +339,8 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         requested->dip_position = attributes->dip_position;
         effective->dip_position = attributes->dip_position;
         NSRect frame = [nsWindow frame];
-        frame.dip_origin.x = effective->dip_position.x;
-        frame.dip_origin.y = effective->dip_position.y;
+        frame.dip_position.x = effective->dip_position.x;
+        frame.dip_position.y = effective->dip_position.y;
         [nsWindow setFrame:frame display:YES];
     }
 

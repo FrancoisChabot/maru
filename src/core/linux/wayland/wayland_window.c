@@ -510,7 +510,7 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       }
     }
 
-    _maru_wayland_dispatch_presentation_state(window, changed);
+    _maru_wayland_dispatch_presentation_changed(window, changed);
   }
 
   if (effective->maximized != is_maximized) {
@@ -520,7 +520,7 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
     }
-    _maru_wayland_dispatch_presentation_state(
+    _maru_wayland_dispatch_presentation_changed(
         window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED);
   }
 
@@ -901,8 +901,8 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     maru_zwp_text_input_v3_enable(ctx, window->ext.text_input);
     maru_zwp_text_input_v3_set_content_type(ctx, window->ext.text_input, hint, purpose);
     maru_zwp_text_input_v3_set_cursor_rectangle(
-        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.text_input_rect.dip_origin.x,
-        (int32_t)window->base.attrs_effective.text_input_rect.dip_origin.y,
+        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.text_input_rect.dip_position.x,
+        (int32_t)window->base.attrs_effective.text_input_rect.dip_position.y,
         (int32_t)window->base.attrs_effective.text_input_rect.dip_size.x,
         (int32_t)window->base.attrs_effective.text_input_rect.dip_size.y);
     
@@ -1246,7 +1246,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (presentation_changed != 0u) {
-      _maru_wayland_dispatch_presentation_state(window, presentation_changed);
+      _maru_wayland_dispatch_presentation_changed(window, presentation_changed);
   }
 
   maru_getWindowGeometry_WL(window_handle, NULL);

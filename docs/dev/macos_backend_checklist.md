@@ -24,10 +24,10 @@ This checklist tracks the implementation status of the Maru macOS (Cocoa) backen
 - [x] Window Icon Support
 
 ## 3. Input & Events
-- [x] Keyboard Events (`MARU_EVENT_KEY_STATE_CHANGED`)
+- [x] Keyboard Events (`MARU_EVENT_KEY_CHANGED`)
 - [x] Key Translation Table (Incomplete, needs validation for all keys)
 - [x] Modifier Mapping (`Shift`, `Control`, `Option`, `Command`, `CapsLock`)
-- [x] Mouse Button Events (`MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED`)
+- [x] Mouse Button Events (`MARU_EVENT_MOUSE_BUTTON_CHANGED`)
 - [x] Mouse Motion Events (`MARU_EVENT_MOUSE_MOVED`)
 - [x] Scroll Wheel Events (`MARU_EVENT_MOUSE_SCROLLED`)
 - [x] Window Resized Events (`MARU_EVENT_WINDOW_RESIZED`)

@@ -28,6 +28,7 @@ static inline MARU_Status maru_setContextInhibitsSystemIdle(MARU_Context *contex
 // N.B. If you are calling a few of those in a row, consider using maru_updateWindow instead.
 static inline MARU_Status maru_setWindowTitle(MARU_Window *window, const char *title);
 static inline MARU_Status maru_setWindowDipSize(MARU_Window *window, MARU_Vec2Dip size);
+static inline MARU_Status maru_setWindowDipPosition(MARU_Window *window, MARU_Vec2Dip position);
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowMaximized(MARU_Window *window, bool enabled);
 static inline MARU_Status maru_setWindowCursorMode(MARU_Window *window, MARU_CursorMode mode);
@@ -70,7 +71,7 @@ static inline bool maru_applyTextEditCommitUtf8(char *buffer,
                                                 uint32_t capacity_bytes,
                                                 uint32_t *inout_length,
                                                 uint32_t *inout_cursor_byte,
-                                                const MARU_TextEditCommitEvent *commit);
+                                                const MARU_TextEditCommittedEvent *commit);
 
 static inline const MARU_UserEventMetrics *maru_getContextEventMetrics(const MARU_Context *context);
 

@@ -356,7 +356,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                         maru_isWindowMaximized(target) ? "[Maximized] " : "",
                         maru_isWindowFullscreen(target) ? "[Fullscreen] " : "",
                         maru_isWindowLost(target) ? "[LOST] " : "");
-            ImGui::Text("Origin:  %.1f, %.1f", geometry.dip_origin.x, geometry.dip_origin.y);
+            ImGui::Text("Origin:  %.1f, %.1f", geometry.dip_position.x, geometry.dip_position.y);
             ImGui::Text("Dip: %.1f x %.1f", geometry.dip_size.x, geometry.dip_size.y);
             ImGui::Text("Px:   %d x %d", geometry.px_size.x, geometry.px_size.y);
 
@@ -470,7 +470,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                             maru_isWindowMaximized(sw.window) ? "[Maximized] " : "",
                             maru_isWindowFullscreen(sw.window) ? "[Fullscreen] " : "",
                             maru_isWindowLost(sw.window) ? "[LOST] " : "");
-                ImGui::Text("Origin:  %.1f, %.1f", geometry.dip_origin.x, geometry.dip_origin.y);
+                ImGui::Text("Origin:  %.1f, %.1f", geometry.dip_position.x, geometry.dip_position.y);
                 ImGui::Text("Dip: %.1f x %.1f", geometry.dip_size.x, geometry.dip_size.y);
                 ImGui::Text("Px:   %d x %d", geometry.px_size.x, geometry.px_size.y);
             } else if (sw.window) {

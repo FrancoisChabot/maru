@@ -73,9 +73,9 @@ Connect and disconnect events are delivered via the event queue.
 
 ```c
 void handle_event(MARU_EventId type, MARU_Window *window, const MARU_Event *event, void *userdata) {
-    if (type == MARU_EVENT_MONITOR_CONNECTION_CHANGED) {
-        if (event->monitor_connection.connected) {
-            printf("Monitor connected: %s\n", maru_getMonitorName(event->monitor_connection.monitor));
+    if (type == MARU_EVENT_MONITOR_CHANGED) {
+        if (event->monitor_changed.connected) {
+            printf("Monitor connected: %s\n", maru_getMonitorName(event->monitor_changed.monitor));
         } else {
             printf("Monitor disconnected.\n");
         }

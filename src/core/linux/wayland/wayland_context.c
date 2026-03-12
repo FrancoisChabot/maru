@@ -301,7 +301,7 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
     if ((window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0) {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
       memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
-      _maru_wayland_dispatch_presentation_state(
+      _maru_wayland_dispatch_presentation_changed(
           window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
     }
 
@@ -428,7 +428,7 @@ static void _idle_notification_handle_idled(void *data, struct ext_idle_notifica
   MARU_Event evt = {0};
   evt.idle.is_idle = true;
   evt.idle.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_STATE_CHANGED, NULL, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &evt);
 }
 
 static void _idle_notification_handle_resumed(void *data, struct ext_idle_notification_v1 *notification) {
@@ -436,7 +436,7 @@ static void _idle_notification_handle_resumed(void *data, struct ext_idle_notifi
   MARU_Event evt = {0};
   evt.idle.is_idle = false;
   evt.idle.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_STATE_CHANGED, NULL, &evt);
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &evt);
 }
 
 static const struct ext_idle_notification_v1_listener _idle_notification_listener = {
@@ -1117,9 +1117,9 @@ static void _maru_wayland_pump_dispatch_repeats(MARU_Context_WL *ctx) {
                                             ctx->repeat.repeat_key, buf, sizeof(buf));
         if (n > 0) {
           MARU_Event text_evt = {0};
-          text_evt.text_edit_commit.committed_utf8 = buf;
-          text_evt.text_edit_commit.committed_length = (uint32_t)n;
-          _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT,
+          text_evt.text_edit_committed.committed_utf8 = buf;
+          text_evt.text_edit_committed.committed_length = (uint32_t)n;
+          _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED,
                                (MARU_Window *)window, &text_evt);
         }
 

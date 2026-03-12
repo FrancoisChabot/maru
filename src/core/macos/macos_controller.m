@@ -63,10 +63,10 @@ static void _maru_cocoa_dispatch_button_event(MARU_Controller_Cocoa *c, uint32_t
     c->button_states[button_id] = (MARU_ButtonState8)state;
     
     MARU_Event event = {0};
-    event.controller_button_state_changed.controller = (MARU_Controller *)c;
-    event.controller_button_state_changed.button_id = button_id;
-    event.controller_button_state_changed.state = state;
-    _maru_post_event_internal(c->base.ctx_base, MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED, NULL, &event);
+    event.controller_button_changed.controller = (MARU_Controller *)c;
+    event.controller_button_changed.button_id = button_id;
+    event.controller_button_changed.state = state;
+    _maru_post_event_internal(c->base.ctx_base, MARU_EVENT_CONTROLLER_BUTTON_CHANGED, NULL, &event);
 }
 
 static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *ctx, GCController *gc) {
@@ -245,9 +245,9 @@ void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base) {
             ctx->controller_cache[ctx->controller_cache_count++] = &c->base;
             
             MARU_Event event = {0};
-            event.controller_connection.controller = (MARU_Controller *)c;
-            event.controller_connection.connected = true;
-            _maru_post_event_internal(&ctx->base, MARU_EVENT_CONTROLLER_CONNECTION_CHANGED, NULL, &event);
+            event.controller_changed.controller = (MARU_Controller *)c;
+            event.controller_changed.connected = true;
+            _maru_post_event_internal(&ctx->base, MARU_EVENT_CONTROLLER_CHANGED, NULL, &event);
         }
     }
     
@@ -257,9 +257,9 @@ void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base) {
         if (!c->is_active && !(c->pub.flags & MARU_CONTROLLER_STATE_LOST)) {
             c->pub.flags |= MARU_CONTROLLER_STATE_LOST;
             MARU_Event event = {0};
-            event.controller_connection.controller = (MARU_Controller *)c;
-            event.controller_connection.connected = false;
-            _maru_post_event_internal(&ctx->base, MARU_EVENT_CONTROLLER_CONNECTION_CHANGED, NULL, &event);
+            event.controller_changed.controller = (MARU_Controller *)c;
+            event.controller_changed.connected = false;
+            _maru_post_event_internal(&ctx->base, MARU_EVENT_CONTROLLER_CHANGED, NULL, &event);
         }
     }
 }

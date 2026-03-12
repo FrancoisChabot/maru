@@ -142,7 +142,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             event.key.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
-                                              MARU_EVENT_KEY_STATE_CHANGED, &event);
+                                              MARU_EVENT_KEY_CHANGED, &event);
             break;
         }
         case NSEventTypeFlagsChanged: {
@@ -167,7 +167,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             event.key.modifiers = _maru_cocoa_translate_modifiers(new_mods);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
-                                              MARU_EVENT_KEY_STATE_CHANGED, &event);
+                                              MARU_EVENT_KEY_CHANGED, &event);
             break;
         }
         case NSEventTypeLeftMouseDown:
@@ -191,7 +191,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             event.mouse_button.modifiers = _maru_cocoa_translate_modifiers([nsEvent modifierFlags]);
             
             _maru_cocoa_dispatch_window_event(active_ctx, window,
-                                              MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED,
+                                              MARU_EVENT_MOUSE_BUTTON_CHANGED,
                                               &event);
             break;
         }

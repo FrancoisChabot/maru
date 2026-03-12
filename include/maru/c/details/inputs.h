@@ -28,7 +28,8 @@ static inline uint32_t maru_getKeyboardKeyCount(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->keyboard_key_count;
 }
 
-static inline bool maru_isKeyPressed(const MARU_Window *window, MARU_Key key) {
+static inline bool maru_isKeyboardKeyPressed(const MARU_Window *window,
+                                             MARU_Key key) {
   if ((uint32_t)key >= MARU_KEY_COUNT) {
     return false;
   }

@@ -102,7 +102,7 @@ _libdecor_frame_handle_configure(struct libdecor_frame *frame,
         changed |= MARU_WINDOW_PRESENTATION_CHANGED_VISIBLE;
       }
     }
-    _maru_wayland_dispatch_presentation_state(window, changed);
+    _maru_wayland_dispatch_presentation_changed(window, changed);
   }
 
   if (effective->maximized != is_maximized) {
@@ -112,7 +112,7 @@ _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
     }
-    _maru_wayland_dispatch_presentation_state(
+    _maru_wayland_dispatch_presentation_changed(
         window, MARU_WINDOW_PRESENTATION_CHANGED_MAXIMIZED);
   }
 

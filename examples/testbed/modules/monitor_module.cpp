@@ -11,7 +11,7 @@ void MonitorModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_E
     if (!auto_refresh_on_events_) {
         return;
     }
-    if (type == MARU_EVENT_MONITOR_CONNECTION_CHANGED || type == MARU_EVENT_MONITOR_MODE_CHANGED) {
+    if (type == MARU_EVENT_MONITOR_CHANGED || type == MARU_EVENT_MONITOR_MODE_CHANGED) {
         refresh_requested_ = true;
     }
 }

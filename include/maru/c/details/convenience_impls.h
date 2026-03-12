@@ -44,6 +44,14 @@ static inline MARU_Status maru_setWindowDipSize(MARU_Window *window,
   return maru_updateWindow(window, MARU_WINDOW_ATTR_DIP_SIZE, &attrs);
 }
 
+static inline MARU_Status maru_setWindowDipPosition(MARU_Window *window,
+                                                    MARU_Vec2Dip position) {
+  MARU_WindowAttributes attrs;
+  memset(&attrs, 0, sizeof(attrs));
+  attrs.dip_position = position;
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_DIP_POSITION, &attrs);
+}
+
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window *window,
                                                    bool enabled) {
   MARU_WindowAttributes attrs;
@@ -182,7 +190,7 @@ maru_configureWindowSimpleTextInput(MARU_Window *window,
 
 static inline bool maru_applyTextEditCommitUtf8(
     char *buffer, uint32_t capacity_bytes, uint32_t *inout_length,
-    uint32_t *inout_cursor_byte, const MARU_TextEditCommitEvent *commit) {
+    uint32_t *inout_cursor_byte, const MARU_TextEditCommittedEvent *commit) {
   if (!buffer || !inout_length || !inout_cursor_byte || !commit) {
     return false;
   }

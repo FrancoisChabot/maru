@@ -48,16 +48,16 @@ typedef struct MARU_Queue MARU_Queue;
 #define MARU_QUEUE_SAFE_EVENT_MASK                                              \
   (MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED) |                               \
    MARU_EVENT_MASK(MARU_EVENT_WINDOW_RESIZED) |                                \
-   MARU_EVENT_MASK(MARU_EVENT_KEY_STATE_CHANGED) |                             \
+   MARU_EVENT_MASK(MARU_EVENT_KEY_CHANGED) |                             \
    MARU_EVENT_MASK(MARU_EVENT_WINDOW_READY) |                                  \
    MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED) |                                   \
-   MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED) |                    \
+   MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_CHANGED) |                    \
    MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED) |                                \
-   MARU_EVENT_MASK(MARU_EVENT_IDLE_STATE_CHANGED) |                            \
+   MARU_EVENT_MASK(MARU_EVENT_IDLE_CHANGED) |                            \
    MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME) |                                  \
-   MARU_EVENT_MASK(MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED) |             \
-   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_START) |                               \
-   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_END) |                                 \
+   MARU_EVENT_MASK(MARU_EVENT_WINDOW_PRESENTATION_CHANGED) |             \
+   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED) |                               \
+   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_ENDED) |                                 \
    MARU_EVENT_MASK(MARU_EVENT_USER_0) |                                        \
    MARU_EVENT_MASK(MARU_EVENT_USER_1) |                                        \
    MARU_EVENT_MASK(MARU_EVENT_USER_2) |                                        \

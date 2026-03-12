@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window,
+void _maru_wayland_dispatch_presentation_changed(MARU_Window_WL *window,
                                                uint32_t changed_fields) {
   if (changed_fields == 0u) {
     return;
@@ -24,7 +24,7 @@ void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window,
   evt.presentation.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
   evt.presentation.icon_changed =
       (changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_ICON) != 0;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_CHANGED,
                        (MARU_Window *)window, &evt);
 }
 

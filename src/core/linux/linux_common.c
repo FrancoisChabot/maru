@@ -641,14 +641,14 @@ static MARU_LinuxController *_maru_linux_find_controller_by_syspath(
   return NULL;
 }
 
-static void _maru_linux_emit_controller_connection_event(
+static void _maru_linux_emit_controller_changed_event(
     MARU_Context_Linux_Common *common, MARU_LinuxController *ctrl,
     bool connected) {
   if (!common || !ctrl) return;
   MARU_Event pub_evt = {0};
-  pub_evt.controller_connection.controller = (MARU_Controller *)ctrl;
-  pub_evt.controller_connection.connected = connected;
-  _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_CONNECTION_CHANGED,
+  pub_evt.controller_changed.controller = (MARU_Controller *)ctrl;
+  pub_evt.controller_changed.connected = connected;
+  _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_CHANGED,
                        NULL, &pub_evt);
 }
 
@@ -663,7 +663,7 @@ static void _maru_linux_remove_controller_by_syspath(
       *curr = to_remove->next;
       common->controller_count--;
 
-      _maru_linux_emit_controller_connection_event(common, to_remove, false);
+      _maru_linux_emit_controller_changed_event(common, to_remove, false);
 
       to_remove->is_active = false;
       to_remove->base.flags |= MARU_CONTROLLER_STATE_LOST;
@@ -709,7 +709,7 @@ static void _maru_linux_handle_hotplug_add(MARU_Context_Linux_Common *common,
   ctrl->next = common->controllers;
   common->controllers = ctrl;
   common->controller_count++;
-  _maru_linux_emit_controller_connection_event(common, ctrl, true);
+  _maru_linux_emit_controller_changed_event(common, ctrl, true);
 }
 
 static void _maru_linux_handle_hotplug_remove(MARU_Context_Linux_Common *common,
@@ -942,10 +942,10 @@ void _maru_linux_common_process_pollfds(MARU_Context_Linux_Common *common, const
               it->button_states[idx] = new_state;
               
               MARU_Event pub_evt = {0};
-              pub_evt.controller_button_state_changed.controller = (MARU_Controller*)it;
-              pub_evt.controller_button_state_changed.button_id = (uint32_t)idx;
-              pub_evt.controller_button_state_changed.state = (MARU_ButtonState)new_state;
-              _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED, NULL, &pub_evt);
+              pub_evt.controller_button_changed.controller = (MARU_Controller*)it;
+              pub_evt.controller_button_changed.button_id = (uint32_t)idx;
+              pub_evt.controller_button_changed.state = (MARU_ButtonState)new_state;
+              _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_CHANGED, NULL, &pub_evt);
             }
           }
         } else if (ev.type == EV_ABS) {
@@ -985,18 +985,18 @@ void _maru_linux_common_process_pollfds(MARU_Context_Linux_Common *common, const
               if (it->button_states[left_id] != left_state) {
                 it->button_states[left_id] = left_state;
                 MARU_Event pub_evt = {0};
-                pub_evt.controller_button_state_changed.controller = (MARU_Controller*)it;
-                pub_evt.controller_button_state_changed.button_id = left_id;
-                pub_evt.controller_button_state_changed.state = (MARU_ButtonState)left_state;
-                _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED, NULL, &pub_evt);
+                pub_evt.controller_button_changed.controller = (MARU_Controller*)it;
+                pub_evt.controller_button_changed.button_id = left_id;
+                pub_evt.controller_button_changed.state = (MARU_ButtonState)left_state;
+                _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_CHANGED, NULL, &pub_evt);
               }
               if (it->button_states[right_id] != right_state) {
                 it->button_states[right_id] = right_state;
                 MARU_Event pub_evt = {0};
-                pub_evt.controller_button_state_changed.controller = (MARU_Controller*)it;
-                pub_evt.controller_button_state_changed.button_id = right_id;
-                pub_evt.controller_button_state_changed.state = (MARU_ButtonState)right_state;
-                _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED, NULL, &pub_evt);
+                pub_evt.controller_button_changed.controller = (MARU_Controller*)it;
+                pub_evt.controller_button_changed.button_id = right_id;
+                pub_evt.controller_button_changed.state = (MARU_ButtonState)right_state;
+                _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_CHANGED, NULL, &pub_evt);
               }
             }
           } else if (ev.code == ABS_HAT0Y) {
@@ -1010,18 +1010,18 @@ void _maru_linux_common_process_pollfds(MARU_Context_Linux_Common *common, const
               if (it->button_states[up_id] != up_state) {
                 it->button_states[up_id] = up_state;
                 MARU_Event pub_evt = {0};
-                pub_evt.controller_button_state_changed.controller = (MARU_Controller*)it;
-                pub_evt.controller_button_state_changed.button_id = up_id;
-                pub_evt.controller_button_state_changed.state = (MARU_ButtonState)up_state;
-                _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED, NULL, &pub_evt);
+                pub_evt.controller_button_changed.controller = (MARU_Controller*)it;
+                pub_evt.controller_button_changed.button_id = up_id;
+                pub_evt.controller_button_changed.state = (MARU_ButtonState)up_state;
+                _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_CHANGED, NULL, &pub_evt);
               }
               if (it->button_states[down_id] != down_state) {
                 it->button_states[down_id] = down_state;
                 MARU_Event pub_evt = {0};
-                pub_evt.controller_button_state_changed.controller = (MARU_Controller*)it;
-                pub_evt.controller_button_state_changed.button_id = down_id;
-                pub_evt.controller_button_state_changed.state = (MARU_ButtonState)down_state;
-                _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED, NULL, &pub_evt);
+                pub_evt.controller_button_changed.controller = (MARU_Controller*)it;
+                pub_evt.controller_button_changed.button_id = down_id;
+                pub_evt.controller_button_changed.state = (MARU_ButtonState)down_state;
+                _maru_dispatch_event(common->ctx_base, MARU_EVENT_CONTROLLER_BUTTON_CHANGED, NULL, &pub_evt);
               }
             }
           }

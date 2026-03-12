@@ -27,13 +27,13 @@ struct Event {
 typedef Event<MARU_WindowReadyEvent> WindowReadyEvent;
 typedef Event<MARU_WindowCloseEvent> WindowCloseEvent;
 typedef Event<MARU_WindowResizedEvent> WindowResizedEvent;
-typedef Event<MARU_WindowPresentationStateEvent> WindowPresentationStateEvent;
+typedef Event<MARU_WindowPresentationChangedEvent> WindowPresentationChangedEvent;
 typedef Event<MARU_KeyboardEvent> KeyboardEvent;
 typedef Event<MARU_MouseMotionEvent> MouseMotionEvent;
 typedef Event<MARU_MouseButtonEvent> MouseButtonEvent;
 typedef Event<MARU_MouseScrollEvent> MouseScrollEvent;
 typedef Event<MARU_IdleEvent> IdleEvent;
-typedef Event<MARU_MonitorConnectionEvent> MonitorConnectionEvent;
+typedef Event<MARU_MonitorChangedEvent> MonitorChangedEvent;
 typedef Event<MARU_MonitorModeEvent> MonitorModeEvent;
 typedef Event<MARU_DropEnterEvent> DropEnterEvent;
 typedef Event<MARU_DropHoverEvent> DropHoverEvent;
@@ -43,13 +43,13 @@ typedef Event<MARU_DataReceivedEvent> DataReceivedEvent;
 typedef Event<MARU_DataRequestEvent> DataRequestEvent;
 typedef Event<MARU_DataConsumedEvent> DataConsumedEvent;
 typedef Event<MARU_DragFinishedEvent> DragFinishedEvent;
-typedef Event<MARU_ControllerConnectionEvent> ControllerConnectionEvent;
-typedef Event<MARU_ControllerButtonStateChangedEvent> ControllerButtonStateChangedEvent;
+typedef Event<MARU_ControllerChangedEvent> ControllerChangedEvent;
+typedef Event<MARU_ControllerButtonChangedEvent> ControllerButtonChangedEvent;
 typedef Event<MARU_WindowFrameEvent> WindowFrameEvent;
-typedef Event<MARU_TextEditStartEvent> TextEditStartEvent;
-typedef Event<MARU_TextEditUpdateEvent> TextEditUpdateEvent;
-typedef Event<MARU_TextEditCommitEvent> TextEditCommitEvent;
-typedef Event<MARU_TextEditEndEvent> TextEditEndEvent;
+typedef Event<MARU_TextEditStartedEvent> TextEditStartedEvent;
+typedef Event<MARU_TextEditUpdatedEvent> TextEditUpdatedEvent;
+typedef Event<MARU_TextEditCommittedEvent> TextEditCommittedEvent;
+typedef Event<MARU_TextEditEndedEvent> TextEditEndedEvent;
 
 } // namespace maru
 

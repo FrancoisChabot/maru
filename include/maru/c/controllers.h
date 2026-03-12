@@ -50,11 +50,11 @@ typedef struct MARU_ControllerInfo {
 // Specialized structs removed in favor of unified MARU_ChannelInfo.
 
 /** @brief Event mask for controller connection changes. */
-#define MARU_MASK_CONTROLLER_CONNECTION_CHANGED                                \
-  MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_CONNECTION_CHANGED)
+#define MARU_MASK_CONTROLLER_CHANGED                                \
+  MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_CHANGED)
 /** @brief Event mask for controller button state changes. */
-#define MARU_MASK_CONTROLLER_BUTTON_STATE_CHANGED                              \
-  MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_STATE_CHANGED)
+#define MARU_MASK_CONTROLLER_BUTTON_CHANGED                              \
+  MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_CHANGED)
 
 /* ----- Direct-Return State Access (External Synchronization Required) -----
  *

@@ -259,7 +259,7 @@ Instead, you `retain()` a reference. If the device is disconnected, Maru flags i
 ### 3. Input & High DPI
 
 #### Eat Your Veggies: Proper Text Input
-**"How am I supposed to use MARU_TextEditCommitEvent correctly?"**
+**"How am I supposed to use MARU_TextEditCommittedEvent correctly?"**
 
 Maru only provides a full IME-capable text input mechanism. It forces you to "eat your veggies" because quick-and-dirty keyboard-to-text hacks (like using `MARU_KeyboardEvent`) fail on internationalization, keyboard layouts, and OS-level repeats.
 

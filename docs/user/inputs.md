@@ -8,11 +8,11 @@ Events are delivered through the `maru_pumpEvents` callback. This is the preferr
 
 ### Keyboard Events
 
-The `MARU_EVENT_KEY_STATE_CHANGED` event is fired when a physical key is pressed or released.
+The `MARU_EVENT_KEY_CHANGED` event is fired when a physical key is pressed or released.
 
 ```c
 void handle_event(MARU_EventId type, MARU_Window *window, const MARU_Event *event, void *userdata) {
-    if (type == MARU_EVENT_KEY_STATE_CHANGED) {
+    if (type == MARU_EVENT_KEY_CHANGED) {
         if (event->key.raw_key == MARU_KEY_ESCAPE && event->key.state == MARU_BUTTON_STATE_PRESSED) {
             // Quit app
         }
@@ -20,12 +20,12 @@ void handle_event(MARU_EventId type, MARU_Window *window, const MARU_Event *even
 }
 ```
 
-**Note on Text Input:** Do not use keyboard events for text entry. Instead, use the `MARU_EVENT_TEXT_EDIT_COMMIT` event, which handles IME (Input Method Editors), different keyboard layouts, and dead keys correctly.
+**Note on Text Input:** Do not use keyboard events for text entry. Instead, use the `MARU_EVENT_TEXT_EDIT_COMMITTED` event, which handles IME (Input Method Editors), different keyboard layouts, and dead keys correctly.
 
 ### Mouse Events
 
 - `MARU_EVENT_MOUSE_MOVED`: Contains current dip_position and delta.
-- `MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED`: Fired for clicks.
+- `MARU_EVENT_MOUSE_BUTTON_CHANGED`: Fired for clicks.
 - `MARU_EVENT_MOUSE_SCROLLED`: Fired for wheel or trackpad scrolling.
 
 ```c
@@ -44,7 +44,7 @@ You can also query the current state of input devices at any time. This is usefu
 ### Keyboard Polling
 
 ```c
-if (maru_isKeyPressed(window, MARU_KEY_W)) {
+if (maru_isKeyboardKeyPressed(window, MARU_KEY_W)) {
     // Move forward
 }
 ```

@@ -112,7 +112,7 @@ typedef struct MARU_ContextAttributes {
 
   bool inhibit_idle; ///< If true, prevents the OS from entering sleep.
 
-  uint32_t idle_timeout_ms; ///< Threshold for MARU_EVENT_IDLE_STATE_CHANGED.
+  uint32_t idle_timeout_ms; ///< Threshold for MARU_EVENT_IDLE_CHANGED.
                             ///< 0 disables idle notifications.
 
 } MARU_ContextAttributes;

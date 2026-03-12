@@ -14,7 +14,7 @@ static void _maru_windows_dispatch_presentation_event(MARU_Window_Windows *win, 
     evt.presentation.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
     evt.presentation.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
     evt.presentation.icon_changed = (changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_ICON) != 0;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)win, &evt);
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_CHANGED, (MARU_Window *)win, &evt);
 }
 
 static void _maru_windows_set_window_icon(MARU_Window_Windows *win, const MARU_Image *icon) {
@@ -133,7 +133,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       maru_updateMonitors_Windows((MARU_Context *)ctx);
       
       MARU_Event evt = {0};
-      _maru_dispatch_event(&ctx->base, MARU_EVENT_MONITOR_CONNECTION_CHANGED, NULL, &evt);
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_MONITOR_CHANGED, NULL, &evt);
       break;
     }
     case WM_DEVICECHANGE: {
@@ -190,7 +190,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         evt.key.raw_key = key;
         evt.key.state = state;
         evt.key.modifiers = _maru_get_modifiers_windows();
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)win, &evt);
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_CHANGED, (MARU_Window *)win, &evt);
       }
       return 0;
     }
@@ -221,9 +221,9 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       if (n > 0) {
         utf8[n] = '\0';
         MARU_Event evt = {0};
-        evt.text_edit_commit.committed_utf8 = utf8;
-        evt.text_edit_commit.committed_length = (uint32_t)n;
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win, &evt);
+        evt.text_edit_committed.committed_utf8 = utf8;
+        evt.text_edit_committed.committed_length = (uint32_t)n;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win, &evt);
       }
       return 0;
     }
@@ -252,9 +252,9 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       if (n > 0) {
         utf8[n] = '\0';
         MARU_Event evt = {0};
-        evt.text_edit_commit.committed_utf8 = utf8;
-        evt.text_edit_commit.committed_length = (uint32_t)n;
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)win, &evt);
+        evt.text_edit_committed.committed_utf8 = utf8;
+        evt.text_edit_committed.committed_length = (uint32_t)n;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win, &evt);
       }
       return 0;
     }
@@ -289,7 +289,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       evt.mouse_button.button_id = button_id;
       evt.mouse_button.state = state;
       evt.mouse_button.modifiers = _maru_get_modifiers_windows();
-      _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED, (MARU_Window *)win, &evt);
+      _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_CHANGED, (MARU_Window *)win, &evt);
 
       if (uMsg == WM_LBUTTONDOWN || uMsg == WM_RBUTTONDOWN || uMsg == WM_MBUTTONDOWN || uMsg == WM_XBUTTONDOWN) {
           SetCapture(hwnd);
@@ -669,8 +669,8 @@ MARU_WindowGeometry maru_getWindowGeometry_Windows(MARU_Window *window_handle) {
 
   POINT pt = {0, 0};
   ClientToScreen(win->hwnd, &pt);
-  geometry.dip_origin.x = (MARU_Scalar)pt.x / geometry.scale;
-  geometry.dip_origin.y = (MARU_Scalar)pt.y / geometry.scale;
+  geometry.dip_position.x = (MARU_Scalar)pt.x / geometry.scale;
+  geometry.dip_position.y = (MARU_Scalar)pt.y / geometry.scale;
   
   geometry.buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
   win->base.pub.geometry = geometry;
@@ -750,8 +750,8 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       } else {
           MARU_WindowGeometry geo;
           geo = maru_getWindowGeometry_Windows(window);
-          new_x = geo.dip_origin.x;
-          new_y = geo.dip_origin.y;
+          new_x = geo.dip_position.x;
+          new_y = geo.dip_position.y;
       }
 
       DWORD style = GetWindowLongW(win->hwnd, GWL_STYLE);

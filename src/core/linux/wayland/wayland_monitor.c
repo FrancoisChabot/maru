@@ -126,9 +126,9 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
   if (!monitor->announced) {
     monitor->announced = true;
     monitor->mode_changed_pending = false;
-    evt.monitor_connection.monitor = (MARU_Monitor *)monitor;
-    evt.monitor_connection.connected = true;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_MONITOR_CONNECTION_CHANGED, NULL, &evt);
+    evt.monitor_changed.monitor = (MARU_Monitor *)monitor;
+    evt.monitor_changed.connected = true;
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_MONITOR_CHANGED, NULL, &evt);
     return;
   }
 
@@ -316,9 +316,9 @@ void _maru_wayland_remove_output(MARU_Context_WL *ctx, uint32_t name) {
     monitor->base.is_active = false;
 
     MARU_Event evt = {0};
-    evt.monitor_connection.monitor = (MARU_Monitor *)monitor;
-    evt.monitor_connection.connected = false;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_MONITOR_CONNECTION_CHANGED, NULL, &evt);
+    evt.monitor_changed.monitor = (MARU_Monitor *)monitor;
+    evt.monitor_changed.connected = false;
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_MONITOR_CHANGED, NULL, &evt);
 
     for (uint32_t j = i; j + 1 < ctx->base.monitor_cache_count; ++j) {
       ctx->base.monitor_cache[j] = ctx->base.monitor_cache[j + 1];

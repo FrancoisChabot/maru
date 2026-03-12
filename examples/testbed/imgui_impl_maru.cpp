@@ -149,8 +149,8 @@ static void ImGui_ImplMaru_SetImeData(ImGuiContext*, ImGuiViewport* viewport, Im
         const float line_h = (data->InputLineHeight > 1.0f) ? data->InputLineHeight : 1.0f;
 
         attrs.text_input_type = MARU_TEXT_INPUT_TYPE_TEXT;
-        attrs.text_input_rect.dip_origin.x = (MARU_Scalar)local_x;
-        attrs.text_input_rect.dip_origin.y = (MARU_Scalar)local_y;
+        attrs.text_input_rect.dip_position.x = (MARU_Scalar)local_x;
+        attrs.text_input_rect.dip_position.y = (MARU_Scalar)local_y;
         attrs.text_input_rect.dip_size.x = (MARU_Scalar)1.0;
         attrs.text_input_rect.dip_size.y = (MARU_Scalar)line_h;
         maru_updateWindow(
@@ -291,7 +291,7 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
     ImGuiIO& io = ImGui::GetIO();
     if (type == MARU_EVENT_MOUSE_MOVED) {
         io.AddMousePosEvent((float)event->mouse_motion.dip_position.x, (float)event->mouse_motion.dip_position.y);
-    } else if (type == MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_MOUSE_BUTTON_CHANGED) {
         int mouse_button = -1;
         if (event->mouse_button.button_id == 0) mouse_button = 0;
         if (event->mouse_button.button_id == 1) mouse_button = 1;
@@ -300,7 +300,7 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
             io.AddMouseButtonEvent(mouse_button, event->mouse_button.state == MARU_BUTTON_STATE_PRESSED);
     } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
         io.AddMouseWheelEvent((float)event->mouse_scroll.dip_delta.x, (float)event->mouse_scroll.dip_delta.y);
-    } else if (type == MARU_EVENT_KEY_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_KEY_CHANGED) {
         ImGuiKey key = ImGui_ImplMaru_KeyToImGuiKey(event->key.raw_key);
         if (key != ImGuiKey_None) {
             io.AddKeyEvent(key, event->key.state == MARU_BUTTON_STATE_PRESSED);
@@ -309,14 +309,14 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
             io.AddKeyEvent(ImGuiMod_Alt, (event->key.modifiers & MARU_MODIFIER_ALT) != 0);
             io.AddKeyEvent(ImGuiMod_Super, (event->key.modifiers & MARU_MODIFIER_META) != 0);
         }
-    } else if (type == MARU_EVENT_TEXT_EDIT_COMMIT) {
-        if (event->text_edit_commit.committed_utf8 &&
-            event->text_edit_commit.committed_length > 0) {
-            const std::string committed(event->text_edit_commit.committed_utf8,
-                                        event->text_edit_commit.committed_length);
+    } else if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) {
+        if (event->text_edit_committed.committed_utf8 &&
+            event->text_edit_committed.committed_length > 0) {
+            const std::string committed(event->text_edit_committed.committed_utf8,
+                                        event->text_edit_committed.committed_length);
             io.AddInputCharactersUTF8(committed.c_str());
         }
-    } else if (type == MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED) {
+    } else if (type == MARU_EVENT_WINDOW_PRESENTATION_CHANGED) {
         if ((event->presentation.changed_fields & MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED) != 0u) {
             io.AddFocusEvent(event->presentation.focused);
         }

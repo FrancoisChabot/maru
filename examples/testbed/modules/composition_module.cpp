@@ -12,32 +12,32 @@ void CompositionModule::update(MARU_Context* ctx, MARU_Window* window) {
 void CompositionModule::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event) {
     (void)window;
     
-    if (type == MARU_EVENT_TEXT_EDIT_START) {
-        current_session_.id = event.text_edit_start.session_id;
+    if (type == MARU_EVENT_TEXT_EDIT_STARTED) {
+        current_session_.id = event.text_edit_started.session_id;
         current_session_.active = true;
         current_session_.preedit = "";
-    } else if (type == MARU_EVENT_TEXT_EDIT_UPDATE) {
-        if (current_session_.active && current_session_.id == event.text_edit_update.session_id) {
-            current_session_.preedit = event.text_edit_update.preedit_utf8 ? event.text_edit_update.preedit_utf8 : "";
-            current_session_.caret = event.text_edit_update.caret.start_byte;
-            current_session_.sel_start = event.text_edit_update.selection.start_byte;
-            current_session_.sel_len = event.text_edit_update.selection.length_byte;
+    } else if (type == MARU_EVENT_TEXT_EDIT_UPDATED) {
+        if (current_session_.active && current_session_.id == event.text_edit_updated.session_id) {
+            current_session_.preedit = event.text_edit_updated.preedit_utf8 ? event.text_edit_updated.preedit_utf8 : "";
+            current_session_.caret = event.text_edit_updated.caret.start_byte;
+            current_session_.sel_start = event.text_edit_updated.selection.start_byte;
+            current_session_.sel_len = event.text_edit_updated.selection.length_byte;
         }
-    } else if (type == MARU_EVENT_TEXT_EDIT_COMMIT) {
-        if (event.text_edit_commit.committed_length > 0 &&
-            event.text_edit_commit.committed_utf8) {
+    } else if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) {
+        if (event.text_edit_committed.committed_length > 0 &&
+            event.text_edit_committed.committed_utf8) {
             commit_history_.push_back(std::string(
-                event.text_edit_commit.committed_utf8,
-                event.text_edit_commit.committed_length));
+                event.text_edit_committed.committed_utf8,
+                event.text_edit_committed.committed_length));
             if (commit_history_.size() > 20) commit_history_.erase(commit_history_.begin());
         }
         
         // When a commit happens, the preedit is typically cleared by the next update or implicitly
-        if (current_session_.active && current_session_.id == event.text_edit_commit.session_id) {
+        if (current_session_.active && current_session_.id == event.text_edit_committed.session_id) {
              current_session_.preedit = "";
         }
-    } else if (type == MARU_EVENT_TEXT_EDIT_END) {
-        if (current_session_.active && current_session_.id == event.text_edit_end.session_id) {
+    } else if (type == MARU_EVENT_TEXT_EDIT_ENDED) {
+        if (current_session_.active && current_session_.id == event.text_edit_ended.session_id) {
             current_session_.active = false;
         }
     }

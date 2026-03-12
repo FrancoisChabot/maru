@@ -86,7 +86,7 @@ int main() {
       [&](maru::KeyboardEvent e) {
         std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";
       },
-      [&](maru::ControllerButtonStateChangedEvent e) {
+      [&](maru::ControllerButtonChangedEvent e) {
         std::cout << "Controller Button: (" << e->button_id << ", " << e->state << ")\n";
       },
       [&](maru::WindowReadyEvent e) {

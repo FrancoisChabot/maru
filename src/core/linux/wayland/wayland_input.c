@@ -452,7 +452,7 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
     evt.mouse_button.button_id = channel;
     evt.mouse_button.state = btn_state;
     evt.mouse_button.modifiers = _maru_wayland_get_modifiers(ctx);
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_STATE_CHANGED,
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_MOUSE_BUTTON_CHANGED,
                          (MARU_Window *)window, &evt);
 }
 
@@ -739,7 +739,7 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
             }
         }
         
-        _maru_wayland_dispatch_presentation_state(
+        _maru_wayland_dispatch_presentation_changed(
             window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
     }
 }
@@ -755,7 +755,7 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
         // Clear keyboard state on focus loss
         memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
 
-        _maru_wayland_dispatch_presentation_state(
+        _maru_wayland_dispatch_presentation_changed(
             window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
         ctx->linux_common.xkb.focused_window = NULL;
     }
@@ -798,7 +798,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
         evt.key.state = maru_state;
         evt.key.modifiers = _maru_wayland_get_modifiers(ctx);
 
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_STATE_CHANGED, (MARU_Window *)window, &evt);
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_CHANGED, (MARU_Window *)window, &evt);
     }
 
     if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
@@ -814,9 +814,9 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
         int n = maru_xkb_state_key_get_utf8(ctx, ctx->linux_common.xkb.state, keycode, buf, sizeof(buf));
         if (n > 0) {
             MARU_Event text_evt = {0};
-            text_evt.text_edit_commit.committed_utf8 = buf;
-            text_evt.text_edit_commit.committed_length = (uint32_t)n;
-            _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)window, &text_evt);
+            text_evt.text_edit_committed.committed_utf8 = buf;
+            text_evt.text_edit_committed.committed_length = (uint32_t)n;
+            _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)window, &text_evt);
 
             if (ctx->repeat.rate > 0 && ctx->repeat.delay >= 0) {
                 const uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
@@ -886,8 +886,8 @@ static void _text_input_handle_enter(void *data, struct zwp_text_input_v3 *text_
     _maru_wayland_clear_text_input_pending(window);
     
     MARU_Event evt = {0};
-    evt.text_edit_start.session_id = window->text_input_session_id;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_START, (MARU_Window *)window, &evt);
+    evt.text_edit_started.session_id = window->text_input_session_id;
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_STARTED, (MARU_Window *)window, &evt);
 }
 
 static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_input, struct wl_surface *surface) {
@@ -899,9 +899,9 @@ static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_
     _maru_wayland_clear_text_input_pending(window);
 
     MARU_Event evt = {0};
-    evt.text_edit_end.session_id = window->text_input_session_id;
-    evt.text_edit_end.canceled = false;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_END, (MARU_Window *)window, &evt);
+    evt.text_edit_ended.session_id = window->text_input_session_id;
+    evt.text_edit_ended.canceled = false;
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)window, &evt);
 }
 
 static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_v3 *text_input,
@@ -950,14 +950,14 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
         if (safe_end < safe_begin) safe_end = safe_begin;
         if (safe_end > preedit_length) safe_end = preedit_length;
 
-        evt.text_edit_update.session_id = window->text_input_session_id;
-        evt.text_edit_update.preedit_utf8 = preedit;
-        evt.text_edit_update.preedit_length = preedit_length;
-        evt.text_edit_update.caret.start_byte = safe_begin;
-        evt.text_edit_update.caret.length_byte = 0;
-        evt.text_edit_update.selection.start_byte = safe_begin;
-        evt.text_edit_update.selection.length_byte = safe_end - safe_begin;
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_UPDATE, (MARU_Window *)window, &evt);
+        evt.text_edit_updated.session_id = window->text_input_session_id;
+        evt.text_edit_updated.preedit_utf8 = preedit;
+        evt.text_edit_updated.preedit_length = preedit_length;
+        evt.text_edit_updated.caret.start_byte = safe_begin;
+        evt.text_edit_updated.caret.length_byte = 0;
+        evt.text_edit_updated.selection.start_byte = safe_begin;
+        evt.text_edit_updated.selection.length_byte = safe_end - safe_begin;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_UPDATED, (MARU_Window *)window, &evt);
 
         window->ime_preedit_active = (preedit_length != 0);
     }
@@ -965,16 +965,16 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
     if (window->text_input_pending.has_commit || window->text_input_pending.has_delete) {
         MARU_Event evt = {0};
         const char *commit = window->text_input_pending.commit_utf8 ? window->text_input_pending.commit_utf8 : "";
-        evt.text_edit_commit.session_id = window->text_input_session_id;
-        evt.text_edit_commit.delete_before_bytes = window->text_input_pending.has_delete
+        evt.text_edit_committed.session_id = window->text_input_session_id;
+        evt.text_edit_committed.delete_before_bytes = window->text_input_pending.has_delete
                                                        ? window->text_input_pending.delete_before_bytes
                                                        : 0u;
-        evt.text_edit_commit.delete_after_bytes = window->text_input_pending.has_delete
+        evt.text_edit_committed.delete_after_bytes = window->text_input_pending.has_delete
                                                       ? window->text_input_pending.delete_after_bytes
                                                       : 0u;
-        evt.text_edit_commit.committed_utf8 = commit;
-        evt.text_edit_commit.committed_length = (uint32_t)strlen(commit);
-        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMIT, (MARU_Window *)window, &evt);
+        evt.text_edit_committed.committed_utf8 = commit;
+        evt.text_edit_committed.committed_length = (uint32_t)strlen(commit);
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)window, &evt);
 
         window->ime_preedit_active = false;
     }
