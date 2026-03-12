@@ -117,7 +117,7 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     [self.window->ns_layer setContentsScale:geo.scale];
 
     MARU_Event event = {0};
-    event.resized.geometry = geo;
+    event.window_resized.geometry = geo;
 
     _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
 }
@@ -134,23 +134,23 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     [self.window->ns_layer setContentsScale:geo.scale];
 
     MARU_Event event = {0};
-    event.resized.geometry = geo;
+    event.window_resized.geometry = geo;
     _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
 }
 
 - (void)windowDidBecomeKey:(NSNotification *)notification {
     self.window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
     MARU_Event event = {0};
-    event.state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_FOCUSED;
-    event.state_changed.focused = true;
+    event.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_FOCUSED;
+    event.window_state_changed.focused = true;
     _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)self.window, &event);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification {
     self.window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
     MARU_Event event = {0};
-    event.state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_FOCUSED;
-    event.state_changed.focused = false;
+    event.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_FOCUSED;
+    event.window_state_changed.focused = false;
     _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)self.window, &event);
 }
 

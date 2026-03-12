@@ -77,10 +77,14 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
            << " Focused: " << (e.window_state_changed.focused ? "YES" : "NO")
            << " Fullscreen: " << (e.window_state_changed.fullscreen ? "YES" : "NO")
            << " Resizable: " << (e.window_state_changed.resizable ? "YES" : "NO")
-           << " Decorated: " << (e.window_state_changed.decorated ? "YES" : "NO")
            << " Icon: " << (e.window_state_changed.icon ? "SET" : "NONE")
-           << " IconChanged: "
-           << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) ? "YES" : "NO");
+           << " (Changed: V:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_VISIBLE) ? "Y" : "N")
+           << " Mi:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_MINIMIZED) ? "Y" : "N")
+           << " Ma:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_MAXIMIZED) ? "Y" : "N")
+           << " F:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_FOCUSED) ? "Y" : "N")
+           << " FS:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_FULLSCREEN) ? "Y" : "N")
+           << " R:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_RESIZABLE) ? "Y" : "N")
+           << " I:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) ? "Y" : "N") << ")";
     } else if (type == MARU_EVENT_MONITOR_CHANGED) {
         ss << "Monitor: " << (void*)e.monitor_changed.monitor << " Connected: " << (e.monitor_changed.connected ? "YES" : "NO");
     } else if (type == MARU_EVENT_DROP_ENTERED) {

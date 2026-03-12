@@ -11,11 +11,10 @@ static void _maru_windows_dispatch_state_event(MARU_Window_Windows *win, uint32_
     evt.window_state_changed.changed_fields = changed_fields;
     evt.window_state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
     evt.window_state_changed.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-    evt.window_state_changed.maximized = (win->base.pub.window_state & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-    evt.window_state_changed.focused = (win->base.pub.window_state & MARU_WINDOW_STATE_FOCUSED) != 0;
+    evt.window_state_changed.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
+    evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
     evt.window_state_changed.fullscreen = (win->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
     evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
-    evt.window_state_changed.decorated = (win->base.pub.flags & MARU_WINDOW_STATE_DECORATED) != 0;
     evt.window_state_changed.icon = win->base.pub.icon;
     _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &evt);
 

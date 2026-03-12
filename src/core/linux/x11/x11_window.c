@@ -195,8 +195,6 @@ static void _maru_x11_dispatch_state_changed(MARU_Window_X11 *window,
       (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
   evt.window_state_changed.resizable =
       (window->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
-  evt.window_state_changed.decorated =
-      (window->base.pub.flags & MARU_WINDOW_STATE_DECORATED) != 0;
   evt.window_state_changed.icon = window->base.pub.icon;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED,
                        (MARU_Window *)window, &evt);

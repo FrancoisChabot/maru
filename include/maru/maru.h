@@ -610,6 +610,8 @@ typedef uint32_t MARU_WindowStateChangedFlags;
 #define MARU_WINDOW_STATE_CHANGED_MAXIMIZED MARU_BIT(2)
 #define MARU_WINDOW_STATE_CHANGED_FOCUSED MARU_BIT(3)
 #define MARU_WINDOW_STATE_CHANGED_ICON MARU_BIT(4)
+#define MARU_WINDOW_STATE_CHANGED_FULLSCREEN MARU_BIT(5)
+#define MARU_WINDOW_STATE_CHANGED_RESIZABLE MARU_BIT(6)
 
 typedef struct MARU_WindowStateChangedEvent {
   MARU_WindowStateChangedFlags changed_fields;
@@ -619,7 +621,6 @@ typedef struct MARU_WindowStateChangedEvent {
   bool focused;
   bool fullscreen;
   bool resizable;
-  bool decorated;
   /* Borrowed same-context handle to the window's current icon, if any. */
   const MARU_Image* icon;
 } MARU_WindowStateChangedEvent;
