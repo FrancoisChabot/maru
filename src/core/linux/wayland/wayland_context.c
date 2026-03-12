@@ -805,7 +805,7 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
                                   const MARU_ContextAttributes *attributes) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   if (maru_isContextLost(context)) {
-    return MARU_ERROR_CONTEXT_LOST;
+    return MARU_CONTEXT_LOST;
   }
 
   _maru_update_context_base(&ctx->base, field_mask, attributes);
@@ -825,7 +825,7 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
 MARU_Status maru_wakeContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   if (maru_isContextLost(context)) {
-    return MARU_ERROR_CONTEXT_LOST;
+    return MARU_CONTEXT_LOST;
   }
   if (ctx->wake_fd < 0) {
     return MARU_FAILURE;
@@ -939,14 +939,14 @@ static bool _maru_wayland_pump_prepare_wayland_read(MARU_Context_WL *ctx,
     if (maru_wl_display_dispatch_pending(ctx, ctx->wl.display) < 0) {
       _maru_wayland_mark_lost(
           ctx, "wl_display_dispatch_pending() failure during prepare_read");
-      *status = MARU_ERROR_CONTEXT_LOST;
+      *status = MARU_CONTEXT_LOST;
       return false;
     }
   }
 
   if (maru_wl_display_flush(ctx, ctx->wl.display) < 0 && errno != EAGAIN) {
     _maru_wayland_mark_lost(ctx, "wl_display_flush() failure");
-    *status = MARU_ERROR_CONTEXT_LOST;
+    *status = MARU_CONTEXT_LOST;
     return false;
   }
 
@@ -1003,7 +1003,7 @@ static bool _maru_wayland_pump_poll_and_consume(MARU_Context_WL *ctx,
       maru_wl_display_cancel_read(ctx, ctx->wl.display);
       _maru_wayland_mark_lost(
           ctx, "Wayland display fd reported POLLERR/POLLHUP/POLLNVAL");
-      *status = MARU_ERROR_CONTEXT_LOST;
+      *status = MARU_CONTEXT_LOST;
       return false;
     }
 
@@ -1011,7 +1011,7 @@ static bool _maru_wayland_pump_poll_and_consume(MARU_Context_WL *ctx,
     if (display_ready) {
       if (maru_wl_display_read_events(ctx, ctx->wl.display) < 0) {
         _maru_wayland_mark_lost(ctx, "wl_display_read_events() failure");
-        *status = MARU_ERROR_CONTEXT_LOST;
+        *status = MARU_CONTEXT_LOST;
         return false;
       }
     } else {
@@ -1027,7 +1027,7 @@ static bool _maru_wayland_pump_poll_and_consume(MARU_Context_WL *ctx,
       if ((libdecor_revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
         _maru_wayland_mark_lost(ctx,
                                 "libdecor fd reported POLLERR/POLLHUP/POLLNVAL");
-        *status = MARU_ERROR_CONTEXT_LOST;
+        *status = MARU_CONTEXT_LOST;
         return false;
       }
     }
@@ -1045,7 +1045,7 @@ static bool _maru_wayland_pump_poll_and_consume(MARU_Context_WL *ctx,
     maru_wl_display_cancel_read(ctx, ctx->wl.display);
     if (errno != EINTR) {
       _maru_wayland_mark_lost(ctx, "poll() failure on Wayland display fd");
-      *status = MARU_ERROR_CONTEXT_LOST;
+      *status = MARU_CONTEXT_LOST;
       return false;
     }
   }
@@ -1058,14 +1058,14 @@ static bool _maru_wayland_pump_dispatch_and_validate(
   // Dispatch protocol events after poll/read, then verify terminal connection errors.
   if (maru_wl_display_dispatch_pending(ctx, ctx->wl.display) < 0) {
     _maru_wayland_mark_lost(ctx, "wl_display_dispatch_pending() failure");
-    *status = MARU_ERROR_CONTEXT_LOST;
+    *status = MARU_CONTEXT_LOST;
     return false;
   }
 
   if (step->have_libdecor_fd) {
     if (maru_libdecor_dispatch(ctx, ctx->libdecor_context, 0) < 0) {
       _maru_wayland_mark_lost(ctx, "libdecor_dispatch() failure");
-      *status = MARU_ERROR_CONTEXT_LOST;
+      *status = MARU_CONTEXT_LOST;
       return false;
     }
   }
@@ -1074,7 +1074,7 @@ static bool _maru_wayland_pump_dispatch_and_validate(
     _maru_wayland_mark_lost(
         ctx,
         "Wayland display reported a fatal protocol/connection error");
-    *status = MARU_ERROR_CONTEXT_LOST;
+    *status = MARU_CONTEXT_LOST;
     return false;
   }
 
@@ -1153,7 +1153,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
                                MARU_EventCallback callback, void *userdata) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   if (maru_isContextLost(context)) {
-    return MARU_ERROR_CONTEXT_LOST;
+    return MARU_CONTEXT_LOST;
   }
   const uint64_t pump_start_ns = _maru_wayland_get_monotonic_time_ns();
   MARU_Status status = MARU_SUCCESS;
@@ -1186,7 +1186,7 @@ pump_exit:;
     _maru_wayland_record_pump_duration_ns(ctx, pump_end_ns - pump_start_ns);
   }
   if (status == MARU_SUCCESS && maru_isContextLost(context)) {
-    status = MARU_ERROR_CONTEXT_LOST;
+    status = MARU_CONTEXT_LOST;
   }
   ctx->base.pump_ctx = NULL;
   return status;

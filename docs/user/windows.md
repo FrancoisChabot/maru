@@ -80,8 +80,8 @@ maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_FULLSCREEN, 
 ```c
 MARU_WindowGeometry geometry = maru_getWindowGeometry(window);
 
-printf("Pixel size: %fx%f\n", geometry.px_size.x, geometry.px_size.y);
-printf("Scale factor: %f\n", geometry.scale_factor);
+printf("Pixel size: %dx%d\n", geometry.px_size.x, geometry.px_size.y);
+printf("Scale factor: %f\n", geometry.scale);
 ```
 
 ### Lifecycle & the "Ready" State

@@ -1,6 +1,6 @@
 # Event Queues
 
-`MARU_Queue` provides an optional, double-buffered snapshot mechanism to consume events. While `maru_pumpEvents()` uses direct callback dispatch, `MARU_Queue` lets you decouple event gathering from event processing and scan events safely from multiple threads.
+`MARU_Queue` provides an optional, double-buffered snapshot mechanism to consume events. While `maru_pumpEvents()` uses direct callback dispatch, `MARU_Queue` lets you decouple event gathering from event processing and scan events from other threads once you have published a stable snapshot.
 
 ## The Push-Commit-Scan Lifecycle
 
@@ -11,22 +11,22 @@ A `MARU_Queue` operates in three distinct phases:
 3.  **SCAN**: Iterate over the stable snapshot.
 
 ### 1. Pushing
-On the **primary thread**, call `maru_pumpEvents(...)` and forward queue-safe events into `maru_queue_push(...)` from your callback.
+On the queue creator thread, call `maru_pumpEvents(...)` and forward queue-safe events into `maru_pushQueue(...)` from your callback.
 
 Use `MARU_QUEUE_SAFE_EVENT_MASK` when pumping, or `maru_isQueueSafeEventId(type)` if you prefer to filter inside your callback.
 This mask intentionally excludes data-exchange events, monitor/controller handle events, and pointer-bearing text-edit payloads.
 
 ### 2. Committing
-When ready to process pushed events, call `maru_queue_commit()` on the **primary thread**. This freezes the active buffer as the stable snapshot, then clears the active buffer for the next frame.
+When ready to process pushed events, call `maru_commitQueue()` on the queue creator thread. This freezes the active buffer as the stable snapshot, then clears the active buffer for the next frame.
 
 ### 3. Scanning
-Call `maru_queue_scan()` to iterate the stable snapshot. Scanning can happen from **any thread**.
+Call `maru_scanQueue()` to iterate the stable snapshot. Scanning can happen from another thread as long as it does not race with `maru_commitQueue()`.
 
 ## Threading and Synchronization
 
-- `maru_queue_push()` and `maru_queue_commit()` **MUST** be called from the primary thread.
-- `maru_queue_scan()` is safe for concurrent readers and can be called from multiple threads simultaneously.
-- **Synchronization**: `MARU_Queue` is NOT a lock-free SPMC queue. You **must** ensure that `maru_queue_scan()` does not run concurrently with `maru_queue_commit()`. A read-write lock (where `commit` is the writer and `scan` is the reader) or a thread barrier is required if scanning from worker threads.
+- `maru_pushQueue()` and `maru_commitQueue()` **MUST** be called from the queue creator thread.
+- `maru_scanQueue()` may run on another thread, but you must externally synchronize it against `maru_commitQueue()`.
+- `MARU_Queue` is not a lock-free SPMC queue. A read-write lock, barrier, or equivalent handoff is required if worker threads scan snapshots.
 
 ## C API Example
 
@@ -36,7 +36,7 @@ Call `maru_queue_scan()` to iterate the stable snapshot. Scanning can happen fro
 static void queue_capture_cb(MARU_EventId type, MARU_Window *window,
                              const MARU_Event *evt, void *userdata) {
     MARU_Queue *queue = (MARU_Queue *)userdata;
-    maru_queue_push(queue, type, window, evt);
+    maru_pushQueue(queue, type, window, evt);
 }
 
 static void on_queue_event(MARU_EventId type, MARU_Window *window,
@@ -51,7 +51,9 @@ static void on_queue_event(MARU_EventId type, MARU_Window *window,
 int main() {
     MARU_Context *ctx = ...;
     MARU_Queue *queue = NULL;
-    maru_queue_create(ctx, 1024, &queue);
+    MARU_QueueCreateInfo queue_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
+    queue_info.capacity = 1024;
+    maru_createQueue(&queue_info, &queue);
 
     bool running = true;
     while (running) {
@@ -60,13 +62,13 @@ int main() {
                         queue);
 
         // 2. Publish snapshot
-        maru_queue_commit(queue);
+        maru_commitQueue(queue);
 
         // 3. Consume snapshot
-        maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &running);
+        maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &running);
     }
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
 }
 ```
 
@@ -84,7 +86,7 @@ Coalescence is opt-in per event type via a bitmask.
 
 ### Example (C)
 ```c
-maru_queue_set_coalesce_mask(queue,
+maru_setQueueCoalesceMask(queue,
     MARU_MASK_MOUSE_MOVED | MARU_MASK_MOUSE_SCROLLED);
 ```
 
@@ -106,10 +108,10 @@ You can inspect cumulative queue metrics (including peak occupancy and per-event
 
 ```c
 MARU_QueueMetrics metrics = {0};
-maru_queue_get_metrics(queue, &metrics);
+maru_getQueueMetrics(queue, &metrics);
 
 // Reset between sampling windows if desired
-maru_queue_reset_metrics(queue);
+maru_resetQueueMetrics(queue);
 ```
 
 ```cpp
@@ -131,7 +133,7 @@ static void queue_capture_cb(MARU_EventId type, MARU_Window *window,
 int main() {
     auto ctx_result = maru::Context::create();
     maru::Context &ctx = *ctx_result;
-    auto queue_result = maru::Queue::create(ctx, 1024);
+    auto queue_result = maru::Queue::create(1024);
     maru::Queue &queue = *queue_result;
 
     bool running = true;
@@ -141,8 +143,8 @@ int main() {
         queue.commit();
 
         queue.scan(maru::overloads{
-            [&](maru::WindowCloseEvent) { running = false; },
-            [&](maru::MouseMotionEvent e) { /* ... */ }
+            [&](maru::CloseRequestedEvent) { running = false; },
+            [&](maru::MouseMovedEvent e) { (void)e; }
         });
     }
 }
@@ -152,4 +154,4 @@ int main() {
 
 - **Memory Layout**: `MARU_Queue` uses a bulk-allocated, 64-byte aligned memory layout to minimize cache misses and false sharing during scanning.
 - **Lock-Free**: The active/stable buffer swap in `commit()` is O(1) and designed for high throughput on the main thread.
-- **Filtering**: Use `MARU_QUEUE_SAFE_EVENT_MASK` at pump-time and a scan mask in `maru_queue_scan()` to minimize queue traffic and scan work.
+- **Filtering**: Use `MARU_QUEUE_SAFE_EVENT_MASK` at pump-time and a scan mask in `maru_scanQueue()` to minimize queue traffic and scan work.

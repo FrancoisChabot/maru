@@ -1116,7 +1116,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
     return _maru_wl_flush_or_mark_lost(
                ctx, "wl_display_flush() failed while starting drag and drop")
                ? MARU_SUCCESS
-               : MARU_ERROR_CONTEXT_LOST;
+               : MARU_CONTEXT_LOST;
   }
 
   if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
@@ -1141,7 +1141,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
       return _maru_wl_flush_or_mark_lost(
                  ctx, "wl_display_flush() failed while clearing clipboard")
                  ? MARU_SUCCESS
-                 : MARU_ERROR_CONTEXT_LOST;
+                 : MARU_CONTEXT_LOST;
     }
 
     struct wl_data_source *source = maru_wl_data_device_manager_create_data_source(
@@ -1172,7 +1172,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
     return _maru_wl_flush_or_mark_lost(
                ctx, "wl_display_flush() failed while setting clipboard")
                ? MARU_SUCCESS
-               : MARU_ERROR_CONTEXT_LOST;
+               : MARU_CONTEXT_LOST;
   }
 
   if (!ctx->primary_selection.device || ctx->primary_selection.serial == 0) {
@@ -1195,7 +1195,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
     return _maru_wl_flush_or_mark_lost(
                ctx, "wl_display_flush() failed while clearing primary selection")
                ? MARU_SUCCESS
-               : MARU_ERROR_CONTEXT_LOST;
+               : MARU_CONTEXT_LOST;
   }
 
   struct zwp_primary_selection_source_v1 *primary_source =
@@ -1228,7 +1228,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
   return _maru_wl_flush_or_mark_lost(
              ctx, "wl_display_flush() failed while setting primary selection")
              ? MARU_SUCCESS
-             : MARU_ERROR_CONTEXT_LOST;
+             : MARU_CONTEXT_LOST;
 }
 
 MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
@@ -1287,7 +1287,7 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
                                        ? "wl_display_flush() failed while requesting clipboard data"
                                        : "wl_display_flush() failed while requesting primary selection data")) {
     close(pipefd[0]);
-    return MARU_ERROR_CONTEXT_LOST;
+    return MARU_CONTEXT_LOST;
   }
 
   return maru_linux_dataexchange_queueTransfer(

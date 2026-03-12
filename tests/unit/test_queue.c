@@ -368,6 +368,7 @@ UTEST(QueueTest, RejectsPartialAllocator) {
     EXPECT_TRUE(queue == NULL);
     EXPECT_EQ(stats.alloc_count, (uint32_t)0);
     EXPECT_EQ(stats.free_count, (uint32_t)0);
+#endif
 }
 
 UTEST(QueueTest, SurvivesUnrelatedContextDestruction) {

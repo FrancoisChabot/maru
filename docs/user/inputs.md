@@ -13,7 +13,8 @@ The `MARU_EVENT_KEY_CHANGED` event is fired when a physical key is pressed or re
 ```c
 void handle_event(MARU_EventId type, MARU_Window *window, const MARU_Event *event, void *userdata) {
     if (type == MARU_EVENT_KEY_CHANGED) {
-        if (event->key.raw_key == MARU_KEY_ESCAPE && event->key.state == MARU_BUTTON_STATE_PRESSED) {
+        if (event->key_changed.raw_key == MARU_KEY_ESCAPE &&
+            event->key_changed.state == MARU_BUTTON_STATE_PRESSED) {
             // Quit app
         }
     }
@@ -52,7 +53,8 @@ if (maru_isKeyboardKeyPressed(context, MARU_KEY_W)) {
 ### Mouse Polling
 
 ```c
-if (maru_isMouseButtonPressed(window, MARU_MOUSE_DEFAULT_LEFT)) {
+int32_t left_button = maru_getContextMouseDefaultButtonChannel(context, MARU_MOUSE_DEFAULT_LEFT);
+if (left_button >= 0 && maru_isContextMouseButtonPressed(context, (uint32_t)left_button)) {
     // Shooting!
 }
 ```
@@ -81,7 +83,20 @@ Maru supports hardware-accelerated custom cursors. You create a `MARU_Cursor` fr
 
 ```c
 // Assume 'my_image' is a MARU_Image*
-MARU_Cursor *cursor = maru_createCursor(context, my_image, 0, 0); // (0,0) is the hotspot
+MARU_CursorFrame frame = {
+    .image = my_image,
+    .px_hot_spot = {0, 0},
+    .delay_ms = 0,
+};
+MARU_CursorCreateInfo cursor_info = {
+    .source = MARU_CURSOR_SOURCE_CUSTOM,
+    .system_shape = MARU_CURSOR_SHAPE_DEFAULT,
+    .frames = &frame,
+    .frame_count = 1,
+    .userdata = NULL,
+};
+MARU_Cursor *cursor = NULL;
+maru_createCursor(context, &cursor_info, &cursor);
 
 MARU_WindowAttributes attrs = {0};
 attrs.cursor = cursor;

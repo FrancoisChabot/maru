@@ -10,7 +10,7 @@
 static inline MARU_Status
 _maru_status_if_context_lost(const MARU_Context *context) {
   if (maru_isContextLost(context)) {
-    return MARU_ERROR_CONTEXT_LOST;
+    return MARU_CONTEXT_LOST;
   }
   return MARU_SUCCESS;
 }

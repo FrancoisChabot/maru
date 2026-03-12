@@ -10,7 +10,7 @@ When `MARU_VALIDATE_API_CALLS` is enabled, invalid API usage is treated as a con
 
 You should follow these rules in all builds, not just validation builds. Validation builds only make contract violations obvious.
 
-Context loss is not an API violation. Once a context is lost, most `MARU_Status` APIs will short-circuit with `MARU_ERROR_CONTEXT_LOST` until the context is destroyed.
+Context loss is not an API violation. Once a context is lost, most `MARU_Status` APIs will short-circuit with `MARU_CONTEXT_LOST` until the context is destroyed.
 
 ## Threading Contracts
 

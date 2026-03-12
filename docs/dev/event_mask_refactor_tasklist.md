@@ -6,7 +6,7 @@ Remove persistent context/window event masks and move filtering to pump-time API
 ## Progress
 - [x] 1. Add/confirm target API surface
   - `maru_pumpEvents(context, timeout_ms, mask, callback, userdata)`
-  - `maru_queue_push(queue, type, window, event)`
+  - `maru_pushQueue(queue, type, window, event)`
 - [x] 2. Remove context-level persistent event mask
   - Remove `MARU_CONTEXT_ATTR_EVENT_MASK`
   - Remove `MARU_ContextAttributes::event_mask`

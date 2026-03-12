@@ -94,18 +94,18 @@ typedef uint64_t MARU_EventMask;
  * information.
  *
  * Invoking an api method on a lost context is **NOT** an API violation, but is guaranteed to be a
- * no-op. You do not need to explictly check for MARU_ERROR_CONTEXT_LOST everywhere. Doing it on the
+ * no-op. You do not need to explictly check for MARU_CONTEXT_LOST everywhere. Doing it on the
  * result of maru_pumpEvents() is often plenty.
  *
  * Handles owned by a lost context should be treated as inert. Status-returning
  * APIs on those child handles will typically short-circuit with
- * MARU_ERROR_CONTEXT_LOST; destroy the context rather than trying to tear down
+ * MARU_CONTEXT_LOST; destroy the context rather than trying to tear down
  * attached child objects one by one.
  */
 typedef enum MARU_Status {
   MARU_SUCCESS = 0,             // The operation succeeded
   MARU_FAILURE = 1,             // The operation failed, but the backend is still healthy
-  MARU_ERROR_CONTEXT_LOST = 2,  // The context is dead and now inert. You will have to rebuild it
+  MARU_CONTEXT_LOST = 2,  // The context is dead and now inert. You will have to rebuild it
 } MARU_Status;
 
 /*
@@ -1454,7 +1454,15 @@ typedef struct MARU_QueueCreateInfo {
  *
  * A MARU_Queue is not attached to a MARU_Context and is never destroyed
  * implicitly by maru_destroyContext(). Queue APIs return queue-local status
- * only; they never report MARU_ERROR_CONTEXT_LOST.
+ * only; they never report MARU_CONTEXT_LOST.
+
+ * Threading contract:
+ * - maru_pushQueue() and maru_commitQueue() are single-owner APIs. Call them
+ *   from the queue's creator thread only.
+ * - maru_scanQueue() may be called from any thread, but the caller must ensure
+ *   it does not race with maru_commitQueue().
+ * - Only queue-safe event ids may be pushed. Use MARU_QUEUE_SAFE_EVENT_MASK or
+ *   maru_isQueueSafeEventId() when capturing events from maru_pumpEvents().
  */
 MARU_API MARU_Status maru_createQueue(const MARU_QueueCreateInfo* create_info,
                                       MARU_Queue** out_queue);

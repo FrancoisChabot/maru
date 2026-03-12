@@ -10,7 +10,7 @@ The recommended way to use Maru is via CMake's `FetchContent`.
 include(FetchContent)
 FetchContent_Declare(
     maru
-    GIT_REPOSITORY https://github.com/francois/maru.git
+    GIT_REPOSITORY https://github.com/birdsafe/maru.git
     GIT_TAG main # Or a specific version tag
 )
 FetchContent_MakeAvailable(maru)

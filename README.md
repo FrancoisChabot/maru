@@ -208,11 +208,11 @@ Certain OS operations (e.g., scanning for gamepads on Linux via udev or handling
 
 - `MARU_SUCCESS`: Everything is fine
 - `MARU_FAILURE`: The operation failed, but the context is still sane
-- `MARU_ERROR_CONTEXT_LOST`: Something critical went wrong in the context, and that context must be destroyed and rebuilt.
+- `MARU_CONTEXT_LOST`: Something critical went wrong in the context, and that context must be destroyed and rebuilt.
 
 Explanations as to *why* something failed are delivered via the `MARU_DiagnosticCallback`.
 
-Note that making an API call on a lost context is **NOT** an API violation. Instead, it will early-out and return `MARU_ERROR_CONTEXT_LOST`. You don't have to check for it at every turn. Usually, handling it from `maru_pumpEvents()` 
+Note that making an API call on a lost context is **NOT** an API violation. Instead, it will early-out and return `MARU_CONTEXT_LOST`. You don't have to check for it at every turn. Usually, handling it from `maru_pumpEvents()` 
 and relying on early-outs for the rest is fine.
 
 ---
