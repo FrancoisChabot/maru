@@ -185,7 +185,7 @@ def generate(output_c, output_h, input_dir):
         h.write(f"#ifndef {guard}\n")
         h.write(f"#define {guard}\n\n")
         h.write("#include <stdint.h>\n\n")
-        h.write('#include "maru/c/cursors.h"\n\n')
+        h.write('#include "maru/maru.h"\n\n')
         h.write("typedef struct MARU_CursorBitmapAsset {\n")
         h.write("  uint32_t width;\n")
         h.write("  uint32_t height;\n")

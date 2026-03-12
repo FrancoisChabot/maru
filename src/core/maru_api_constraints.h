@@ -75,8 +75,7 @@ _maru_status_if_request_context_lost(MARU_DataRequest *request) {
       abort();                                                                 \
   } while (0)
 
-#include "maru/c/instrumentation.h"
-#include "maru/c/vulkan.h"
+#include "maru/maru.h"
 #ifdef MARU_ENABLE_DIAGNOSTICS
 extern void _maru_reportDiagnostic(const MARU_Context *ctx,
                                    MARU_Diagnostic diag, const char *msg);

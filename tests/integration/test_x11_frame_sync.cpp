@@ -4,8 +4,7 @@
 #include <iostream>
 
 #include "integration/support/tracking_allocator.h"
-#include "maru/c/core.h"
-#include "maru/c/native/x11.h"
+#include "maru/native/x11.h"
 #include "maru/maru.h"
 
 namespace {

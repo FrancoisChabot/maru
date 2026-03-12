@@ -15,7 +15,7 @@
 
 #include "maru/maru.h"
 #include "maru_internal.h"
-#include "maru/c/details/maru_config.h"
+#include "maru/details/maru_config.h"
 #include <stddef.h>
 
 #ifdef MARU_GATHER_METRICS

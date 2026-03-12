@@ -1,14 +1,7 @@
 #ifndef MARU_BACKEND_H_INCLUDED
 #define MARU_BACKEND_H_INCLUDED
 
-#include "maru/c/contexts.h"
-#include "maru/c/windows.h"
-#include "maru/c/images.h"
-#include "maru/c/events.h"
-#include "maru/c/controllers.h"
-#include "maru/c/data_exchange.h"
-#include "maru/c/vulkan.h"
-#include "maru/c/monitors.h"
+#include "maru/maru.h"
 
 #ifdef MARU_INDIRECT_BACKEND
 typedef struct MARU_Backend {

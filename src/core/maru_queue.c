@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "maru/maru_queue.h"
+#include "maru/maru.h"
 #include "maru_api_constraints.h"
 #include "maru_internal.h"
 #include "maru_mem_internal.h"

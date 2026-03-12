@@ -3,7 +3,7 @@
 
 #include "event_module.h"
 #include "imgui.h"
-#include "maru/c/events.h"
+#include "maru/maru.h"
 #include <cstdio>
 
 void EventModule::update(MARU_Context* ctx, MARU_Window* window) {

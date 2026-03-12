@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "maru/c/data_exchange.h"
+#include "maru/maru.h"
 #include "maru_internal.h"
 
 typedef struct MARU_LinuxDataTransfer {

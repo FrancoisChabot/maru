@@ -66,8 +66,8 @@ endif()
 
 # Installation
 install(DIRECTORY include/maru DESTINATION include)
-install(FILES "${PROJECT_BINARY_DIR}/include/maru/c/details/maru_config.h"
-        DESTINATION include/maru/c/details)
+install(FILES "${PROJECT_BINARY_DIR}/include/maru/details/maru_config.h"
+        DESTINATION include/maru/details)
 
 install(TARGETS ${MARU_INSTALL_TARGETS}
         EXPORT MaruTargets

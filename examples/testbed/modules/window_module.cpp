@@ -3,8 +3,7 @@
 
 #include "window_module.h"
 #include "imgui.h"
-#include "maru/c/vulkan.h"
-#include "maru/c/images.h"
+#include "maru/maru.h"
 #include <algorithm>
 #include <cstdlib>
 #include <cstdio>

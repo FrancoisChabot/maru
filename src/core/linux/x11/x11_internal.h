@@ -12,7 +12,7 @@
 #include "dlib/xrandr.h"
 #include "dlib/xfixes.h"
 #include "dlib/xss.h"
-#include "maru/c/vulkan.h"
+#include "maru/maru.h"
 
 typedef struct MARU_Cursor_X11 MARU_Cursor_X11;
 typedef struct MARU_Window_X11 MARU_Window_X11;

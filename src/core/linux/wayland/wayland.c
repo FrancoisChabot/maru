@@ -2,9 +2,8 @@
 #include "../linux_native_stubs.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
-#include "maru/c/cursors.h"
-#include "maru/c/monitors.h"
-#include "maru/c/native/linux.h"
+#include "maru/maru.h"
+#include "maru/native/linux.h"
 #include <stdlib.h>
 #include <string.h>
 

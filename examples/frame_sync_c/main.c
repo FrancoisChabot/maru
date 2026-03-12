@@ -1,7 +1,4 @@
 #include "../shared_renderer/vulkan_renderer.h"
-#include "maru/c/events.h"
-#include "maru/c/vulkan.h"
-#include "maru/c/windows.h"
 #include "maru/maru.h"
 #include <stdio.h>
 #include <stdlib.h>

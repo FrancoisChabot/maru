@@ -4,7 +4,7 @@
 #ifndef MARU_NATIVE_WIN32_H_INCLUDED
 #define MARU_NATIVE_WIN32_H_INCLUDED
 
-#include "maru/c/core.h"
+#include "maru/maru.h"
 
 #ifdef _WIN32
 #include <windows.h>

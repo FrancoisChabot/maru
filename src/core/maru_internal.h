@@ -10,13 +10,8 @@
 #include "maru_backend.h"
 #include "core_event_queue.h"
 
-// The API headers define MARU_ContextExposed and MARU_WindowExposed
-#include "maru/c/details/contexts.h"
-#include "maru/c/details/windows.h"
-#include "maru/c/details/cursors.h"
-#include "maru/c/details/images.h"
-#include "maru/c/details/monitors.h"
-#include "maru/c/details/controllers.h"
+// The API headers define the exposed handle prefixes used internally.
+#include "maru/details/maru_details.h"
 
 /**
  * @file maru_internal.h

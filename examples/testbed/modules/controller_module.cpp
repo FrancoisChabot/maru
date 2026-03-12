@@ -3,7 +3,7 @@
 
 #include "controller_module.h"
 #include "imgui.h"
-#include "maru/c/controllers.h"
+#include "maru/maru.h"
 #include <algorithm>
 #include <cfloat>
 #include <cstdio>

@@ -4,7 +4,7 @@
 #ifndef MARU_NATIVE_WAYLAND_H_INCLUDED
 #define MARU_NATIVE_WAYLAND_H_INCLUDED
 
-#include "maru/c/core.h"
+#include "maru/maru.h"
 
 #ifdef __cplusplus
 extern "C" {

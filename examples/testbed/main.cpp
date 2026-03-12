@@ -10,9 +10,6 @@
 #include <vector>
 
 #include "app.h"
-#include "maru/c/core.h"
-#include "maru/c/tuning.h"
-#include "maru/c/vulkan.h"
 #include "maru/maru.h"
 #include <vulkan/vulkan.h>
 

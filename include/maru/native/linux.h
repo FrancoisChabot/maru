@@ -4,9 +4,9 @@
 #ifndef MARU_NATIVE_LINUX_H_INCLUDED
 #define MARU_NATIVE_LINUX_H_INCLUDED
 
-#include "maru/c/core.h"
-#include "maru/c/native/wayland.h"
-#include "maru/c/native/x11.h"
+#include "maru/maru.h"
+#include "maru/native/wayland.h"
+#include "maru/native/x11.h"
 
 #ifdef __cplusplus
 extern "C" {

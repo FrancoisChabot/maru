@@ -4,8 +4,7 @@
 #ifndef MARU_CORE_EVENT_QUEUE_H_INCLUDED
 #define MARU_CORE_EVENT_QUEUE_H_INCLUDED
 
-#include "maru/c/core.h"
-#include "maru/c/events.h"
+#include "maru/maru.h"
 
 #ifdef __cplusplus
 #include <atomic>
@@ -38,8 +37,6 @@ typedef struct MARU_EventQueue {
 } MARU_EventQueue;
 
 typedef struct MARU_Context_Base MARU_Context_Base;
-
-#include "maru/c/metrics.h"
 
 // Returns true on success
 bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t capacity_power_of_2);

@@ -1,6 +1,5 @@
 #include "utest.h"
 #include "maru/maru.h"
-#include "maru/c/instrumentation.h"
 #include "maru_test_utils.h"
 
 struct CustomAllocatorState {

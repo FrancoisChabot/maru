@@ -6,9 +6,8 @@
 #include "maru_backend.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
-#include "maru/c/cursors.h"
-#include "maru/c/monitors.h"
-#include "maru/c/native/linux.h"
+#include "maru/maru.h"
+#include "maru/native/linux.h"
 #include "linux_internal.h"
 #include "x11_internal.h"
 #include <stdatomic.h>

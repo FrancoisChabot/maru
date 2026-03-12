@@ -1,17 +1,16 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
-#include "maru/c/details/contexts.h"
-#include "maru/c/details/controllers.h"
+#include "maru/details/maru_details.h"
 
 #include <stdatomic.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "maru/c/native/cocoa.h"
-#include "maru/c/native/linux.h"
-#include "maru/c/native/wayland.h"
-#include "maru/c/native/win32.h"
-#include "maru/c/native/x11.h"
+#include "maru/native/cocoa.h"
+#include "maru/native/linux.h"
+#include "maru/native/wayland.h"
+#include "maru/native/win32.h"
+#include "maru/native/x11.h"
 
 #ifdef MARU_INDIRECT_BACKEND
 MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {

@@ -1,5 +1,5 @@
 #define _GNU_SOURCE
-#include "maru/c/instrumentation.h"
+#include "maru/maru.h"
 #include <dlfcn.h>
 #include "dlib/loader.h"
 #include "maru_api_constraints.h"

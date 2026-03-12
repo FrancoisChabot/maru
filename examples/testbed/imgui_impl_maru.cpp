@@ -2,13 +2,8 @@
 // Copyright (c) 2026 François Chabot
 
 #include "imgui_impl_maru.h"
-#include "maru/c/cursors.h"
-
-#include <maru/c/events.h>
-#include <maru/c/inputs.h>
-#include <maru/c/details/windows.h>
-#include <maru/c/windows.h>
 #include <maru/maru.h>
+#include <maru/details/maru_details.h>
 #include <chrono>
 #include <string>
 

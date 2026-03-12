@@ -4,7 +4,7 @@
 #ifndef MARU_NATIVE_X11_H_INCLUDED
 #define MARU_NATIVE_X11_H_INCLUDED
 
-#include "maru/c/core.h"
+#include "maru/maru.h"
 #include <stdbool.h>
 
 #ifdef __cplusplus

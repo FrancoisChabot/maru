@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "maru/c/native/wayland.h"
-#include "maru/c/vulkan.h"
+#include "maru/native/wayland.h"
+#include "maru/maru.h"
 #include "maru_internal.h"
 #include "maru_api_constraints.h"
 

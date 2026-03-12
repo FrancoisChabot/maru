@@ -2,7 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "windows_internal.h"
-#include "maru/c/vulkan.h"
+#include "maru/maru.h"
 
 // Vulkan types and function pointers needed for the implementation.
 // We define them locally to avoid a hard dependency on Vulkan headers.

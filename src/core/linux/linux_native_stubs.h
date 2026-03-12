@@ -5,8 +5,8 @@
 #define MARU_LINUX_NATIVE_STUBS_H_INCLUDED
 
 #include "maru_internal.h"
-#include "maru/c/native/wayland.h"
-#include "maru/c/native/x11.h"
+#include "maru/native/wayland.h"
+#include "maru/native/x11.h"
 
 static inline MARU_X11ContextHandle _maru_stub_x11_context_handle_unsupported(
     void) {

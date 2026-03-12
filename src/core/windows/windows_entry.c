@@ -3,7 +3,7 @@
 
 #include "windows_internal.h"
 #include "maru_api_constraints.h"
-#include "maru/c/native/win32.h"
+#include "maru/native/win32.h"
 #include <stdatomic.h>
 #include <string.h>
 

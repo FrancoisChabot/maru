@@ -3,7 +3,7 @@
 
 #include "macos_internal.h"
 #include "maru_api_constraints.h"
-#include "maru/c/native/cocoa.h"
+#include "maru/native/cocoa.h"
 #include <stdatomic.h>
 #include <string.h>
 

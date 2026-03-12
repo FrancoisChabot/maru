@@ -5,7 +5,7 @@
 #define MARU_COCOA_INTERNAL_H_INCLUDED
 
 #include "maru_internal.h"
-#include "maru/c/vulkan.h"
+#include "maru/maru.h"
 
 #include <objc/objc.h>
 #include <objc/message.h>

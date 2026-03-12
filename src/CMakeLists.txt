@@ -13,10 +13,10 @@ else()
 endif()
 
 # 2. Configure the public config header
-file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/include/maru/c/details")
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/include/maru/details")
 configure_file(
     "core/maru_config.h.in"
-    "${PROJECT_BINARY_DIR}/include/maru/c/details/maru_config.h"
+    "${PROJECT_BINARY_DIR}/include/maru/details/maru_config.h"
 )
 
 # 3. Base interfaces
