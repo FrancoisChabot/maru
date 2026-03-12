@@ -10,7 +10,7 @@
 
 typedef struct MARU_QueueBuffer {
     MARU_EventId *types;
-    MARU_Window **windows;
+    MARU_WindowId *window_ids;
     MARU_Event *events;
     void *bulk_ptr;
 } MARU_QueueBuffer;
@@ -43,7 +43,7 @@ typedef struct MARU_Queue {
 
 typedef struct MARU_QueueCompactMapEntry {
     MARU_EventId type;
-    MARU_Window *window;
+    MARU_WindowId window_id;
     uint32_t survivor_idx;
     bool used;
 } MARU_QueueCompactMapEntry;
@@ -172,23 +172,24 @@ static void _maru_queue_fold_older_into_survivor(MARU_EventId type, const MARU_E
     }
 }
 
-static uint32_t _maru_queue_compact_hash(MARU_EventId type, MARU_Window *window) {
-    uintptr_t window_bits = (uintptr_t)window;
-    uint32_t h = (uint32_t)window_bits;
-#if UINTPTR_MAX > 0xFFFFFFFFu
-    h ^= (uint32_t)(window_bits >> 32u);
-#endif
+static uint32_t _maru_queue_compact_hash(MARU_EventId type,
+                                         MARU_WindowId window_id) {
+    uint64_t id_bits = (uint64_t)window_id;
+    uint32_t h = (uint32_t)id_bits;
+    h ^= (uint32_t)(id_bits >> 32u);
     h ^= (uint32_t)type * 0x9E3779B1u;
     return h;
 }
 
 static bool _maru_queue_compact_map_find(const MARU_QueueCompactMapEntry *map, uint32_t cap,
-                                         MARU_EventId type, MARU_Window *window, uint32_t *out_survivor_idx) {
-    uint32_t idx = _maru_queue_compact_hash(type, window) & (cap - 1u);
+                                         MARU_EventId type,
+                                         MARU_WindowId window_id,
+                                         uint32_t *out_survivor_idx) {
+    uint32_t idx = _maru_queue_compact_hash(type, window_id) & (cap - 1u);
     for (uint32_t probe = 0; probe < cap; ++probe) {
         const MARU_QueueCompactMapEntry *entry = &map[idx];
         if (!entry->used) return false;
-        if (entry->type == type && entry->window == window) {
+        if (entry->type == type && entry->window_id == window_id) {
             *out_survivor_idx = entry->survivor_idx;
             return true;
         }
@@ -198,18 +199,20 @@ static bool _maru_queue_compact_map_find(const MARU_QueueCompactMapEntry *map, u
 }
 
 static bool _maru_queue_compact_map_insert(MARU_QueueCompactMapEntry *map, uint32_t cap,
-                                           MARU_EventId type, MARU_Window *window, uint32_t survivor_idx) {
-    uint32_t idx = _maru_queue_compact_hash(type, window) & (cap - 1u);
+                                           MARU_EventId type,
+                                           MARU_WindowId window_id,
+                                           uint32_t survivor_idx) {
+    uint32_t idx = _maru_queue_compact_hash(type, window_id) & (cap - 1u);
     for (uint32_t probe = 0; probe < cap; ++probe) {
         MARU_QueueCompactMapEntry *entry = &map[idx];
         if (!entry->used) {
             entry->used = true;
             entry->type = type;
-            entry->window = window;
+            entry->window_id = window_id;
             entry->survivor_idx = survivor_idx;
             return true;
         }
-        if (entry->type == type && entry->window == window) {
+        if (entry->type == type && entry->window_id == window_id) {
             entry->survivor_idx = survivor_idx;
             return true;
         }
@@ -231,13 +234,16 @@ static uint32_t _maru_queue_compact_active(MARU_Queue *q) {
         MARU_EventId type = q->active.types[i];
         if (!maru_eventMaskHas(q->coalesce_mask, type)) continue;
 
-        MARU_Window *window = q->active.windows[i];
+        MARU_WindowId window_id = q->active.window_ids[i];
         uint32_t survivor_idx = UINT32_MAX;
-        bool found = _maru_queue_compact_map_find(map, MARU_QUEUE_COMPACT_MAP_CAPACITY, type, window, &survivor_idx);
+        bool found = _maru_queue_compact_map_find(
+            map, MARU_QUEUE_COMPACT_MAP_CAPACITY, type, window_id,
+            &survivor_idx);
 
         if (!found && map_saturated) {
             for (uint32_t j = i + 1u; j < count; ++j) {
-                if (q->active.types[j] == type && q->active.windows[j] == window) {
+                if (q->active.types[j] == type &&
+                    q->active.window_ids[j] == window_id) {
                     survivor_idx = j;
                     found = true;
                     break;
@@ -252,7 +258,8 @@ static uint32_t _maru_queue_compact_active(MARU_Queue *q) {
             continue;
         }
 
-        if (!_maru_queue_compact_map_insert(map, MARU_QUEUE_COMPACT_MAP_CAPACITY, type, window, i)) {
+        if (!_maru_queue_compact_map_insert(
+                map, MARU_QUEUE_COMPACT_MAP_CAPACITY, type, window_id, i)) {
             map_saturated = true;
         }
     }
@@ -264,7 +271,7 @@ static uint32_t _maru_queue_compact_active(MARU_Queue *q) {
         if (q->active.types[read_idx] == MARU_QUEUE_INVALID_EVENT_ID) continue;
         if (write_idx != read_idx) {
             q->active.types[write_idx] = q->active.types[read_idx];
-            q->active.windows[write_idx] = q->active.windows[read_idx];
+            q->active.window_ids[write_idx] = q->active.window_ids[read_idx];
             q->active.events[write_idx] = q->active.events[read_idx];
         }
         write_idx++;
@@ -275,11 +282,12 @@ static uint32_t _maru_queue_compact_active(MARU_Queue *q) {
 }
 
 static bool _maru_queue_push_internal(MARU_Queue *q, MARU_EventId type,
-                                      MARU_Window *window,
+                                      MARU_WindowId window_id,
                                       const MARU_Event *evt) {
     if (q->active_count > 0 && maru_eventMaskHas(q->coalesce_mask, type)) {
         uint32_t last_idx = q->active_count - 1u;
-        if (q->active.types[last_idx] == type && q->active.windows[last_idx] == window) {
+        if (q->active.types[last_idx] == type &&
+            q->active.window_ids[last_idx] == window_id) {
             _maru_queue_coalesce_latest(type, &q->active.events[last_idx], evt);
             return true;
         }
@@ -293,7 +301,7 @@ static bool _maru_queue_push_internal(MARU_Queue *q, MARU_EventId type,
     if (q->active_count < q->capacity) {
         uint32_t idx = q->active_count++;
         q->active.types[idx] = type;
-        q->active.windows[idx] = window;
+        q->active.window_ids[idx] = window_id;
         q->active.events[idx] = *evt;
         _maru_queue_update_peak_active_count(q);
         return true;
@@ -305,12 +313,13 @@ static bool _maru_queue_push_internal(MARU_Queue *q, MARU_EventId type,
 
 static bool _maru_queue_buffer_init(const MARU_Allocator *allocator, MARU_QueueBuffer *buf, uint32_t capacity) {
     size_t types_size = sizeof(MARU_EventId) * capacity;
-    size_t windows_size = sizeof(MARU_Window *) * capacity;
+    size_t window_ids_size = sizeof(MARU_WindowId) * capacity;
     size_t events_size = sizeof(MARU_Event) * capacity;
 
     size_t types_offset = 0;
-    size_t windows_offset = (types_offset + types_size + 63) & ~(size_t)63;
-    size_t events_offset = (windows_offset + windows_size + 63) & ~(size_t)63;
+    size_t window_ids_offset = (types_offset + types_size + 63) & ~(size_t)63;
+    size_t events_offset =
+        (window_ids_offset + window_ids_size + 63) & ~(size_t)63;
     size_t total_size = events_offset + events_size;
 
     void *ptr = _maru_queue_alloc_aligned64(allocator, total_size);
@@ -319,7 +328,8 @@ static bool _maru_queue_buffer_init(const MARU_Allocator *allocator, MARU_QueueB
     }
 
     buf->types = (MARU_EventId *)(void *)((uint8_t *)ptr + types_offset);
-    buf->windows = (MARU_Window **)(void *)((uint8_t *)ptr + windows_offset);
+    buf->window_ids =
+        (MARU_WindowId *)(void *)((uint8_t *)ptr + window_ids_offset);
     buf->events = (MARU_Event *)(void *)((uint8_t *)ptr + events_offset);
     buf->bulk_ptr = ptr;
     
@@ -390,13 +400,13 @@ void maru_destroyQueue(MARU_Queue *queue) {
 }
 
 MARU_Status maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
-                            MARU_Window *window, const MARU_Event *event) {
-    MARU_API_VALIDATE(pushQueue, queue, type, window, event);
+                           MARU_WindowId window_id, const MARU_Event *event) {
+    MARU_API_VALIDATE(pushQueue, queue, type, window_id, event);
 
     if (!queue || !event) return MARU_FAILURE;
     _maru_queue_validate_thread(queue);
 
-    return _maru_queue_push_internal(queue, type, window, event)
+    return _maru_queue_push_internal(queue, type, window_id, event)
                ? MARU_SUCCESS
                : MARU_FAILURE;
 }
@@ -419,7 +429,10 @@ MARU_Status maru_commitQueue(MARU_Queue *queue) {
     return MARU_SUCCESS;
 }
 
-void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback callback, void *userdata) {
+void maru_scanQueue(MARU_Queue *queue,
+                    MARU_EventMask mask,
+                    MARU_QueueEventCallback callback,
+                    void *userdata) {
     MARU_API_VALIDATE(scanQueue, queue, mask, callback, userdata);
     if (!queue || !callback) return;
     _maru_queue_validate_thread(queue);
@@ -429,7 +442,8 @@ void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback c
 
     for (uint32_t i = 0; i < count; ++i) {
         if (maru_eventMaskHas(mask, stable.types[i])) {
-            callback(stable.types[i], stable.windows[i], &stable.events[i], userdata);
+            callback(stable.types[i], stable.window_ids[i], &stable.events[i],
+                     userdata);
         }
     }
 }

@@ -332,19 +332,25 @@ static inline void _maru_validate_destroyQueue(MARU_Queue *queue) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
 }
 
-static inline void _maru_validate_pushQueue(MARU_Queue *queue, MARU_EventId type, MARU_Window *window, const MARU_Event *event) {
+static inline void _maru_validate_pushQueue(MARU_Queue *queue,
+                                            MARU_EventId type,
+                                            MARU_WindowId window_id,
+                                            const MARU_Event *event) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
   MARU_CONSTRAINT_CHECK(event != NULL);
   MARU_CONSTRAINT_CHECK(maru_isKnownEventId(type));
   MARU_CONSTRAINT_CHECK(maru_isQueueSafeEventId(type));
-  (void)window;
+  (void)window_id;
 }
 
 static inline void _maru_validate_commitQueue(MARU_Queue *queue) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
 }
 
-static inline void _maru_validate_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback callback, void *userdata) {
+static inline void _maru_validate_scanQueue(MARU_Queue *queue,
+                                            MARU_EventMask mask,
+                                            MARU_QueueEventCallback callback,
+                                            void *userdata) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
   if (mask != 0) {
     MARU_CONSTRAINT_CHECK(callback != NULL);

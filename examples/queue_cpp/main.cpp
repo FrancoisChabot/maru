@@ -85,7 +85,9 @@ int main() {
   auto enqueue_callback = [](MARU_EventId type, MARU_Window* event_window,
                              const MARU_Event* evt, void* userdata) {
     QueuePumpBridge* bridge = static_cast<QueuePumpBridge*>(userdata);
-    bridge->queue->push(type, event_window, *evt);
+    const MARU_WindowId window_id =
+        event_window ? maru_getWindowId(event_window) : MARU_WINDOW_ID_NONE;
+    bridge->queue->push(type, window_id, *evt);
   };
 
   while (keep_running) {
@@ -105,22 +107,28 @@ int main() {
     // 3. Scan the stable buffer with a visitor. 
     // Implicit event mask will be generated from the lambdas.
     queue.scan(maru::overloads{
-      [&](maru::CloseRequestedEvent) { 
+      [&](maru::QueuedCloseRequestedEvent e) {
+        (void)e;
         keep_running = false; 
       },
-      [&](maru::WindowResizedEvent e) {
-        renderer.on_resized(e->geometry);
+      [&](maru::QueuedWindowResizedEvent e) {
+        if (e.window_id == window.getId()) {
+          renderer.on_resized(e->geometry);
+        }
       },
-      [&](maru::MouseMovedEvent e) {
+      [&](maru::QueuedMouseMovedEvent e) {
         std::cout << "mouse movement: (" << e->dip_position.x << ", (" << e->dip_position.y << ")\n";
       },
-      [&](maru::KeyChangedEvent e) {
+      [&](maru::QueuedKeyChangedEvent e) {
         std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";
       },
-      [&](maru::WindowReadyEvent e) {
-        auto surface_result = window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr);
-        if (surface_result) {
-          renderer.setup_surface(*surface_result, e->geometry);
+      [&](maru::QueuedWindowReadyEvent e) {
+        if (e.window_id == window.getId()) {
+          auto surface_result =
+              window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr);
+          if (surface_result) {
+            renderer.setup_surface(*surface_result, e->geometry);
+          }
         }
       }
     });

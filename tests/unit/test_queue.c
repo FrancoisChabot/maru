@@ -6,20 +6,24 @@
 struct QueueTestState {
     int event_count;
     MARU_EventId last_type;
+    MARU_WindowId last_window_id;
 };
 
-static void on_queue_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
+static void on_queue_event(MARU_EventId type,
+                           MARU_WindowId window_id,
+                           const MARU_Event *evt,
+                           void *userdata) {
     struct QueueTestState *state = (struct QueueTestState *)userdata;
-    (void)window;
     (void)evt;
     state->event_count++;
     state->last_type = type;
+    state->last_window_id = window_id;
 }
 
 static MARU_Status push_user_event(MARU_Queue *queue, MARU_EventId type) {
     MARU_Event evt = {0};
     evt.user = (MARU_UserDefinedEvent){0};
-    return maru_pushQueue(queue, type, NULL, &evt);
+    return maru_pushQueue(queue, type, MARU_WINDOW_ID_NONE, &evt);
 }
 
 static MARU_Status create_queue(uint32_t capacity, MARU_Queue **out_queue) {
@@ -44,7 +48,7 @@ UTEST(QueueTest, PushCommitScan) {
     // 1. Push an event
     MARU_Event evt = {0};
     evt.user.userdata = (void *)0x123;
-    maru_pushQueue(queue, MARU_EVENT_USER_0, NULL, &evt);
+    maru_pushQueue(queue, MARU_EVENT_USER_0, MARU_WINDOW_ID_NONE, &evt);
 
     struct QueueTestState state = {0};
 
@@ -59,6 +63,7 @@ UTEST(QueueTest, PushCommitScan) {
     maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
     EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_0);
+    EXPECT_EQ(state.last_window_id, (MARU_WindowId)MARU_WINDOW_ID_NONE);
 
     maru_destroyQueue(queue);
 }
@@ -131,9 +136,12 @@ struct CoalesceResult {
     MARU_Vec2Dip dip_delta;
 };
 
-static void on_coalesce_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
+static void on_coalesce_event(MARU_EventId type,
+                              MARU_WindowId window_id,
+                              const MARU_Event *evt,
+                              void *userdata) {
     struct CoalesceResult *r = (struct CoalesceResult *)userdata;
-    (void)window;
+    (void)window_id;
     r->count++;
     if (type == MARU_EVENT_MOUSE_MOVED) {
         r->dip_pos = evt->mouse_moved.dip_position;
@@ -154,7 +162,7 @@ UTEST(QueueTest, Coalescence) {
     ev1.mouse_moved.dip_position.y = (MARU_Scalar)10.0;
     ev1.mouse_moved.dip_delta.x = (MARU_Scalar)5.0;
     ev1.mouse_moved.dip_delta.y = (MARU_Scalar)5.0;
-    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev1);
+    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, MARU_WINDOW_ID_NONE, &ev1);
 
     // ev2
     MARU_Event ev2 = {0};
@@ -162,7 +170,7 @@ UTEST(QueueTest, Coalescence) {
     ev2.mouse_moved.dip_position.y = (MARU_Scalar)20.0;
     ev2.mouse_moved.dip_delta.x = (MARU_Scalar)10.0;
     ev2.mouse_moved.dip_delta.y = (MARU_Scalar)10.0;
-    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev2);
+    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, MARU_WINDOW_ID_NONE, &ev2);
 
     maru_commitQueue(queue);
 
@@ -184,8 +192,11 @@ struct QueueTrace {
     MARU_Event events[16];
 };
 
-static void on_trace_event(MARU_EventId type, MARU_Window *window, const MARU_Event *evt, void *userdata) {
-    (void)window;
+static void on_trace_event(MARU_EventId type,
+                           MARU_WindowId window_id,
+                           const MARU_Event *evt,
+                           void *userdata) {
+    (void)window_id;
     struct QueueTrace *trace = (struct QueueTrace *)userdata;
     if (trace->count >= 16u) return;
     uint32_t idx = trace->count++;
@@ -206,7 +217,7 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     move_a.mouse_moved.dip_delta.y = (MARU_Scalar)2.0;
     move_a.mouse_moved.raw_dip_delta.x = (MARU_Scalar)3.0;
     move_a.mouse_moved.raw_dip_delta.y = (MARU_Scalar)4.0;
-    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_a);
+    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, MARU_WINDOW_ID_NONE, &move_a);
 
     push_user_event(queue, MARU_EVENT_USER_0);
 
@@ -217,7 +228,7 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     move_b.mouse_moved.dip_delta.y = (MARU_Scalar)7.0;
     move_b.mouse_moved.raw_dip_delta.x = (MARU_Scalar)11.0;
     move_b.mouse_moved.raw_dip_delta.y = (MARU_Scalar)13.0;
-    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_b);
+    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, MARU_WINDOW_ID_NONE, &move_b);
 
     push_user_event(queue, MARU_EVENT_USER_1);
     maru_commitQueue(queue);

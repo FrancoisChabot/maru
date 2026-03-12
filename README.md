@@ -303,6 +303,15 @@ Not natively. Supporting legacy APIs would break several of the hard timing and 
 
 The default mode will try Wayland first and fall back to X11. Every system dependency is manually loaded and checked at runtime, so your app will work as long as either is available. You can also force a specific backend at runtime or link against `maru::x11` or `maru::wayland` to strip the selection machinery entirely.
 
+### 5. Performance Budgets
+
+#### Cache-Resident Events
+**"Why is MARU_Event capped at 64 bytes?"**
+
+Every `MARU_Event` is strictly limited to 64 bytes to ensure it fits within a single standard CPU cache line. This guarantees O(1) cache-line residency for every event dispatched, minimizing cache pressure and latency during high-frequency input (like raw mouse motion). 
+
+If a future event type requires more data than the 64-byte budget allows, Maru's strategy is to provide that data via borrowed, callback-scoped pointers rather than bloating the central union.
+
 #### Consistent Attribute Updates
 **"What's up with the attribute substructs?"**
 

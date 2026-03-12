@@ -29,12 +29,13 @@ public:
     MARU_Queue* get() const { return m_handle; }
     operator MARU_Queue*() const { return m_handle; }
 
-    MARU_Status push(MARU_EventId type, MARU_Window* window,
+    MARU_Status push(MARU_EventId type, MARU_WindowId window_id,
                      const MARU_Event& event);
 
     MARU_Status commit();
 
-    void scan(MARU_EventMask mask, MARU_EventCallback callback, void* userdata = nullptr);
+    void scan(MARU_EventMask mask, MARU_QueueEventCallback callback,
+              void* userdata = nullptr);
 
     void setCoalesceMask(MARU_EventMask mask) {
         maru_setQueueCoalesceMask(m_handle, mask);

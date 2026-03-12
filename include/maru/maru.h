@@ -472,6 +472,12 @@ typedef enum MARU_EventId {
   MARU_EVENT_DRAG_FINISHED = 23,
   MARU_EVENT_CONTROLLER_CHANGED = 24,
   MARU_EVENT_CONTROLLER_BUTTON_CHANGED = 25,
+
+  /* Ids 26 to 47 are reserved for future additions.
+  * 
+  * User event bits are permanently pinned to the end of the range.
+  */
+
   MARU_EVENT_USER_0 = 48,
   MARU_EVENT_USER_1 = 49,
   MARU_EVENT_USER_2 = 50,
@@ -804,6 +810,11 @@ typedef struct MARU_Event {
   };
 } MARU_Event;
 
+/* 
+ * MARU_Event is strictly capped at 64 bytes to ensure it fits within a single
+ * standard CPU cache line. This minimizes cache pressure and latency during
+ * high-frequency event dispatch (e.g., raw mouse motion).
+ */
 MARU_STATIC_ASSERT(sizeof(MARU_Event) <= 64, "MARU_Event ABI Violation: Size exceeds 64 bytes.");
 MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 64,
                    "MARU_UserDefinedEvent ABI Violation: Expected 64 bytes.");
@@ -823,6 +834,16 @@ typedef void (*MARU_EventCallback)(MARU_EventId type,
                                    MARU_Window* window,
                                    const MARU_Event* evt,
                                    void* userdata);
+
+/*
+ * Queue replay callback. Unlike live pump callbacks, queue scans report the
+ * stable target window id that was captured at enqueue time rather than a live
+ * MARU_Window* handle.
+ */
+typedef void (*MARU_QueueEventCallback)(MARU_EventId type,
+                                        MARU_WindowId window_id,
+                                        const MARU_Event* evt,
+                                        void* userdata);
 
 /*
  * Pumps backend events and synchronously dispatches matching callbacks inline.
@@ -1382,7 +1403,7 @@ typedef struct VkSurfaceKHR_T* VkSurfaceKHR;
 
 typedef MARU_VulkanVoidFunction (*MARU_VkGetInstanceProcAddrFunc)(VkInstance instance,
                                                                   const char* pName);
-
+                               
 typedef struct MARU_VkExtensionList {
   const char* const* names;
   uint32_t count;
@@ -1407,6 +1428,9 @@ MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
  * Events excluded from this mask carry transient handles or borrowed pointer
  * payloads that are not safe to snapshot into a MARU_Queue without additional
  * copying or retention by the application.
+ *
+ * Queue-safe replay preserves only the event payload and the target
+ * MARU_WindowId. It does not preserve a live MARU_Window* handle.
  */
 #define MARU_QUEUE_SAFE_EVENT_MASK                                                              \
   (MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_RESIZED) |   \
@@ -1453,7 +1477,7 @@ typedef struct MARU_QueueCreateInfo {
  * A MARU_Queue is not attached to a MARU_Context and is never destroyed
  * implicitly by maru_destroyContext(). Queue APIs return queue-local status
  * only; they never report MARU_CONTEXT_LOST.
-
+ *
  * Threading contract:
  * - maru_pushQueue() and maru_commitQueue() are single-owner APIs. Call them
  *   from the queue's creator thread only.
@@ -1461,18 +1485,20 @@ typedef struct MARU_QueueCreateInfo {
  *   it does not race with maru_commitQueue().
  * - Only queue-safe event ids may be pushed. Use MARU_QUEUE_SAFE_EVENT_MASK or
  *   maru_isQueueSafeEventId() when capturing events from maru_pumpEvents().
+ * - Window-targeted events are keyed by the stable MARU_WindowId captured at
+ *   enqueue time. Use MARU_WINDOW_ID_NONE for context-scoped events.
  */
 MARU_API MARU_Status maru_createQueue(const MARU_QueueCreateInfo* create_info,
                                       MARU_Queue** out_queue);
 MARU_API void maru_destroyQueue(MARU_Queue* queue);
 MARU_API MARU_Status maru_pushQueue(MARU_Queue* queue,
                                     MARU_EventId type,
-                                    MARU_Window* window,
+                                    MARU_WindowId window_id,
                                     const MARU_Event* event);
 MARU_API MARU_Status maru_commitQueue(MARU_Queue* queue);
 MARU_API void maru_scanQueue(MARU_Queue* queue,
                              MARU_EventMask mask,
-                             MARU_EventCallback callback,
+                             MARU_QueueEventCallback callback,
                              void* userdata);
 MARU_API void maru_setQueueCoalesceMask(MARU_Queue* queue, MARU_EventMask mask);
 MARU_API void maru_getQueueMetrics(const MARU_Queue* queue, MARU_QueueMetrics* out_metrics);

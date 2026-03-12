@@ -412,16 +412,17 @@ inline Queue& Queue::operator=(Queue&& other) noexcept {
     return *this;
 }
 
-inline MARU_Status Queue::push(MARU_EventId type, MARU_Window* window,
+inline MARU_Status Queue::push(MARU_EventId type, MARU_WindowId window_id,
                                const MARU_Event& event) {
-    return maru_pushQueue(m_handle, type, window, &event);
+    return maru_pushQueue(m_handle, type, window_id, &event);
 }
 
 inline MARU_Status Queue::commit() {
     return maru_commitQueue(m_handle);
 }
 
-inline void Queue::scan(MARU_EventMask mask, MARU_EventCallback callback, void* userdata) {
+inline void Queue::scan(MARU_EventMask mask, MARU_QueueEventCallback callback,
+                        void* userdata) {
     maru_scanQueue(m_handle, mask, callback, userdata);
 }
 

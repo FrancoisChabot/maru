@@ -50,6 +50,35 @@ concept PartialEventVisitor =
   std::invocable<std::remove_cvref_t<T>, TextEditCommittedEvent> ||
   std::invocable<std::remove_cvref_t<T>, TextEditEndedEvent>;
 
+template <typename T>
+concept PartialQueueEventVisitor =
+  std::invocable<std::remove_cvref_t<T>, QueuedWindowReadyEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedCloseRequestedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedWindowResizedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedWindowStateChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedKeyChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedMouseMovedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedMouseButtonChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedMouseScrolledEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedIdleEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedMonitorChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedMonitorModeEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDropEnteredEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDropHoveredEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDropExitedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDropDroppedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDataReceivedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDataRequestEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDataConsumedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDragFinishedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedControllerChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedControllerButtonChangedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedWindowFrameEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedTextEditStartedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedTextEditUpdatedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedTextEditCommittedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedTextEditEndedEvent>;
+
 /**
  * A helper class that can be used as event_userdata to dispatch events to visitors.
  */
@@ -60,6 +89,8 @@ class EventDispatcher {
 
   static void callback(MARU_EventId type, MARU_Window *window, const MARU_Event *event,
                        void *userdata);
+  static void queueCallback(MARU_EventId type, MARU_WindowId window_id,
+                            const MARU_Event *event, void *userdata);
 
  private:
   Visitor m_visitor;
@@ -89,7 +120,7 @@ inline MARU_Status Context::pumpEvents(EventDispatcher<Visitor>& dispatcher,
 
 template <typename Visitor>
 inline void Queue::scan(EventDispatcher<Visitor>& dispatcher, MARU_EventMask mask) {
-  scan(mask, dispatcher.callback, &dispatcher);
+  scan(mask, dispatcher.queueCallback, &dispatcher);
 }
 
 template <typename Visitor>
