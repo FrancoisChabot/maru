@@ -77,63 +77,6 @@ void _maru_wayland_window_drop_monitor(MARU_Window_WL *window, MARU_Monitor *mon
   }
 }
 
-static bool _maru_wayland_init_mouse_button_channels(MARU_Window_WL *window) {
-  static const struct {
-    const char *name;
-    uint32_t native_code;
-  } channel_defs[] = {
-      {"left", BTN_LEFT},       {"right", BTN_RIGHT},     {"middle", BTN_MIDDLE},
-      {"side", BTN_SIDE},       {"extra", BTN_EXTRA},     {"forward", BTN_FORWARD},
-      {"back", BTN_BACK},       {"task", BTN_TASK},
-  };
-  const uint32_t channel_count = (uint32_t)(sizeof(channel_defs) / sizeof(channel_defs[0]));
-
-  MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
-  window->base.mouse_button_channels =
-      (MARU_ChannelInfo *)maru_context_alloc(&ctx->base,
-                                                        sizeof(MARU_ChannelInfo) * channel_count);
-  if (!window->base.mouse_button_channels) {
-    return false;
-  }
-
-  window->base.mouse_button_states =
-      (MARU_ButtonState8 *)maru_context_alloc(&ctx->base,
-                                              sizeof(MARU_ButtonState8) * channel_count);
-  if (!window->base.mouse_button_states) {
-    maru_context_free(&ctx->base, window->base.mouse_button_channels);
-    window->base.mouse_button_channels = NULL;
-    return false;
-  }
-
-  memset(window->base.mouse_button_states, 0, sizeof(MARU_ButtonState8) * channel_count);
-  window->base.pub.mouse_button_count = channel_count;
-  window->base.pub.mouse_button_channels = window->base.mouse_button_channels;
-  window->base.pub.mouse_button_state = window->base.mouse_button_states;
-
-  for (uint32_t i = 0; i < channel_count; ++i) {
-    window->base.mouse_button_channels[i].name = channel_defs[i].name;
-    window->base.mouse_button_channels[i].native_code = channel_defs[i].native_code;
-    window->base.mouse_button_channels[i].flags = 0;
-  }
-
-  for (uint32_t i = 0; i < MARU_MOUSE_DEFAULT_COUNT; ++i) {
-    window->base.pub.mouse_default_button_channels[i] = -1;
-  }
-  window->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_LEFT] = 0;
-  window->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_RIGHT] = 1;
-  window->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_MIDDLE] = 2;
-  window->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_BACK] = 6;
-  window->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_FORWARD] = 5;
-
-  window->base.mouse_button_channels[0].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  window->base.mouse_button_channels[1].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  window->base.mouse_button_channels[2].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  window->base.mouse_button_channels[5].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  window->base.mouse_button_channels[6].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-
-  return true;
-}
-
 void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   if (!maru_isWindowReady((MARU_Window *)window)) {
@@ -669,12 +612,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.pub.userdata = create_info->userdata;
   window->base.pub.context = context;
   window->base.pub.metrics = &window->base.metrics;
-  window->base.pub.mouse_button_state = NULL;
-  window->base.pub.mouse_button_channels = NULL;
-  window->base.pub.mouse_button_count = 0;
-  for (uint32_t i = 0; i < MARU_MOUSE_DEFAULT_COUNT; ++i) {
-    window->base.pub.mouse_default_button_channels[i] = -1;
-  }
   window->base.attrs_requested = create_info->attributes;
   window->base.attrs_effective = create_info->attributes;
   window->base.attrs_dirty_mask = MARU_WINDOW_ATTR_ALL;
@@ -742,10 +679,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
       window->base.attrs_requested.surrounding_text = NULL;
       window->base.attrs_effective.surrounding_text = NULL;
     }
-  }
-
-  if (!_maru_wayland_init_mouse_button_channels(window)) {
-    goto cleanup_window;
   }
 
   window->wl.surface = maru_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
@@ -832,8 +765,6 @@ cleanup_surface:
     window->wl.surface = NULL;
   }
 cleanup_window:
-  maru_context_free(&ctx->base, window->base.mouse_button_states);
-  maru_context_free(&ctx->base, window->base.mouse_button_channels);
   maru_context_free(&ctx->base, window->base.title_storage);
   maru_context_free(&ctx->base, window->base.surrounding_text_storage);
   maru_context_free(&ctx->base, window);
@@ -1357,10 +1288,6 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
     window->ext.text_input = NULL;
   }
   _maru_wayland_clear_text_input_pending(window);
-  maru_context_free(&ctx->base, window->base.mouse_button_states);
-  window->base.mouse_button_states = NULL;
-  maru_context_free(&ctx->base, window->base.mouse_button_channels);
-  window->base.mouse_button_channels = NULL;
   if (window->ext.content_type) {
     maru_wp_content_type_v1_destroy(ctx, window->ext.content_type);
     window->ext.content_type = NULL;

@@ -199,9 +199,9 @@ typedef struct MARU_WindowAttributes {
 /** @brief Parameters for maru_createWindow(). */
 typedef struct MARU_WindowCreateInfo {
   MARU_WindowAttributes attributes;
-  const char *app_id;
-  MARU_ContentType content_type;
-  bool decorated;
+  const char *app_id;            ///< Application ID (immutable after creation).
+  MARU_ContentType content_type; ///< Content hint (immutable after creation).
+  bool decorated;                ///< Window frame/title bar (immutable after creation).
   void *userdata;
 } MARU_WindowCreateInfo;
 

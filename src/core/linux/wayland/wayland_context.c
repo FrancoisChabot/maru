@@ -305,11 +305,6 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
           window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
     }
 
-    if (window->base.mouse_button_states && window->base.pub.mouse_button_count > 0) {
-      memset(window->base.mouse_button_states, 0,
-             sizeof(MARU_ButtonState8) * window->base.pub.mouse_button_count);
-    }
-
     if (window->ext.text_input) {
       maru_zwp_text_input_v3_destroy(ctx, window->ext.text_input);
       window->ext.text_input = NULL;

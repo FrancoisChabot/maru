@@ -431,19 +431,13 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
         return;
     }
 
-    if (channel >= window->base.pub.mouse_button_count ||
-        !window->base.mouse_button_states) {
-        _maru_wayland_report_unknown_mouse_button_once(ctx, button);
-        return;
-    }
-
     MARU_ButtonState btn_state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ?
                                  MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
     if (btn_state == MARU_BUTTON_STATE_PRESSED) {
         ctx->clipboard.serial = serial;
         ctx->primary_selection.serial = serial;
     }
-    window->base.mouse_button_states[channel] = (MARU_ButtonState8)btn_state;
+
     if (ctx->base.mouse_button_states && channel < ctx->base.pub.mouse_button_count) {
         ctx->base.mouse_button_states[channel] = (MARU_ButtonState8)btn_state;
     }

@@ -118,9 +118,6 @@ typedef struct MARU_Window_Base {
   MARU_WindowAttributes attrs_effective;
   uint64_t attrs_dirty_mask;
 
-  MARU_ButtonState8 *mouse_button_states;
-  MARU_ChannelInfo *mouse_button_channels;
-  
   char *title_storage;
   char *surrounding_text_storage;
 

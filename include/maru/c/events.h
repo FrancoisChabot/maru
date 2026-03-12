@@ -321,7 +321,7 @@ typedef enum MARU_DropAction {
 } MARU_DropAction;
 
 /** @brief Bitmask of allowed drop actions. */
-typedef uint32_t MARU_DropActionMask;
+typedef uint64_t MARU_DropActionMask;
 
 /** @brief System-managed data exchange targets. */
 typedef enum MARU_DataExchangeTarget {

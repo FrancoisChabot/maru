@@ -722,12 +722,6 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->base.pub.context = context;
   win->base.pub.userdata = create_info->userdata;
   win->base.pub.metrics = &win->base.metrics;
-  win->base.pub.mouse_button_state = ctx->base.pub.mouse_button_state;
-  win->base.pub.mouse_button_channels = ctx->base.pub.mouse_button_channels;
-  win->base.pub.mouse_button_count = ctx->base.pub.mouse_button_count;
-  memcpy(win->base.pub.mouse_default_button_channels,
-         ctx->base.pub.mouse_default_button_channels,
-         sizeof(win->base.pub.mouse_default_button_channels));
   win->base.pub.cursor_mode = create_info->attributes.cursor_mode;
   win->base.pub.current_cursor = create_info->attributes.cursor;
   win->base.pub.title = NULL;

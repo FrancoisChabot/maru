@@ -74,22 +74,9 @@ void InputModule::render(MARU_Context* ctx, MARU_Window* window) {
                 mouse_raw_delta_ = {0, 0};
             }
 
-            const uint32_t win_btn_count = maru_getMouseButtonCount(window);
-            const MARU_ButtonState8* win_btn_states = maru_getMouseButtonStates(window);
-            const MARU_ChannelInfo* win_btn_channels = maru_getMouseButtonChannelInfo(window);
-
             const uint32_t ctx_btn_count = maru_getContextMouseButtonCount(ctx);
             const MARU_ButtonState8* ctx_btn_states = maru_getContextMouseButtonStates(ctx);
             const MARU_ChannelInfo* ctx_btn_channels = maru_getContextMouseButtonChannelInfo(ctx);
-
-            ImGui::Separator();
-            ImGui::Text("Window Mouse Channels: %u", win_btn_count);
-            render_mouse_channels("WindowMouseChannels", win_btn_count, win_btn_states, win_btn_channels);
-            int32_t win_defaults[MARU_MOUSE_DEFAULT_COUNT];
-            for (uint32_t i = 0; i < MARU_MOUSE_DEFAULT_COUNT; ++i) {
-                win_defaults[i] = maru_getMouseDefaultButtonChannel(window, (MARU_MouseDefaultButton)i);
-            }
-            render_default_map("Window Default Mapping", win_defaults);
 
             ImGui::Separator();
             ImGui::Text("Context Mouse Channels: %u", ctx_btn_count);

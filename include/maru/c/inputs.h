@@ -174,21 +174,6 @@ typedef struct MARU_Window MARU_Window;
  * memory visibility.
  */
 
-/** @brief Retrieves the number of mouse buttons/channels for a window. */
-static inline uint32_t maru_getMouseButtonCount(const MARU_Window *window);
-
-/** @brief Retrieves the current state of all mouse buttons/channels for a window. */
-static inline const MARU_ButtonState8 *maru_getMouseButtonStates(const MARU_Window *window);
-
-/** @brief Retrieves metadata for all mouse buttons/channels for a window. */
-static inline const MARU_ChannelInfo *maru_getMouseButtonChannelInfo(const MARU_Window *window);
-
-/** @brief Retrieves the channel index for a named default mouse button role. */
-static inline int32_t maru_getMouseDefaultButtonChannel(const MARU_Window *window, MARU_MouseDefaultButton which);
-
-/** @brief Checks if a specific mouse button/channel is currently pressed for a window. */
-static inline bool maru_isMouseButtonPressed(const MARU_Window *window, uint32_t button_id);
-
 /** @brief Retrieves the number of keyboard keys supported by this context. */
 static inline uint32_t maru_getKeyboardKeyCount(const MARU_Context *context);
 
