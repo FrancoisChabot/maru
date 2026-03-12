@@ -73,11 +73,11 @@ static MARU_Status maru_getControllerInfo_X11(const MARU_Controller *controller,
                                               MARU_ControllerInfo *out_info) {
   MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
   memset(out_info, 0, sizeof(*out_info));
-  out_info->name = ctrl->name;
-  out_info->vendor_id = ctrl->vendor_id;
-  out_info->product_id = ctrl->product_id;
-  out_info->version = ctrl->version;
-  memcpy(out_info->guid, ctrl->guid, 16);
+  out_info->name = ctrl->base.name;
+  out_info->vendor_id = ctrl->base.vendor_id;
+  out_info->product_id = ctrl->base.product_id;
+  out_info->version = ctrl->base.version;
+  memcpy(out_info->guid, ctrl->base.guid, 16);
   out_info->is_standardized = ctrl->is_standardized;
   return MARU_SUCCESS;
 }

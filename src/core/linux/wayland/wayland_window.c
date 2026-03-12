@@ -669,8 +669,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.pub.userdata = create_info->userdata;
   window->base.pub.context = context;
   window->base.pub.metrics = &window->base.metrics;
-  window->base.pub.keyboard_state = window->base.keyboard_state;
-  window->base.pub.keyboard_key_count = MARU_KEY_COUNT;
   window->base.pub.mouse_button_state = NULL;
   window->base.pub.mouse_button_channels = NULL;
   window->base.pub.mouse_button_count = 0;

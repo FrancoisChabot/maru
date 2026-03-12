@@ -80,7 +80,7 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       break;
     case MARU_EVENT_IDLE_CHANGED:
       if constexpr (std::invocable<F_raw, IdleEvent>) 
-        f(IdleEvent{window, evt.idle});
+        f(IdleEvent{window, evt.idle_changed});
       break;
     case MARU_EVENT_MONITOR_CHANGED:
       if constexpr (std::invocable<F_raw, MonitorChangedEvent>)
@@ -88,7 +88,7 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       break;
     case MARU_EVENT_MONITOR_MODE_CHANGED:
       if constexpr (std::invocable<F_raw, MonitorModeEvent>)
-        f(MonitorModeEvent{window, evt.monitor_mode});
+        f(MonitorModeEvent{window, evt.monitor_mode_changed});
       break;
     case MARU_EVENT_DROP_ENTERED:
       if constexpr (std::invocable<F_raw, DropEnterEvent>)

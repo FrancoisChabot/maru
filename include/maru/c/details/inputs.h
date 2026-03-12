@@ -19,21 +19,12 @@
 extern "C" {
 #endif
 
-static inline const MARU_ButtonState8 *
-maru_getKeyboardKeyStates(const MARU_Window *window) {
-  return ((const MARU_WindowExposed *)window)->keyboard_state;
-}
-
-static inline uint32_t maru_getKeyboardKeyCount(const MARU_Window *window) {
-  return ((const MARU_WindowExposed *)window)->keyboard_key_count;
-}
-
-static inline bool maru_isKeyboardKeyPressed(const MARU_Window *window,
+static inline bool maru_isKeyboardKeyPressed(const MARU_Context *context,
                                              MARU_Key key) {
   if ((uint32_t)key >= MARU_KEY_COUNT) {
     return false;
   }
-  const MARU_ButtonState8 *states = maru_getKeyboardKeyStates(window);
+  const MARU_ButtonState8 *states = maru_getKeyboardKeyStates(context);
   return states ? (states[key] == MARU_BUTTON_STATE_PRESSED) : false;
 }
 

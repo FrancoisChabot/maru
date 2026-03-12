@@ -134,7 +134,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             MARU_Key key = _maru_cocoa_translate_key([nsEvent keyCode]);
             MARU_ButtonState state = (type == NSEventTypeKeyDown) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
             
-            window->base.keyboard_state[key] = (MARU_ButtonState8)state;
+            window->base.ctx_base->keyboard_state[key] = (MARU_ButtonState8)state;
 
             MARU_Event event = {0};
             event.key.raw_key = key;
@@ -159,7 +159,7 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             else if (scancode == 0x37 || scancode == 0x3F) pressed = (new_mods & NSEventModifierFlagCommand) != 0;
             else if (scancode == 0x39) pressed = (new_mods & NSEventModifierFlagCapsLock) != 0;
 
-            window->base.keyboard_state[key] = pressed ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+            window->base.ctx_base->keyboard_state[key] = pressed ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
 
             MARU_Event event = {0};
             event.key.raw_key = key;

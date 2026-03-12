@@ -168,8 +168,6 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     win->base.pub.userdata = create_info->userdata;
     win->base.pub.context = context;
     win->base.pub.metrics = &win->base.metrics;
-    win->base.pub.keyboard_state = win->base.keyboard_state;
-    win->base.pub.keyboard_key_count = MARU_KEY_COUNT;
     win->base.pub.mouse_button_state = NULL;
     win->base.pub.mouse_button_channels = NULL;
     win->base.pub.mouse_button_count = 0;

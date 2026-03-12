@@ -722,8 +722,6 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   win->base.pub.context = context;
   win->base.pub.userdata = create_info->userdata;
   win->base.pub.metrics = &win->base.metrics;
-  win->base.pub.keyboard_state = win->base.keyboard_state;
-  win->base.pub.keyboard_key_count = MARU_KEY_COUNT;
   win->base.pub.mouse_button_state = ctx->base.pub.mouse_button_state;
   win->base.pub.mouse_button_channels = ctx->base.pub.mouse_button_channels;
   win->base.pub.mouse_button_count = ctx->base.pub.mouse_button_count;
@@ -1085,7 +1083,7 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
       if (ctx->locked_window == win) {
         _maru_x11_release_pointer_lock(ctx, win);
       }
-      memset(win->base.keyboard_state, 0, sizeof(win->base.keyboard_state));
+      memset(ctx->base.keyboard_state, 0, sizeof(ctx->base.keyboard_state));
       if (ctx->linux_common.xkb.focused_window == (MARU_Window *)win) {
         ctx->linux_common.xkb.focused_window = NULL;
       }

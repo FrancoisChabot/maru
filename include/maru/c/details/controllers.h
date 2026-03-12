@@ -27,6 +27,12 @@ typedef struct MARU_ControllerExposed {
   uint64_t flags;
   const MARU_ControllerMetrics *metrics;
 
+  const char *name;
+  uint16_t vendor_id;
+  uint16_t product_id;
+  uint16_t version;
+  uint8_t guid[16];
+
   const MARU_ChannelInfo *analog_channels;
   const MARU_AnalogInputState *analogs;
   uint32_t analog_count;
@@ -62,6 +68,31 @@ static inline bool maru_isControllerLost(const MARU_Controller *controller) {
 static inline const MARU_ControllerMetrics *
 maru_getControllerMetrics(const MARU_Controller *controller) {
   return ((const MARU_ControllerExposed *)controller)->metrics;
+}
+
+static inline const char *
+maru_getControllerName(const MARU_Controller *controller) {
+  return ((const MARU_ControllerExposed *)controller)->name;
+}
+
+static inline uint16_t
+maru_getControllerVendorId(const MARU_Controller *controller) {
+  return ((const MARU_ControllerExposed *)controller)->vendor_id;
+}
+
+static inline uint16_t
+maru_getControllerProductId(const MARU_Controller *controller) {
+  return ((const MARU_ControllerExposed *)controller)->product_id;
+}
+
+static inline uint16_t
+maru_getControllerVersion(const MARU_Controller *controller) {
+  return ((const MARU_ControllerExposed *)controller)->version;
+}
+
+static inline const uint8_t *
+maru_getControllerGUID(const MARU_Controller *controller) {
+  return ((const MARU_ControllerExposed *)controller)->guid;
 }
 
 static inline uint32_t

@@ -112,8 +112,9 @@ void InputModule::render(MARU_Context* ctx, MARU_Window* window) {
         }
 
         if (ImGui::CollapsingHeader("Keyboard", ImGuiTreeNodeFlags_DefaultOpen)) {
-            uint32_t key_count = maru_getKeyboardKeyCount(window);
-            const MARU_ButtonState8* states = maru_getKeyboardKeyStates(window);
+            MARU_Context* ctx = maru_getWindowContext(window);
+            uint32_t key_count = maru_getKeyboardKeyCount(ctx);
+            const MARU_ButtonState8* states = maru_getKeyboardKeyStates(ctx);
 
             ImGui::Text("Key Count: %u", key_count);            
             ImGui::Text("Pressed Keys:");

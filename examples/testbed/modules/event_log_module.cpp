@@ -49,7 +49,7 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
     } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
         ss << "Delta: (" << e.mouse_scroll.dip_delta.x << "," << e.mouse_scroll.dip_delta.y << ")" << "Steps: (" << e.mouse_scroll.steps.x << "," << e.mouse_scroll.steps.y << ")";
     } else if (type == MARU_EVENT_IDLE_CHANGED) {
-        ss << "Idle: " << (e.idle.is_idle ? "YES" : "NO") << " Timeout: " << e.idle.timeout_ms << "ms";
+        ss << "Idle: " << (e.idle_changed.is_idle ? "YES" : "NO") << " Timeout: " << e.idle_changed.timeout_ms << "ms";
     } else if (type == MARU_EVENT_TEXT_EDIT_STARTED) {
         ss << "IME Start: Session=" << e.text_edit_started.session_id;
     } else if (type == MARU_EVENT_TEXT_EDIT_UPDATED) {

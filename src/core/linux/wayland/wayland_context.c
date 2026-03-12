@@ -300,7 +300,7 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
     MARU_Window_WL *window = (MARU_Window_WL *)it;
     if ((window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0) {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
-      memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
+      memset(ctx->base.keyboard_state, 0, sizeof(ctx->base.keyboard_state));
       _maru_wayland_dispatch_presentation_changed(
           window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
     }
@@ -426,16 +426,16 @@ static void _wl_handle_optional_global_removed(MARU_Context_WL *ctx,
 static void _idle_notification_handle_idled(void *data, struct ext_idle_notification_v1 *notification) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   MARU_Event evt = {0};
-  evt.idle.is_idle = true;
-  evt.idle.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
+  evt.idle_changed.is_idle = true;
+  evt.idle_changed.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &evt);
 }
 
 static void _idle_notification_handle_resumed(void *data, struct ext_idle_notification_v1 *notification) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)data;
   MARU_Event evt = {0};
-  evt.idle.is_idle = false;
-  evt.idle.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
+  evt.idle_changed.is_idle = false;
+  evt.idle_changed.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &evt);
 }
 

@@ -72,6 +72,16 @@ maru_getControllerContext(const MARU_Controller *controller);
 static inline bool maru_isControllerLost(const MARU_Controller *controller);
 static inline const MARU_ControllerMetrics *
 maru_getControllerMetrics(const MARU_Controller *controller);
+static inline const char *
+maru_getControllerName(const MARU_Controller *controller);
+static inline uint16_t
+maru_getControllerVendorId(const MARU_Controller *controller);
+static inline uint16_t
+maru_getControllerProductId(const MARU_Controller *controller);
+static inline uint16_t
+maru_getControllerVersion(const MARU_Controller *controller);
+static inline const uint8_t *
+maru_getControllerGUID(const MARU_Controller *controller);
 static inline uint32_t
 maru_getControllerAnalogCount(const MARU_Controller *controller);
 static inline const MARU_ChannelInfo *

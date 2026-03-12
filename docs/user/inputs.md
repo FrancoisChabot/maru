@@ -44,7 +44,7 @@ You can also query the current state of input devices at any time. This is usefu
 ### Keyboard Polling
 
 ```c
-if (maru_isKeyboardKeyPressed(window, MARU_KEY_W)) {
+if (maru_isKeyboardKeyPressed(context, MARU_KEY_W)) {
     // Move forward
 }
 ```

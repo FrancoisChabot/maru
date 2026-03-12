@@ -102,6 +102,12 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     c->base.pub.buttons = c->button_states;
     c->base.pub.metrics = &c->base.metrics;
 
+    if (gc.vendorName) {
+        c->base.pub.name = [gc.vendorName UTF8String];
+    } else {
+        c->base.pub.name = "Unknown Game Controller";
+    }
+
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_X].name = "Left X";
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_Y].name = "Left Y";
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_X].name = "Right X";
@@ -303,9 +309,10 @@ MARU_Status maru_resetControllerMetrics_Cocoa(MARU_Controller *controller) {
 }
 
 MARU_Status maru_getControllerInfo_Cocoa(const MARU_Controller *controller,
-                                         MARU_ControllerInfo *out_info) {    MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)controller;
+                                         MARU_ControllerInfo *out_info) {
+    MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)controller;
     memset(out_info, 0, sizeof(MARU_ControllerInfo));
-    out_info->name = [c->gc_controller.vendorName UTF8String];
+    out_info->name = c->base.pub.name;
     out_info->is_standardized = (c->gc_controller.extendedGamepad != nil);
     return MARU_SUCCESS;
 }

@@ -104,6 +104,10 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
     ctx_base->pub.mouse_default_button_channels[i] = -1;
   }
 
+  memset(ctx_base->keyboard_state, 0, sizeof(ctx_base->keyboard_state));
+  ctx_base->pub.keyboard_state = ctx_base->keyboard_state;
+  ctx_base->pub.keyboard_key_count = MARU_KEY_COUNT;
+
   uint32_t capacity = ctx_base->tuning.user_event_queue_size;
   if (capacity == 0) capacity = 256;
   if ((capacity & (capacity - 1u)) != 0u) {

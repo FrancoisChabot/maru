@@ -174,15 +174,6 @@ typedef struct MARU_Window MARU_Window;
  * memory visibility.
  */
 
-/** @brief Retrieves the number of keyboard keys supported for a window. */
-static inline uint32_t maru_getKeyboardKeyCount(const MARU_Window *window);
-
-/** @brief Retrieves the current state of all keyboard keys for a window. */
-static inline const MARU_ButtonState8 *maru_getKeyboardKeyStates(const MARU_Window *window);
-
-/** @brief Checks if a specific keyboard key is currently pressed for a window. */
-static inline bool maru_isKeyboardKeyPressed(const MARU_Window *window, MARU_Key key);
-
 /** @brief Retrieves the number of mouse buttons/channels for a window. */
 static inline uint32_t maru_getMouseButtonCount(const MARU_Window *window);
 

@@ -28,6 +28,8 @@ typedef struct MARU_ContextExposed {
   const MARU_ButtonState8 *mouse_button_state;
   const MARU_ChannelInfo *mouse_button_channels;
   uint32_t mouse_button_count;
+  const MARU_ButtonState8 *keyboard_state;
+  uint32_t keyboard_key_count;
   int32_t mouse_default_button_channels[MARU_MOUSE_DEFAULT_COUNT];
 } MARU_ContextExposed;
 
@@ -73,6 +75,15 @@ maru_getContextMouseButtonStates(const MARU_Context *context) {
 static inline const MARU_ChannelInfo *
 maru_getContextMouseButtonChannelInfo(const MARU_Context *context) {
   return ((const MARU_ContextExposed *)context)->mouse_button_channels;
+}
+
+static inline uint32_t maru_getKeyboardKeyCount(const MARU_Context *context) {
+  return ((const MARU_ContextExposed *)context)->keyboard_key_count;
+}
+
+static inline const MARU_ButtonState8 *
+maru_getKeyboardKeyStates(const MARU_Context *context) {
+  return ((const MARU_ContextExposed *)context)->keyboard_state;
 }
 
 static inline int32_t

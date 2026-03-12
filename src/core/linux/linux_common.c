@@ -629,6 +629,20 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
     return NULL;
   }
 
+  ctrl->base.name = ctrl->name;
+  ctrl->base.vendor_id = ctrl->vendor_id;
+  ctrl->base.product_id = ctrl->product_id;
+  ctrl->base.version = ctrl->version;
+  memcpy((void *)ctrl->base.guid, ctrl->guid, 16);
+  ctrl->base.analog_channels = ctrl->analog_channels;
+  ctrl->base.analogs = ctrl->analog_states;
+  ctrl->base.analog_count = abs_count;
+  ctrl->base.button_channels = ctrl->button_channels;
+  ctrl->base.buttons = ctrl->button_states;
+  ctrl->base.button_count = btn_count;
+  ctrl->base.haptic_channels = ctrl->haptic_channels;
+  ctrl->base.haptic_count = haptic_count;
+
   return ctrl;
 }
 

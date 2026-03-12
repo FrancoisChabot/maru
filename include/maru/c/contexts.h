@@ -88,6 +88,18 @@ maru_getContextMouseDefaultButtonChannel(const MARU_Context *context,
 static inline bool maru_isContextMouseButtonPressed(const MARU_Context *context,
                                                     uint32_t button_id);
 
+/** @brief Retrieves the number of keyboard keys supported by this context. */
+static inline uint32_t maru_getKeyboardKeyCount(const MARU_Context *context);
+
+/** @brief Retrieves the current context-level keyboard key states table. */
+static inline const MARU_ButtonState8 *
+maru_getKeyboardKeyStates(const MARU_Context *context);
+
+/** @brief Checks whether a specific keyboard key is currently pressed on this
+ * context. */
+static inline bool maru_isKeyboardKeyPressed(const MARU_Context *context,
+                                             MARU_Key key);
+
 /* ----- Context Management ----- */
 
 /** @brief Special value for timeouts to indicate it should never trigger. */

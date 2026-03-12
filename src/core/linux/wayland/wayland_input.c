@@ -728,13 +728,13 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
         window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
 
         // Re-sync key cache from compositor-provided pressed keys on focus enter.
-        memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
+        memset(ctx->base.keyboard_state, 0, sizeof(ctx->base.keyboard_state));
         if (keys) {
             const uint32_t *key = NULL;
             wl_array_for_each(key, keys) {
                 MARU_Key maru_key = _linux_scancode_to_maru_key(*key);
                 if (maru_key != MARU_KEY_UNKNOWN) {
-                    window->base.keyboard_state[maru_key] = (MARU_ButtonState8)MARU_BUTTON_STATE_PRESSED;
+                    ctx->base.keyboard_state[maru_key] = (MARU_ButtonState8)MARU_BUTTON_STATE_PRESSED;
                 }
             }
         }
@@ -753,7 +753,7 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
         window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
 
         // Clear keyboard state on focus loss
-        memset(window->base.keyboard_state, 0, sizeof(window->base.keyboard_state));
+        memset(ctx->base.keyboard_state, 0, sizeof(ctx->base.keyboard_state));
 
         _maru_wayland_dispatch_presentation_changed(
             window, MARU_WINDOW_PRESENTATION_CHANGED_FOCUSED);
@@ -787,7 +787,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
 
     // Update keyboard cache
     if (maru_key != MARU_KEY_UNKNOWN) {
-        window->base.keyboard_state[maru_key] = (MARU_ButtonState8)maru_state;
+        ctx->base.keyboard_state[maru_key] = (MARU_ButtonState8)maru_state;
     }
 
     const bool is_repeat = (state == WL_KEYBOARD_KEY_STATE_PRESSED) && (ctx->repeat.repeat_key == keycode);

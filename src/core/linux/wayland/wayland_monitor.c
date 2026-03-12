@@ -136,7 +136,7 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
     return;
   }
   monitor->mode_changed_pending = false;
-  evt.monitor_mode.monitor = (MARU_Monitor *)monitor;
+  evt.monitor_mode_changed.monitor = (MARU_Monitor *)monitor;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_MONITOR_MODE_CHANGED, NULL, &evt);
 }
 

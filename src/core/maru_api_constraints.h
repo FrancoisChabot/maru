@@ -623,6 +623,22 @@ static inline void _maru_validate_getLinuxWindowHandle(MARU_Window *window) {
                         backend == MARU_BACKEND_X11);
 }
 
+static inline void
+_maru_validate_getKeyboardKeyCount(const MARU_Context *context) {
+  MARU_CONSTRAINT_CHECK(context != NULL);
+}
+
+static inline void
+_maru_validate_getKeyboardKeyStates(const MARU_Context *context) {
+  MARU_CONSTRAINT_CHECK(context != NULL);
+}
+
+static inline void
+_maru_validate_isKeyboardKeyPressed(const MARU_Context *context, MARU_Key key) {
+  MARU_CONSTRAINT_CHECK(context != NULL);
+  MARU_CONSTRAINT_CHECK(key < MARU_KEY_COUNT);
+}
+
 static inline void _maru_validate_getVkExtensions(const MARU_Context *context,
                                                   MARU_VkExtensionList *out_list) {
   MARU_CONSTRAINT_CHECK(context != NULL);

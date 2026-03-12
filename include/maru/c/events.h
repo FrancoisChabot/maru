@@ -293,10 +293,10 @@ typedef struct MARU_MouseScrollEvent {
 } MARU_MouseScrollEvent;
 
 /** @brief Payload for MARU_EVENT_IDLE_CHANGED. */
-typedef struct MARU_IdleEvent {
+typedef struct MARU_IdleChangedEvent {
   uint32_t timeout_ms;
   bool is_idle;
-} MARU_IdleEvent;
+} MARU_IdleChangedEvent;
 
 /** @brief Payload for MARU_EVENT_MONITOR_CHANGED. */
 typedef struct MARU_MonitorChangedEvent {
@@ -305,9 +305,9 @@ typedef struct MARU_MonitorChangedEvent {
 } MARU_MonitorChangedEvent;
 
 /** @brief Payload for MARU_EVENT_MONITOR_MODE_CHANGED. */
-typedef struct MARU_MonitorModeEvent {
+typedef struct MARU_MonitorModeChangedEvent {
   MARU_Monitor *monitor;
-} MARU_MonitorModeEvent;
+} MARU_MonitorModeChangedEvent;
 
 /** @brief Supported Drag and Drop actions for OS feedback. */
 typedef enum MARU_DropAction {
@@ -489,9 +489,9 @@ typedef struct MARU_Event {
     MARU_MouseMotionEvent mouse_motion;
     MARU_MouseButtonEvent mouse_button;
     MARU_MouseScrollEvent mouse_scroll;
-    MARU_IdleEvent idle;
+    MARU_IdleChangedEvent idle_changed;
     MARU_MonitorChangedEvent monitor_changed;
-    MARU_MonitorModeEvent monitor_mode;
+    MARU_MonitorModeChangedEvent monitor_mode_changed;
     MARU_DropEnterEvent drop_enter;
     MARU_DropHoverEvent drop_hover;
     MARU_DropLeaveEvent drop_leave;

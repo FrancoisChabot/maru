@@ -740,8 +740,8 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
       bool is_repeat = false;
       if (key != MARU_KEY_UNKNOWN) {
-        is_repeat = is_press && (win->base.keyboard_state[key] == (MARU_ButtonState8)MARU_BUTTON_STATE_PRESSED);
-        win->base.keyboard_state[key] = (MARU_ButtonState8)state;
+        is_repeat = is_press && (ctx->base.keyboard_state[key] == (MARU_ButtonState8)MARU_BUTTON_STATE_PRESSED);
+        ctx->base.keyboard_state[key] = (MARU_ButtonState8)state;
       }
 
       if (!is_repeat) {

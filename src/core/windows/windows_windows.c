@@ -179,7 +179,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                  : MARU_BUTTON_STATE_RELEASED;
         
         // Update internal state
-        win->base.keyboard_state[key] = (MARU_ButtonState8)state;
+        ctx->base.keyboard_state[key] = (MARU_ButtonState8)state;
 
         // Skip repeats for state changed events
         if (state == MARU_BUTTON_STATE_PRESSED && (lParam & (1 << 30))) {
@@ -505,8 +505,6 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   win->base.pub.context = context;
   win->base.pub.userdata = create_info->userdata;
   win->base.pub.metrics = &win->base.metrics;
-  win->base.pub.keyboard_state = win->base.keyboard_state;
-  win->base.pub.keyboard_key_count = MARU_KEY_COUNT;
   win->base.pub.mouse_button_state = ctx->base.pub.mouse_button_state;
   win->base.pub.mouse_button_channels = ctx->base.pub.mouse_button_channels;
   win->base.pub.mouse_button_count = ctx->base.pub.mouse_button_count;

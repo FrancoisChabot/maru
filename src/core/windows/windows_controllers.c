@@ -157,6 +157,22 @@ static char *_maru_windows_dup_utf8(MARU_Context_Base *ctx_base,
   return dst;
 }
 
+static void _maru_windows_controller_sync_pub(MARU_Controller_Windows *ctrl) {
+  ctrl->base.pub.name = ctrl->name;
+  ctrl->base.pub.vendor_id = ctrl->vendor_id;
+  ctrl->base.pub.product_id = ctrl->product_id;
+  ctrl->base.pub.version = ctrl->version;
+  memcpy((void *)ctrl->base.pub.guid, ctrl->guid, 16);
+  ctrl->base.pub.analog_channels = ctrl->analog_channels;
+  ctrl->base.pub.analogs = ctrl->analog_states;
+  ctrl->base.pub.analog_count = ctrl->analog_count;
+  ctrl->base.pub.button_channels = ctrl->button_channels;
+  ctrl->base.pub.buttons = ctrl->button_states;
+  ctrl->base.pub.button_count = ctrl->button_count;
+  ctrl->base.pub.haptic_channels = ctrl->haptic_channels;
+  ctrl->base.pub.haptic_count = ctrl->haptic_count;
+}
+
 static void _maru_windows_fill_standard_controller_layout(
     MARU_Controller_Windows *ctrl) {
   uint32_t i;
@@ -518,14 +534,6 @@ static MARU_Controller_Windows *_maru_windows_controller_create_common(
 
   ctrl->base.pub.context = (MARU_Context *)ctx;
   ctrl->base.pub.metrics = &ctrl->base.metrics;
-  ctrl->base.pub.analog_channels = ctrl->analog_channels;
-  ctrl->base.pub.analogs = ctrl->analog_states;
-  ctrl->base.pub.analog_count = analog_count;
-  ctrl->base.pub.button_channels = ctrl->button_channels;
-  ctrl->base.pub.buttons = ctrl->button_states;
-  ctrl->base.pub.button_count = button_count;
-  ctrl->base.pub.haptic_channels = ctrl->haptic_channels;
-  ctrl->base.pub.haptic_count = haptic_count;
 
   return ctrl;
 }
@@ -558,6 +566,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_xinput(
   memset(ctrl->guid, 0, sizeof(ctrl->guid));
   memcpy(ctrl->guid, "XINPUT", 6u);
   ctrl->guid[6] = (uint8_t)index;
+  _maru_windows_controller_sync_pub(ctrl);
   return ctrl;
 }
 
@@ -585,6 +594,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_wgi(
   ctrl->is_standardized = true;
   memset(ctrl->guid, 0, sizeof(ctrl->guid));
   memcpy(ctrl->guid, "WGI", 3u);
+  _maru_windows_controller_sync_pub(ctrl);
   return ctrl;
 }
 
@@ -628,6 +638,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_dualshock4(
   }
 
   _maru_windows_fill_standard_controller_layout(ctrl);
+  _maru_windows_controller_sync_pub(ctrl);
   return ctrl;
 }
 
@@ -671,6 +682,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_dualsense(
   }
 
   _maru_windows_fill_standard_controller_layout(ctrl);
+  _maru_windows_controller_sync_pub(ctrl);
   return ctrl;
 }
 
@@ -1034,6 +1046,7 @@ static MARU_Controller_Windows *_maru_windows_controller_create_raw_hid(
   maru_context_free(&ctx->base, button_caps);
   (void)usage_page;
   (void)usage;
+  _maru_windows_controller_sync_pub(ctrl);
   return ctrl;
 }
 
@@ -1322,11 +1335,11 @@ MARU_Status maru_getControllerInfo_Windows(const MARU_Controller *controller,
                                            MARU_ControllerInfo *out_info) {
   MARU_Controller_Windows *ctrl = (MARU_Controller_Windows *)controller;
   memset(out_info, 0, sizeof(*out_info));
-  out_info->name = ctrl->name;
-  out_info->vendor_id = ctrl->vendor_id;
-  out_info->product_id = ctrl->product_id;
-  out_info->version = ctrl->version;
-  memcpy(out_info->guid, ctrl->guid, sizeof(out_info->guid));
+  out_info->name = ctrl->base.pub.name;
+  out_info->vendor_id = ctrl->base.pub.vendor_id;
+  out_info->product_id = ctrl->base.pub.product_id;
+  out_info->version = ctrl->base.pub.version;
+  memcpy(out_info->guid, ctrl->base.pub.guid, sizeof(out_info->guid));
   out_info->is_standardized = ctrl->is_standardized;
   return MARU_SUCCESS;
 }
