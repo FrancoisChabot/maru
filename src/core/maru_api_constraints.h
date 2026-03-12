@@ -660,15 +660,6 @@ _maru_validate_live_requestWindowAttention(MARU_Window *window) {
   _maru_validate_window_not_lost(window);
 }
 
-static inline void _maru_validate_live_resetWindowMetrics(MARU_Window *window) {
-  _maru_validate_window_not_lost(window);
-}
-
-static inline void
-_maru_validate_live_resetControllerMetrics(MARU_Controller *controller) {
-  _maru_validate_controller_not_lost(controller);
-}
-
 static inline void
 _maru_validate_live_getControllerInfo(const MARU_Controller *controller,
                                       MARU_ControllerInfo *out_info) {
@@ -723,18 +714,12 @@ static inline void _maru_validate_live_getMonitorModes(
 
 static inline void
 _maru_validate_live_setMonitorMode(const MARU_Monitor *monitor,
-                                   MARU_VideoMode mode) {
+                                    MARU_VideoMode mode) {
   (void)mode;
   _maru_validate_monitor_not_lost(monitor);
 }
 
-static inline void
-_maru_validate_live_resetMonitorMetrics(MARU_Monitor *monitor) {
-  _maru_validate_monitor_not_lost(monitor);
-}
-
-static inline void _maru_validate_live_createVkSurface(
-    MARU_Window *window, VkInstance instance,
+static inline void _maru_validate_live_createVkSurface(    MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
   (void)instance;
   (void)vk_loader;
