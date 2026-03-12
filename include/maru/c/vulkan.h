@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include "maru/c/core.h"
-#include "maru/c/tuning.h"
 
 /**
  * @file vulkan.h
@@ -16,6 +15,16 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** @brief Generic function pointer for Vulkan return types. */
+typedef void (*MARU_VulkanVoidFunction)(void);
+
+/** @brief Opaque handle to a Vulkan instance. */
+typedef struct VkInstance_T *VkInstance;
+
+/** @brief Function pointer signature for vkGetInstanceProcAddr. */
+typedef MARU_VulkanVoidFunction (*MARU_VkGetInstanceProcAddrFunc)(
+    VkInstance instance, const char *pName);
 
 /** @brief Opaque handle representing the library state and display server connection. */
 typedef struct MARU_Context MARU_Context;

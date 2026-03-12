@@ -37,16 +37,6 @@ typedef enum MARU_CursorPolicy {
   MARU_CURSOR_POLICY_MARU_ONLY = 2,
 } MARU_CursorPolicy;
 
-/** @brief Generic function pointer for Vulkan return types. */
-typedef void (*MARU_VulkanVoidFunction)(void);
-
-/** @brief Opaque handle to a Vulkan instance. */
-typedef struct VkInstance_T *VkInstance;
-
-/** @brief Function pointer signature for vkGetInstanceProcAddr. */
-typedef MARU_VulkanVoidFunction (*MARU_VkGetInstanceProcAddrFunc)(VkInstance instance,
-                                                                  const char *pName);
-
 /** @brief Backend-specific and internal library tuning. */
 
 //N.B. If you are reviewing this API, imagine that this will be extended as needed as the backends are built...
