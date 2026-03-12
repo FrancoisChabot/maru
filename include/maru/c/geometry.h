@@ -38,6 +38,12 @@ typedef struct MARU_Vec2Px {
   int32_t y;
 } MARU_Vec2Px;
 
+/** @brief 2D vector in physical millimeter coordinates. */
+typedef struct MARU_Vec2Mm {
+  MARU_Scalar x;
+  MARU_Scalar y;
+} MARU_Vec2Mm;
+
 /** @brief 2D vector in logical coordinates. */
 typedef struct MARU_Vec2Dip {
   MARU_Scalar x;

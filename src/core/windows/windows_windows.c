@@ -13,7 +13,7 @@ static void _maru_windows_dispatch_presentation_event(MARU_Window_Windows *win, 
     evt.presentation.minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
     evt.presentation.maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
     evt.presentation.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-    evt.presentation.icon_effective = (win->base.pub.icon != NULL);
+    evt.presentation.icon = (win->base.pub.icon != NULL);
     _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED, (MARU_Window *)win, &evt);
 }
 

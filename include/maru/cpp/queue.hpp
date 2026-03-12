@@ -37,7 +37,7 @@ public:
     void scan(MARU_EventMask mask, MARU_EventCallback callback, void* userdata = nullptr);
 
     void setCoalesceMask(MARU_EventMask mask) {
-        maru_queue_set_coalesce_mask(m_handle, mask);
+        maru_setQueueCoalesceMask(m_handle, mask);
     }
 
     MARU_QueueMetrics metrics() const;

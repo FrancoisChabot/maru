@@ -90,7 +90,7 @@ inline Monitor& Monitor::operator=(Monitor&& other) noexcept {
 inline void* Monitor::getUserData() const { return maru_getMonitorUserdata(m_handle); }
 inline void Monitor::setUserData(void* userdata) { maru_setMonitorUserdata(m_handle, userdata); }
 inline const char* Monitor::getName() const { return maru_getMonitorName(m_handle); }
-inline MARU_Vec2Dip Monitor::getPhysicalSize() const { return maru_getMonitorPhysicalSize(m_handle); }
+inline MARU_Vec2Mm Monitor::getPhysicalSize() const { return maru_getMonitorPhysicalSize(m_handle); }
 inline MARU_VideoMode Monitor::getCurrentMode() const { return maru_getMonitorCurrentMode(m_handle); }
 inline MARU_Vec2Dip Monitor::getLogicalPosition() const { return maru_getMonitorLogicalPosition(m_handle); }
 inline MARU_Vec2Dip Monitor::getLogicalSize() const { return maru_getMonitorLogicalSize(m_handle); }
@@ -157,14 +157,14 @@ inline expected<MARU_ControllerInfo> Controller::getInfo() const {
 }
 
 inline uint32_t Controller::getAnalogCount() const { return maru_getControllerAnalogCount(m_handle); }
-inline const MARU_AnalogChannelInfo* Controller::getAnalogChannelInfo() const { return maru_getControllerAnalogChannelInfo(m_handle); }
+inline const MARU_ChannelInfo* Controller::getAnalogChannelInfo() const { return maru_getControllerAnalogChannelInfo(m_handle); }
 inline const MARU_AnalogInputState* Controller::getAnalogStates() const { return maru_getControllerAnalogStates(m_handle); }
 inline uint32_t Controller::getButtonCount() const { return maru_getControllerButtonCount(m_handle); }
-inline const MARU_ButtonChannelInfo* Controller::getButtonChannelInfo() const { return maru_getControllerButtonChannelInfo(m_handle); }
+inline const MARU_ChannelInfo* Controller::getButtonChannelInfo() const { return maru_getControllerButtonChannelInfo(m_handle); }
 inline const MARU_ButtonState8* Controller::getButtonStates() const { return maru_getControllerButtonStates(m_handle); }
 inline bool Controller::isButtonPressed(uint32_t button_id) const { return maru_isControllerButtonPressed(m_handle, button_id); }
 inline uint32_t Controller::getHapticCount() const { return maru_getControllerHapticCount(m_handle); }
-inline const MARU_HapticChannelInfo* Controller::getHapticChannelInfo() const { return maru_getControllerHapticChannelInfo(m_handle); }
+inline const MARU_ChannelInfo* Controller::getHapticChannelInfo() const { return maru_getControllerHapticChannelInfo(m_handle); }
 
 inline MARU_Status Controller::setHapticLevels(uint32_t first_haptic, uint32_t count, const MARU_Scalar* intensities) {
     return maru_setControllerHapticLevels(m_handle, first_haptic, count, intensities);
@@ -380,13 +380,13 @@ inline MARU_Status Context::wake() {
 
 inline expected<Queue> Queue::create(Context& ctx, uint32_t capacity_power_of_2) {
     MARU_Queue* handle = nullptr;
-    MARU_Status status = maru_queue_create(ctx.get(), capacity_power_of_2, &handle);
+    MARU_Status status = maru_createQueue(ctx.get(), capacity_power_of_2, &handle);
     if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
     return Queue(handle);
 }
 
 inline Queue::~Queue() {
-    if (m_handle) maru_queue_destroy(m_handle);
+    if (m_handle) maru_destroyQueue(m_handle);
 }
 
 inline Queue::Queue(Queue&& other) noexcept : m_handle(other.m_handle) {
@@ -395,7 +395,7 @@ inline Queue::Queue(Queue&& other) noexcept : m_handle(other.m_handle) {
 
 inline Queue& Queue::operator=(Queue&& other) noexcept {
     if (this != &other) {
-        if (m_handle) maru_queue_destroy(m_handle);
+        if (m_handle) maru_destroyQueue(m_handle);
         m_handle = other.m_handle;
         other.m_handle = nullptr;
     }
@@ -404,25 +404,25 @@ inline Queue& Queue::operator=(Queue&& other) noexcept {
 
 inline MARU_Status Queue::push(MARU_EventId type, MARU_Window* window,
                                const MARU_Event& event) {
-    return maru_queue_push(m_handle, type, window, &event);
+    return maru_pushQueue(m_handle, type, window, &event);
 }
 
 inline MARU_Status Queue::commit() {
-    return maru_queue_commit(m_handle);
+    return maru_commitQueue(m_handle);
 }
 
 inline void Queue::scan(MARU_EventMask mask, MARU_EventCallback callback, void* userdata) {
-    maru_queue_scan(m_handle, mask, callback, userdata);
+    maru_scanQueue(m_handle, mask, callback, userdata);
 }
 
 inline MARU_QueueMetrics Queue::metrics() const {
     MARU_QueueMetrics metrics = {};
-    maru_queue_get_metrics(m_handle, &metrics);
+    maru_getQueueMetrics(m_handle, &metrics);
     return metrics;
 }
 
 inline void Queue::resetMetrics() {
-    maru_queue_reset_metrics(m_handle);
+    maru_resetQueueMetrics(m_handle);
 }
 
 } // namespace maru

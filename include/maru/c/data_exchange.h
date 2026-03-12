@@ -70,6 +70,26 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
                                                 MARU_DataExchangeTarget target,
                                                 MARU_MIMETypeList *out_list);
 
+/* ----- Drag and Drop Session Handling ----- */
+
+/** @brief Sets the drag-and-drop action to be reported to the OS for this session. */
+static inline void maru_setDropSessionAction(MARU_DropSession *session,
+                                             MARU_DropAction action);
+
+/** @brief Retrieves the currently set drag-and-drop action for this session. */
+static inline MARU_DropAction
+maru_getDropSessionAction(const MARU_DropSession *session);
+
+/** @brief Sets a custom user data pointer for this drag-and-drop session. */
+static inline void maru_setDropSessionUserdata(MARU_DropSession *session,
+                                               void *userdata);
+
+/** @brief Retrieves the custom user data pointer for this drag-and-drop session. */
+static inline void *
+maru_getDropSessionUserdata(const MARU_DropSession *session);
+
+#include "maru/c/details/data_exchange.h"
+
 #ifdef __cplusplus
 }
 #endif

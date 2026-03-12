@@ -59,6 +59,16 @@ typedef struct MARU_Allocator {
   void *userdata;
 } MARU_Allocator;
 
+/** @brief Metadata for an input or output channel. */
+typedef struct MARU_ChannelInfo {
+  const char *name;     ///< Human-readable name (UTF-8).
+  uint32_t native_code; ///< Backend-specific raw code.
+  uint32_t flags;       ///< Behavioral flags.
+} MARU_ChannelInfo;
+
+/** @brief Channel metadata flags. */
+#define MARU_CHANNEL_FLAG_IS_DEFAULT MARU_BIT(0)
+
 /** @brief Return codes for MARU functions. 
 
 The codes returned by the Maru API are not meant to tell you "What went wrong",

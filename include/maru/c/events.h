@@ -251,7 +251,7 @@ typedef struct MARU_WindowPresentationStateEvent {
   bool minimized;
   bool maximized;
   bool focused;
-  bool icon_effective;
+  bool icon;
 } MARU_WindowPresentationStateEvent;
 
 /** @brief Payload for MARU_EVENT_KEY_STATE_CHANGED. */
@@ -339,16 +339,13 @@ typedef enum MARU_DataProvideFlags {
   MARU_DATA_PROVIDE_FLAG_ZERO_COPY = MARU_BIT(0),
 } MARU_DataProvideFlags;
 
-/** @brief Controls application response to a drag-and-drop hover. */
-typedef struct MARU_DropFeedback {
-  MARU_DropAction *action;
-  void **session_userdata;
-} MARU_DropFeedback;
+/** @brief Represents an active drag-and-drop session over a window. */
+typedef struct MARU_DropSession MARU_DropSession;
 
 /** @brief Payload for MARU_EVENT_DROP_ENTERED. */
 typedef struct MARU_DropEnterEvent {
   MARU_Vec2Dip position;
-  MARU_DropFeedback *feedback;
+  MARU_DropSession *session;
   const char **paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
@@ -358,7 +355,7 @@ typedef struct MARU_DropEnterEvent {
 /** @brief Payload for MARU_EVENT_DROP_HOVERED. */
 typedef struct MARU_DropHoverEvent {
   MARU_Vec2Dip position;
-  MARU_DropFeedback *feedback;
+  MARU_DropSession *session;
   const char **paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
@@ -367,13 +364,13 @@ typedef struct MARU_DropHoverEvent {
 
 /** @brief Payload for MARU_EVENT_DROP_EXITED. */
 typedef struct MARU_DropLeaveEvent {
-  void **session_userdata;
+  MARU_DropSession *session;
 } MARU_DropLeaveEvent;
 
 /** @brief Payload for MARU_EVENT_DROP_DROPPED. */
 typedef struct MARU_DropEvent {
   MARU_Vec2Dip position;
-  void **session_userdata;
+  MARU_DropSession *session;
   const char **paths;
   MARU_MIMETypeList available_types;
   MARU_ModifierFlags modifiers;
@@ -480,7 +477,7 @@ typedef struct MARU_UserDefinedEvent {
 
 /** @brief Unified standard event payload union.
  *
- * Note: This is compiler-enforced to remain under 64 bytes.
+ * Note: This is compiler-enforced to remain exactly 64 bytes.
  */
 typedef struct MARU_Event {
   union {

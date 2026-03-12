@@ -130,14 +130,14 @@ typedef struct MARU_Controller_Windows {
   bool is_standardized;
 
   MARU_ButtonState8 *button_states;
-  MARU_ButtonChannelInfo *button_channels;
+  MARU_ChannelInfo *button_channels;
   uint32_t button_count;
 
   MARU_AnalogInputState *analog_states;
-  MARU_AnalogChannelInfo *analog_channels;
+  MARU_ChannelInfo *analog_channels;
   uint32_t analog_count;
 
-  MARU_HapticChannelInfo *haptic_channels;
+  MARU_ChannelInfo *haptic_channels;
   uint32_t haptic_count;
   MARU_Scalar last_haptic_levels[MARU_CONTROLLER_HAPTIC_STANDARD_COUNT];
   bool haptics_dirty;

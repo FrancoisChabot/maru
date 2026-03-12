@@ -479,22 +479,22 @@ static MARU_Controller_Windows *_maru_windows_controller_create_common(
   if (button_count > 0u) {
     ctrl->button_states = (MARU_ButtonState8 *)maru_context_alloc(
         &ctx->base, sizeof(MARU_ButtonState8) * button_count);
-    ctrl->button_channels = (MARU_ButtonChannelInfo *)maru_context_alloc(
-        &ctx->base, sizeof(MARU_ButtonChannelInfo) * button_count);
+    ctrl->button_channels = (MARU_ChannelInfo *)maru_context_alloc(
+        &ctx->base, sizeof(MARU_ChannelInfo) * button_count);
     if (!ctrl->button_states || !ctrl->button_channels) {
       _maru_windows_controller_free(&ctx->base, ctrl);
       return NULL;
     }
     memset(ctrl->button_states, 0, sizeof(MARU_ButtonState8) * button_count);
     memset(ctrl->button_channels, 0,
-           sizeof(MARU_ButtonChannelInfo) * button_count);
+           sizeof(MARU_ChannelInfo) * button_count);
   }
 
   if (analog_count > 0u) {
     ctrl->analog_states = (MARU_AnalogInputState *)maru_context_alloc(
         &ctx->base, sizeof(MARU_AnalogInputState) * analog_count);
-    ctrl->analog_channels = (MARU_AnalogChannelInfo *)maru_context_alloc(
-        &ctx->base, sizeof(MARU_AnalogChannelInfo) * analog_count);
+    ctrl->analog_channels = (MARU_ChannelInfo *)maru_context_alloc(
+        &ctx->base, sizeof(MARU_ChannelInfo) * analog_count);
     if (!ctrl->analog_states || !ctrl->analog_channels) {
       _maru_windows_controller_free(&ctx->base, ctrl);
       return NULL;
@@ -502,18 +502,18 @@ static MARU_Controller_Windows *_maru_windows_controller_create_common(
     memset(ctrl->analog_states, 0,
            sizeof(MARU_AnalogInputState) * analog_count);
     memset(ctrl->analog_channels, 0,
-           sizeof(MARU_AnalogChannelInfo) * analog_count);
+           sizeof(MARU_ChannelInfo) * analog_count);
   }
 
   if (haptic_count > 0u) {
-    ctrl->haptic_channels = (MARU_HapticChannelInfo *)maru_context_alloc(
-        &ctx->base, sizeof(MARU_HapticChannelInfo) * haptic_count);
+    ctrl->haptic_channels = (MARU_ChannelInfo *)maru_context_alloc(
+        &ctx->base, sizeof(MARU_ChannelInfo) * haptic_count);
     if (!ctrl->haptic_channels) {
       _maru_windows_controller_free(&ctx->base, ctrl);
       return NULL;
     }
     memset(ctrl->haptic_channels, 0,
-           sizeof(MARU_HapticChannelInfo) * haptic_count);
+           sizeof(MARU_ChannelInfo) * haptic_count);
   }
 
   ctrl->base.pub.context = (MARU_Context *)ctx;

@@ -158,13 +158,6 @@ typedef enum MARU_MouseDefaultButton {
   MARU_MOUSE_DEFAULT_COUNT = 5,
 } MARU_MouseDefaultButton;
 
-/** @brief Metadata for a mouse button channel. */
-typedef struct MARU_MouseButtonChannelInfo {
-  const char *name;
-  uint32_t native_code;
-  bool is_default;
-} MARU_MouseButtonChannelInfo;
-
 /** @brief State for a single continuous input axis. */
 typedef struct MARU_AnalogInputState {
   MARU_Scalar value;
@@ -197,7 +190,7 @@ static inline uint32_t maru_getMouseButtonCount(const MARU_Window *window);
 static inline const MARU_ButtonState8 *maru_getMouseButtonStates(const MARU_Window *window);
 
 /** @brief Retrieves metadata for all mouse buttons/channels for a window. */
-static inline const MARU_MouseButtonChannelInfo *maru_getMouseButtonChannelInfo(const MARU_Window *window);
+static inline const MARU_ChannelInfo *maru_getMouseButtonChannelInfo(const MARU_Window *window);
 
 /** @brief Retrieves the channel index for a named default mouse button role. */
 static inline int32_t maru_getMouseDefaultButtonChannel(const MARU_Window *window, MARU_MouseDefaultButton which);

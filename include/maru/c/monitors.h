@@ -81,7 +81,7 @@ static inline const MARU_MonitorMetrics *maru_getMonitorMetrics(const MARU_Monit
 static inline const char *maru_getMonitorName(const MARU_Monitor *monitor);
 
 /** @brief Retrieves the physical dimensions of the monitor in millimeters. */
-static inline MARU_Vec2Dip maru_getMonitorPhysicalSize(const MARU_Monitor *monitor);
+static inline MARU_Vec2Mm maru_getMonitorPhysicalSize(const MARU_Monitor *monitor);
 
 /** @brief Retrieves the current video mode of the monitor. */
 static inline MARU_VideoMode maru_getMonitorCurrentMode(const MARU_Monitor *monitor);

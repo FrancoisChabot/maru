@@ -428,13 +428,13 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   
   total_size = ALIGN_UP(total_size);
   size_t btn_channels_offset = total_size;
-  total_size += ALIGN_UP(btn_count * sizeof(MARU_ButtonChannelInfo));
+  total_size += ALIGN_UP(btn_count * sizeof(MARU_ChannelInfo));
   
   size_t btn_states_offset = total_size;
   total_size += ALIGN_UP(btn_count * sizeof(MARU_ButtonState8));
   
   size_t abs_channels_offset = total_size;
-  total_size += ALIGN_UP(abs_count * sizeof(MARU_AnalogChannelInfo));
+  total_size += ALIGN_UP(abs_count * sizeof(MARU_ChannelInfo));
   
   size_t abs_states_offset = total_size;
   total_size += ALIGN_UP(abs_count * sizeof(MARU_AnalogInputState));
@@ -443,7 +443,7 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   total_size += ALIGN_UP(abs_count * sizeof(struct input_absinfo));
   
   size_t haptic_channels_offset = total_size;
-  total_size += ALIGN_UP(haptic_count * sizeof(MARU_HapticChannelInfo));
+  total_size += ALIGN_UP(haptic_count * sizeof(MARU_ChannelInfo));
   
   uint32_t dynamic_name_capacity = 0u;
   if (btn_count > MARU_CONTROLLER_BUTTON_STANDARD_COUNT) {
@@ -461,12 +461,12 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   memset(ctrl, 0, total_size);
 
   uint8_t* base_ptr = (uint8_t*)ctrl;
-  ctrl->button_channels = (MARU_ButtonChannelInfo*)(base_ptr + btn_channels_offset);
+  ctrl->button_channels = (MARU_ChannelInfo*)(base_ptr + btn_channels_offset);
   ctrl->button_states = (MARU_ButtonState8*)(base_ptr + btn_states_offset);
-  ctrl->analog_channels = (MARU_AnalogChannelInfo*)(base_ptr + abs_channels_offset);
+  ctrl->analog_channels = (MARU_ChannelInfo*)(base_ptr + abs_channels_offset);
   ctrl->analog_states = (MARU_AnalogInputState*)(base_ptr + abs_states_offset);
   ctrl->analog_abs_info = (struct input_absinfo *)(base_ptr + abs_info_offset);
-  ctrl->haptic_channels = (MARU_HapticChannelInfo*)(base_ptr + haptic_channels_offset);
+  ctrl->haptic_channels = (MARU_ChannelInfo*)(base_ptr + haptic_channels_offset);
   ctrl->allocated_names = (char**)(base_ptr + allocated_names_offset);
 
   ctrl->fd = fd;
@@ -569,14 +569,15 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   ctrl->allocated_name_count = 0;
 
   for (uint32_t i = 0; i < btn_count; ++i) {
+    int code = -1;
+    for (int c = 0; c < KEY_CNT; ++c) {
+      if (ctrl->evdev_to_button[c] == (int)i) { code = c; break; }
+    }
+    ctrl->button_channels[i].native_code = (uint32_t)code;
+
     if (i < MARU_CONTROLLER_BUTTON_STANDARD_COUNT) {
       ctrl->button_channels[i].name = std_button_names[i];
     } else {
-      // Find the evdev code for this non-standard button
-      int code = -1;
-      for (int c = 0; c < KEY_CNT; ++c) {
-        if (ctrl->evdev_to_button[c] == (int)i) { code = c; break; }
-      }
       char buf[32];
       snprintf(buf, sizeof(buf), "Button %d", code);
       char *n = _maru_linux_strdup_ctx(common->ctx_base, buf);
@@ -590,13 +591,15 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   }
 
   for (uint32_t i = 0; i < abs_count; ++i) {
+    int code = -1;
+    for (int c = 0; c < ABS_CNT; ++c) {
+      if (ctrl->evdev_to_analog[c] == (int)i) { code = c; break; }
+    }
+    ctrl->analog_channels[i].native_code = (uint32_t)code;
+
     if (i < MARU_CONTROLLER_ANALOG_STANDARD_COUNT) {
       ctrl->analog_channels[i].name = std_analog_names[i];
     } else {
-      int code = -1;
-      for (int c = 0; c < ABS_CNT; ++c) {
-        if (ctrl->evdev_to_analog[c] == (int)i) { code = c; break; }
-      }
       char buf[32];
       snprintf(buf, sizeof(buf), "Axis %d", code);
       char *n = _maru_linux_strdup_ctx(common->ctx_base, buf);
@@ -611,6 +614,7 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
 
   for (uint32_t i = 0; i < haptic_count; ++i) {
     ctrl->haptic_channels[i].name = std_haptic_names[i];
+    ctrl->haptic_channels[i].native_code = UINT32_MAX;
   }
 
   char name[256];

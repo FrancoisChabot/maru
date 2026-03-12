@@ -33,12 +33,12 @@ typedef struct MARU_LinuxController {
   bool is_standardized;
 
   // Dynamically discovered capabilities
-  MARU_ButtonChannelInfo *button_channels;
+  MARU_ChannelInfo *button_channels;
   MARU_ButtonState8 *button_states;
-  MARU_AnalogChannelInfo *analog_channels;
+  MARU_ChannelInfo *analog_channels;
   MARU_AnalogInputState *analog_states;
 
-  MARU_HapticChannelInfo *haptic_channels;
+  MARU_ChannelInfo *haptic_channels;
   int effect_id; // -1 if no effect uploaded
   bool haptics_dirty;
   MARU_Scalar last_haptic_levels[MARU_CONTROLLER_HAPTIC_STANDARD_COUNT];

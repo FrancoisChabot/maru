@@ -33,7 +33,7 @@ public:
     void setUserData(void* userdata);
     
     const char* getName() const;
-    MARU_Vec2Dip getPhysicalSize() const;
+    MARU_Vec2Mm getPhysicalSize() const;
     MARU_VideoMode getCurrentMode() const;
     MARU_Vec2Dip getLogicalPosition() const;
     MARU_Vec2Dip getLogicalSize() const;

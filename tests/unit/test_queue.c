@@ -19,7 +19,7 @@ static void on_queue_event(MARU_EventId type, MARU_Window *window, const MARU_Ev
 static MARU_Status push_user_event(MARU_Queue *queue, MARU_EventId type) {
     MARU_Event evt = {0};
     evt.user = (MARU_UserDefinedEvent){0};
-    return maru_queue_push(queue, type, NULL, &evt);
+    return maru_pushQueue(queue, type, NULL, &evt);
 }
 
 UTEST(QueueTest, CreateDestroy) {
@@ -28,10 +28,10 @@ UTEST(QueueTest, CreateDestroy) {
     ASSERT_TRUE(context != NULL);
 
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(maru_queue_create(context, 16, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_EQ(maru_createQueue(context, 16, &queue), (MARU_Status)MARU_SUCCESS);
     ASSERT_TRUE(queue != NULL);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }
 
@@ -40,28 +40,28 @@ UTEST(QueueTest, PushCommitScan) {
     MARU_Context *context = maru_test_createContext(&create_info);
     
     MARU_Queue *queue = NULL;
-    maru_queue_create(context, 16, &queue);
+    maru_createQueue(context, 16, &queue);
 
     // 1. Push an event
     MARU_Event evt = {0};
     evt.user.userdata = (void *)0x123;
-    maru_queue_push(queue, MARU_EVENT_USER_0, NULL, &evt);
+    maru_pushQueue(queue, MARU_EVENT_USER_0, NULL, &evt);
 
     struct QueueTestState state = {0};
 
     // 2. Scan before commit should find nothing
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
+    maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 0);
 
     // 4. Commit
-    EXPECT_EQ(maru_queue_commit(queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_EQ(maru_commitQueue(queue), (MARU_Status)MARU_SUCCESS);
 
     // 5. Scan should now find the event
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
+    maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
     EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_0);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }
 
@@ -70,15 +70,15 @@ UTEST(QueueTest, MultipleCommits) {
     MARU_Context *context = maru_test_createContext(&create_info);
     
     MARU_Queue *queue = NULL;
-    maru_queue_create(context, 16, &queue);
+    maru_createQueue(context, 16, &queue);
 
     // Push Event A
     EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
               (MARU_Status)MARU_SUCCESS);
-    maru_queue_commit(queue);
+    maru_commitQueue(queue);
 
     struct QueueTestState state = {0};
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
+    maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
 
     // Push Event B
@@ -87,18 +87,18 @@ UTEST(QueueTest, MultipleCommits) {
     
     // Before second commit, scan still shows only A
     state.event_count = 0;
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
+    maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
     EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_0);
 
     // Second commit: A is discarded, B becomes stable
-    maru_queue_commit(queue);
+    maru_commitQueue(queue);
     state.event_count = 0;
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_queue_event, &state);
+    maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
     EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_1);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }
 
@@ -107,21 +107,21 @@ UTEST(QueueTest, Masking) {
     MARU_Context *context = maru_test_createContext(&create_info);
     
     MARU_Queue *queue = NULL;
-    maru_queue_create(context, 16, &queue);
+    maru_createQueue(context, 16, &queue);
 
     EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
               (MARU_Status)MARU_SUCCESS);
     EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
               (MARU_Status)MARU_SUCCESS);
-    maru_queue_commit(queue);
+    maru_commitQueue(queue);
 
     struct QueueTestState state = {0};
     // Scan only for USER_1
-    maru_queue_scan(queue, MARU_MASK_USER_1, on_queue_event, &state);
+    maru_scanQueue(queue, MARU_MASK_USER_1, on_queue_event, &state);
     EXPECT_EQ(state.event_count, 1);
     EXPECT_EQ(state.last_type, (MARU_EventId)MARU_EVENT_USER_1);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }
 
@@ -138,12 +138,12 @@ UTEST(QueueTest, PushRejectsNullPayload) {
     MARU_Context *context = maru_test_createContext(&create_info);
 
     MARU_Queue *queue = NULL;
-    maru_queue_create(context, 16, &queue);
+    maru_createQueue(context, 16, &queue);
 
-    EXPECT_EQ(maru_queue_push(queue, MARU_EVENT_USER_0, NULL, NULL),
+    EXPECT_EQ(maru_pushQueue(queue, MARU_EVENT_USER_0, NULL, NULL),
               (MARU_Status)MARU_FAILURE);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }
 
@@ -168,9 +168,9 @@ UTEST(QueueTest, Coalescence) {
     MARU_Context *context = maru_test_createContext(&create_info);
     
     MARU_Queue *queue = NULL;
-    maru_queue_create(context, 16, &queue);
+    maru_createQueue(context, 16, &queue);
 
-    maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED);
+    maru_setQueueCoalesceMask(queue, MARU_MASK_MOUSE_MOVED);
 
     // ev1
     MARU_Event ev1 = {0};
@@ -178,7 +178,7 @@ UTEST(QueueTest, Coalescence) {
     ev1.mouse_motion.position.y = (MARU_Scalar)10.0;
     ev1.mouse_motion.delta.x = (MARU_Scalar)5.0;
     ev1.mouse_motion.delta.y = (MARU_Scalar)5.0;
-    maru_queue_push(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev1);
+    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev1);
 
     // ev2
     MARU_Event ev2 = {0};
@@ -186,12 +186,12 @@ UTEST(QueueTest, Coalescence) {
     ev2.mouse_motion.position.y = (MARU_Scalar)20.0;
     ev2.mouse_motion.delta.x = (MARU_Scalar)10.0;
     ev2.mouse_motion.delta.y = (MARU_Scalar)10.0;
-    maru_queue_push(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev2);
+    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &ev2);
 
-    maru_queue_commit(queue);
+    maru_commitQueue(queue);
 
     struct CoalesceResult result = {0};
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_coalesce_event, &result);
+    maru_scanQueue(queue, MARU_ALL_EVENTS, on_coalesce_event, &result);
 
     EXPECT_EQ(result.count, 1);
     EXPECT_EQ(result.pos.x, (MARU_Scalar)20.0);
@@ -199,7 +199,7 @@ UTEST(QueueTest, Coalescence) {
     EXPECT_EQ(result.delta.x, (MARU_Scalar)15.0);
     EXPECT_EQ(result.delta.y, (MARU_Scalar)15.0);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }
 
@@ -223,8 +223,8 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     MARU_Context *context = maru_test_createContext(&create_info);
 
     MARU_Queue *queue = NULL;
-    maru_queue_create(context, 3, &queue);
-    maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED);
+    maru_createQueue(context, 3, &queue);
+    maru_setQueueCoalesceMask(queue, MARU_MASK_MOUSE_MOVED);
 
     MARU_Event move_a = {0};
     move_a.mouse_motion.position.x = (MARU_Scalar)10.0;
@@ -233,7 +233,7 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     move_a.mouse_motion.delta.y = (MARU_Scalar)2.0;
     move_a.mouse_motion.raw_delta.x = (MARU_Scalar)3.0;
     move_a.mouse_motion.raw_delta.y = (MARU_Scalar)4.0;
-    maru_queue_push(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_a);
+    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_a);
 
     push_user_event(queue, MARU_EVENT_USER_0);
 
@@ -244,13 +244,13 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     move_b.mouse_motion.delta.y = (MARU_Scalar)7.0;
     move_b.mouse_motion.raw_delta.x = (MARU_Scalar)11.0;
     move_b.mouse_motion.raw_delta.y = (MARU_Scalar)13.0;
-    maru_queue_push(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_b);
+    maru_pushQueue(queue, MARU_EVENT_MOUSE_MOVED, NULL, &move_b);
 
     push_user_event(queue, MARU_EVENT_USER_1);
-    maru_queue_commit(queue);
+    maru_commitQueue(queue);
 
     struct QueueTrace trace = {0};
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_trace_event, &trace);
+    maru_scanQueue(queue, MARU_ALL_EVENTS, on_trace_event, &trace);
 
     EXPECT_EQ(trace.count, (uint32_t)3);
     EXPECT_EQ(trace.types[0], (MARU_EventId)MARU_EVENT_USER_0);
@@ -265,7 +265,7 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     EXPECT_EQ(trace.events[1].mouse_motion.raw_delta.y, (MARU_Scalar)17.0);
 
     MARU_QueueMetrics metrics = {0};
-    maru_queue_get_metrics(queue, &metrics);
+    maru_getQueueMetrics(queue, &metrics);
     EXPECT_EQ(metrics.peak_active_count, (uint32_t)3);
     EXPECT_EQ(metrics.overflow_drop_count, (uint32_t)0);
     EXPECT_EQ(metrics.overflow_compact_count, (uint32_t)1);
@@ -274,7 +274,7 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_1], (uint32_t)0);
     EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_MOUSE_MOVED], (uint32_t)0);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }
 
@@ -283,8 +283,8 @@ UTEST(QueueTest, OverflowDropsWhenCompactionCannotFreeSpace) {
     MARU_Context *context = maru_test_createContext(&create_info);
 
     MARU_Queue *queue = NULL;
-    maru_queue_create(context, 2, &queue);
-    maru_queue_set_coalesce_mask(queue, MARU_MASK_MOUSE_MOVED);
+    maru_createQueue(context, 2, &queue);
+    maru_setQueueCoalesceMask(queue, MARU_MASK_MOUSE_MOVED);
 
     EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
               (MARU_Status)MARU_SUCCESS);
@@ -292,17 +292,17 @@ UTEST(QueueTest, OverflowDropsWhenCompactionCannotFreeSpace) {
               (MARU_Status)MARU_SUCCESS);
     EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_2),
               (MARU_Status)MARU_FAILURE);
-    maru_queue_commit(queue);
+    maru_commitQueue(queue);
 
     struct QueueTrace trace = {0};
-    maru_queue_scan(queue, MARU_ALL_EVENTS, on_trace_event, &trace);
+    maru_scanQueue(queue, MARU_ALL_EVENTS, on_trace_event, &trace);
 
     EXPECT_EQ(trace.count, (uint32_t)2);
     EXPECT_EQ(trace.types[0], (MARU_EventId)MARU_EVENT_USER_0);
     EXPECT_EQ(trace.types[1], (MARU_EventId)MARU_EVENT_USER_1);
 
     MARU_QueueMetrics metrics = {0};
-    maru_queue_get_metrics(queue, &metrics);
+    maru_getQueueMetrics(queue, &metrics);
     EXPECT_EQ(metrics.peak_active_count, (uint32_t)2);
     EXPECT_EQ(metrics.overflow_drop_count, (uint32_t)1);
     EXPECT_EQ(metrics.overflow_compact_count, (uint32_t)1);
@@ -310,7 +310,7 @@ UTEST(QueueTest, OverflowDropsWhenCompactionCannotFreeSpace) {
     EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_2], (uint32_t)1);
     EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_0], (uint32_t)0);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }
 
@@ -319,7 +319,7 @@ UTEST(QueueTest, ResetMetricsClearsOverflowCounters) {
     MARU_Context *context = maru_test_createContext(&create_info);
 
     MARU_Queue *queue = NULL;
-    maru_queue_create(context, 2, &queue);
+    maru_createQueue(context, 2, &queue);
 
     EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
               (MARU_Status)MARU_SUCCESS);
@@ -329,19 +329,19 @@ UTEST(QueueTest, ResetMetricsClearsOverflowCounters) {
               (MARU_Status)MARU_FAILURE);
 
     MARU_QueueMetrics metrics = {0};
-    maru_queue_get_metrics(queue, &metrics);
+    maru_getQueueMetrics(queue, &metrics);
     EXPECT_EQ(metrics.peak_active_count, (uint32_t)2);
     EXPECT_EQ(metrics.overflow_drop_count, (uint32_t)1);
     EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_2], (uint32_t)1);
 
-    maru_queue_reset_metrics(queue);
-    maru_queue_get_metrics(queue, &metrics);
+    maru_resetQueueMetrics(queue);
+    maru_getQueueMetrics(queue, &metrics);
     EXPECT_EQ(metrics.peak_active_count, (uint32_t)0);
     EXPECT_EQ(metrics.overflow_drop_count, (uint32_t)0);
     EXPECT_EQ(metrics.overflow_compact_count, (uint32_t)0);
     EXPECT_EQ(metrics.overflow_events_compacted, (uint32_t)0);
     EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_2], (uint32_t)0);
 
-    maru_queue_destroy(queue);
+    maru_destroyQueue(queue);
     maru_destroyContext(context);
 }

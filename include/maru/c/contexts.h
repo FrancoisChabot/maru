@@ -74,7 +74,7 @@ static inline const MARU_ButtonState8 *
 maru_getContextMouseButtonStates(const MARU_Context *context);
 
 /** @brief Retrieves metadata for context-level mouse button channels. */
-static inline const MARU_MouseButtonChannelInfo *
+static inline const MARU_ChannelInfo *
 maru_getContextMouseButtonChannelInfo(const MARU_Context *context);
 
 /** @brief Retrieves the channel index for a default mouse role on this context.
@@ -108,6 +108,8 @@ typedef struct MARU_ContextAttributes {
       diagnostic_cb;         ///< Optional callback for library diagnostics.
   void *diagnostic_userdata; ///< Passed to the diagnostic callback.
 
+  struct MARU_Cursor *default_cursor; ///< Default cursor for all windows.
+
   bool inhibit_idle; ///< If true, prevents the OS from entering sleep.
 
   uint32_t idle_timeout_ms; ///< Threshold for MARU_EVENT_IDLE_STATE_CHANGED.
@@ -140,6 +142,7 @@ typedef struct MARU_ContextCreateInfo {
           {                                                                    \
               .diagnostic_cb = NULL,                                           \
               .diagnostic_userdata = NULL,                                     \
+              .default_cursor = NULL,                                          \
               .inhibit_idle = false,                                           \
               .idle_timeout_ms = 0,                                            \
           },                                                                   \

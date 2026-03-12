@@ -10,9 +10,9 @@ typedef struct MARU_Controller_Cocoa {
   MARU_Controller_Base base;
   GCController *gc_controller;
   
-  MARU_AnalogChannelInfo *analog_channel_infos;
+  MARU_ChannelInfo *analog_channel_infos;
   MARU_AnalogInputState *analog_states;
-  MARU_ButtonChannelInfo *button_channel_infos;
+  MARU_ChannelInfo *button_channel_infos;
   MARU_ButtonState8 *button_states;
 } MARU_Controller_Cocoa;
 
@@ -83,15 +83,17 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     c->base.pub.analog_count = MARU_CONTROLLER_ANALOG_STANDARD_COUNT;
     c->base.pub.button_count = MARU_CONTROLLER_BUTTON_STANDARD_COUNT;
     
-    c->analog_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_AnalogChannelInfo) * c->base.pub.analog_count);
+    c->analog_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) * c->base.pub.analog_count);
     c->analog_states = maru_context_alloc(&ctx->base, sizeof(MARU_AnalogInputState) * c->base.pub.analog_count);
-    c->button_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_ButtonChannelInfo) * c->base.pub.button_count);
+    c->button_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) * c->base.pub.button_count);
     c->button_states = maru_context_alloc(&ctx->base, sizeof(MARU_ButtonState8) * c->base.pub.button_count);
     if (!c->analog_channel_infos || !c->analog_states || !c->button_channel_infos || !c->button_states) {
         _maru_controller_free(&c->base);
         return NULL;
     }
+    memset(c->analog_channel_infos, 0, sizeof(MARU_ChannelInfo) * c->base.pub.analog_count);
     memset(c->analog_states, 0, sizeof(MARU_AnalogInputState) * c->base.pub.analog_count);
+    memset(c->button_channel_infos, 0, sizeof(MARU_ChannelInfo) * c->base.pub.button_count);
     memset(c->button_states, 0, sizeof(MARU_ButtonState8) * c->base.pub.button_count);
     
     c->base.pub.analog_channels = c->analog_channel_infos;

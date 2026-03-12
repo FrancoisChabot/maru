@@ -28,7 +28,7 @@ typedef struct MARU_MonitorExposed {
   const MARU_MonitorMetrics *metrics;
 
   const char *name;
-  MARU_Vec2Dip physical_size;
+  MARU_Vec2Mm physical_size;
   MARU_VideoMode current_mode;
   MARU_Vec2Dip logical_position;
   MARU_Vec2Dip logical_size;
@@ -64,7 +64,7 @@ static inline const char *maru_getMonitorName(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->name;
 }
 
-static inline MARU_Vec2Dip
+static inline MARU_Vec2Mm
 maru_getMonitorPhysicalSize(const MARU_Monitor *monitor) {
   return ((const MARU_MonitorExposed *)monitor)->physical_size;
 }

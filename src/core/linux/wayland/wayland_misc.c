@@ -7,7 +7,7 @@
 #include <string.h>
 
 void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t changed_fields,
-                                               bool icon_effective) {
+                                               bool icon) {
   if (changed_fields == 0u) {
     return;
   }
@@ -22,7 +22,7 @@ void _maru_wayland_dispatch_presentation_state(MARU_Window_WL *window, uint32_t 
   evt.presentation.minimized = (flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
   evt.presentation.maximized = (flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
   evt.presentation.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-  evt.presentation.icon_effective = icon_effective;
+  evt.presentation.icon = icon;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
 }

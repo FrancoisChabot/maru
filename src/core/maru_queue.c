@@ -280,7 +280,7 @@ static void _maru_queue_buffer_cleanup(MARU_Context_Base *ctx_base, MARU_QueueBu
     }
 }
 
-MARU_Status maru_queue_create(MARU_Context *ctx, uint32_t capacity, MARU_Queue **out_queue) {
+MARU_Status maru_createQueue(MARU_Context *ctx, uint32_t capacity, MARU_Queue **out_queue) {
     if (!ctx || !out_queue || capacity == 0) {
         return MARU_FAILURE;
     }
@@ -316,7 +316,7 @@ MARU_Status maru_queue_create(MARU_Context *ctx, uint32_t capacity, MARU_Queue *
     return MARU_SUCCESS;
 }
 
-void maru_queue_destroy(MARU_Queue *queue) {
+void maru_destroyQueue(MARU_Queue *queue) {
     if (!queue) return;
     
     MARU_Context_Base *ctx_base = queue->ctx_base;
@@ -325,7 +325,7 @@ void maru_queue_destroy(MARU_Queue *queue) {
     maru_context_free(ctx_base, queue);
 }
 
-MARU_Status maru_queue_push(MARU_Queue *queue, MARU_EventId type,
+MARU_Status maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
                             MARU_Window *window, const MARU_Event *event) {
     if (!queue || !event) return MARU_FAILURE;
 
@@ -340,7 +340,7 @@ MARU_Status maru_queue_push(MARU_Queue *queue, MARU_EventId type,
                : MARU_FAILURE;
 }
 
-MARU_Status maru_queue_commit(MARU_Queue *queue) {
+MARU_Status maru_commitQueue(MARU_Queue *queue) {
     if (!queue) return MARU_FAILURE;
 
 #ifdef MARU_VALIDATE_API_CALLS
@@ -359,7 +359,7 @@ MARU_Status maru_queue_commit(MARU_Queue *queue) {
     return MARU_SUCCESS;
 }
 
-void maru_queue_scan(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback callback, void *userdata) {
+void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback callback, void *userdata) {
     if (!queue || !callback) return;
 
     MARU_QueueBuffer stable = queue->stable;
@@ -372,13 +372,13 @@ void maru_queue_scan(MARU_Queue *queue, MARU_EventMask mask, MARU_EventCallback 
     }
 }
 
-void maru_queue_set_coalesce_mask(MARU_Queue *queue, MARU_EventMask mask) {
+void maru_setQueueCoalesceMask(MARU_Queue *queue, MARU_EventMask mask) {
     if (queue) {
         queue->coalesce_mask = mask;
     }
 }
 
-void maru_queue_get_metrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metrics) {
+void maru_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metrics) {
     if (!out_metrics) return;
 
     if (!queue) {
@@ -395,7 +395,7 @@ void maru_queue_get_metrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metr
            sizeof(out_metrics->overflow_drop_count_by_event));
 }
 
-void maru_queue_reset_metrics(MARU_Queue *queue) {
+void maru_resetQueueMetrics(MARU_Queue *queue) {
     if (!queue) return;
     _maru_queue_reset_metrics_internal(queue);
 }

@@ -77,18 +77,16 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         for (uint32_t i = 0; i < event.drop_enter.available_types.count; ++i) {
             dnd_mime_types_.emplace_back(event.drop_enter.available_types.mime_types[i]);
         }
-        if (event.drop_enter.feedback && event.drop_enter.feedback->action) {
-            *event.drop_enter.feedback->action = MARU_DROP_ACTION_COPY;
-        }
-        if (event.drop_enter.feedback && event.drop_enter.feedback->session_userdata) {
-            *event.drop_enter.feedback->session_userdata = (void*)"Hello from session";
+        if (event.drop_enter.session) {
+            maru_setDropSessionAction(event.drop_enter.session, MARU_DROP_ACTION_COPY);
+            maru_setDropSessionUserdata(event.drop_enter.session, (void*)"Hello from session");
         }
         return;
     }
     if (type == MARU_EVENT_DROP_HOVERED) {
         const char* session_msg = "none";
-        if (event.drop_hover.feedback && event.drop_hover.feedback->session_userdata && *event.drop_hover.feedback->session_userdata) {
-            session_msg = (const char*)*event.drop_hover.feedback->session_userdata;
+        if (event.drop_hover.session && maru_getDropSessionUserdata(event.drop_hover.session)) {
+            session_msg = (const char*)maru_getDropSessionUserdata(event.drop_hover.session);
         }
         _dnd_info = "Drop Hovered at " + std::to_string(event.drop_hover.position.x) + ", " + std::to_string(event.drop_hover.position.y) + " Session: " + session_msg;
         
@@ -97,15 +95,15 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
             dnd_mime_types_.emplace_back(event.drop_hover.available_types.mime_types[i]);
         }
 
-        if (event.drop_hover.feedback && event.drop_hover.feedback->action) {
-            *event.drop_hover.feedback->action = MARU_DROP_ACTION_COPY;
+        if (event.drop_hover.session) {
+            maru_setDropSessionAction(event.drop_hover.session, MARU_DROP_ACTION_COPY);
         }
         return;
     }
     if (type == MARU_EVENT_DROP_EXITED) {
         const char* session_msg = "none";
-        if (event.drop_leave.session_userdata && *event.drop_leave.session_userdata) {
-            session_msg = (const char*)*event.drop_leave.session_userdata;
+        if (event.drop_leave.session && maru_getDropSessionUserdata(event.drop_leave.session)) {
+            session_msg = (const char*)maru_getDropSessionUserdata(event.drop_leave.session);
         }
         _dnd_info = std::string("Drop Exited. Session was: ") + session_msg;
         dnd_mime_types_.clear();
@@ -113,8 +111,8 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
     }
     if (type == MARU_EVENT_DROP_DROPPED) {
         const char* session_msg = "none";
-        if (event.drop.session_userdata && *event.drop.session_userdata) {
-            session_msg = (const char*)*event.drop.session_userdata;
+        if (event.drop.session && maru_getDropSessionUserdata(event.drop.session)) {
+            session_msg = (const char*)maru_getDropSessionUserdata(event.drop.session);
         }
         _dnd_info = std::string("Drop Dropped. Session was: ") + session_msg;
         

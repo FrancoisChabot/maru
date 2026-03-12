@@ -238,6 +238,14 @@ _maru_validate_updateContext(MARU_Context *context, uint64_t field_mask,
 
   const uint64_t known_fields = MARU_CONTEXT_ATTR_ALL;
   MARU_CONSTRAINT_CHECK((field_mask & ~known_fields) == 0);
+
+  if (field_mask & MARU_CONTEXT_ATTR_DEFAULT_CURSOR) {
+    if (attributes->default_cursor != NULL) {
+      MARU_CONSTRAINT_CHECK(
+          ((const MARU_Cursor_Base *)attributes->default_cursor)->ctx_base ==
+          (const MARU_Context_Base *)context);
+    }
+  }
 }
 
 static inline void _maru_validate_pumpEvents(MARU_Context *context,

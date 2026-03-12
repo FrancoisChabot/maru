@@ -24,12 +24,12 @@
  * 3. SCAN: From any thread, the stable snapshot can be iterated.
  *
  * Threading Rules:
- * - maru_queue_push() and maru_queue_commit() MUST be called from the primary
+ * - maru_pushQueue() and maru_commitQueue() MUST be called from the primary
  * thread.
- * - maru_queue_scan() can be called from any thread.
+ * - maru_scanQueue() can be called from any thread.
  * - External synchronization (e.g., an RW lock) MUST be used to ensure that
- *   maru_queue_scan() does not run concurrently with maru_queue_commit().
- *   Multiple concurrent calls to maru_queue_scan() are safe.
+ *   maru_scanQueue() does not run concurrently with maru_commitQueue().
+ *   Multiple concurrent calls to maru_scanQueue() are safe.
  */
 
 #ifdef __cplusplus
@@ -40,7 +40,7 @@ extern "C" {
 typedef struct MARU_Queue MARU_Queue;
 
 /**
- * @brief Event mask of payloads safe to queue by value via maru_queue_push().
+ * @brief Event mask of payloads safe to queue by value via maru_pushQueue().
  *
  * Any event outside this mask may carry transient pointers/handles whose
  * lifetime only spans the active pump callback.
@@ -75,7 +75,7 @@ typedef struct MARU_Queue MARU_Queue;
    MARU_EVENT_MASK(MARU_EVENT_USER_14) |                                       \
    MARU_EVENT_MASK(MARU_EVENT_USER_15))
 
-/** @brief Returns true when an event id is safe for maru_queue_push(). */
+/** @brief Returns true when an event id is safe for maru_pushQueue(). */
 static inline bool maru_isQueueSafeEventId(MARU_EventId type) {
   return maru_eventMaskHas(MARU_QUEUE_SAFE_EVENT_MASK, type);
 }
@@ -107,15 +107,15 @@ typedef struct MARU_QueueMetrics {
  * @param out_queue Pointer to receive the created queue handle.
  * @return MARU_SUCCESS on success, or an error code.
  */
-MARU_API MARU_Status maru_queue_create(MARU_Context *ctx, uint32_t capacity,
-                                       MARU_Queue **out_queue);
+MARU_API MARU_Status maru_createQueue(MARU_Context *ctx, uint32_t capacity,
+                                      MARU_Queue **out_queue);
 
 /**
  * @brief Destroys an event queue and frees its resources.
  *
  * @param queue The queue to destroy.
  */
-MARU_API void maru_queue_destroy(MARU_Queue *queue);
+MARU_API void maru_destroyQueue(MARU_Queue *queue);
 
 /**
  * @brief Pushes one event into the queue's transient active buffer.
@@ -129,34 +129,34 @@ MARU_API void maru_queue_destroy(MARU_Queue *queue);
  * @param event Event payload to copy by value.
  * @return MARU_SUCCESS on success, or an error code.
  */
-MARU_API MARU_Status maru_queue_push(MARU_Queue *queue, MARU_EventId type,
-                                     MARU_Window *window,
-                                     const MARU_Event *event);
+MARU_API MARU_Status maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
+                                    MARU_Window *window,
+                                    const MARU_Event *event);
 
 /**
  * @brief Makes all pushed events since the last commit available for scanning.
  *
- * This "freezes" the current set of events into a stable snapshot.
+ * This "freeze" the current set of events into a stable snapshot.
  * Must be called on the primary thread.
  *
  * @param queue The event queue.
  * @return MARU_SUCCESS on success, or an error code.
  */
-MARU_API MARU_Status maru_queue_commit(MARU_Queue *queue);
+MARU_API MARU_Status maru_commitQueue(MARU_Queue *queue);
 
 /**
  * @brief Iterates over the stable snapshot of events.
  *
  * Can be called from any thread. Must be externally synchronized with
- * maru_queue_commit().
+ * maru_commitQueue().
  *
  * @param queue The event queue.
  * @param mask Bitmask of event types to include in the scan.
  * @param callback Function to invoke for each matching event.
  * @param userdata User-provided pointer passed to the callback.
  */
-MARU_API void maru_queue_scan(MARU_Queue *queue, MARU_EventMask mask,
-                              MARU_EventCallback callback, void *userdata);
+MARU_API void maru_scanQueue(MARU_Queue *queue, MARU_EventMask mask,
+                             MARU_EventCallback callback, void *userdata);
 
 /**
  * @brief Sets a bitmask of event types that should be coalesced.
@@ -179,8 +179,8 @@ MARU_API void maru_queue_scan(MARU_Queue *queue, MARU_EventMask mask,
  * @param queue The event queue.
  * @param mask Bitmask of MARU_EventId bits to coalesce.
  */
-MARU_API void maru_queue_set_coalesce_mask(MARU_Queue *queue,
-                                           MARU_EventMask mask);
+MARU_API void maru_setQueueCoalesceMask(MARU_Queue *queue,
+                                        MARU_EventMask mask);
 
 /**
  * @brief Reads cumulative queue metrics for the queue.
@@ -188,15 +188,15 @@ MARU_API void maru_queue_set_coalesce_mask(MARU_Queue *queue,
  * @param queue The queue to inspect (may be NULL).
  * @param out_metrics Receives metrics, zeroed when queue is NULL.
  */
-MARU_API void maru_queue_get_metrics(const MARU_Queue *queue,
-                                     MARU_QueueMetrics *out_metrics);
+MARU_API void maru_getQueueMetrics(const MARU_Queue *queue,
+                                    MARU_QueueMetrics *out_metrics);
 
 /**
  * @brief Resets queue metrics counters to zero.
  *
  * @param queue The queue to reset (may be NULL).
  */
-MARU_API void maru_queue_reset_metrics(MARU_Queue *queue);
+MARU_API void maru_resetQueueMetrics(MARU_Queue *queue);
 
 #ifdef __cplusplus
 }

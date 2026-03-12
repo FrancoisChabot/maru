@@ -92,9 +92,9 @@ void ControllerModule::renderController(MARU_Controller* handle, ControllerState
     const uint32_t analog_count = maru_getControllerAnalogCount(state.controller);
     const uint32_t button_count = maru_getControllerButtonCount(state.controller);
     const MARU_AnalogInputState* analogs = maru_getControllerAnalogStates(state.controller);
-    const MARU_AnalogChannelInfo* analog_channels = maru_getControllerAnalogChannelInfo(state.controller);
+    const MARU_ChannelInfo* analog_channels = maru_getControllerAnalogChannelInfo(state.controller);
     const MARU_ButtonState8* buttons = maru_getControllerButtonStates(state.controller);
-    const MARU_ButtonChannelInfo* button_channels = maru_getControllerButtonChannelInfo(state.controller);
+    const MARU_ChannelInfo* button_channels = maru_getControllerButtonChannelInfo(state.controller);
 
     if (ImGui::BeginTable("CtrlTable", 2, ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableNextColumn();
@@ -124,7 +124,7 @@ void ControllerModule::renderController(MARU_Controller* handle, ControllerState
 
     ImGui::Separator();
     const uint32_t haptic_count = maru_getControllerHapticCount(state.controller);
-    const MARU_HapticChannelInfo* haptic_channels =
+    const MARU_ChannelInfo* haptic_channels =
         maru_getControllerHapticChannelInfo(state.controller);
     ImGui::Text("Haptics / Rumble (%u channels)", haptic_count);
     if (haptic_count > 0) {

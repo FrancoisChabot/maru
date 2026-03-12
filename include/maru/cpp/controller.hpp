@@ -33,14 +33,14 @@ public:
 
     expected<MARU_ControllerInfo> getInfo() const;
     uint32_t getAnalogCount() const;
-    const MARU_AnalogChannelInfo* getAnalogChannelInfo() const;
+    const MARU_ChannelInfo* getAnalogChannelInfo() const;
     const MARU_AnalogInputState* getAnalogStates() const;
     uint32_t getButtonCount() const;
-    const MARU_ButtonChannelInfo* getButtonChannelInfo() const;
+    const MARU_ChannelInfo* getButtonChannelInfo() const;
     const MARU_ButtonState8* getButtonStates() const;
     bool isButtonPressed(uint32_t button_id) const;
     uint32_t getHapticCount() const;
-    const MARU_HapticChannelInfo* getHapticChannelInfo() const;
+    const MARU_ChannelInfo* getHapticChannelInfo() const;
 
     MARU_Status setHapticLevels(uint32_t first_haptic, uint32_t count, const MARU_Scalar* intensities);
 

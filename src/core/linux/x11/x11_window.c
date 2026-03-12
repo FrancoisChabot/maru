@@ -180,7 +180,7 @@ void _maru_x11_apply_size_hints_local(MARU_Context_X11 *ctx,
 
 static void _maru_x11_dispatch_presentation_state(MARU_Window_X11 *window,
                                                   uint32_t changed_fields,
-                                                  bool icon_effective) {
+                                                  bool icon) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)window->base.ctx_base;
   MARU_Event evt = {0};
   evt.presentation.changed_fields = changed_fields;
@@ -192,7 +192,7 @@ static void _maru_x11_dispatch_presentation_state(MARU_Window_X11 *window,
       (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
   evt.presentation.focused =
       (window->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-  evt.presentation.icon_effective = icon_effective;
+  evt.presentation.icon = icon;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_PRESENTATION_STATE_CHANGED,
                        (MARU_Window *)window, &evt);
 }

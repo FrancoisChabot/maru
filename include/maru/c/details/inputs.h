@@ -45,7 +45,7 @@ maru_getMouseButtonStates(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->mouse_button_state;
 }
 
-static inline const MARU_MouseButtonChannelInfo *
+static inline const MARU_ChannelInfo *
 maru_getMouseButtonChannelInfo(const MARU_Window *window) {
   return ((const MARU_WindowExposed *)window)->mouse_button_channels;
 }

@@ -46,20 +46,8 @@ typedef struct MARU_ControllerInfo {
 /** @brief Runtime state flags for a controller. */
 #define MARU_CONTROLLER_STATE_LOST MARU_BIT(0)
 
-/** @brief Capabilities and properties of an analog input channel. */
-typedef struct MARU_AnalogChannelInfo {
-  const char *name;
-} MARU_AnalogChannelInfo;
-
-/** @brief Capabilities and properties of a digital button. */
-typedef struct MARU_ButtonChannelInfo {
-  const char *name;
-} MARU_ButtonChannelInfo;
-
-/** @brief Capabilities and properties of a haptic feedback channel. */
-typedef struct MARU_HapticChannelInfo {
-  const char *name;
-} MARU_HapticChannelInfo;
+/** @brief Capabilities and properties of a hardware controller channel. */
+// Specialized structs removed in favor of unified MARU_ChannelInfo.
 
 /** @brief Event mask for controller connection changes. */
 #define MARU_MASK_CONTROLLER_CONNECTION_CHANGED                                \
@@ -86,7 +74,7 @@ static inline const MARU_ControllerMetrics *
 maru_getControllerMetrics(const MARU_Controller *controller);
 static inline uint32_t
 maru_getControllerAnalogCount(const MARU_Controller *controller);
-static inline const MARU_AnalogChannelInfo *
+static inline const MARU_ChannelInfo *
 maru_getControllerAnalogChannelInfo(const MARU_Controller *controller);
 
 static inline const MARU_AnalogInputState *
@@ -94,7 +82,7 @@ maru_getControllerAnalogStates(const MARU_Controller *controller);
 
 static inline uint32_t
 maru_getControllerButtonCount(const MARU_Controller *controller);
-static inline const MARU_ButtonChannelInfo *
+static inline const MARU_ChannelInfo *
 maru_getControllerButtonChannelInfo(const MARU_Controller *controller);
 static inline const MARU_ButtonState8 *
 maru_getControllerButtonStates(const MARU_Controller *controller);
@@ -103,7 +91,7 @@ maru_isControllerButtonPressed(const MARU_Controller *controller,
                                uint32_t button_id);
 static inline uint32_t
 maru_getControllerHapticCount(const MARU_Controller *controller);
-static inline const MARU_HapticChannelInfo *
+static inline const MARU_ChannelInfo *
 maru_getControllerHapticChannelInfo(const MARU_Controller *controller);
 
 /** @brief Standardized analog axis indices. */

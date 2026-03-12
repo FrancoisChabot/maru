@@ -90,8 +90,8 @@ static bool _maru_wayland_init_mouse_button_channels(MARU_Window_WL *window) {
 
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   window->base.mouse_button_channels =
-      (MARU_MouseButtonChannelInfo *)maru_context_alloc(&ctx->base,
-                                                        sizeof(MARU_MouseButtonChannelInfo) * channel_count);
+      (MARU_ChannelInfo *)maru_context_alloc(&ctx->base,
+                                                        sizeof(MARU_ChannelInfo) * channel_count);
   if (!window->base.mouse_button_channels) {
     return false;
   }
@@ -113,7 +113,7 @@ static bool _maru_wayland_init_mouse_button_channels(MARU_Window_WL *window) {
   for (uint32_t i = 0; i < channel_count; ++i) {
     window->base.mouse_button_channels[i].name = channel_defs[i].name;
     window->base.mouse_button_channels[i].native_code = channel_defs[i].native_code;
-    window->base.mouse_button_channels[i].is_default = false;
+    window->base.mouse_button_channels[i].flags = 0;
   }
 
   for (uint32_t i = 0; i < MARU_MOUSE_DEFAULT_COUNT; ++i) {
@@ -125,11 +125,11 @@ static bool _maru_wayland_init_mouse_button_channels(MARU_Window_WL *window) {
   window->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_BACK] = 6;
   window->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_FORWARD] = 5;
 
-  window->base.mouse_button_channels[0].is_default = true;
-  window->base.mouse_button_channels[1].is_default = true;
-  window->base.mouse_button_channels[2].is_default = true;
-  window->base.mouse_button_channels[5].is_default = true;
-  window->base.mouse_button_channels[6].is_default = true;
+  window->base.mouse_button_channels[0].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  window->base.mouse_button_channels[1].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  window->base.mouse_button_channels[2].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  window->base.mouse_button_channels[5].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  window->base.mouse_button_channels[6].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
 
   return true;
 }
@@ -928,7 +928,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   MARU_WindowAttributes *effective = &window->base.attrs_effective;
   MARU_Status status = MARU_SUCCESS;
   uint32_t presentation_changed = 0u;
-  bool icon_effective = true;
+  bool icon = true;
 
   window->base.attrs_dirty_mask |= field_mask;
 
@@ -1242,13 +1242,13 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       requested->icon = attributes->icon;
       effective->icon = attributes->icon;
       presentation_changed |= MARU_WINDOW_PRESENTATION_CHANGED_ICON;
-      icon_effective = false;
+      icon = false;
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "Wayland taskbar/dock icon is compositor-shell managed; window icon request stored as intent only");
   }
 
   if (presentation_changed != 0u) {
-      _maru_wayland_dispatch_presentation_state(window, presentation_changed, icon_effective);
+      _maru_wayland_dispatch_presentation_state(window, presentation_changed, icon);
   }
 
   maru_getWindowGeometry_WL(window_handle, NULL);

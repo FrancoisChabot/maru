@@ -84,7 +84,7 @@ void MonitorModule::render(MARU_Context* ctx, MARU_Window* window) {
         const MARU_Vec2Dip pos = maru_getMonitorLogicalPosition(monitor);
         const MARU_Vec2Dip size = maru_getMonitorLogicalSize(monitor);
         const MARU_Scalar scale = maru_getMonitorScale(monitor);
-        const MARU_Vec2Dip phys_size = maru_getMonitorPhysicalSize(monitor);
+        const MARU_Vec2Mm phys_size = maru_getMonitorPhysicalSize(monitor);
 
         ImGui::Text("Handle: %p", (void*)monitor);
         ImGui::Text("Logical Position: (%.1f, %.1f)", pos.x, pos.y);

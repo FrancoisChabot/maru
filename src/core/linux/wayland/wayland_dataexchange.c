@@ -746,15 +746,15 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
   if (!meta) return;
 
   MARU_DropAction action = MARU_DROP_ACTION_NONE;
-  MARU_DropFeedback feedback = {
+  MARU_DropSessionExposed session_exposed = {
       .action = &action,
       .session_userdata = &ctx->clipboard.dnd_session_userdata,
   };
 
   MARU_Event evt = {0};
-  evt.drop_enter.position.x = (MARU_Scalar)wl_fixed_to_double(x);
-  evt.drop_enter.position.y = (MARU_Scalar)wl_fixed_to_double(y);
-  evt.drop_enter.feedback = &feedback;
+  evt.drop_enter.position.x = wl_fixed_to_double(x);
+  evt.drop_enter.position.y = wl_fixed_to_double(y);
+  evt.drop_enter.session = (MARU_DropSession *)&session_exposed;
   evt.drop_enter.available_types.mime_types = meta->mime_types;
   evt.drop_enter.available_types.count = meta->mime_count;
   evt.drop_enter.modifiers = _maru_wayland_get_modifiers(ctx);
@@ -781,10 +781,15 @@ static void _clipboard_data_device_leave(void *data, struct wl_data_device *data
 
   MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (window) {
+    MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
+    MARU_DropSessionExposed session_exposed = {
+        .action = &dummy_action,
+        .session_userdata = &ctx->clipboard.dnd_session_userdata,
+    };
+
     MARU_Event evt = {0};
-    evt.drop_leave.session_userdata = &ctx->clipboard.dnd_session_userdata;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_EXITED, (MARU_Window *)window, &evt);
-  }
+    evt.drop_leave.session = (MARU_DropSession *)&session_exposed;
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_EXITED, (MARU_Window *)window, &evt);  }
   ctx->clipboard.dnd_offer = NULL;
   ctx->clipboard.dnd_serial = 0;
   ctx->clipboard.dnd_session_userdata = NULL;
@@ -807,15 +812,15 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   if (!meta) return;
 
   MARU_DropAction action = MARU_DROP_ACTION_NONE;
-  MARU_DropFeedback feedback = {
+  MARU_DropSessionExposed session_exposed = {
       .action = &action,
       .session_userdata = &ctx->clipboard.dnd_session_userdata,
   };
 
   MARU_Event evt = {0};
-  evt.drop_hover.position.x = (MARU_Scalar)wl_fixed_to_double(x);
-  evt.drop_hover.position.y = (MARU_Scalar)wl_fixed_to_double(y);
-  evt.drop_hover.feedback = &feedback;
+  evt.drop_hover.position.x = wl_fixed_to_double(x);
+  evt.drop_hover.position.y = wl_fixed_to_double(y);
+  evt.drop_hover.session = (MARU_DropSession *)&session_exposed;
   evt.drop_hover.available_types.mime_types = meta->mime_types;
   evt.drop_hover.available_types.count = meta->mime_count;
   evt.drop_hover.modifiers = _maru_wayland_get_modifiers(ctx);
@@ -865,10 +870,16 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
     maru_requestData_WL((MARU_Window *)window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
                          "text/uri-list", (void *)1);
   } else {
+    MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
+    MARU_DropSessionExposed session_exposed = {
+        .action = &dummy_action,
+        .session_userdata = &ctx->clipboard.dnd_session_userdata,
+    };
+
     MARU_Event evt = {0};
     evt.drop.position.x = ctx->linux_common.pointer.x;
     evt.drop.position.y = ctx->linux_common.pointer.y;
-    evt.drop.session_userdata = &ctx->clipboard.dnd_session_userdata;
+    evt.drop.session = (MARU_DropSession *)&session_exposed;
     evt.drop.available_types.mime_types = meta->mime_types;
     evt.drop.available_types.count = meta->mime_count;
     evt.drop.modifiers = _maru_wayland_get_modifiers(ctx);
@@ -1420,9 +1431,15 @@ void _maru_wayland_dataexchange_handle_internal_transfer_complete(
 
     MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_drop.offer);
     
+    MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
+    MARU_DropSessionExposed session_exposed = {
+        .action = &dummy_action,
+        .session_userdata = &ctx->clipboard.dnd_session_userdata,
+    };
+
     MARU_Event drop_evt = {0};
     drop_evt.drop.position = ctx->clipboard.dnd_drop.position;
-    drop_evt.drop.session_userdata = &ctx->clipboard.dnd_session_userdata;
+    drop_evt.drop.session = (MARU_DropSession *)&session_exposed;
     drop_evt.drop.modifiers = ctx->clipboard.dnd_drop.modifiers;
     drop_evt.drop.paths = paths;
     drop_evt.drop.path_count = (uint16_t)path_count;

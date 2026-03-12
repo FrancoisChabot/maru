@@ -27,15 +27,15 @@ typedef struct MARU_ControllerExposed {
   uint64_t flags;
   const MARU_ControllerMetrics *metrics;
 
-  const MARU_AnalogChannelInfo *analog_channels;
+  const MARU_ChannelInfo *analog_channels;
   const MARU_AnalogInputState *analogs;
   uint32_t analog_count;
 
-  const MARU_ButtonChannelInfo *button_channels;
+  const MARU_ChannelInfo *button_channels;
   const MARU_ButtonState8 *buttons;
   uint32_t button_count;
 
-  const MARU_HapticChannelInfo *haptic_channels;
+  const MARU_ChannelInfo *haptic_channels;
   uint32_t haptic_count;
 } MARU_ControllerExposed;
 
@@ -69,7 +69,7 @@ maru_getControllerAnalogCount(const MARU_Controller *controller) {
   return ((const MARU_ControllerExposed *)controller)->analog_count;
 }
 
-static inline const MARU_AnalogChannelInfo *
+static inline const MARU_ChannelInfo *
 maru_getControllerAnalogChannelInfo(const MARU_Controller *controller) {
   return ((const MARU_ControllerExposed *)controller)->analog_channels;
 }
@@ -84,7 +84,7 @@ maru_getControllerButtonCount(const MARU_Controller *controller) {
   return ((const MARU_ControllerExposed *)controller)->button_count;
 }
 
-static inline const MARU_ButtonChannelInfo *
+static inline const MARU_ChannelInfo *
 maru_getControllerButtonChannelInfo(const MARU_Controller *controller) {
   return ((const MARU_ControllerExposed *)controller)->button_channels;
 }
@@ -109,7 +109,7 @@ maru_getControllerHapticCount(const MARU_Controller *controller) {
   return ((const MARU_ControllerExposed *)controller)->haptic_count;
 }
 
-static inline const MARU_HapticChannelInfo *
+static inline const MARU_ChannelInfo *
 maru_getControllerHapticChannelInfo(const MARU_Controller *controller) {
   return ((const MARU_ControllerExposed *)controller)->haptic_channels;
 }
