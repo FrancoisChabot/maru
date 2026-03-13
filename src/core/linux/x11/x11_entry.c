@@ -71,7 +71,7 @@ maru_setControllerHapticLevels_X11(MARU_Controller *controller,
   return _maru_linux_common_set_haptic_levels(&ctx->linux_common, ctrl, first_haptic, count, intensities);
 }
 
-MARU_API bool maru_x11SupportsExtendedFrameSync(const MARU_Context *context) {
+MARU_API bool maru_getX11SupportsExtendedFrameSync(const MARU_Context *context) {
   MARU_API_VALIDATE(getX11SupportsExtendedFrameSync, context);
   return ((MARU_Context_X11 *)context)->compositor_supports_extended_frame_sync;
 }

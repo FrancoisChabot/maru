@@ -37,7 +37,7 @@ TEST_CASE("X11.FrameSynchronizationThrottling") {
     return;
   }
 
-  if (!maru_x11SupportsExtendedFrameSync(ctx)) {
+  if (!maru_getX11SupportsExtendedFrameSync(ctx)) {
     maru_destroyContext(ctx);
     MESSAGE("Skipping X11 frame sync test: compositor does not advertise extended frame sync support.");
     return;
