@@ -144,12 +144,12 @@ static void _maru_linux_dataexchange_dispatch_complete(MARU_Context_Base *ctx_ba
                                                        MARU_Status status) {
   if (transfer->is_write) {
     MARU_Event evt = {0};
-    evt.data_consumed.target = transfer->target;
-    evt.data_consumed.mime_type = transfer->mime_type;
-    evt.data_consumed.data = transfer->buffer;
-    evt.data_consumed.size = transfer->size;
-    evt.data_consumed.action = MARU_DROP_ACTION_NONE; // Optional?
-    _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_CONSUMED, transfer->window, &evt);
+    evt.data_released.target = transfer->target;
+    evt.data_released.mime_type = transfer->mime_type;
+    evt.data_released.data = transfer->buffer;
+    evt.data_released.size = transfer->size;
+    evt.data_released.action = MARU_DROP_ACTION_NONE; // Optional?
+    _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_RELEASED, transfer->window, &evt);
     return;
   }
 

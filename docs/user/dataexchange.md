@@ -90,4 +90,8 @@ When `MARU_EVENT_DROP_DROPPED` occurs, you can then call `maru_requestDropData()
 
 To start a drag, call `maru_announceDragData()`. The OS will then take over the cursor until the drag is finished or cancelled.
 
+If you provide payload bytes with `MARU_DATA_PROVIDE_FLAG_ZERO_COPY`, Maru will
+later fire `MARU_EVENT_DATA_RELEASED` when it no longer needs that storage.
+That callback means the data may now be freed, reused, or overwritten.
+
 Next: [Vulkan Integration](vulkan.md)

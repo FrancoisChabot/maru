@@ -40,7 +40,7 @@ concept PartialEventVisitor =
   std::invocable<std::remove_cvref_t<T>, DropDroppedEvent> ||
   std::invocable<std::remove_cvref_t<T>, DataReceivedEvent> ||
   std::invocable<std::remove_cvref_t<T>, DataRequestEvent> ||
-  std::invocable<std::remove_cvref_t<T>, DataConsumedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, DataReleasedEvent> ||
   std::invocable<std::remove_cvref_t<T>, DragFinishedEvent> ||
   std::invocable<std::remove_cvref_t<T>, ControllerChangedEvent> ||
   std::invocable<std::remove_cvref_t<T>, ControllerButtonChangedEvent> ||
@@ -69,7 +69,7 @@ concept PartialQueueEventVisitor =
   std::invocable<std::remove_cvref_t<T>, QueuedDropDroppedEvent> ||
   std::invocable<std::remove_cvref_t<T>, QueuedDataReceivedEvent> ||
   std::invocable<std::remove_cvref_t<T>, QueuedDataRequestEvent> ||
-  std::invocable<std::remove_cvref_t<T>, QueuedDataConsumedEvent> ||
+  std::invocable<std::remove_cvref_t<T>, QueuedDataReleasedEvent> ||
   std::invocable<std::remove_cvref_t<T>, QueuedDragFinishedEvent> ||
   std::invocable<std::remove_cvref_t<T>, QueuedControllerChangedEvent> ||
   std::invocable<std::remove_cvref_t<T>, QueuedControllerButtonChangedEvent> ||

@@ -528,7 +528,7 @@ typedef enum MARU_EventId {
   MARU_EVENT_DROP_DROPPED = 19,
   MARU_EVENT_DATA_RECEIVED = 20,
   MARU_EVENT_DATA_REQUESTED = 21,
-  MARU_EVENT_DATA_CONSUMED = 22,
+  MARU_EVENT_DATA_RELEASED = 22,
   MARU_EVENT_DRAG_FINISHED = 23,
   MARU_EVENT_CONTROLLER_CHANGED = 24,
   MARU_EVENT_CONTROLLER_BUTTON_CHANGED = 25,
@@ -587,7 +587,7 @@ typedef enum MARU_EventId {
 #define MARU_MASK_DROP_DROPPED MARU_EVENT_MASK(MARU_EVENT_DROP_DROPPED)
 #define MARU_MASK_DATA_RECEIVED MARU_EVENT_MASK(MARU_EVENT_DATA_RECEIVED)
 #define MARU_MASK_DATA_REQUESTED MARU_EVENT_MASK(MARU_EVENT_DATA_REQUESTED)
-#define MARU_MASK_DATA_CONSUMED MARU_EVENT_MASK(MARU_EVENT_DATA_CONSUMED)
+#define MARU_MASK_DATA_RELEASED MARU_EVENT_MASK(MARU_EVENT_DATA_RELEASED)
 #define MARU_MASK_DRAG_FINISHED MARU_EVENT_MASK(MARU_EVENT_DRAG_FINISHED)
 #define MARU_MASK_CONTROLLER_CHANGED MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_CHANGED)
 #define MARU_MASK_CONTROLLER_BUTTON_CHANGED MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_CHANGED)
@@ -616,7 +616,7 @@ typedef enum MARU_EventId {
    MARU_MASK_TEXT_EDIT_STARTED | MARU_MASK_TEXT_EDIT_UPDATED | MARU_MASK_TEXT_EDIT_COMMITTED |     \
    MARU_MASK_TEXT_EDIT_ENDED | MARU_MASK_DROP_ENTERED | MARU_MASK_DROP_HOVERED |                   \
    MARU_MASK_DROP_EXITED | MARU_MASK_DROP_DROPPED | MARU_MASK_DATA_RECEIVED |                      \
-   MARU_MASK_DATA_REQUESTED | MARU_MASK_DATA_CONSUMED | MARU_MASK_DRAG_FINISHED |                  \
+   MARU_MASK_DATA_REQUESTED | MARU_MASK_DATA_RELEASED | MARU_MASK_DRAG_FINISHED |                  \
    MARU_MASK_CONTROLLER_CHANGED | MARU_MASK_CONTROLLER_BUTTON_CHANGED |                             \
    MARU_MASK_TEXT_EDIT_NAVIGATION | MARU_MASK_USER_0 | MARU_MASK_USER_1 | MARU_MASK_USER_2 |      \
    MARU_MASK_USER_3 | MARU_MASK_USER_4 | MARU_MASK_USER_5 | MARU_MASK_USER_6 |                     \
@@ -822,19 +822,25 @@ typedef struct MARU_DataRequestEvent {
   MARU_DataRequest* request;
 } MARU_DataRequestEvent;
 
-typedef struct MARU_DataConsumedEvent {
-  /* Identifies whether the consumed payload belonged to clipboard or drag/drop. */
+typedef struct MARU_DataReleasedEvent {
+  /*
+   * Identifies whether the released payload belonged to clipboard or
+   * drag/drop.
+   */
   MARU_DataExchangeTarget target;
-  /* Borrowed callback-scoped pointers. Copy what you need before returning. */
+  /*
+   * Borrowed callback-scoped pointers describing the payload Maru no longer
+   * needs. Copy what you need before returning.
+   */
   const char* mime_type;
   const void* data;
   size_t size;
   /*
-   * Meaningful only for drag/drop consumption. When `target` is
+   * Meaningful only for drag/drop release. When `target` is
    * MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, ignore this field.
    */
   MARU_DropAction action;
-} MARU_DataConsumedEvent;
+} MARU_DataReleasedEvent;
 
 typedef struct MARU_DragFinishedEvent {
   MARU_DropAction action;
@@ -967,7 +973,7 @@ typedef struct MARU_Event {
     MARU_DropEvent drop_dropped;
     MARU_DataReceivedEvent data_received;
     MARU_DataRequestEvent data_requested;
-    MARU_DataConsumedEvent data_consumed;
+    MARU_DataReleasedEvent data_released;
     MARU_DragFinishedEvent drag_finished;
     MARU_ControllerChangedEvent controller_changed;
     MARU_ControllerButtonChangedEvent controller_button_changed;
@@ -1693,7 +1699,7 @@ MARU_API MARU_Status maru_announceDragData(MARU_Window* window,
  * MARU_EVENT_DATA_REQUESTED.
  *
  * If `flags` contains MARU_DATA_PROVIDE_FLAG_ZERO_COPY, `data` must remain
- * readable until the matching MARU_EVENT_DATA_CONSUMED callback fires or the
+ * readable until the matching MARU_EVENT_DATA_RELEASED callback fires or the
  * owning context is destroyed. Otherwise, the payload is copied before the API
  * returns successfully.
  */
@@ -1706,7 +1712,7 @@ MARU_API MARU_Status maru_provideClipboardData(MARU_DataRequest* request,
  * MARU_EVENT_DATA_REQUESTED.
  *
  * If `flags` contains MARU_DATA_PROVIDE_FLAG_ZERO_COPY, `data` must remain
- * readable until the matching MARU_EVENT_DATA_CONSUMED callback fires or the
+ * readable until the matching MARU_EVENT_DATA_RELEASED callback fires or the
  * owning context is destroyed. Otherwise, the payload is copied before the API
  * returns successfully.
  */

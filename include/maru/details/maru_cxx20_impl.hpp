@@ -49,8 +49,8 @@ consteval MARU_EventMask generateMask() {
     mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_RECEIVED);
   if constexpr (std::invocable<F, DataRequestEvent> || std::invocable<F, QueuedDataRequestEvent>)
     mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_REQUESTED);
-  if constexpr (std::invocable<F, DataConsumedEvent> || std::invocable<F, QueuedDataConsumedEvent>)
-    mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_CONSUMED);
+  if constexpr (std::invocable<F, DataReleasedEvent> || std::invocable<F, QueuedDataReleasedEvent>)
+    mask |= MARU_EVENT_MASK(MARU_EVENT_DATA_RELEASED);
   if constexpr (std::invocable<F, DragFinishedEvent> || std::invocable<F, QueuedDragFinishedEvent>)
     mask |= MARU_EVENT_MASK(MARU_EVENT_DRAG_FINISHED);
   if constexpr (std::invocable<F, ControllerChangedEvent> ||
@@ -147,9 +147,9 @@ void dispatchVisitor(MARU_EventId type, MARU_Window *window, const MARU_Event &e
       if constexpr (std::invocable<F_raw, DataRequestEvent>)
         f(DataRequestEvent{window, evt.data_requested});
       break;
-    case MARU_EVENT_DATA_CONSUMED:
-      if constexpr (std::invocable<F_raw, DataConsumedEvent>)
-        f(DataConsumedEvent{window, evt.data_consumed});
+    case MARU_EVENT_DATA_RELEASED:
+      if constexpr (std::invocable<F_raw, DataReleasedEvent>)
+        f(DataReleasedEvent{window, evt.data_released});
       break;
     case MARU_EVENT_DRAG_FINISHED:
       if constexpr (std::invocable<F_raw, DragFinishedEvent>)
@@ -261,9 +261,9 @@ void dispatchQueuedVisitor(MARU_EventId type, MARU_WindowId window_id,
       if constexpr (std::invocable<F_raw, QueuedDataRequestEvent>)
         f(QueuedDataRequestEvent{window_id, evt.data_requested});
       break;
-    case MARU_EVENT_DATA_CONSUMED:
-      if constexpr (std::invocable<F_raw, QueuedDataConsumedEvent>)
-        f(QueuedDataConsumedEvent{window_id, evt.data_consumed});
+    case MARU_EVENT_DATA_RELEASED:
+      if constexpr (std::invocable<F_raw, QueuedDataReleasedEvent>)
+        f(QueuedDataReleasedEvent{window_id, evt.data_released});
       break;
     case MARU_EVENT_DRAG_FINISHED:
       if constexpr (std::invocable<F_raw, QueuedDragFinishedEvent>)

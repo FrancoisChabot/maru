@@ -1260,12 +1260,12 @@ static void _maru_x11_finish_incr_send(MARU_Context_X11 *ctx) {
       (send->target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) ? NULL
                                                             : (MARU_Window *)send->window;
   MARU_Event consumed_evt = {0};
-  consumed_evt.data_consumed.target = send->target;
-  consumed_evt.data_consumed.mime_type = send->mime_type ? send->mime_type : "";
-  consumed_evt.data_consumed.data = send->data;
-  consumed_evt.data_consumed.size = send->size;
-  consumed_evt.data_consumed.action = MARU_DROP_ACTION_NONE;
-  _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_CONSUMED, event_window,
+  consumed_evt.data_released.target = send->target;
+  consumed_evt.data_released.mime_type = send->mime_type ? send->mime_type : "";
+  consumed_evt.data_released.data = send->data;
+  consumed_evt.data_released.size = send->size;
+  consumed_evt.data_released.action = MARU_DROP_ACTION_NONE;
+  _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_RELEASED, event_window,
                        &consumed_evt);
   _maru_x11_clear_incr_send(ctx);
 }
@@ -1675,13 +1675,13 @@ MARU_Status _maru_x11_provideData(MARU_DataRequest *request,
   ctx->x11_lib.XFlush(ctx->display);
 
   MARU_Event consumed_evt = {0};
-  consumed_evt.data_consumed.target = handle->target;
-  consumed_evt.data_consumed.mime_type = handle->mime_type;
-  consumed_evt.data_consumed.data = data;
-  consumed_evt.data_consumed.size = size;
-  consumed_evt.data_consumed.action = MARU_DROP_ACTION_NONE;
+  consumed_evt.data_released.target = handle->target;
+  consumed_evt.data_released.mime_type = handle->mime_type;
+  consumed_evt.data_released.data = data;
+  consumed_evt.data_released.size = size;
+  consumed_evt.data_released.action = MARU_DROP_ACTION_NONE;
   _maru_dispatch_event(
-      &ctx->base, MARU_EVENT_DATA_CONSUMED,
+      &ctx->base, MARU_EVENT_DATA_RELEASED,
       handle->target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD
           ? NULL
           : (MARU_Window *)handle->window,

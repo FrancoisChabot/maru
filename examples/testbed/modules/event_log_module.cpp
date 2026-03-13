@@ -105,8 +105,8 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
         ss << "Data Received: Status=" << (int)e.data_received.status << " Mime=" << (e.data_received.mime_type ? e.data_received.mime_type : "N/A") << " Size=" << e.data_received.size;
     } else if (type == MARU_EVENT_DATA_REQUESTED) {
         ss << "Data Requested: Mime=" << (e.data_requested.mime_type ? e.data_requested.mime_type : "N/A");
-    } else if (type == MARU_EVENT_DATA_CONSUMED) {
-        ss << "Data Consumed: Mime=" << (e.data_consumed.mime_type ? e.data_consumed.mime_type : "N/A") << " Size=" << e.data_consumed.size;
+    } else if (type == MARU_EVENT_DATA_RELEASED) {
+        ss << "Data Released: Mime=" << (e.data_released.mime_type ? e.data_released.mime_type : "N/A") << " Size=" << e.data_released.size;
     } else if (type == MARU_EVENT_DRAG_FINISHED) {
         ss << "Drag Finished: Action=" << (int)e.drag_finished.action;
     } else if (type == MARU_EVENT_CONTROLLER_CHANGED) {
@@ -238,7 +238,7 @@ const char* EventLogModule::typeToString(MARU_EventId type) {
     if (type == MARU_EVENT_DROP_DROPPED) return "DROP_DROPPED";
     if (type == MARU_EVENT_DATA_RECEIVED) return "DATA_RECEIVED";
     if (type == MARU_EVENT_DATA_REQUESTED) return "DATA_REQUESTED";
-    if (type == MARU_EVENT_DATA_CONSUMED) return "DATA_CONSUMED";
+    if (type == MARU_EVENT_DATA_RELEASED) return "DATA_RELEASED";
     if (type == MARU_EVENT_DRAG_FINISHED) return "DRAG_FINISHED";
     if (type == MARU_EVENT_CONTROLLER_CHANGED) return "CONTROLLER_CHANGED";
     if (type == MARU_EVENT_CONTROLLER_BUTTON_CHANGED) return "CONTROLLER_BUTTON_CHANGED";

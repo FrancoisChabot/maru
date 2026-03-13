@@ -158,6 +158,9 @@ context is destroyed.
   `data != NULL` when `size > 0`.
 - `maru_provideClipboardData()` and `maru_provideDropData()` flags may only
   contain documented bits.
+- When `MARU_DATA_PROVIDE_FLAG_ZERO_COPY` is used, the provided storage must
+  remain readable until the matching `MARU_EVENT_DATA_RELEASED` callback or
+  context destruction.
 - `maru_setDropSessionAction()` is only meaningful during
   `MARU_EVENT_DROP_ENTERED` and `MARU_EVENT_DROP_HOVERED`.
 
