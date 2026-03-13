@@ -908,23 +908,6 @@ static inline void _maru_validate_getCocoaWindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_COCOA);
 }
 
-static inline void _maru_validate_getLinuxContextHandle(MARU_Context *context) {
-  MARU_CONSTRAINT_CHECK(context != NULL);
-  const MARU_BackendType backend = maru_getContextBackend(context);
-  MARU_CONSTRAINT_CHECK(backend == MARU_BACKEND_WAYLAND ||
-                        backend == MARU_BACKEND_X11);
-}
-
-static inline void _maru_validate_getLinuxWindowHandle(MARU_Window *window) {
-  MARU_CONSTRAINT_CHECK(window != NULL);
-  _maru_validate_window_ready(window);
-  const MARU_Context *context = maru_getWindowContext(window);
-  MARU_CONSTRAINT_CHECK(context != NULL);
-  const MARU_BackendType backend = maru_getContextBackend(context);
-  MARU_CONSTRAINT_CHECK(backend == MARU_BACKEND_WAYLAND ||
-                        backend == MARU_BACKEND_X11);
-}
-
 static inline void
 _maru_validate_getKeyboardKeyStates(const MARU_Context *context) {
   MARU_CONSTRAINT_CHECK(context != NULL);

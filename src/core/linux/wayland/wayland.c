@@ -3,7 +3,6 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "maru/maru.h"
-#include "maru/native/linux.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -332,20 +331,4 @@ MARU_API MARU_X11WindowHandle maru_getX11WindowHandle(MARU_Window *window) {
   return _maru_stub_x11_window_handle_unsupported();
 }
 
-MARU_API MARU_LinuxContextHandle maru_getLinuxContextHandle(
-    MARU_Context *context) {
-  MARU_API_VALIDATE(getLinuxContextHandle, context);
-  MARU_LinuxContextHandle handle = {0};
-  handle.backend = MARU_BACKEND_WAYLAND;
-  handle.wayland = maru_getWaylandContextHandle(context);
-  return handle;
-}
-
-MARU_API MARU_LinuxWindowHandle maru_getLinuxWindowHandle(MARU_Window *window) {
-  MARU_API_VALIDATE(getLinuxWindowHandle, window);
-  MARU_LinuxWindowHandle handle = {0};
-  handle.backend = MARU_BACKEND_WAYLAND;
-  handle.wayland = maru_getWaylandWindowHandle(window);
-  return handle;
-}
 #endif

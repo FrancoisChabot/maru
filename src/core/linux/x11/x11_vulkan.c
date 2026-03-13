@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "maru/native/linux.h"
 #include "maru/maru.h"
+#include "maru/native/x11.h"
 #include "maru_internal.h"
 #include "maru_api_constraints.h"
 

@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "maru/native/cocoa.h"
-#include "maru/native/linux.h"
 #include "maru/native/wayland.h"
 #include "maru/native/win32.h"
 #include "maru/native/x11.h"
@@ -471,41 +470,4 @@ MARU_API MARU_CocoaWindowHandle maru_getCocoaWindowHandle(MARU_Window *window) {
 }
 #endif
 
-MARU_API MARU_LinuxContextHandle maru_getLinuxContextHandle(
-    MARU_Context *context) {
-  MARU_API_VALIDATE(getLinuxContextHandle, context);
-  MARU_LinuxContextHandle handle = {0};
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  handle.backend = ctx_base->pub.backend_type;
-  switch (ctx_base->pub.backend_type) {
-    case MARU_BACKEND_WAYLAND:
-      handle.wayland = maru_getWaylandContextHandle(context);
-      break;
-    case MARU_BACKEND_X11:
-      handle.x11 = maru_getX11ContextHandle(context);
-      break;
-    default:
-      break;
-  }
-  return handle;
-}
-
-MARU_API MARU_LinuxWindowHandle maru_getLinuxWindowHandle(MARU_Window *window) {
-  MARU_API_VALIDATE(getLinuxWindowHandle, window);
-  MARU_LinuxWindowHandle handle = {0};
-  const MARU_Context *context = maru_getWindowContext(window);
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  handle.backend = ctx_base->pub.backend_type;
-  switch (ctx_base->pub.backend_type) {
-    case MARU_BACKEND_WAYLAND:
-      handle.wayland = maru_getWaylandWindowHandle(window);
-      break;
-    case MARU_BACKEND_X11:
-      handle.x11 = maru_getX11WindowHandle(window);
-      break;
-    default:
-      break;
-  }
-  return handle;
-}
 #endif
