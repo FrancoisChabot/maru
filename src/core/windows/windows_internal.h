@@ -266,14 +266,14 @@ void _maru_windows_process_raw_input(MARU_Context_Windows *ctx,
                                      const RAWINPUT *raw);
 
 // data_exchange.h
-MARU_Status maru_announceData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList mime_types, MARU_DropActionMask allowed_actions);
+MARU_Status maru_announceData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_Windows(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata);
-MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
+MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list);
 void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx);
 
 // vulkan.h
-MARU_Status maru_getVkExtensions_Windows(const MARU_Context *context, MARU_VkExtensionList *out_list);
+MARU_Status maru_getVkExtensions_Windows(const MARU_Context *context, MARU_StringList *out_list);
 MARU_Status maru_createVkSurface_Windows(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 // Native handles

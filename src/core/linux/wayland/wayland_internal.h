@@ -449,7 +449,7 @@ MARU_Status maru_getMonitorModes_WL(const MARU_Monitor *monitor, MARU_VideoModeL
 MARU_Status maru_setMonitorMode_WL(MARU_Monitor *monitor,
                                    MARU_VideoMode mode);
 
-MARU_Status maru_getVkExtensions_WL(const MARU_Context *context,                                   MARU_VkExtensionList *out_list);
+MARU_Status maru_getVkExtensions_WL(const MARU_Context *context,                                   MARU_StringList *out_list);
 void _maru_wayland_register_xdg_output(MARU_Context_WL *ctx, MARU_Monitor_WL *monitor);
 
 MARU_Status maru_createCursor_WL(MARU_Context *context,
@@ -471,7 +471,7 @@ MARU_Status maru_setControllerHapticLevels_WL(MARU_Controller *controller,
                                               uint32_t count,
                                               const MARU_Scalar *intensities);
 MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
-                                 MARU_MIMETypeList mime_types,
+                                 MARU_StringList mime_types,
                                  MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_WL(MARU_DataRequest *request,
                                 const void *data, size_t size,
@@ -480,7 +480,7 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
                                 const char *mime_type, void *userdata);
 MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
                                           MARU_DataExchangeTarget target,
-                                          MARU_MIMETypeList *out_list);
+                                          MARU_StringList *out_list);
 void _maru_wayland_dataexchange_handle_internal_transfer_complete(
     void *ctx, MARU_Window *window, MARU_DataExchangeTarget target,
     const char *mime_type, const void *data, size_t size, MARU_Status status);

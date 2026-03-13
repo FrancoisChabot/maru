@@ -28,7 +28,7 @@ typedef VkResult (*PFN_vkCreateXlibSurfaceKHR)(
     const void *pAllocator, VkSurfaceKHR *pSurface);
 
 MARU_Status maru_getVkExtensions_X11(const MARU_Context *context,
-                                     MARU_VkExtensionList *out_list) {
+                                     MARU_StringList *out_list) {
   (void)context;
   static const char *extensions[] = {
       "VK_KHR_surface",
@@ -36,7 +36,7 @@ MARU_Status maru_getVkExtensions_X11(const MARU_Context *context,
   };
 
   out_list->count = 2;
-  out_list->names = (const char *const *)extensions;
+  out_list->strings = (const char *const *)extensions;
   return MARU_SUCCESS;
 }
 
@@ -84,7 +84,7 @@ MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
 
 #ifndef MARU_INDIRECT_BACKEND
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
-                                         MARU_VkExtensionList *out_list) {
+                                         MARU_StringList *out_list) {
   MARU_API_VALIDATE(getVkExtensions, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   return maru_getVkExtensions_X11(context, out_list);

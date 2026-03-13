@@ -97,10 +97,10 @@ void maru_releaseController_Cocoa(MARU_Controller *controller);
 MARU_Status maru_getControllerInfo_Cocoa(const MARU_Controller *controller, MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_Cocoa(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
 
-MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList mime_types, MARU_DropActionMask allowed_actions);
+MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_Cocoa(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata);
-MARU_Status maru_getAvailableMIMETypes_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
+MARU_Status maru_getAvailableMIMETypes_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list);
 
 MARU_Status maru_getMonitors_Cocoa(MARU_Context *context,
                                    MARU_MonitorList *out_list);
@@ -111,7 +111,7 @@ MARU_Status maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor,
 MARU_Status maru_setMonitorMode_Cocoa(MARU_Monitor *monitor,
                                       MARU_VideoMode mode);
 
-MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_VkExtensionList *out_list);MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
+MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_StringList *out_list);MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 void _maru_cocoa_associate_window(id ns_window, MARU_Window_Cocoa *window);
 MARU_Window_Cocoa *_maru_cocoa_window_from_ns_window(id ns_window);

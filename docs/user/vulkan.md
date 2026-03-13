@@ -7,13 +7,13 @@ Maru is designed to work seamlessly with the Vulkan graphics API. It handles the
 To create a Vulkan instance that can render to Maru windows, you need to enable certain instance extensions (like `VK_KHR_xlib_surface` or `VK_KHR_wayland_surface`). Maru provides a list of these extensions based on the current context.
 
 ```c
-MARU_VkExtensionList extensions = {};
+MARU_StringList extensions = {};
 maru_getVkExtensions(context, &extensions);
 
 VkInstanceCreateInfo create_info = {
     .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
     .enabledExtensionCount = extensions.count,
-    .ppEnabledExtensionNames = (const char**)extensions.names,
+    .ppEnabledExtensionNames = (const char**)extensions.strings,
     // ...
 };
 

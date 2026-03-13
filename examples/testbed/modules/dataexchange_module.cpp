@@ -75,7 +75,7 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         _dnd_info = "Drop Entered";
         dnd_mime_types_.clear();
         for (uint32_t i = 0; i < event.drop_entered.available_types.count; ++i) {
-            dnd_mime_types_.emplace_back(event.drop_entered.available_types.mime_types[i]);
+            dnd_mime_types_.emplace_back(event.drop_entered.available_types.strings[i]);
         }
         if (event.drop_entered.session) {
             maru_setDropSessionAction(event.drop_entered.session, MARU_DROP_ACTION_COPY);
@@ -92,7 +92,7 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         
         dnd_mime_types_.clear();
         for (uint32_t i = 0; i < event.drop_hovered.available_types.count; ++i) {
-            dnd_mime_types_.emplace_back(event.drop_hovered.available_types.mime_types[i]);
+            dnd_mime_types_.emplace_back(event.drop_hovered.available_types.strings[i]);
         }
 
         if (event.drop_hovered.session) {
@@ -118,12 +118,12 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         
         dropped_paths_.clear();
         for (uint32_t i = 0; i < event.drop_dropped.paths.count; ++i) {
-            dropped_paths_.push_back(event.drop_dropped.paths.paths[i]);
+            dropped_paths_.push_back(event.drop_dropped.paths.strings[i]);
         }
 
         dnd_mime_types_.clear();
         for (uint32_t i = 0; i < event.drop_dropped.available_types.count; ++i) {
-            dnd_mime_types_.emplace_back(event.drop_dropped.available_types.mime_types[i]);
+            dnd_mime_types_.emplace_back(event.drop_dropped.available_types.strings[i]);
         }
         return;
     }
@@ -223,12 +223,12 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
 
         if (ImGui::Button("Refresh MIME Types")) {
             clipboard_mime_types_.clear();
-            MARU_MIMETypeList list = {};
+            MARU_StringList list = {};
             last_status_ = maru_getAvailableMIMETypes(
                 window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, &list);
-            if (last_status_ == MARU_SUCCESS && list.mime_types) {
+            if (last_status_ == MARU_SUCCESS && list.strings) {
                 for (uint32_t i = 0; i < list.count; ++i) {
-                    clipboard_mime_types_.emplace_back(list.mime_types[i] ? list.mime_types[i] : "");
+                    clipboard_mime_types_.emplace_back(list.strings[i] ? list.strings[i] : "");
                 }
             }
         }
@@ -258,12 +258,12 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
 
         if (ImGui::Button("Refresh Primary MIME Types")) {
             primary_mime_types_.clear();
-            MARU_MIMETypeList list = {};
+            MARU_StringList list = {};
             last_status_ = maru_getAvailableMIMETypes(
                 window, MARU_DATA_EXCHANGE_TARGET_PRIMARY, &list);
-            if (last_status_ == MARU_SUCCESS && list.mime_types) {
+            if (last_status_ == MARU_SUCCESS && list.strings) {
                 for (uint32_t i = 0; i < list.count; ++i) {
-                    primary_mime_types_.emplace_back(list.mime_types[i] ? list.mime_types[i] : "");
+                    primary_mime_types_.emplace_back(list.strings[i] ? list.strings[i] : "");
                 }
             }
         }

@@ -119,9 +119,9 @@ int main() {
   maru_createContext(&create_info, &context);
 
   // Initialize Vulkan.
-  MARU_VkExtensionList vk_extensions = {0};
+  MARU_StringList vk_extensions = {0};
   maru_getVkExtensions(context, &vk_extensions);
-  init_vk_renderer(&app.renderer, vk_extensions.names, vk_extensions.count);
+  init_vk_renderer(&app.renderer, vk_extensions.strings, vk_extensions.count);
 
   // create a window
   MARU_Window *window = NULL;
@@ -236,11 +236,12 @@ maru_createContext(&create_info, &context);
 
 *   Each `MARU_Context` is its own little universe. They are **fully** independent from one another.
 *   The thread that creates a `MARU_Context` is its owner thread. 
-*   For true cross-platform parity, this should be your main thread. As much as we'd like to provide isolated concurent contexts, it's just not possible on every backend.
-- `maru_postEvent()` and `maru_wakeContext()` are globally thread-safe and return a `bool` to signal success/failure.
-- Functions that return `MARU_Status` must be called from the owner thread.
-- Functions that do not return `MARU_Status` (including those returning `void` or `bool`) can be called from any thread, as long as they are externally synchronized if needed.
-- `maru_*retain()` and `maru_*release()` can be safely called from anywhere at any time. (The safety is provided via atomic operations, not locks).
+*   Functions that return `MARU_Status` (e.g., `maru_createWindow`, `maru_pumpEvents`) MUST be called from the owner thread of the context they operate on.
+*   Context-lifecycle functions returning `void` (e.g., `maru_destroyContext`) MUST be called from the owner thread.
+*   Standalone utility objects like `MARU_Queue` are owned by the thread that created them. All `maru_*Queue` APIs (except where noted) must be called from that creator thread.
+*   `maru_postEvent()` and `maru_wakeContext()` are globally thread-safe and return a `bool` to signal success/failure.
+*   `maru_*retain()` and `maru_*release()` can be safely called from anywhere at any time. (The safety is provided via atomic operations, not locks).
+*   `maru_getVersion()` is globally thread-safe.
 
 #### Volatile Hardware, Stable Threads
 **"Why do Controllers and Monitors use a retain/release system?"**

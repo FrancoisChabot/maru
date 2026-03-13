@@ -348,12 +348,12 @@ void maru_releaseMonitor_X11(MARU_Monitor *monitor);
 MARU_Status maru_getMonitorModes_X11(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_X11(MARU_Monitor *monitor, MARU_VideoMode mode);
 
-MARU_Status maru_announceData_X11(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList mime_types, MARU_DropActionMask allowed_actions);
+MARU_Status maru_announceData_X11(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_X11(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_X11(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata);
-MARU_Status maru_getAvailableMIMETypes_X11(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list);
+MARU_Status maru_getAvailableMIMETypes_X11(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list);
 
-MARU_Status maru_getVkExtensions_X11(const MARU_Context *context, MARU_VkExtensionList *out_list);
+MARU_Status maru_getVkExtensions_X11(const MARU_Context *context, MARU_StringList *out_list);
 MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 bool _maru_x11_apply_window_cursor_mode(MARU_Context_X11 *ctx, MARU_Window_X11 *win);
@@ -372,7 +372,7 @@ MARU_Status _maru_x11_requestData(MARU_Window *window, MARU_DataExchangeTarget t
                                   const char *mime_type, void *userdata);
 MARU_Status _maru_x11_getAvailableMIMETypes(MARU_Window *window,
                                             MARU_DataExchangeTarget target,
-                                            MARU_MIMETypeList *out_list);
+                                            MARU_StringList *out_list);
 
 #ifdef MARU_INDIRECT_BACKEND
 extern const struct MARU_Backend maru_backend_X11;

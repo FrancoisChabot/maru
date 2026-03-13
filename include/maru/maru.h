@@ -660,15 +660,10 @@ typedef enum MARU_DataExchangeTarget {
   MARU_DATA_EXCHANGE_TARGET_DRAG_DROP = 2,
 } MARU_DataExchangeTarget;
 
-typedef struct MARU_MIMETypeList {
-  const char* const* mime_types;
+typedef struct MARU_StringList {
+  const char* const* strings;
   uint32_t count;
-} MARU_MIMETypeList;
-
-typedef struct MARU_PathList {
-  const char* const* paths;
-  uint32_t count;
-} MARU_PathList;
+} MARU_StringList;
 
 typedef uint32_t MARU_DataProvideFlags;
 #define MARU_DATA_PROVIDE_FLAG_NONE 0
@@ -686,8 +681,8 @@ typedef struct MARU_DropEvent {
    */
   MARU_DropSession* session;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
-  MARU_PathList paths;
-  MARU_MIMETypeList available_types;
+  MARU_StringList paths;
+  MARU_StringList available_types;
   MARU_ModifierFlags modifiers;
 } MARU_DropEvent;
 
@@ -944,6 +939,9 @@ MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo* create_inf
  *
  * You do not need to destroy windows, cursors, images, or other context-owned
  * child objects one by one before destroying the context.
+ *
+ * Note: Always returns void. Unlike other destroy functions, context destruction
+ * is terminal and cannot fail - it tears down regardless of context state.
  */
 MARU_API void maru_destroyContext(MARU_Context* context);
 MARU_API MARU_Status maru_updateContext(MARU_Context* context,
@@ -1367,7 +1365,7 @@ MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller* controller,
  */
 MARU_API MARU_Status maru_announceData(MARU_Window* window,
                                        MARU_DataExchangeTarget target,
-                                       MARU_MIMETypeList mime_types,
+                                       MARU_StringList mime_types,
                                        MARU_DropActionMask allowed_actions);
 /*
  * Fulfills a callback-scoped MARU_EVENT_DATA_REQUESTED request.
@@ -1394,7 +1392,7 @@ MARU_API MARU_Status maru_requestData(MARU_Window* window,
  */
 MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window* window,
                                                 MARU_DataExchangeTarget target,
-                                                MARU_MIMETypeList* out_list);
+                                                MARU_StringList* out_list);
 
 /*
  * Drop-session helpers operate on callback-scoped handles delivered through
@@ -1427,18 +1425,13 @@ typedef struct VkSurfaceKHR_T* VkSurfaceKHR;
 typedef MARU_VulkanVoidFunction (*MARU_VkGetInstanceProcAddrFunc)(VkInstance instance,
                                                                   const char* pName);
                                
-typedef struct MARU_VkExtensionList {
-  const char* const* names;
-  uint32_t count;
-} MARU_VkExtensionList;
-
 /*
  * Returns a borrowed extension-name array. Backends may point this at static
  * storage; treat it as read-only and valid for at least the lifetime of the
  * context.
  */
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context* context,
-                                          MARU_VkExtensionList* out_list);
+                                          MARU_StringList* out_list);
 /* Requires a ready, non-lost window. */
 MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
                                           VkInstance instance,

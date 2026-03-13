@@ -130,7 +130,7 @@ MARU_API void maru_releaseController(MARU_Controller *controller) {
 
 MARU_API MARU_Status maru_announceData(MARU_Window *window,
                                        MARU_DataExchangeTarget target,
-                                       MARU_MIMETypeList mime_types,
+                                       MARU_StringList mime_types,
                                        MARU_DropActionMask allowed_actions) {
   MARU_API_VALIDATE(announceData, window, target, mime_types, allowed_actions);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
@@ -169,13 +169,13 @@ MARU_API MARU_Status maru_requestData(MARU_Window *window,
 
 MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
                                                 MARU_DataExchangeTarget target,
-                                                MARU_MIMETypeList *out_list) {
+                                                MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableMIMETypes, window, target, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(getAvailableMIMETypes, window, target, out_list);
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
   if (!win_base->backend->getAvailableMIMETypes) {
-    out_list->mime_types = NULL;
+    out_list->strings = NULL;
     out_list->count = 0;
     return MARU_FAILURE;
   }
@@ -183,7 +183,7 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
 }
 
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
-                                          MARU_VkExtensionList *out_list) {
+                                          MARU_StringList *out_list) {
   MARU_API_VALIDATE(getVkExtensions, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   if (!context || !out_list) {
@@ -192,7 +192,7 @@ MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   if (!ctx_base->backend->getVkExtensions) {
     out_list->count = 0;
-    out_list->names = NULL;
+    out_list->strings = NULL;
     return MARU_SUCCESS;
   }
   return ctx_base->backend->getVkExtensions(context, out_list);

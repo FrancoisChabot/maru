@@ -305,10 +305,10 @@ inline MARU_Status Context::update(uint64_t field_mask, const MARU_ContextAttrib
 }
 
 inline std::vector<const char*> Context::getVkExtensions() const {
-    MARU_VkExtensionList list = {};
+    MARU_StringList list = {};
     MARU_Status status = maru_getVkExtensions(m_handle, &list);
-    if (status != MARU_SUCCESS || !list.names || list.count == 0) return std::vector<const char*>();
-    return std::vector<const char*>(list.names, list.names + list.count);
+    if (status != MARU_SUCCESS || !list.strings || list.count == 0) return std::vector<const char*>();
+    return std::vector<const char*>(list.strings, list.strings + list.count);
 }
 
 inline expected<std::vector<Monitor>> Context::getMonitors() {

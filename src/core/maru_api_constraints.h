@@ -482,7 +482,7 @@ _maru_validate_setControllerHapticLevels(MARU_Controller *controller,
 
 static inline void
 _maru_validate_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
-                            MARU_MIMETypeList mime_types,
+                            MARU_StringList mime_types,
                             MARU_DropActionMask allowed_actions) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
@@ -492,10 +492,10 @@ _maru_validate_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
       MARU_DROP_ACTION_COPY | MARU_DROP_ACTION_MOVE | MARU_DROP_ACTION_LINK);
   MARU_CONSTRAINT_CHECK((allowed_actions & ~known_actions) == 0);
   if (mime_types.count > 0) {
-    MARU_CONSTRAINT_CHECK(mime_types.mime_types != NULL);
+    MARU_CONSTRAINT_CHECK(mime_types.strings != NULL);
     for (uint32_t i = 0; i < mime_types.count; ++i) {
-      MARU_CONSTRAINT_CHECK(mime_types.mime_types[i] != NULL);
-      MARU_CONSTRAINT_CHECK(mime_types.mime_types[i][0] != '\0');
+      MARU_CONSTRAINT_CHECK(mime_types.strings[i] != NULL);
+      MARU_CONSTRAINT_CHECK(mime_types.strings[i][0] != '\0');
     }
   }
 }
@@ -531,7 +531,7 @@ static inline void _maru_validate_requestData(MARU_Window *window,
 static inline void
 _maru_validate_getAvailableMIMETypes(MARU_Window *window,
                                      MARU_DataExchangeTarget target,
-                                     MARU_MIMETypeList *out_list) {
+                                     MARU_StringList *out_list) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
   MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
@@ -671,7 +671,7 @@ _maru_validate_isKeyboardKeyPressed(const MARU_Context *context, MARU_Key key) {
 }
 
 static inline void _maru_validate_getVkExtensions(const MARU_Context *context,
-                                                  MARU_VkExtensionList *out_list) {
+                                                  MARU_StringList *out_list) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(out_list != NULL);
   _maru_validate_thread((const MARU_Context_Base *)context);
@@ -728,7 +728,7 @@ static inline void _maru_validate_live_setControllerHapticLevels(
 }
 
 static inline void _maru_validate_live_announceData(
-    MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList mime_types,
+    MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types,
     MARU_DropActionMask allowed_actions) {
   (void)target;
   (void)mime_types;
@@ -747,7 +747,7 @@ static inline void _maru_validate_live_requestData(
 
 static inline void _maru_validate_live_getAvailableMIMETypes(
     MARU_Window *window, MARU_DataExchangeTarget target,
-    MARU_MIMETypeList *out_list) {
+    MARU_StringList *out_list) {
   (void)target;
   (void)out_list;
   _maru_validate_window_ready(window);

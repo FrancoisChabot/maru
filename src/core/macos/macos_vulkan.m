@@ -25,7 +25,7 @@ typedef VkResult (*PFN_vkCreateMetalSurfaceEXT)(
     VkInstance instance, const VkMetalSurfaceCreateInfoEXT *pCreateInfo,
     const void *pAllocator, VkSurfaceKHR *pSurface);
 
-MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_VkExtensionList *out_list) {
+MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_StringList *out_list) {
     static const char *extensions[] = {
         "VK_KHR_surface",
         "VK_EXT_metal_surface"

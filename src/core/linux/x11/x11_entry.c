@@ -251,7 +251,7 @@ maru_setControllerHapticLevels(MARU_Controller *controller, uint32_t first_hapti
 
 MARU_API MARU_Status maru_announceData(MARU_Window *window,
                                        MARU_DataExchangeTarget target,
-                                       MARU_MIMETypeList mime_types,
+                                       MARU_StringList mime_types,
                                        MARU_DropActionMask allowed_actions) {
   MARU_API_VALIDATE(announceData, window, target, mime_types, allowed_actions);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
@@ -280,7 +280,7 @@ MARU_API MARU_Status maru_requestData(MARU_Window *window,
 
 MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window *window,
                                                 MARU_DataExchangeTarget target,
-                                                MARU_MIMETypeList *out_list) {
+                                                MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableMIMETypes, window, target, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(getAvailableMIMETypes, window, target, out_list);

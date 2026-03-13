@@ -3,7 +3,7 @@
 
 #import "macos_internal.h"
 
-MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList mime_types, MARU_DropActionMask allowed_actions) {
+MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions) {
   (void)window;
   (void)target;
   (void)mime_types;
@@ -19,6 +19,6 @@ MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget 
   return MARU_FAILURE;
 }
 
-MARU_Status maru_getAvailableMIMETypes_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_MIMETypeList *out_list) {
+MARU_Status maru_getAvailableMIMETypes_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list) {
   return MARU_FAILURE;
 }
