@@ -2,15 +2,14 @@
 
 [![License](https://img.shields.io/badge/license-zlib-blue.svg)](LICENSE.txt)
 
-A brutally strict, high-performance desktop windowing and input layer.
+Maru aims to be the high-speed rail line of cross-platform windowing: restrictive by design, so engines can move faster on top of it.
 
-Maru is less flexible than GLFW or SDL by design. It is highly opinionated, has a very strict (but clear!) threading model, and it forces you to do things "right" from the get-go. It asks a bit more of you on day
-one, but in exchange you get a much stronger foundation to build on.
+Maru is less flexible than other similar libraries. It is highly opinionated, has a strict (but clear!) threading model, and favors explicitness over convenience. It asks a bit more of you on day one, but in exchange it gives you a strong foundation to build on.
 
 - It goes out of its way to provide steady and predictable timing, even during unusual events like controller hot-plugs.
-- Ruthless API validation that can be completely stripped out. It will abort() on any invalid API usage in validation builds.
-- No dynamic global state unless the OS mandates it.
-- It stays in its lane. It provides windowing, surface creation, and user inputs (including DnD, clipboard, and cursors). That's it.
+- It has ruthless API validation that can be completely stripped out. It will abort() on any invalid API usage in validation builds.
+- It has no dynamic global state unless the OS mandates it.
+- It stays in its lane. It provides windowing, surface creation, and user inputs. That's it.
 
 Why is it called Maru? This library was built to support a bird-themed game, so it's named after my pet parrot: Marula.
 
@@ -45,7 +44,7 @@ cmake --build build --config Release
 
 ## Integration
 
-The easiest way to integrate Maru is via CMake (`FetchContent` or `add_subdirectory`).
+The easiest way to integrate Maru is via CMake (`add_subdirectory` or `FetchContent`).
 
 ```cmake
 add_subdirectory(path/to/maru)
@@ -64,14 +63,7 @@ FetchContent_MakeAvailable(maru)
 target_link_libraries(your_target PRIVATE maru::maru)
 ```
 
-You can also build Maru by itself and use it as a regular library:
-
-```bash
-cd path/to/maru
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=path/to/where/to/install/maru ..
-cmake --install .
-```
+For more integrations methods, including injecting Maru's sources in your own build system, check out the [integration guide](docs/user/integration.md).
 
 ## Usage example
 
@@ -80,10 +72,9 @@ cmake --install .
 - Check out the [basic_c example](examples/basic_c/main.c) for a more complete example.
 
 ```c
-// N.B. Maru does not include vulkan headers for you, it does not care if you 
-// include them before or after it, and it doesn't require any #define beforehand.
 #include <vulkan/vulkan.h>
 #include "maru/maru.h"
+#include "maru/vulkan.h"
 
 typedef struct AppState {
   bool keep_running;
@@ -192,7 +183,7 @@ Unfortunately, asynchronous window creation is absolutely necessary to get a smo
 
 In any case, for a single-window app or game, you can easily work around this with a dedicated pump loop immediately after the creation call, as shown in the usage example.
 
-#### Honest Concurrency: The "Lightweight" Lie
+#### Honest Concurrency: Adressing the big thread in the room
 **"Why does Maru create a worker thread in some backends?"**
 
 Maru isn't "lightweight" for the sake of a low binary size; it is lightweight so that your application can run as fast and smoothly as possible. 
@@ -300,7 +291,7 @@ By default, every single mouse movement is dispatched to ensure zero-latency acc
 #### Strict Separation of Concerns
 **"Does Maru initialize Vulkan for me?"**
 
-No. There are too many architectural decisions involved in renderer initialization. Maru sticks to windows and I/O. It provides exactly two Vulkan helpers:
+No. There are too many architectural decisions involved in renderer initialization. Maru sticks to windows and I/O. It provides exactly two Vulkan helpers in `maru/vulkan.h`:
 1. `maru_getVkExtensions()`: To tell you what you need for `vkCreateInstance`.
 2. `maru_createVkSurface()`: To create a `VkSurfaceKHR` for a given window.
 
@@ -327,11 +318,6 @@ If a future event type requires more data than the 64-byte budget allows, Maru's
 **"What's up with the attribute substructs?"**
 
 Attributes represent properties that can change on the fly. We use the same struct type for both `CreateInfo` (initial state) and `maru_update*` calls (live changes). That keeps the API nice and consistent.
-
-#### Predictable Builds
-**"Do I really need CMake to build the library?"**
-
-Yes. The X11 and Wayland backends each need to be compiled twice (direct use vs. runtime-dispatched), which requires specific build logic. We only ensure stability for the CMake path. For other build systems,  headers + precompiled library is the way to go.
 
 ## Acknowledgements
 

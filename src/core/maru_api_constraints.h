@@ -77,8 +77,10 @@ _maru_status_if_request_context_lost(MARU_DataRequest *request) {
 
 #define MARU_CONSTRAINT_CHECK(cond)                                            \
   do {                                                                         \
-    if (!(cond))                                                               \
+    if (!(cond)) {                                                             \
+      fprintf(stderr, "Maru API contract violation in %s\n", __func__);        \
       abort();                                                                 \
+    }                                                                          \
   } while (0)
 
 #include "maru/maru.h"

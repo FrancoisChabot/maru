@@ -2,6 +2,8 @@
 
 Maru is designed to work seamlessly with the Vulkan graphics API. It handles the platform-specific extensions and surface creation for you.
 
+Include both `maru/maru.h` and `maru/vulkan.h` when using these APIs.
+
 ## Extensions
 
 To create a Vulkan instance that can render to Maru windows, you need to enable certain instance extensions (like `VK_KHR_xlib_surface` or `VK_KHR_wayland_surface`). Maru provides a list of these extensions based on the current context.

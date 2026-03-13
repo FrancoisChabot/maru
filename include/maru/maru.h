@@ -1461,7 +1461,8 @@ typedef struct MARU_WindowCreateInfo {
  * APIs that require a realized native window, such as maru_updateWindow(),
  * maru_requestWindowFocus(), maru_requestWindowFrame(),
  * maru_requestWindowAttention(), drag/drop window data-exchange APIs, native
- * window getters, and maru_createVkSurface().
+ * window getters, and Vulkan surface creation APIs declared in
+ * `maru/vulkan.h`.
  *
  * If the owning context is already lost, status-returning APIs on that window
  * short-circuit with MARU_CONTEXT_LOST before runtime ready-window
@@ -1707,28 +1708,6 @@ static inline void maru_setDropSessionAction(MARU_DropSession* session, MARU_Dro
 static inline MARU_DropAction maru_getDropSessionAction(const MARU_DropSession* session);
 static inline void maru_setDropSessionUserdata(MARU_DropSession* session, void* userdata);
 static inline void* maru_getDropSessionUserdata(const MARU_DropSession* session);
-
-/* ----- Vulkan ----- */
-
-typedef void (*MARU_VulkanVoidFunction)(void);
-typedef struct VkInstance_T* VkInstance;
-typedef struct VkSurfaceKHR_T* VkSurfaceKHR;
-
-typedef MARU_VulkanVoidFunction (*MARU_VkGetInstanceProcAddrFunc)(VkInstance instance,
-                                                                  const char* pName);
-                               
-/*
- * Returns a borrowed extension-name array. Backends may point this at static
- * storage; treat it as read-only and valid for at least the lifetime of the
- * context.
- */
-MARU_API MARU_Status maru_getVkExtensions(const MARU_Context* context,
-                                          MARU_StringList* out_list);
-/* Requires a ready window. */
-MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
-                                          VkInstance instance,
-                                          MARU_VkGetInstanceProcAddrFunc vk_loader,
-                                          VkSurfaceKHR* out_surface);
 
 /* ----- Convenience helpers ----- */
 

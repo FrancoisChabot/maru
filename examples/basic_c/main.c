@@ -1,5 +1,6 @@
 #include "../shared_renderer/vulkan_renderer.h"
 #include "maru/maru.h"
+#include "maru/vulkan.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <vulkan/vulkan.h>

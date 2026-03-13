@@ -15,11 +15,14 @@ extern "C" {
 #endif
 
 #if defined(MARU_VALIDATE_API_CALLS) || defined(MARU_ENABLE_INTERNAL_CHECKS)
+#include <stdio.h>
 #include <stdlib.h>
 #define MARU_ASSUME(cond)                                                      \
   do {                                                                         \
-    if (!(cond))                                                               \
+    if (!(cond)) {                                                             \
+      fprintf(stderr, "Maru API contract violation in %s\n", __func__);        \
       abort();                                                                 \
+    }                                                                          \
   } while (0)
 #else
 #if defined(__clang__)

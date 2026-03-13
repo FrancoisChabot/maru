@@ -7,7 +7,7 @@
 #include <chrono>
 #include <vector>
 
-#include "maru/maru.h"
+#include "maru/vulkan.h"
 #include "maru/cpp/fwd.hpp"
 #include "maru/cpp/expected.hpp"
 #include "maru/cpp/window.hpp"

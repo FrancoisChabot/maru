@@ -5,6 +5,7 @@
 #define MARU_HPP_INCLUDED
 
 #include "maru/maru.h"
+#include "maru/vulkan.h"
 
 #include "maru/cpp/fwd.hpp"
 #include "maru/cpp/expected.hpp"

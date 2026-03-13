@@ -2,6 +2,7 @@
 #define MARU_BACKEND_H_INCLUDED
 
 #include "maru/maru.h"
+#include "maru_vulkan_types.h"
 
 #ifdef MARU_INDIRECT_BACKEND
 typedef struct MARU_Backend {
@@ -47,8 +48,11 @@ typedef struct MARU_Backend {
   void *(*getContextNativeHandle)(MARU_Context *context);
   void *(*getWindowNativeHandle)(MARU_Window *window);
 
-  __typeof__(maru_getVkExtensions) *getVkExtensions;
-  __typeof__(maru_createVkSurface) *createVkSurface;
+  MARU_Status (*getVkExtensions)(const MARU_Context *context,
+                                 MARU_StringList *out_list);
+  MARU_Status (*createVkSurface)(MARU_Window *window, VkInstance instance,
+                                 MARU_VkGetInstanceProcAddrFunc vk_loader,
+                                 VkSurfaceKHR *out_surface);
 
   // More to be added directly here
 } MARU_Backend;

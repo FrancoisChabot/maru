@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdatomic.h>
 #include "maru/maru.h"
+#include "maru_vulkan_types.h"
 #include "maru_backend.h"
 #include "core_event_queue.h"
 
