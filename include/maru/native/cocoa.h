@@ -13,7 +13,6 @@ extern "C" {
 typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 
-#ifdef MARU_ENABLE_BACKEND_COCOA
 typedef struct MARU_CocoaContextHandle {
   void *ns_application;
 } MARU_CocoaContextHandle;
@@ -26,7 +25,6 @@ MARU_API MARU_CocoaContextHandle
 maru_getCocoaContextHandle(MARU_Context *context);
 MARU_API MARU_CocoaWindowHandle
 maru_getCocoaWindowHandle(MARU_Window *window);
-#endif
 
 #ifdef __cplusplus
 }

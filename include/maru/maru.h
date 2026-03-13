@@ -83,6 +83,7 @@ typedef uint64_t MARU_EventMask;
 typedef uint64_t MARU_WindowId;
 
 #define MARU_BIT(n) ((uint64_t)1 << (n))
+#define MARU_BIT32(n) ((uint32_t)1 << (n))
 #define MARU_WINDOW_ID_NONE ((MARU_WindowId)0)
 
 /**
@@ -143,7 +144,7 @@ typedef struct MARU_ChannelInfo {
   uint32_t flags;
 } MARU_ChannelInfo;
 
-#define MARU_CHANNEL_FLAG_IS_DEFAULT MARU_BIT(0)
+#define MARU_CHANNEL_FLAG_IS_DEFAULT MARU_BIT32(0)
 
 MARU_API MARU_Version maru_getVersion(void);
 
@@ -601,13 +602,13 @@ typedef struct MARU_WindowResizedEvent {
 } MARU_WindowResizedEvent;
 
 typedef uint32_t MARU_WindowStateChangedFlags;
-#define MARU_WINDOW_STATE_CHANGED_VISIBLE MARU_BIT(0)
-#define MARU_WINDOW_STATE_CHANGED_MINIMIZED MARU_BIT(1)
-#define MARU_WINDOW_STATE_CHANGED_MAXIMIZED MARU_BIT(2)
-#define MARU_WINDOW_STATE_CHANGED_FOCUSED MARU_BIT(3)
-#define MARU_WINDOW_STATE_CHANGED_ICON MARU_BIT(4)
-#define MARU_WINDOW_STATE_CHANGED_FULLSCREEN MARU_BIT(5)
-#define MARU_WINDOW_STATE_CHANGED_RESIZABLE MARU_BIT(6)
+#define MARU_WINDOW_STATE_CHANGED_VISIBLE MARU_BIT32(0)
+#define MARU_WINDOW_STATE_CHANGED_MINIMIZED MARU_BIT32(1)
+#define MARU_WINDOW_STATE_CHANGED_MAXIMIZED MARU_BIT32(2)
+#define MARU_WINDOW_STATE_CHANGED_FOCUSED MARU_BIT32(3)
+#define MARU_WINDOW_STATE_CHANGED_ICON MARU_BIT32(4)
+#define MARU_WINDOW_STATE_CHANGED_FULLSCREEN MARU_BIT32(5)
+#define MARU_WINDOW_STATE_CHANGED_RESIZABLE MARU_BIT32(6)
 
 typedef struct MARU_WindowStateChangedEvent {
   MARU_WindowStateChangedFlags changed_fields;
@@ -667,9 +668,9 @@ typedef struct MARU_MonitorModeChangedEvent {
 
 typedef enum MARU_DropAction {
   MARU_DROP_ACTION_NONE = 0,
-  MARU_DROP_ACTION_COPY = MARU_BIT(0),
-  MARU_DROP_ACTION_MOVE = MARU_BIT(1),
-  MARU_DROP_ACTION_LINK = MARU_BIT(2),
+  MARU_DROP_ACTION_COPY = MARU_BIT32(0),
+  MARU_DROP_ACTION_MOVE = MARU_BIT32(1),
+  MARU_DROP_ACTION_LINK = MARU_BIT32(2),
 } MARU_DropAction;
 
 typedef uint64_t MARU_DropActionMask;
@@ -1185,6 +1186,9 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
  *
  * `icon`, `cursor`, and `monitor` are borrowed same-context handles. They are
  * not retained by the window.
+ *
+ * `dip_position` updates may act as a silent no-op or return MARU_FAILURE on 
+ * certain backends (like Wayland) where positioning is compositor-controlled.
  */
 typedef struct MARU_WindowAttributes {
   const char* title;
@@ -1552,6 +1556,7 @@ MARU_API void maru_resetQueueMetrics(MARU_Queue* queue);
 static inline MARU_Status maru_setContextInhibitsSystemIdle(MARU_Context* context, bool enabled);
 static inline MARU_Status maru_setWindowTitle(MARU_Window* window, const char* title);
 static inline MARU_Status maru_setWindowDipSize(MARU_Window* window, MARU_Vec2Dip size);
+/* Note: Window positioning is compositor-controlled on certain backends (like Wayland), where this will act as a silent no-op or return MARU_FAILURE. */
 static inline MARU_Status maru_setWindowDipPosition(MARU_Window* window, MARU_Vec2Dip position);
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowMaximized(MARU_Window* window, bool enabled);

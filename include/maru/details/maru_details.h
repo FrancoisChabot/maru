@@ -1,14 +1,6 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-/*
- * This is not intended to be included or used directly by normal application
- * code. Public MARU_* handles must still be treated as opaque by application
- * code; do not cast them to the prefix types declared here.
- *
- * Nothing in this file is part of Maru's API.
- */
-
 #ifndef MARU__INCLUDING_DETAILS_FROM_MARU_H
 #error "Do not include maru/details/maru_details.h directly; include maru/maru.h."
 #endif
@@ -39,12 +31,13 @@ extern "C" {
 #define MARU_CONTROLLER_STATE_LOST MARU_BIT(0)
 
 /*
- * These prefix types are not a supported programming interface for applications.
- * Do not downcast opaque MARU handles to them or depend on their field names,
- * comments, or undocumented semantics.
+ * This file is not part of Maru's source-level API.
+ * Application code must not include it directly, cast opaque handles to these
+ * types, or depend on their field names.
  *
- * However, because public inline accessors in maru.h depend on these layouts,
- * the memory layout of these prefix structs is part of Maru's ABI contract.
+ * However, maru.h exposes public inline accessors that rely on the leading
+ * layout of some handle storage declared here. Those leading layouts are
+ * therefore part of Maru's ABI contract by design.
  */
 typedef struct MARU_ContextPrefix {
   void* userdata;
