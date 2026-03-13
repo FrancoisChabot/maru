@@ -191,7 +191,6 @@ inline Window& Window::operator=(Window&& other) noexcept {
 
 inline void* Window::getUserData() const { return maru_getWindowUserdata(m_handle); }
 inline void Window::setUserData(void* userdata) { maru_setWindowUserdata(m_handle, userdata); }
-inline bool Window::isLost() const { return maru_isWindowLost(m_handle); }
 inline bool Window::isReady() const { return maru_isWindowReady(m_handle); }
 inline bool Window::isFocused() const { return maru_isWindowFocused(m_handle); }
 inline bool Window::isMaximized() const { return maru_isWindowMaximized(m_handle); }

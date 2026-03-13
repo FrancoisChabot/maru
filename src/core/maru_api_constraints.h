@@ -90,9 +90,6 @@ static inline void _maru_validate_window_ready(const MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(maru_isWindowReady(window));
 }
 
-static inline void _maru_validate_window_not_lost(const MARU_Window *window) {
-  MARU_CONSTRAINT_CHECK(!maru_isWindowLost(window));
-}
 
 static inline void
 _maru_validate_monitor_not_lost(const MARU_Monitor *monitor) {
@@ -300,6 +297,20 @@ _maru_validate_updateWindow(MARU_Window *window, uint64_t field_mask,
 
   MARU_CONSTRAINT_CHECK((field_mask & ~known_fields) == 0);
   _maru_validate_attributes(win_base->ctx_base, field_mask, attributes);
+
+  if ((field_mask & (MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE)) != 0) {
+    MARU_Vec2Dip new_min = (field_mask & MARU_WINDOW_ATTR_MIN_DIP_SIZE) ? attributes->min_dip_size : win_base->attrs_requested.min_dip_size;
+    MARU_Vec2Dip new_max = (field_mask & MARU_WINDOW_ATTR_MAX_DIP_SIZE) ? attributes->max_dip_size : win_base->attrs_requested.max_dip_size;
+
+    const bool max_unbounded_x = new_max.x == 0;
+    const bool max_unbounded_y = new_max.y == 0;
+    if (!max_unbounded_x) {
+      MARU_CONSTRAINT_CHECK(new_max.x >= new_min.x);
+    }
+    if (!max_unbounded_y) {
+      MARU_CONSTRAINT_CHECK(new_max.y >= new_min.y);
+    }
+  }
 }
 
 static inline void _maru_validate_requestWindowFocus(MARU_Window *window) {
@@ -596,7 +607,6 @@ static inline void _maru_validate_getWaylandContextHandle(MARU_Context *context)
 static inline void _maru_validate_getWaylandWindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_WAYLAND);
@@ -610,7 +620,6 @@ static inline void _maru_validate_getX11ContextHandle(MARU_Context *context) {
 static inline void _maru_validate_getX11WindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_X11);
@@ -624,7 +633,6 @@ static inline void _maru_validate_getWin32ContextHandle(MARU_Context *context) {
 static inline void _maru_validate_getWin32WindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_WINDOWS);
@@ -638,7 +646,6 @@ static inline void _maru_validate_getCocoaContextHandle(MARU_Context *context) {
 static inline void _maru_validate_getCocoaWindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_COCOA);
@@ -654,7 +661,6 @@ static inline void _maru_validate_getLinuxContextHandle(MARU_Context *context) {
 static inline void _maru_validate_getLinuxWindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
   MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   const MARU_BackendType backend = maru_getContextBackend(context);
@@ -704,23 +710,19 @@ _maru_validate_live_updateWindow(MARU_Window *window, uint64_t field_mask,
   (void)field_mask;
   (void)attributes;
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 }
 
 static inline void _maru_validate_live_requestWindowFocus(MARU_Window *window) {
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 }
 
 static inline void _maru_validate_live_requestWindowFrame(MARU_Window *window) {
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 }
 
 static inline void
 _maru_validate_live_requestWindowAttention(MARU_Window *window) {
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 }
 
 static inline void
@@ -746,7 +748,6 @@ static inline void _maru_validate_live_announceData(
   (void)mime_types;
   (void)allowed_actions;
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 }
 
 static inline void _maru_validate_live_requestData(
@@ -756,7 +757,6 @@ static inline void _maru_validate_live_requestData(
   (void)mime_type;
   (void)userdata;
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 }
 
 static inline void _maru_validate_live_getAvailableMIMETypes(
@@ -765,7 +765,6 @@ static inline void _maru_validate_live_getAvailableMIMETypes(
   (void)target;
   (void)out_list;
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 }
 
 static inline void _maru_validate_live_getMonitorModes(
@@ -786,7 +785,6 @@ static inline void _maru_validate_live_createVkSurface(    MARU_Window *window, 
   (void)vk_loader;
   (void)out_surface;
   _maru_validate_window_ready(window);
-  _maru_validate_window_not_lost(window);
 }
 
 #define MARU_API_VALIDATE_LIVE(fn, ...) _maru_validate_live_##fn(__VA_ARGS__)

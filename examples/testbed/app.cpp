@@ -57,7 +57,7 @@ void App::onDiagnostic(const MARU_DiagnosticInfo* info) {
 }
 
 AppStatus App::update(MARU_Context* ctx, MARU_Window* window) {
-    if (exit_requested_ || maru_isWindowLost(window)) {
+    if (exit_requested_) {
         return AppStatus::EXIT;
     }
 

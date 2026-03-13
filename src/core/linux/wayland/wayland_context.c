@@ -220,9 +220,6 @@ static void _maru_wayland_disconnect_display(MARU_Context_WL *ctx) {
 
 static void _maru_wayland_mark_lost(MARU_Context_WL *ctx, const char *message) {
   ctx->base.pub.flags |= MARU_CONTEXT_STATE_LOST;
-  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
-    it->pub.flags |= MARU_WINDOW_STATE_LOST;
-  }
   if (message) {
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE, message);
   }

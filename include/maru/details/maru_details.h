@@ -27,7 +27,6 @@ extern "C" {
 
 #define MARU_MONITOR_STATE_LOST MARU_BIT(0)
 
-#define MARU_WINDOW_STATE_LOST MARU_BIT(0)
 #define MARU_WINDOW_STATE_READY MARU_BIT(1)
 #define MARU_WINDOW_STATE_FOCUSED MARU_BIT(2)
 #define MARU_WINDOW_STATE_MAXIMIZED MARU_BIT(3)
@@ -40,10 +39,12 @@ extern "C" {
 #define MARU_CONTROLLER_STATE_LOST MARU_BIT(0)
 
 /*
- * If you are reading this and are having the smart idea of downcasting an opaque handle to one of
- * these, don't.
+ * These prefix types are not a supported programming interface for applications.
+ * Do not downcast opaque MARU handles to them or depend on their field names,
+ * comments, or undocumented semantics.
  *
- * These are implementation details, and prone to change without notice.
+ * However, because public inline accessors in maru.h depend on these layouts,
+ * the memory layout of these prefix structs is part of Maru's ABI contract.
  */
 typedef struct MARU_ContextPrefix {
   void* userdata;
@@ -262,10 +263,6 @@ static inline MARU_WindowId maru_getWindowId(const MARU_Window* window) {
 
 static inline const char* maru_getWindowTitle(const MARU_Window* window) {
   return ((const MARU_WindowPrefix*)window)->title;
-}
-
-static inline bool maru_isWindowLost(const MARU_Window* window) {
-  return (((const MARU_WindowPrefix*)window)->flags & MARU_WINDOW_STATE_LOST) != 0;
 }
 
 static inline bool maru_isWindowReady(const MARU_Window* window) {
@@ -551,24 +548,6 @@ static inline MARU_Status maru_setWindowIcon(MARU_Window* window, MARU_Image* ic
   memset(&attrs, 0, sizeof(attrs));
   attrs.icon = icon;
   return maru_updateWindow(window, MARU_WINDOW_ATTR_ICON, &attrs);
-}
-
-static inline MARU_Status maru_requestText(MARU_Window* window,
-                                           MARU_DataExchangeTarget target,
-                                           void* userdata) {
-  return maru_requestData(window, target, "text/plain", userdata);
-}
-
-static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window* window,
-                                                              MARU_TextInputType type) {
-  MARU_WindowAttributes attrs;
-  memset(&attrs, 0, sizeof(attrs));
-  attrs.text_input_type = type;
-  attrs.text_input_rect.dip_position.x = 0;
-  attrs.text_input_rect.dip_position.y = 0;
-  attrs.text_input_rect.dip_size = maru_getWindowGeometry(window).dip_size;
-  return maru_updateWindow(
-      window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT, &attrs);
 }
 
 static inline bool maru_applyTextEditCommitUtf8(char* buffer,

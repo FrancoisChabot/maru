@@ -29,7 +29,6 @@ public:
     void* getUserData() const;
     void setUserData(void* userdata);
     
-    bool isLost() const;
     bool isReady() const;
     bool isFocused() const;
     bool isMaximized() const;

@@ -979,6 +979,7 @@ typedef struct MARU_ImageCreateInfo {
   MARU_Vec2Px px_size;
   /* Copied into MARU-owned storage before maru_createImage() returns. */
   const uint32_t* pixels;
+  /* Number of bytes per row. If 0, assumes tightly packed (width * 4 bytes). */
   uint32_t stride_bytes;
   void* userdata;
 } MARU_ImageCreateInfo;
@@ -1131,7 +1132,6 @@ static inline void maru_setWindowUserdata(MARU_Window* window, void* userdata);
 static inline MARU_Context* maru_getWindowContext(const MARU_Window* window);
 static inline MARU_WindowId maru_getWindowId(const MARU_Window* window);
 static inline const char* maru_getWindowTitle(const MARU_Window* window);
-static inline bool maru_isWindowLost(const MARU_Window* window);
 static inline bool maru_isWindowReady(const MARU_Window* window);
 static inline bool maru_isWindowFocused(const MARU_Window* window);
 static inline bool maru_isWindowMaximized(const MARU_Window* window);
@@ -1221,7 +1221,7 @@ typedef struct MARU_WindowCreateInfo {
   /*
    * Optional platform app identity. NULL leaves it unset.
    *
-   * Consumed during maru_createWindow(); it need only outlive that call.
+   * Copied by maru_createWindow(); it need only outlive that call.
    */
   const char* app_id;
   MARU_ContentType content_type;

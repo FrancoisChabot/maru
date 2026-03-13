@@ -121,10 +121,6 @@ void WindowModule::update(MARU_Context* ctx, MARU_Window* window) {
         if (!sw->ready) {
             continue;
         }
-        if (maru_isWindowLost(sw->window)) {
-            sw->should_close = true;
-            continue;
-        }
 
         MARU_WindowGeometry geom = maru_getWindowGeometry(sw->window);
         if (geom.px_size.x <= 0 || geom.px_size.y <= 0) {
@@ -349,12 +345,11 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             MARU_WindowGeometry geometry = maru_getWindowGeometry(target);
 
             ImGui::Text("Handle: %p", (void*)target);
-            ImGui::Text("Flags: %s%s%s%s%s",
+            ImGui::Text("Flags: %s%s%s%s",
                         maru_isWindowReady(target) ? "[Ready] " : "",
                         maru_isWindowFocused(target) ? "[Focused] " : "",
                         maru_isWindowMaximized(target) ? "[Maximized] " : "",
-                        maru_isWindowFullscreen(target) ? "[Fullscreen] " : "",
-                        maru_isWindowLost(target) ? "[LOST] " : "");
+                        maru_isWindowFullscreen(target) ? "[Fullscreen] " : "");
             ImGui::Text("Origin:  %.1f, %.1f", geometry.dip_position.x, geometry.dip_position.y);
             ImGui::Text("Dip: %.1f x %.1f", geometry.dip_size.x, geometry.dip_size.y);
             ImGui::Text("Px:   %d x %d", geometry.px_size.x, geometry.px_size.y);
@@ -463,12 +458,11 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             if (sw.window && window_ready) {
                 MARU_WindowGeometry geometry = maru_getWindowGeometry(sw.window);
                 ImGui::Text("Handle: %p", (void*)sw.window);
-                ImGui::Text("Flags: %s%s%s%s%s",
+                ImGui::Text("Flags: %s%s%s%s",
                             maru_isWindowReady(sw.window) ? "[Ready] " : "",
                             maru_isWindowFocused(sw.window) ? "[Focused] " : "",
                             maru_isWindowMaximized(sw.window) ? "[Maximized] " : "",
-                            maru_isWindowFullscreen(sw.window) ? "[Fullscreen] " : "",
-                            maru_isWindowLost(sw.window) ? "[LOST] " : "");
+                            maru_isWindowFullscreen(sw.window) ? "[Fullscreen] " : "");
                 ImGui::Text("Origin:  %.1f, %.1f", geometry.dip_position.x, geometry.dip_position.y);
                 ImGui::Text("Dip: %.1f x %.1f", geometry.dip_size.x, geometry.dip_size.y);
                 ImGui::Text("Px:   %d x %d", geometry.px_size.x, geometry.px_size.y);
