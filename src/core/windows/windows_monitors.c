@@ -167,14 +167,13 @@ MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
   out_list->count = win_mon->mode_count;
   out_list->modes = win_mon->modes;
   return MARU_SUCCESS;
-}
+  }
 
-MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
+  MARU_Status maru_setMonitorMode_Windows(MARU_Monitor *monitor,
                                         MARU_VideoMode mode) {
   MARU_Monitor_Windows *win_mon = (MARU_Monitor_Windows *)monitor;
-  
-  DEVMODEW devmode;
-  memset(&devmode, 0, sizeof(devmode));
+
+  DEVMODEW devmode;  memset(&devmode, 0, sizeof(devmode));
   devmode.dmSize = sizeof(devmode);
   devmode.dmPelsWidth = mode.px_size.x;
   devmode.dmPelsHeight = mode.px_size.y;

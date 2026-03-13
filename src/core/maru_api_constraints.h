@@ -581,7 +581,7 @@ static inline void _maru_validate_getMonitorModes(const MARU_Monitor *monitor,
   _maru_validate_thread(((const MARU_Monitor_Base *)monitor)->ctx_base);
 }
 
-static inline void _maru_validate_setMonitorMode(const MARU_Monitor *monitor,
+static inline void _maru_validate_setMonitorMode(MARU_Monitor *monitor,
                                                  MARU_VideoMode mode) {
   MARU_CONSTRAINT_CHECK(monitor != NULL);
   _maru_validate_thread(((const MARU_Monitor_Base *)monitor)->ctx_base);
@@ -775,12 +775,11 @@ static inline void _maru_validate_live_getMonitorModes(
 }
 
 static inline void
-_maru_validate_live_setMonitorMode(const MARU_Monitor *monitor,
-                                    MARU_VideoMode mode) {
+_maru_validate_live_setMonitorMode(MARU_Monitor *monitor,
+                                   MARU_VideoMode mode) {
   (void)mode;
   _maru_validate_monitor_not_lost(monitor);
 }
-
 static inline void _maru_validate_live_createVkSurface(    MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
   (void)instance;

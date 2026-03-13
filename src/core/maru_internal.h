@@ -10,9 +10,6 @@
 #include "maru_backend.h"
 #include "core_event_queue.h"
 
-// The API headers define the exposed handle prefixes used internally.
-#include "maru/details/maru_details.h"
-
 /**
  * @file maru_internal.h
  * @brief Base structures for opaque handles.

@@ -271,7 +271,7 @@ MARU_Status maru_getMonitorModes_X11(const MARU_Monitor *monitor, MARU_VideoMode
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_setMonitorMode_X11(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+MARU_Status maru_setMonitorMode_X11(MARU_Monitor *monitor, MARU_VideoMode mode) {
   MARU_Monitor_X11 *mon = (MARU_Monitor_X11 *)monitor;
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)mon->base.ctx_base;
   if (!ctx->xrandr_lib.base.available || mon->output == (RROutput)0) {

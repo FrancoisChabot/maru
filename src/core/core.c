@@ -1,6 +1,5 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
-#include "maru/details/maru_details.h"
 #include <string.h>
 #include <stdatomic.h>
 #include <stdio.h>

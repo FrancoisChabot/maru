@@ -108,11 +108,10 @@ void maru_retainMonitor_Cocoa(MARU_Monitor *monitor);
 void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor);
 MARU_Status maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor,
                                       MARU_VideoModeList *out_list);
-MARU_Status maru_setMonitorMode_Cocoa(const MARU_Monitor *monitor,
-                                       MARU_VideoMode mode);
+MARU_Status maru_setMonitorMode_Cocoa(MARU_Monitor *monitor,
+                                      MARU_VideoMode mode);
 
-MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_VkExtensionList *out_list);
-MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
+MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_VkExtensionList *out_list);MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 void _maru_cocoa_associate_window(id ns_window, MARU_Window_Cocoa *window);
 MARU_Window_Cocoa *_maru_cocoa_window_from_ns_window(id ns_window);

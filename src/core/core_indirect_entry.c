@@ -1,6 +1,5 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
-#include "maru/details/maru_details.h"
 
 #include <stdatomic.h>
 #include <stdint.h>
@@ -340,7 +339,7 @@ MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_Vide
   return mon_base->backend->getMonitorModes(monitor, out_list);
 }
 
-MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+MARU_API MARU_Status maru_setMonitorMode(MARU_Monitor *monitor, MARU_VideoMode mode) {
   MARU_API_VALIDATE(setMonitorMode, monitor, mode);
   MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_monitor_context_lost(monitor));
   MARU_API_VALIDATE_LIVE(setMonitorMode, monitor, mode);

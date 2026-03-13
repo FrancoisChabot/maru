@@ -140,7 +140,7 @@ MARU_Status maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor, MARU_VideoMo
     return MARU_SUCCESS;
 }
 
-MARU_Status maru_setMonitorMode_Cocoa(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+MARU_Status maru_setMonitorMode_Cocoa(MARU_Monitor *monitor, MARU_VideoMode mode) {
     // Deprecated in modern macOS. Changing display resolution globally is frowned upon.
     // Applications should use Borderless Fullscreen Windows instead.
     // Implementing this would require CGDisplaySetDisplayMode, which causes flickering and re-layout.

@@ -3,7 +3,6 @@
 
 #include "imgui_impl_maru.h"
 #include <maru/maru.h>
-#include <maru/details/maru_details.h>
 #include <chrono>
 #include <string>
 

@@ -249,7 +249,7 @@ MARU_Status maru_destroyCursor_Windows(MARU_Cursor *cursor);
 MARU_Status maru_updateMonitors_Windows(MARU_Context *context);
 MARU_Status maru_getMonitorModes_Windows(const MARU_Monitor *monitor,
                                          MARU_VideoModeList *out_list);
-MARU_Status maru_setMonitorMode_Windows(const MARU_Monitor *monitor,
+MARU_Status maru_setMonitorMode_Windows(MARU_Monitor *monitor,
                                         MARU_VideoMode mode);
 
 // controllers.h

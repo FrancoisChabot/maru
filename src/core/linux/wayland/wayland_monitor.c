@@ -384,7 +384,7 @@ MARU_Status maru_getMonitorModes_WL(const MARU_Monitor *monitor_handle, MARU_Vid
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_setMonitorMode_WL(const MARU_Monitor *monitor, MARU_VideoMode mode) {
+MARU_Status maru_setMonitorMode_WL(MARU_Monitor *monitor, MARU_VideoMode mode) {
   (void)monitor; (void)mode;
   return MARU_FAILURE; // Wayland doesn't support setting modes directly
 }

@@ -22,12 +22,6 @@
  *    helpers never invoke your MARU_EventCallback directly; event callbacks are
  *    still only dispatched inline from maru_pumpEvents() on the owner thread.
  *
- * Handle layout note
- *
- * Public handles must be treated as opaque by application code. Do not
- * downcast them to details-level representation types; use the public
- * accessors below.
- *
  * Ownership and lifetime model
  *
  * 1. Handle arguments are borrowed references. MARU does not take ownership of
@@ -913,8 +907,6 @@ MARU_API bool maru_wakeContext(MARU_Context* context);
 
 /* ----- Contexts ----- */
 
-#define MARU_CONTEXT_STATE_LOST MARU_BIT(0)
-#define MARU_CONTEXT_STATE_READY MARU_BIT(1)
 
 #define MARU_NEVER UINT32_MAX
 #define MARU_CONTEXT_ATTR_INHIBIT_IDLE MARU_BIT(0)
@@ -1064,8 +1056,6 @@ MARU_API MARU_Status maru_destroyCursor(MARU_Cursor* cursor);
 
 /* ----- Monitors ----- */
 
-#define MARU_MONITOR_STATE_LOST MARU_BIT(0)
-
 typedef struct MARU_VideoMode {
   MARU_Vec2Px px_size;
   uint32_t refresh_rate_millihz;
@@ -1111,19 +1101,9 @@ MARU_API void maru_releaseMonitor(MARU_Monitor* monitor);
  */
 MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor* monitor,
                                           MARU_VideoModeList* out_list);
-MARU_API MARU_Status maru_setMonitorMode(const MARU_Monitor* monitor, MARU_VideoMode mode);
+MARU_API MARU_Status maru_setMonitorMode(MARU_Monitor* monitor, MARU_VideoMode mode);
 
 /* ----- Windows ----- */
-
-#define MARU_WINDOW_STATE_LOST MARU_BIT(0)
-#define MARU_WINDOW_STATE_READY MARU_BIT(1)
-#define MARU_WINDOW_STATE_FOCUSED MARU_BIT(2)
-#define MARU_WINDOW_STATE_MAXIMIZED MARU_BIT(3)
-#define MARU_WINDOW_STATE_FULLSCREEN MARU_BIT(4)
-#define MARU_WINDOW_STATE_RESIZABLE MARU_BIT(5)
-#define MARU_WINDOW_STATE_DECORATED MARU_BIT(6)
-#define MARU_WINDOW_STATE_VISIBLE MARU_BIT(7)
-#define MARU_WINDOW_STATE_MINIMIZED MARU_BIT(8)
 
 typedef enum MARU_CursorMode {
   MARU_CURSOR_NORMAL = 0,
@@ -1173,15 +1153,15 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_MAXIMIZED MARU_BIT(6)
 #define MARU_WINDOW_ATTR_MIN_DIP_SIZE MARU_BIT(7)
 #define MARU_WINDOW_ATTR_MAX_DIP_SIZE MARU_BIT(8)
-#define MARU_WINDOW_ATTR_DIP_POSITION MARU_BIT(9)
-#define MARU_WINDOW_ATTR_ASPECT_RATIO MARU_BIT(10)
-#define MARU_WINDOW_ATTR_RESIZABLE MARU_BIT(11)
-#define MARU_WINDOW_ATTR_ACCEPT_DROP MARU_BIT(12)
-#define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE MARU_BIT(13)
-#define MARU_WINDOW_ATTR_TEXT_INPUT_RECT MARU_BIT(14)
-#define MARU_WINDOW_ATTR_PRIMARY_SELECTION MARU_BIT(15)
-#define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(16)
-#define MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE MARU_BIT(17)
+#define MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE MARU_BIT(9)
+#define MARU_WINDOW_ATTR_DIP_POSITION MARU_BIT(10)
+#define MARU_WINDOW_ATTR_ASPECT_RATIO MARU_BIT(11)
+#define MARU_WINDOW_ATTR_RESIZABLE MARU_BIT(12)
+#define MARU_WINDOW_ATTR_ACCEPT_DROP MARU_BIT(13)
+#define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE MARU_BIT(14)
+#define MARU_WINDOW_ATTR_TEXT_INPUT_RECT MARU_BIT(15)
+#define MARU_WINDOW_ATTR_PRIMARY_SELECTION MARU_BIT(16)
+#define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(17)
 #define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(18)
 #define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(19)
 #define MARU_WINDOW_ATTR_VISIBLE MARU_BIT(20)
@@ -1192,10 +1172,10 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
   (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_FULLSCREEN |           \
    MARU_WINDOW_ATTR_CURSOR_MODE | MARU_WINDOW_ATTR_CURSOR | MARU_WINDOW_ATTR_MONITOR |          \
    MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE | \
-   MARU_WINDOW_ATTR_DIP_POSITION | MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE | \
-   MARU_WINDOW_ATTR_ACCEPT_DROP | MARU_WINDOW_ATTR_TEXT_INPUT_TYPE |                            \
-   MARU_WINDOW_ATTR_TEXT_INPUT_RECT | MARU_WINDOW_ATTR_PRIMARY_SELECTION |                      \
-   MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE | MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE |              \
+   MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE | MARU_WINDOW_ATTR_DIP_POSITION |                         \
+   MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE | MARU_WINDOW_ATTR_ACCEPT_DROP |  \
+   MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |                        \
+   MARU_WINDOW_ATTR_PRIMARY_SELECTION | MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE |              \
    MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE |               \
    MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED | MARU_WINDOW_ATTR_ICON)
 
@@ -1208,13 +1188,13 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
  */
 typedef struct MARU_WindowAttributes {
   const char* title;
-  MARU_Image* icon;
+  const MARU_Image* icon;
 
   MARU_Vec2Dip dip_size;
   MARU_Vec2Dip dip_position;
   MARU_Vec2Dip viewport_dip_size;
   bool fullscreen;
-  MARU_Monitor* monitor;
+  const MARU_Monitor* monitor;
   MARU_Vec2Dip min_dip_size;
   MARU_Vec2Dip max_dip_size;
   MARU_Fraction aspect_ratio;
@@ -1226,7 +1206,7 @@ typedef struct MARU_WindowAttributes {
   bool accept_drop;
 
   MARU_CursorMode cursor_mode;
-  MARU_Cursor* cursor;
+  const MARU_Cursor* cursor;
 
   MARU_TextInputType text_input_type;
   MARU_RectDip text_input_rect;
@@ -1308,8 +1288,6 @@ MARU_API MARU_Status maru_requestWindowFrame(MARU_Window* window);
 MARU_API MARU_Status maru_requestWindowAttention(MARU_Window* window);
 
 /* ----- Controllers ----- */
-
-#define MARU_CONTROLLER_STATE_LOST MARU_BIT(0)
 
 typedef struct MARU_ControllerInfo {
   const char* name;
@@ -1601,7 +1579,9 @@ static inline const char* maru_getDiagnosticString(MARU_Diagnostic diagnostic);
 
 /* ----- Inline accessors and helper implementations ----- */
 
+#define MARU__INCLUDING_DETAILS_FROM_MARU_H 1
 #include "maru/details/maru_details.h"
+#undef MARU__INCLUDING_DETAILS_FROM_MARU_H
 
 #ifdef __cplusplus
 }
