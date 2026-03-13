@@ -349,7 +349,8 @@ MARU_Status maru_createQueue(const MARU_QueueCreateInfo *create_info, MARU_Queue
     if (!create_info || !out_queue || create_info->capacity == 0u) {
         return MARU_FAILURE;
     }
-    if (!_maru_validate_allocator_complete(create_info->allocator)) {
+    const bool any_custom = create_info->allocator.alloc_cb != NULL || create_info->allocator.realloc_cb != NULL || create_info->allocator.free_cb != NULL;
+    if (any_custom && (create_info->allocator.alloc_cb == NULL || create_info->allocator.realloc_cb == NULL || create_info->allocator.free_cb == NULL)) {
         return MARU_FAILURE;
     }
 

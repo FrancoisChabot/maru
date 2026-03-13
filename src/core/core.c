@@ -421,7 +421,7 @@ MARU_API bool maru_postEvent(MARU_Context *context, MARU_EventId type,
 
 MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
   MARU_API_VALIDATE(resetContextMetrics, context);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   memset(&ctx_base->user_event_metrics, 0, sizeof(MARU_UserEventMetrics));
   ctx_base->metrics.cursor_create_count_total = 0;

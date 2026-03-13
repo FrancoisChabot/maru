@@ -2,6 +2,10 @@
 #include "maru/maru.h"
 #include "maru_test_utils.h"
 
+#ifdef MARU_ENABLE_DIAGNOSTICS
+extern void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const char *msg);
+#endif
+
 struct DiagnosticState {
     MARU_Diagnostic last_diag;
     int call_count;
@@ -34,7 +38,9 @@ UTEST(DiagnosticTest, UpdateContextAndReport) {
     EXPECT_EQ(maru_updateContext(context, MARU_CONTEXT_ATTR_DIAGNOSTICS, &attrs),
               (MARU_Status)MARU_SUCCESS);
 
+    #ifdef MARU_ENABLE_DIAGNOSTICS
     _maru_reportDiagnostic(context, MARU_DIAGNOSTIC_INFO, "Test message");
+#endif
 
     EXPECT_EQ(state.call_count, 1);
     EXPECT_EQ(state.last_diag, (MARU_Diagnostic)MARU_DIAGNOSTIC_INFO);
@@ -53,7 +59,9 @@ UTEST(DiagnosticTest, DefaultReportingDoesNotCrash) {
     ASSERT_TRUE(context != NULL);
 
     // Should not crash even with no callback
+    #ifdef MARU_ENABLE_DIAGNOSTICS
     _maru_reportDiagnostic(context, MARU_DIAGNOSTIC_INFO, "Test message");
+#endif
 
     maru_destroyContext(context);
     EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));

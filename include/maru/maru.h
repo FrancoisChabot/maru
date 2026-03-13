@@ -691,10 +691,9 @@ typedef struct MARU_PathList {
   uint32_t count;
 } MARU_PathList;
 
-typedef enum MARU_DataProvideFlags {
-  MARU_DATA_PROVIDE_FLAG_NONE = 0,
-  MARU_DATA_PROVIDE_FLAG_ZERO_COPY = MARU_BIT(0),
-} MARU_DataProvideFlags;
+typedef uint32_t MARU_DataProvideFlags;
+#define MARU_DATA_PROVIDE_FLAG_NONE 0
+#define MARU_DATA_PROVIDE_FLAG_ZERO_COPY MARU_BIT32(0)
 
 typedef struct MARU_DropEvent {
   MARU_Vec2Dip dip_position;
@@ -1554,8 +1553,11 @@ MARU_API void maru_resetQueueMetrics(MARU_Queue* queue);
 /* ----- Convenience helpers ----- */
 
 static inline MARU_Status maru_setContextInhibitsSystemIdle(MARU_Context* context, bool enabled);
+static inline MARU_Status maru_setContextIdleTimeout(MARU_Context* context, uint32_t timeout_ms);
+static inline MARU_Status maru_setContextDiagnosticCallback(MARU_Context* context, MARU_DiagnosticCallback cb, void* userdata);
 static inline MARU_Status maru_setWindowTitle(MARU_Window* window, const char* title);
 static inline MARU_Status maru_setWindowDipSize(MARU_Window* window, MARU_Vec2Dip size);
+static inline MARU_Status maru_setWindowViewportDipSize(MARU_Window* window, MARU_Vec2Dip size);
 /* Note: Window positioning is compositor-controlled on certain backends (like Wayland), where this will act as a silent no-op or return MARU_FAILURE. */
 static inline MARU_Status maru_setWindowDipPosition(MARU_Window* window, MARU_Vec2Dip position);
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool enabled);
@@ -1570,6 +1572,8 @@ static inline MARU_Status maru_setWindowAspectRatio(MARU_Window* window,
 static inline MARU_Status maru_setWindowResizable(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowTextInputType(MARU_Window* window, MARU_TextInputType type);
 static inline MARU_Status maru_setWindowTextInputRect(MARU_Window* window, MARU_RectDip rect);
+static inline MARU_Status maru_setWindowPrimarySelection(MARU_Window* window, bool enabled);
+static inline MARU_Status maru_setWindowSurroundingText(MARU_Window* window, const char* text, uint32_t cursor_byte, uint32_t anchor_byte);
 static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized);

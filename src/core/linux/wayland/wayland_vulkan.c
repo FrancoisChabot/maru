@@ -79,7 +79,7 @@ MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
                                          MARU_VkExtensionList *out_list) {
   MARU_API_VALIDATE(getVkExtensions, context, out_list);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_context_lost(context));
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   return maru_getVkExtensions_WL(context, out_list);
 }
 
@@ -88,7 +88,7 @@ MARU_API MARU_Status maru_createVkSurface(
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
   MARU_API_VALIDATE(createVkSurface, window, instance, vk_loader,
                            out_surface);
-  MARU_RETURN_IF_CONTEXT_LOST(_maru_status_if_window_context_lost(window));
+  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(createVkSurface, window, instance, vk_loader,
                          out_surface);
   return maru_createVkSurface_WL(window, instance, vk_loader, out_surface);

@@ -6,11 +6,14 @@
 
 #include "maru/maru.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-typedef struct HINSTANCE__ *HINSTANCE;
-typedef struct HWND__ *HWND;
+#ifndef _WINDOWS_
+#ifndef HWND
+typedef struct HWND__* HWND;
+#endif
+
+#ifndef HINSTANCE
+typedef struct HINSTANCE__* HINSTANCE;
+#endif
 #endif
 
 #ifdef __cplusplus

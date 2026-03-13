@@ -415,6 +415,45 @@ static inline MARU_Status maru_setContextInhibitsSystemIdle(MARU_Context* contex
   return maru_updateContext(context, MARU_CONTEXT_ATTR_INHIBIT_IDLE, &attrs);
 }
 
+
+static inline MARU_Status maru_setContextIdleTimeout(MARU_Context* context, uint32_t timeout_ms) {
+  MARU_ContextAttributes attrs;
+  memset(&attrs, 0, sizeof(attrs));
+  attrs.idle_timeout_ms = timeout_ms;
+  return maru_updateContext(context, MARU_CONTEXT_ATTR_IDLE_TIMEOUT, &attrs);
+}
+
+static inline MARU_Status maru_setContextDiagnosticCallback(MARU_Context* context, MARU_DiagnosticCallback cb, void* userdata) {
+  MARU_ContextAttributes attrs;
+  memset(&attrs, 0, sizeof(attrs));
+  attrs.diagnostic_cb = cb;
+  attrs.diagnostic_userdata = userdata;
+  return maru_updateContext(context, MARU_CONTEXT_ATTR_DIAGNOSTICS, &attrs);
+}
+
+static inline MARU_Status maru_setWindowViewportDipSize(MARU_Window* window, MARU_Vec2Dip size) {
+  MARU_WindowAttributes attrs;
+  memset(&attrs, 0, sizeof(attrs));
+  attrs.viewport_dip_size = size;
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE, &attrs);
+}
+
+static inline MARU_Status maru_setWindowPrimarySelection(MARU_Window* window, bool enabled) {
+  MARU_WindowAttributes attrs;
+  memset(&attrs, 0, sizeof(attrs));
+  attrs.primary_selection = enabled;
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_PRIMARY_SELECTION, &attrs);
+}
+
+static inline MARU_Status maru_setWindowSurroundingText(MARU_Window* window, const char* text, uint32_t cursor_byte, uint32_t anchor_byte) {
+  MARU_WindowAttributes attrs;
+  memset(&attrs, 0, sizeof(attrs));
+  attrs.surrounding_text = text;
+  attrs.surrounding_cursor_byte = cursor_byte;
+  attrs.surrounding_anchor_byte = anchor_byte;
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE | MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE, &attrs);
+}
+
 static inline MARU_Status maru_setWindowTitle(MARU_Window* window, const char* title) {
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
@@ -573,7 +612,7 @@ static inline bool maru_applyTextEditCommitUtf8(char* buffer,
   const uint32_t delete_len = delete_end - delete_start;
   const uint32_t tail_len = length - delete_end;
   const uint32_t new_length = length - delete_len + commit->committed_length_bytes;
-  if (new_length > capacity_bytes) {
+  if (new_length >= capacity_bytes) {
     return false;
   }
 

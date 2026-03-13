@@ -49,7 +49,7 @@ _maru_status_if_request_context_lost(MARU_DataRequest *request) {
   return _maru_status_if_context_lost((const MARU_Context *)handle->ctx_base);
 }
 
-#define MARU_RETURN_IF_CONTEXT_LOST(expr)                                      \
+#define MARU_RETURN_ON_ERROR(expr)                                      \
   do {                                                                         \
     const MARU_Status _maru_status = (expr);                                   \
     if (_maru_status != MARU_SUCCESS) {                                        \
