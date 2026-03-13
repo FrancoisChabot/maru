@@ -303,6 +303,9 @@ static void _maru_x11_reconcile_wm_state_changed(MARU_Context_X11 *ctx,
   if (old_maximized != new_maximized) {
     changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
   }
+  if (old_fullscreen != new_fullscreen) {
+    changed |= MARU_WINDOW_STATE_CHANGED_FULLSCREEN;
+  }
 
   if (changed != 0) {
     _maru_x11_dispatch_state_changed(win, changed);
@@ -418,6 +421,8 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
 
   if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
     requested->fullscreen = attributes->fullscreen;
+    const bool was_fullscreen =
+        (win->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
     effective->fullscreen = attributes->fullscreen;
     if (effective->fullscreen) {
       win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
@@ -427,6 +432,9 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
       win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
       _maru_x11_send_net_wm_state_local(ctx, win, 0,
                                         ctx->net_wm_state_fullscreen, None);
+    }
+    if (was_fullscreen != effective->fullscreen) {
+      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_FULLSCREEN;
     }
   }
 
@@ -470,11 +478,16 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
   }
   if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
     requested->resizable = attributes->resizable;
+    const bool was_resizable =
+        (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
     effective->resizable = attributes->resizable;
     if (effective->resizable) {
       win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
     } else {
       win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
+    }
+    if (was_resizable != effective->resizable) {
+      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_RESIZABLE;
     }
   }
   if (field_mask &

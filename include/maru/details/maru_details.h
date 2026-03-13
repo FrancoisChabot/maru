@@ -590,6 +590,26 @@ static inline MARU_Status maru_setWindowIcon(MARU_Window* window,
   return maru_updateWindow(window, MARU_WINDOW_ATTR_ICON, &attrs);
 }
 
+static inline MARU_Status maru_requestText(MARU_Window* window,
+                                           MARU_DataExchangeTarget target,
+                                           void* userdata) {
+  return maru_requestData(window, target, "text/plain", userdata);
+}
+
+static inline MARU_Status maru_configureWindowSimpleTextInput(MARU_Window* window,
+                                                              MARU_TextInputType type) {
+  MARU_WindowAttributes attrs;
+  memset(&attrs, 0, sizeof(attrs));
+  attrs.text_input_type = type;
+  attrs.text_input_rect.dip_position.x = 0;
+  attrs.text_input_rect.dip_position.y = 0;
+  attrs.text_input_rect.dip_size = maru_getWindowGeometry(window).dip_size;
+  return maru_updateWindow(window,
+                           MARU_WINDOW_ATTR_TEXT_INPUT_TYPE |
+                               MARU_WINDOW_ATTR_TEXT_INPUT_RECT,
+                           &attrs);
+}
+
 static inline bool maru_applyTextEditCommitUtf8(
     char* buffer, uint32_t capacity_bytes, uint32_t* inout_length,
     uint32_t* inout_cursor_byte, const MARU_TextEditCommittedEvent* commit) {

@@ -467,11 +467,15 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
         window, MARU_WINDOW_STATE_CHANGED_MAXIMIZED);
   }
 
-  effective->fullscreen = is_fullscreen;
-  if (is_fullscreen) {
-    window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-  } else {
-    window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+  if (effective->fullscreen != is_fullscreen) {
+    effective->fullscreen = is_fullscreen;
+    if (is_fullscreen) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+    } else {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+    }
+    _maru_wayland_dispatch_state_changed(
+        window, MARU_WINDOW_STATE_CHANGED_FULLSCREEN);
   }
 }
 
@@ -887,6 +891,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 
   if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
       requested->fullscreen = attributes->fullscreen;
+      const bool was_fullscreen = (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
       effective->fullscreen = attributes->fullscreen;
       if (requested->fullscreen) {
           window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
@@ -902,6 +907,9 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           } else if (window->xdg.toplevel) {
               maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
           }
+      }
+      if (was_fullscreen != effective->fullscreen) {
+          state_changed_mask |= MARU_WINDOW_STATE_CHANGED_FULLSCREEN;
       }
   }
 
@@ -958,11 +966,15 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 
   if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
       requested->resizable = attributes->resizable;
+      const bool was_resizable = (window->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
       effective->resizable = attributes->resizable;
       if (requested->resizable) {
           window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
+      }
+      if (was_resizable != effective->resizable) {
+          state_changed_mask |= MARU_WINDOW_STATE_CHANGED_RESIZABLE;
       }
   }
 

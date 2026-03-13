@@ -144,6 +144,10 @@ static inline void
 _maru_validate_attributes(const MARU_Context_Base *ctx_base,
                           uint64_t field_mask,
                           const MARU_WindowAttributes *attributes) {
+  MARU_CONSTRAINT_CHECK(attributes != NULL);
+  const uint64_t known_fields = MARU_WINDOW_ATTR_ALL;
+  MARU_CONSTRAINT_CHECK((field_mask & ~known_fields) == 0);
+
   if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
     MARU_CONSTRAINT_CHECK(attributes->cursor_mode >= MARU_CURSOR_NORMAL &&
                           attributes->cursor_mode <= MARU_CURSOR_LOCKED);

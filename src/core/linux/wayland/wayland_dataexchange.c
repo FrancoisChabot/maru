@@ -752,8 +752,8 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
   };
 
   MARU_Event evt = {0};
-  evt.drop_entered.dip_position.x = wl_fixed_to_double(x);
-  evt.drop_entered.dip_position.y = wl_fixed_to_double(y);
+  evt.drop_entered.dip_position.x = (MARU_Scalar)wl_fixed_to_double(x);
+  evt.drop_entered.dip_position.y = (MARU_Scalar)wl_fixed_to_double(y);
   evt.drop_entered.session = (MARU_DropSession *)&session_exposed;
   evt.drop_entered.available_types.mime_types = meta->mime_types;
   evt.drop_entered.available_types.count = meta->mime_count;
@@ -818,8 +818,8 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   };
 
   MARU_Event evt = {0};
-  evt.drop_hovered.dip_position.x = wl_fixed_to_double(x);
-  evt.drop_hovered.dip_position.y = wl_fixed_to_double(y);
+  evt.drop_hovered.dip_position.x = (MARU_Scalar)wl_fixed_to_double(x);
+  evt.drop_hovered.dip_position.y = (MARU_Scalar)wl_fixed_to_double(y);
   evt.drop_hovered.session = (MARU_DropSession *)&session_exposed;
   evt.drop_hovered.available_types.mime_types = meta->mime_types;
   evt.drop_hovered.available_types.count = meta->mime_count;
@@ -861,8 +861,8 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
 
   if (has_uri_list) {
     ctx->clipboard.dnd_drop.pending = true;
-    ctx->clipboard.dnd_drop.dip_position.x = ctx->linux_common.pointer.x;
-    ctx->clipboard.dnd_drop.dip_position.y = ctx->linux_common.pointer.y;
+    ctx->clipboard.dnd_drop.dip_position.x = (MARU_Scalar)ctx->linux_common.pointer.x;
+    ctx->clipboard.dnd_drop.dip_position.y = (MARU_Scalar)ctx->linux_common.pointer.y;
     ctx->clipboard.dnd_drop.modifiers = _maru_wayland_get_modifiers(ctx);
     ctx->clipboard.dnd_drop.offer = ctx->clipboard.dnd_offer;
     
@@ -877,8 +877,8 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
     };
 
     MARU_Event evt = {0};
-    evt.drop_dropped.dip_position.x = ctx->linux_common.pointer.x;
-    evt.drop_dropped.dip_position.y = ctx->linux_common.pointer.y;
+    evt.drop_dropped.dip_position.x = (MARU_Scalar)ctx->linux_common.pointer.x;
+    evt.drop_dropped.dip_position.y = (MARU_Scalar)ctx->linux_common.pointer.y;
     evt.drop_dropped.session = (MARU_DropSession *)&session_exposed;
     evt.drop_dropped.available_types.mime_types = meta->mime_types;
     evt.drop_dropped.available_types.count = meta->mime_count;

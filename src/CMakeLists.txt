@@ -49,7 +49,6 @@ else()
     -Wconversion
     -Wsign-conversion
     -Wnull-dereference
-    -Wdouble-promotion
     -Wformat=2
     -Wno-unused-parameter
     -Wno-unused-variable

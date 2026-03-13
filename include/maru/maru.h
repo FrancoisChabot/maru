@@ -155,7 +155,7 @@ MARU_API MARU_Version maru_getVersion(void);
 
 /* ----- Geometry ----- */
 
-typedef double MARU_Scalar;
+typedef float MARU_Scalar;
 
 typedef struct MARU_Fraction {
   int32_t num;
@@ -196,6 +196,7 @@ typedef enum MARU_BufferTransform {
 typedef struct MARU_WindowGeometry {
   MARU_Vec2Dip dip_position;
   MARU_Vec2Dip dip_size;
+  MARU_Vec2Dip dip_viewport_size;
   MARU_Vec2Px px_size;
   MARU_Scalar scale;
   MARU_BufferTransform buffer_transform;
@@ -307,6 +308,9 @@ typedef enum MARU_ButtonState {
   MARU_BUTTON_STATE_PRESSED = 1,
 } MARU_ButtonState;
 
+/*
+* This exists so that button state array can be better packed
+*/ 
 typedef uint8_t MARU_ButtonState8;
 
 typedef enum MARU_Key {
@@ -494,10 +498,8 @@ typedef enum MARU_EventId {
   MARU_EVENT_USER_13 = 61,
   MARU_EVENT_USER_14 = 62,
   MARU_EVENT_USER_15 = 63,
+  /* There can be no EventID above 63, since they are used as bit indices. */
 } MARU_EventId;
-
-MARU_STATIC_ASSERT(MARU_EVENT_USER_15 < 64,
-                   "MARU_EventMask only supports event ids in [0, 63].");
 
 /*
  * Constant-expression primitive for known-valid event ids.
@@ -1070,7 +1072,7 @@ typedef struct MARU_VideoMode {
 } MARU_VideoMode;
 
 typedef struct MARU_VideoModeList {
-  /*
+    /*
    * Borrowed monitor-owned storage. Valid until the monitor is lost or
    * destroyed, or until the backend refreshes that monitor's mode cache.
    * Reacquire after monitor topology/mode changes if you need a fresh view.

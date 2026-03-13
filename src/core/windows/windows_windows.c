@@ -783,11 +783,16 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       }
       SetWindowLongW(win->hwnd, GWL_STYLE, style);
       SetWindowPos(win->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+      const bool was_resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
       win->base.attrs_effective.resizable = attributes->resizable;
       if (attributes->resizable) {
           win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
       } else {
           win->base.pub.flags &= ~MARU_WINDOW_STATE_RESIZABLE;
+      }
+      if (was_resizable != attributes->resizable) {
+          _maru_windows_dispatch_state_event(win, MARU_WINDOW_STATE_CHANGED_RESIZABLE);
       }
   }
 
@@ -797,7 +802,6 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
           win->saved_style = GetWindowLongW(win->hwnd, GWL_STYLE);
           win->saved_ex_style = GetWindowLongW(win->hwnd, GWL_EXSTYLE);
           GetWindowRect(win->hwnd, &win->saved_rect);
-
           MONITORINFO mi = { sizeof(mi) };
           if (GetMonitorInfoW(MonitorFromWindow(win->hwnd, MONITOR_DEFAULTTONEAREST), &mi)) {
               SetWindowLongW(win->hwnd, GWL_STYLE, win->saved_style & ~WS_OVERLAPPEDWINDOW);
@@ -825,7 +829,7 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
       } else {
           win->base.pub.flags &= ~MARU_WINDOW_STATE_FULLSCREEN;
       }
-      _maru_windows_dispatch_state_event(win, MARU_WINDOW_STATE_CHANGED_VISIBLE);
+      _maru_windows_dispatch_state_event(win, MARU_WINDOW_STATE_CHANGED_FULLSCREEN);
   }
 
   if (!win->is_fullscreen) {
