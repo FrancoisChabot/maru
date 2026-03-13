@@ -66,6 +66,7 @@ _maru_status_if_request_context_lost(MARU_DataRequest *request) {
   } while (0)
 
 #include "maru/maru.h"
+#include "maru/queue.h"
 #ifdef MARU_ENABLE_DIAGNOSTICS
 extern void _maru_reportDiagnostic(const MARU_Context *ctx,
                                    MARU_Diagnostic diag, const char *msg);
@@ -251,6 +252,30 @@ _maru_validate_surrounding_text_tuple(const char *text,
          _maru_validate_utf8_boundary(text, anchor_byte);
 }
 
+static inline bool
+_maru_validate_window_state_tuple(bool visible,
+                                  bool minimized,
+                                  bool maximized,
+                                  bool fullscreen) {
+  if (fullscreen) {
+    return visible && !minimized && !maximized;
+  }
+
+  if (maximized) {
+    return visible && !minimized;
+  }
+
+  if (minimized) {
+    return !visible && !maximized;
+  }
+
+  if (!visible) {
+    return !maximized && !fullscreen;
+  }
+
+  return true;
+}
+
 static inline void
 _maru_validate_attributes(const MARU_Context_Base *ctx_base,
                           uint64_t field_mask,
@@ -346,6 +371,17 @@ _maru_validate_attributes(const MARU_Context_Base *ctx_base,
           _maru_validate_utf8_string(attributes->surrounding_text));
     }
   }
+
+  if ((field_mask & (MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED |
+                     MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_FULLSCREEN)) ==
+      (MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED |
+       MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_FULLSCREEN)) {
+    MARU_CONSTRAINT_CHECK(_maru_validate_window_state_tuple(
+        attributes->visible,
+        attributes->minimized,
+        attributes->maximized,
+        attributes->fullscreen));
+  }
 }
 
 static inline void
@@ -405,6 +441,11 @@ _maru_validate_createWindow(MARU_Context *context,
   _maru_validate_thread(ctx_base);
   _maru_validate_attributes(ctx_base, MARU_WINDOW_ATTR_ALL,
                             &create_info->attributes);
+  MARU_CONSTRAINT_CHECK(_maru_validate_window_state_tuple(
+      create_info->attributes.visible,
+      create_info->attributes.minimized,
+      create_info->attributes.maximized,
+      create_info->attributes.fullscreen));
   MARU_CONSTRAINT_CHECK(_maru_validate_surrounding_text_tuple(
       create_info->attributes.surrounding_text,
       create_info->attributes.surrounding_cursor_byte,
@@ -429,6 +470,26 @@ _maru_validate_updateWindow(MARU_Window *window, uint64_t field_mask,
 
   MARU_CONSTRAINT_CHECK((field_mask & ~known_fields) == 0);
   _maru_validate_attributes(win_base->ctx_base, field_mask, attributes);
+
+  if ((field_mask & (MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED |
+                     MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_FULLSCREEN)) != 0) {
+    const MARU_WindowAttributes *requested = &win_base->attrs_requested;
+    const bool new_visible = (field_mask & MARU_WINDOW_ATTR_VISIBLE)
+                                 ? attributes->visible
+                                 : requested->visible;
+    const bool new_minimized = (field_mask & MARU_WINDOW_ATTR_MINIMIZED)
+                                   ? attributes->minimized
+                                   : requested->minimized;
+    const bool new_maximized = (field_mask & MARU_WINDOW_ATTR_MAXIMIZED)
+                                   ? attributes->maximized
+                                   : requested->maximized;
+    const bool new_fullscreen = (field_mask & MARU_WINDOW_ATTR_FULLSCREEN)
+                                    ? attributes->fullscreen
+                                    : requested->fullscreen;
+
+    MARU_CONSTRAINT_CHECK(_maru_validate_window_state_tuple(
+        new_visible, new_minimized, new_maximized, new_fullscreen));
+  }
 
   if ((field_mask & (MARU_WINDOW_ATTR_DIP_MIN_SIZE | MARU_WINDOW_ATTR_DIP_MAX_SIZE)) != 0) {
     MARU_Vec2Dip new_min = (field_mask & MARU_WINDOW_ATTR_DIP_MIN_SIZE) ? attributes->dip_min_size : win_base->attrs_requested.dip_min_size;

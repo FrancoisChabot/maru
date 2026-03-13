@@ -1082,11 +1082,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       effective->accept_drop = attributes->accept_drop;
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
-      requested->primary_selection = attributes->primary_selection;
-      effective->primary_selection = attributes->primary_selection;
-  }
-
   if (field_mask & (MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_DIP_MIN_SIZE |
                     MARU_WINDOW_ATTR_DIP_MAX_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO |
                     MARU_WINDOW_ATTR_RESIZABLE)) {

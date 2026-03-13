@@ -173,7 +173,6 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
     sw->ready = false;
     sw->title = std::move(title);
     sw->is_resizable = secondary_create_.resizable;
-    sw->primary_selection = true;
     secondary_windows_.push_back(std::move(sw));
 }
 

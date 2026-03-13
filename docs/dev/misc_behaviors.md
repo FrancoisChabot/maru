@@ -10,3 +10,10 @@ When a `MARU_Cursor` is destroyed, any window currently using it as its `current
 2. Revert to the system default cursor.
 3. Update its `attrs_requested.cursor` and `attrs_effective.cursor` to `NULL`.
 4. If the cursor is currently active (e.g., the pointer is over the window in `MARU_CURSOR_NORMAL` mode), the change should be reflected immediately.
+
+## 2. Data Exchange
+
+### 2.1 Additional Data Channels
+The public C API currently exposes only `CLIPBOARD` and `DRAG_DROP` data exchange targets.
+
+`PRIMARY` selection support was intentionally removed instead of being kept as a one-off Linux-skewed target. If a future product requirement brings back an additional selection/data channel, the correct direction is an open-ended data-channel model rather than another hard-coded enum slot in `MARU_DataExchangeTarget`.

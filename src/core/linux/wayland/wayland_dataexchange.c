@@ -455,7 +455,7 @@ static bool _maru_wl_dataexchange_target_supported(MARU_Context_WL *ctx,
     }
     return true;
   }
-  if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+  if (target == MARU_LINUX_PRIVATE_TARGET_PRIMARY) {
     if (!ctx->protocols.opt.zwp_primary_selection_device_manager_v1) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "Primary selection requires zwp_primary_selection_device_manager_v1");
@@ -595,7 +595,7 @@ static void _primary_selection_source_send(
   handle->base.ctx_base = &ctx->base;
   handle->magic = MARU_WL_DATA_REQUEST_MAGIC;
   handle->fd = fd;
-  handle->target = MARU_DATA_EXCHANGE_TARGET_PRIMARY;
+  handle->target = MARU_LINUX_PRIVATE_TARGET_PRIMARY;
   handle->window = event_window;
   handle->mime_type = _maru_wl_copy_string(&ctx->base, mime_type);
   if (!handle->mime_type) {
@@ -604,7 +604,7 @@ static void _primary_selection_source_send(
   }
 
   MARU_Event evt = {0};
-  evt.data_requested.target = MARU_DATA_EXCHANGE_TARGET_PRIMARY;
+  evt.data_requested.target = MARU_LINUX_PRIVATE_TARGET_PRIMARY;
   evt.data_requested.mime_type = handle->mime_type;
   evt.data_requested.request = (MARU_DataRequest *)handle;
 
@@ -1252,7 +1252,7 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
       return MARU_FAILURE;
     }
     maru_wl_data_offer_receive(ctx, ctx->clipboard.offer, mime_type, pipefd[1]);
-  } else if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+  } else if (target == MARU_LINUX_PRIVATE_TARGET_PRIMARY) {
     if (!ctx->primary_selection.offer ||
         !_maru_wl_primary_offer_has_mime(ctx, ctx->primary_selection.offer,
                                          mime_type)) {
@@ -1323,7 +1323,7 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
         src_count = meta->mime_count;
       }
     }
-  } else if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+  } else if (target == MARU_LINUX_PRIVATE_TARGET_PRIMARY) {
     _maru_wl_clear_primary_mime_query(ctx);
     if (ctx->primary_selection.announced_mime_count > 0) {
       src = ctx->primary_selection.announced_mime_types;
@@ -1369,7 +1369,7 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
     if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
       ctx->clipboard.mime_query_ptr = query;
       ctx->clipboard.mime_query_count = src_count;
-    } else if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+    } else if (target == MARU_LINUX_PRIVATE_TARGET_PRIMARY) {
       ctx->primary_selection.mime_query_ptr = query;
       ctx->primary_selection.mime_query_count = src_count;
     } else {
@@ -1381,7 +1381,7 @@ MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
   if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     out_list->strings = ctx->clipboard.mime_query_ptr;
     out_list->count = ctx->clipboard.mime_query_count;
-  } else if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+  } else if (target == MARU_LINUX_PRIVATE_TARGET_PRIMARY) {
     out_list->strings = ctx->primary_selection.mime_query_ptr;
     out_list->count = ctx->primary_selection.mime_query_count;
   } else {

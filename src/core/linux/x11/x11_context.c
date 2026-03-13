@@ -310,7 +310,7 @@ void maru_destroyContext_X11(MARU_Context *context) {
   MARU_X11DataOffer *clipboard_offer =
       _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD);
   MARU_X11DataOffer *primary_offer =
-      _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_PRIMARY);
+      _maru_x11_get_offer(ctx, MARU_LINUX_PRIVATE_TARGET_PRIMARY);
   MARU_X11DataOffer *dnd_offer =
       _maru_x11_get_offer(ctx, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
 

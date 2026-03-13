@@ -21,7 +21,6 @@ public:
 private:
     bool enabled_ = false;
     bool owns_clipboard_ = false;
-    bool owns_primary_selection_ = false;
     bool is_dragging_ = false;
     MARU_Status last_status_ = MARU_SUCCESS;
     MARU_DataExchangeTarget last_received_target_ = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
@@ -30,7 +29,6 @@ private:
     bool clipboard_serves_large_payload_ = false;
     std::string large_clipboard_payload_;
     std::vector<std::string> clipboard_mime_types_;
-    std::vector<std::string> primary_mime_types_;
     std::vector<std::string> dnd_mime_types_;
     std::vector<std::string> dropped_paths_;
 };

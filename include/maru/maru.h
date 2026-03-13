@@ -253,7 +253,6 @@ typedef struct MARU_Monitor MARU_Monitor;
 typedef struct MARU_Controller MARU_Controller;
 typedef struct MARU_Cursor MARU_Cursor;
 typedef struct MARU_Image MARU_Image;
-typedef struct MARU_Queue MARU_Queue;
 typedef struct MARU_DropSession MARU_DropSession;
 typedef struct MARU_DataRequest MARU_DataRequest;
 
@@ -672,8 +671,7 @@ typedef uint64_t MARU_DropActionMask;
 
 typedef enum MARU_DataExchangeTarget {
   MARU_DATA_EXCHANGE_TARGET_CLIPBOARD = 0,
-  MARU_DATA_EXCHANGE_TARGET_PRIMARY = 1,
-  MARU_DATA_EXCHANGE_TARGET_DRAG_DROP = 2,
+  MARU_DATA_EXCHANGE_TARGET_DRAG_DROP = 1,
 } MARU_DataExchangeTarget;
 
 typedef struct MARU_StringList {
@@ -871,16 +869,6 @@ typedef void (*MARU_EventCallback)(MARU_EventId type,
                                    void* userdata);
 
 /*
- * Queue replay callback. Unlike live pump callbacks, queue scans report the
- * stable target window id that was captured at enqueue time rather than a live
- * MARU_Window* handle.
- */
-typedef void (*MARU_QueueEventCallback)(MARU_EventId type,
-                                        MARU_WindowId window_id,
-                                        const MARU_Event* evt,
-                                        void* userdata);
-
-/*
  * Pumps backend events and synchronously dispatches matching callbacks inline.
  *
  * User events posted with maru_postEvent() are drained near the start of a
@@ -934,6 +922,10 @@ static inline uint32_t maru_getMouseButtonCount(const MARU_Context* context);
 /*
  * The first `MARU_MOUSE_DEFAULT_COUNT` entries are always the default mouse
  * buttons in `MARU_MouseDefaultButton` order.
+ *
+ * Inline polling helpers that take a channel/key index assume the index is in
+ * range. With API validation enabled, out-of-range indices are diagnosed as an
+ * API violation. Otherwise they are undefined behavior.
  */
 static inline const MARU_ButtonState8* maru_getMouseButtonStates(
     const MARU_Context* context);
@@ -1172,7 +1164,6 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_ACCEPT_DROP MARU_BIT(13)
 #define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE MARU_BIT(14)
 #define MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT MARU_BIT(15)
-#define MARU_WINDOW_ATTR_PRIMARY_SELECTION MARU_BIT(16)
 #define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(17)
 #define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(18)
 #define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(19)
@@ -1187,8 +1178,8 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
    MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE | MARU_WINDOW_ATTR_DIP_POSITION |                         \
    MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE | MARU_WINDOW_ATTR_ACCEPT_DROP |  \
    MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT |                    \
-   MARU_WINDOW_ATTR_PRIMARY_SELECTION | MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE |              \
-   MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE |               \
+   MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE | MARU_WINDOW_ATTR_SURROUNDING_TEXT |               \
+   MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE |                                                    \
    MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED | MARU_WINDOW_ATTR_ICON)
 
 /*
@@ -1200,6 +1191,17 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
  *
  * `dip_position` updates may act as a silent no-op or return MARU_FAILURE on 
  * certain backends (like Wayland) where positioning is compositor-controlled.
+ *
+ * Window presentation state contract:
+ * - `fullscreen`, `maximized`, and `minimized` are mutually exclusive.
+ * - `fullscreen` and `maximized` require `visible == true`.
+ * - `minimized` requires `visible == false`.
+ * - A hidden, non-minimized window is expressed as `visible == false` with
+ *   `fullscreen == maximized == minimized == false`.
+ *
+ * `maru_updateWindow()` validates partial state updates against the window's
+ * current requested state. When switching between these exclusive modes in one
+ * step, update all affected state fields in the same call.
  *
  * `surrounding_text` is optional. When non-NULL, it must point to valid
  * NUL-terminated UTF-8, and `surrounding_cursor_byte` /
@@ -1231,7 +1233,6 @@ typedef struct MARU_WindowAttributes {
 
   MARU_TextInputType text_input_type;
   MARU_RectDip dip_text_input_rect;
-  bool primary_selection;
   const char* surrounding_text;
   uint32_t surrounding_cursor_byte;
   uint32_t surrounding_anchor_byte;
@@ -1279,7 +1280,6 @@ typedef struct MARU_WindowCreateInfo {
                                                                 \
                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE, \
                   .dip_text_input_rect = {{0, 0}, {0, 0}},      \
-                  .primary_selection = true,                    \
                   .surrounding_text = NULL,                     \
                   .surrounding_cursor_byte = 0,                 \
                   .surrounding_anchor_byte = 0},                \
@@ -1492,79 +1492,6 @@ MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
                                           MARU_VkGetInstanceProcAddrFunc vk_loader,
                                           VkSurfaceKHR* out_surface);
 
-/* ----- Event queue helper ----- */
-
-/*
- * Events excluded from this mask carry transient handles or borrowed pointer
- * payloads that are not safe to snapshot into a MARU_Queue without additional
- * copying or retention by the application.
- *
- * Queue-safe replay preserves only the event payload and the target
- * MARU_WindowId. It does not preserve a live MARU_Window* handle.
- */
-#define MARU_QUEUE_SAFE_EVENT_MASK                                                              \
-  (MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_RESIZED) |   \
-   MARU_EVENT_MASK(MARU_EVENT_KEY_CHANGED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_READY) |         \
-   MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED) | MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_CHANGED) | \
-   MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED) | MARU_EVENT_MASK(MARU_EVENT_IDLE_CHANGED) |      \
-   MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME) | MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED) |   \
-   MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_ENDED) | MARU_EVENT_MASK(MARU_EVENT_DRAG_FINISHED) |    \
-   MARU_EVENT_MASK(MARU_EVENT_USER_0) |                                                          \
-   MARU_EVENT_MASK(MARU_EVENT_USER_1) | MARU_EVENT_MASK(MARU_EVENT_USER_2) |                    \
-   MARU_EVENT_MASK(MARU_EVENT_USER_3) | MARU_EVENT_MASK(MARU_EVENT_USER_4) |                    \
-   MARU_EVENT_MASK(MARU_EVENT_USER_5) | MARU_EVENT_MASK(MARU_EVENT_USER_6) |                    \
-   MARU_EVENT_MASK(MARU_EVENT_USER_7) | MARU_EVENT_MASK(MARU_EVENT_USER_8) |                    \
-   MARU_EVENT_MASK(MARU_EVENT_USER_9) | MARU_EVENT_MASK(MARU_EVENT_USER_10) |                   \
-   MARU_EVENT_MASK(MARU_EVENT_USER_11) | MARU_EVENT_MASK(MARU_EVENT_USER_12) |                  \
-   MARU_EVENT_MASK(MARU_EVENT_USER_13) | MARU_EVENT_MASK(MARU_EVENT_USER_14) |                  \
-   MARU_EVENT_MASK(MARU_EVENT_USER_15))
-
-static inline bool maru_isQueueSafeEventId(MARU_EventId type) {
-  return maru_eventMaskHas(MARU_QUEUE_SAFE_EVENT_MASK, type);
-}
-
-typedef struct MARU_QueueCreateInfo {
-  MARU_Allocator allocator;
-  uint32_t capacity;
-} MARU_QueueCreateInfo;
-
-#define MARU_QUEUE_CREATE_INFO_DEFAULT                                                              \
-  {                                                                                                 \
-      .allocator = {.alloc_cb = NULL, .realloc_cb = NULL, .free_cb = NULL, .userdata = NULL},     \
-      .capacity = 256u,                                                                             \
-  }
-
-/*
- * Standalone event snapshot/coalescing helper.
- *
- * A MARU_Queue is not attached to a MARU_Context and is never destroyed
- * implicitly by maru_destroyContext(). Queue APIs return queue-local status
- * only; they never report MARU_CONTEXT_LOST.
- *
- * Threading contract:
- * - maru_createQueue(), maru_pushQueue() and maru_commitQueue() are
- *   single-owner APIs. Call them from the queue's creator thread only.
- * - maru_scanQueue() may be called from any thread, but the caller must ensure
- *   it does not race with maru_commitQueue().
- * - Only queue-safe event ids may be pushed. Use MARU_QUEUE_SAFE_EVENT_MASK or
- *   maru_isQueueSafeEventId() when capturing events from maru_pumpEvents().
- * - Window-targeted events are keyed by the stable MARU_WindowId captured at
- *   enqueue time. Use MARU_WINDOW_ID_NONE for context-scoped events.
- */
-MARU_API bool maru_createQueue(const MARU_QueueCreateInfo* create_info,
-                               MARU_Queue** out_queue);
-MARU_API void maru_destroyQueue(MARU_Queue* queue);
-MARU_API bool maru_pushQueue(MARU_Queue* queue,
-                             MARU_EventId type,
-                             MARU_WindowId window_id,
-                             const MARU_Event* event);
-MARU_API bool maru_commitQueue(MARU_Queue* queue);
-MARU_API void maru_scanQueue(MARU_Queue* queue,
-                             MARU_EventMask mask,
-                             MARU_QueueEventCallback callback,
-                             void* userdata);
-MARU_API void maru_setQueueCoalesceMask(MARU_Queue* queue, MARU_EventMask mask);
-
 /* ----- Convenience helpers ----- */
 
 static inline MARU_Status maru_setContextInhibitsSystemIdle(MARU_Context* context, bool enabled);
@@ -1587,7 +1514,6 @@ static inline MARU_Status maru_setWindowAspectRatio(MARU_Window* window,
 static inline MARU_Status maru_setWindowResizable(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowTextInputType(MARU_Window* window, MARU_TextInputType type);
 static inline MARU_Status maru_setWindowDipTextInputRect(MARU_Window* window, MARU_RectDip rect);
-static inline MARU_Status maru_setWindowPrimarySelection(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowSurroundingText(MARU_Window* window, const char* text, uint32_t cursor_byte, uint32_t anchor_byte);
 static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);

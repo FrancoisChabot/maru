@@ -2,6 +2,12 @@
 
 `MARU_Queue` provides an optional, double-buffered snapshot mechanism to consume events. While `maru_pumpEvents()` uses direct callback dispatch, `MARU_Queue` lets you decouple event gathering from event processing and scan events from other threads once you have published a stable snapshot.
 
+The queue API lives in `<maru/queue.h>`. It is a standalone utility surface and is not included by `<maru/maru.h>`.
+
+Because a queue is not attached to any `MARU_Context`, its APIs use plain `bool`
+results for queue-local success or failure rather than `MARU_Status`.
+`MARU_CONTEXT_LOST` is not meaningful for this utility.
+
 ## The Push-Commit-Scan Lifecycle
 
 A `MARU_Queue` operates in three distinct phases:
@@ -32,16 +38,19 @@ Call `maru_scanQueue()` to iterate the stable snapshot. Scanning can happen from
 
 ```c
 #include <maru/maru.h>
+#include <maru/queue.h>
 
 static void queue_capture_cb(MARU_EventId type, MARU_Window *window,
                              const MARU_Event *evt, void *userdata) {
     MARU_Queue *queue = (MARU_Queue *)userdata;
-    maru_pushQueue(queue, type, window, evt);
+    maru_pushQueue(queue, type,
+                   window ? maru_getWindowId(window) : MARU_WINDOW_ID_NONE,
+                   evt);
 }
 
-static void on_queue_event(MARU_EventId type, MARU_Window *window,
+static void on_queue_event(MARU_EventId type, MARU_WindowId window_id,
                            const MARU_Event *evt, void *userdata) {
-    (void)window;
+    (void)window_id;
     (void)evt;
     if (type == MARU_EVENT_CLOSE_REQUESTED) {
         *(bool *)userdata = false;

@@ -35,7 +35,6 @@ private:
         bool ready = false;
         std::string title;
         bool is_resizable = true;
-        bool primary_selection = true;
         MARU_Vec2Dip dip_min_size = {0, 0};
         MARU_Vec2Dip dip_max_size = {0, 0};
         MARU_Fraction aspect_ratio = {0, 0};
@@ -54,7 +53,6 @@ private:
     std::vector<std::unique_ptr<SecondaryWindow>> secondary_windows_;
     bool handling_window_teardown_ = false;
 
-    bool primary_is_primary_selection_ = true;
     MARU_Vec2Dip primary_min_size_ = {0, 0};
     MARU_Vec2Dip primary_max_size_ = {0, 0};
     MARU_Fraction primary_aspect_ratio_ = {0, 0};

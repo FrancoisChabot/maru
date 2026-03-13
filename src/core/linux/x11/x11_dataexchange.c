@@ -15,7 +15,7 @@ Atom _maru_x11_target_to_selection_atom(const MARU_Context_X11 *ctx,
   if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     return ctx->selection_clipboard;
   }
-  if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+  if (target == MARU_LINUX_PRIVATE_TARGET_PRIMARY) {
     return ctx->selection_primary;
   }
   if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
@@ -35,7 +35,7 @@ static bool _maru_x11_selection_atom_to_target(const MARU_Context_X11 *ctx,
   }
   if (selection_atom == ctx->selection_primary) {
     if (out_target) {
-      *out_target = MARU_DATA_EXCHANGE_TARGET_PRIMARY;
+      *out_target = MARU_LINUX_PRIVATE_TARGET_PRIMARY;
     }
     return true;
   }
@@ -53,7 +53,7 @@ MARU_X11DataOffer *_maru_x11_get_offer(MARU_Context_X11 *ctx,
   if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     return &ctx->clipboard_offer;
   }
-  if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+  if (target == MARU_LINUX_PRIVATE_TARGET_PRIMARY) {
     return &ctx->primary_offer;
   }
   if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
@@ -67,7 +67,7 @@ MARU_X11DataRequestPending *_maru_x11_get_pending_request(
   if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
     return &ctx->clipboard_request;
   }
-  if (target == MARU_DATA_EXCHANGE_TARGET_PRIMARY) {
+  if (target == MARU_LINUX_PRIVATE_TARGET_PRIMARY) {
     return &ctx->primary_request;
   }
   if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
@@ -1117,7 +1117,7 @@ static bool _maru_x11_process_incr_property_notify(MARU_Context_X11 *ctx,
 
   static const MARU_DataExchangeTarget k_targets[] = {
       MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-      MARU_DATA_EXCHANGE_TARGET_PRIMARY,
+      MARU_LINUX_PRIVATE_TARGET_PRIMARY,
       MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
   };
 

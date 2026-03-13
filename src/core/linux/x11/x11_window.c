@@ -502,11 +502,6 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     (void)_maru_x11_apply_window_drop_target(ctx, win);
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_PRIMARY_SELECTION) {
-    requested->primary_selection = attributes->primary_selection;
-    effective->primary_selection = attributes->primary_selection;
-  }
-
   if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
     if (attributes->cursor &&
         ((MARU_Cursor_X11 *)attributes->cursor)->base.ctx_base != &ctx->base) {

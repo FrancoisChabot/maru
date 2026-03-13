@@ -40,14 +40,12 @@ void DataExchangeModule::onContextRecreated(MARU_Context* ctx, MARU_Window* wind
     (void)ctx;
     (void)window;
     owns_clipboard_ = false;
-    owns_primary_selection_ = false;
     is_dragging_ = false;
     last_status_ = MARU_SUCCESS;
     has_received_target_ = false;
     clipboard_serves_large_payload_ = false;
     large_clipboard_payload_.clear();
     clipboard_mime_types_.clear();
-    primary_mime_types_.clear();
     dnd_mime_types_.clear();
     dropped_paths_.clear();
 
@@ -132,7 +130,6 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         const MARU_DataRequestEvent* req = &event.data_requested;
         if (!req) return;
         if (req->target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
-            req->target != MARU_DATA_EXCHANGE_TARGET_PRIMARY &&
             req->target != MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) return;
         if (!_is_text_mime(req->mime_type)) return;
         if (req->target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
@@ -234,62 +231,18 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         }
 
         ImGui::Separator();
-        if (ImGui::Button("Announce Primary Selection Text")) {
-            last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_PRIMARY,
-                                             {clipboard_mimes, 2}, 0);
-            owns_primary_selection_ = (last_status_ == MARU_SUCCESS);
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Clear Primary Selection Ownership")) {
-            last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_PRIMARY,
-                                             {NULL, 0}, 0);
-            owns_primary_selection_ = false;
-        }
-        ImGui::Text("Primary ownership: %s", owns_primary_selection_ ? "announced" : "none");
-
-        if (ImGui::Button("Request Primary Selection Text")) {
-            last_status_ = maru_requestData(window, MARU_DATA_EXCHANGE_TARGET_PRIMARY,
-                                            "text/plain;charset=utf-8", this);
-            if (last_status_ != MARU_SUCCESS) {
-                last_status_ = maru_requestData(window, MARU_DATA_EXCHANGE_TARGET_PRIMARY,
-                                                "text/plain", this);
-            }
-        }
-
-        if (ImGui::Button("Refresh Primary MIME Types")) {
-            primary_mime_types_.clear();
-            MARU_StringList list = {};
-            last_status_ = maru_getAvailableMIMETypes(
-                window, MARU_DATA_EXCHANGE_TARGET_PRIMARY, &list);
-            if (last_status_ == MARU_SUCCESS && list.strings) {
-                for (uint32_t i = 0; i < list.count; ++i) {
-                    primary_mime_types_.emplace_back(list.strings[i] ? list.strings[i] : "");
-                }
-            }
-        }
-
         ImGui::Text("Last API status: %s", last_status_ == MARU_SUCCESS ? "MARU_SUCCESS" : "MARU_FAILURE");
         if (has_received_target_) {
             ImGui::Text("Last received target: %s",
-                        last_received_target_ == MARU_DATA_EXCHANGE_TARGET_PRIMARY
-                            ? "primary"
-                            : (last_received_target_ == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD
-                                   ? "clipboard"
-                                   : "other"));
+                        last_received_target_ == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD
+                            ? "clipboard"
+                            : "drag-drop");
         } else {
             ImGui::Text("Last received target: none");
         }
         ImGui::Text("Clipboard MIME Types (%zu)", clipboard_mime_types_.size());
         if (ImGui::BeginChild("ClipboardMimeTypes", ImVec2(0, 90), true)) {
             for (const std::string& mime : clipboard_mime_types_) {
-                ImGui::BulletText("%s", mime.c_str());
-            }
-        }
-        ImGui::EndChild();
-
-        ImGui::Text("Primary MIME Types (%zu)", primary_mime_types_.size());
-        if (ImGui::BeginChild("PrimaryMimeTypes", ImVec2(0, 90), true)) {
-            for (const std::string& mime : primary_mime_types_) {
                 ImGui::BulletText("%s", mime.c_str());
             }
         }

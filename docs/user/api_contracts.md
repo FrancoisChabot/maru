@@ -80,6 +80,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 
 - `MARU_WindowAttributes.aspect_ratio` must be either `{0, 0}` to disable the constraint, or a fraction with both `num` and `denom` greater than zero.
 - Window max size uses `0` as an unbounded sentinel on each axis. When both min and max size are supplied together, each nonzero max axis must be greater than or equal to the corresponding min axis.
+- Window presentation state requests are exclusive: `fullscreen`, `maximized`, and `minimized` may not overlap. `fullscreen` and `maximized` require `visible == true`; `minimized` requires `visible == false`; a hidden non-minimized window uses `visible == false` with the others false.
 - `MARU_ImageCreateInfo.stride_bytes` may be `0` for the default tightly packed layout. If nonzero, it must be at least `width * 4` bytes.
 
 ## API-Specific Notes
@@ -94,7 +95,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 
 ### Data Exchange
 
-- `MARU_DataExchangeTarget` must be a valid target value.
+- `MARU_DataExchangeTarget` must be either `MARU_DATA_EXCHANGE_TARGET_CLIPBOARD` or `MARU_DATA_EXCHANGE_TARGET_DRAG_DROP`.
 - The allowed drop action mask may only contain `COPY`, `MOVE`, and `LINK`.
 - `maru_provideData()` requires `data != NULL` when `size > 0`.
 - `maru_provideData()` flags may only contain documented bits.

@@ -4,7 +4,7 @@
 #ifndef MARU_CPP_QUEUE_HPP_INCLUDED
 #define MARU_CPP_QUEUE_HPP_INCLUDED
 
-#include "maru/maru.h"
+#include "maru/queue.h"
 #include "maru/cpp/fwd.hpp"
 #include "maru/cpp/expected.hpp"
 

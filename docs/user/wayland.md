@@ -61,7 +61,6 @@ degrade gracefully with diagnostics:
 
 - `zwp_text_input_manager_v3` for advanced IME flows.
 - `wl_data_device_manager` for clipboard and drag-and-drop.
-- `zwp_primary_selection_device_manager_v1` for primary selection.
 - `zwp_pointer_constraints_v1` and `zwp_relative_pointer_manager_v1` for pointer lock/raw motion.
 - `wp_viewporter` for viewport destination sizing.
 - `zwp_idle_inhibit_manager_v1` for idle inhibition.

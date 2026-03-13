@@ -12,6 +12,8 @@
 #include "dlib/udev.h"
 #include "maru_internal.h"
 
+#define MARU_LINUX_PRIVATE_TARGET_PRIMARY ((MARU_DataExchangeTarget)2)
+
 typedef enum MARU_LinuxWorkerMessage {
   MARU_LINUX_WORKER_MSG_TERMINATE,
 } MARU_LinuxWorkerMessage;

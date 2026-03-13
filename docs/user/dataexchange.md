@@ -1,10 +1,10 @@
 # Data Exchange (Clipboard & Drag-and-Drop)
 
-Maru provides a unified API for exchanging data with the operating system and other applications. This covers the system clipboard, the primary selection (on X11/Wayland), and Drag-and-Drop (DnD).
+Maru provides a unified API for exchanging data with the operating system and other applications. This currently covers the system clipboard and Drag-and-Drop (DnD).
 
 ## Concepts
 
-- **Target**: The location of the data (`MARU_DATA_EXCHANGE_TARGET_CLIPBOARD`, `MARU_DATA_EXCHANGE_TARGET_PRIMARY`, or `MARU_DATA_EXCHANGE_TARGET_DRAG_DROP`).
+- **Target**: The location of the data (`MARU_DATA_EXCHANGE_TARGET_CLIPBOARD` or `MARU_DATA_EXCHANGE_TARGET_DRAG_DROP`).
 - **MIME Type**: A string identifying the data format (e.g., `text/plain`, `image/png`).
 - **Lazy Evaluation**: Maru uses a "lazy" approach for providing data. You announce what formats you have, and only provide the actual bytes when another application requests them.
 

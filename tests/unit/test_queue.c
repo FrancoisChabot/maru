@@ -1,5 +1,6 @@
 #include "utest.h"
 #include "maru/maru.h"
+#include "maru/queue.h"
 #include "maru_test_utils.h"
 #include <stdlib.h>
 
