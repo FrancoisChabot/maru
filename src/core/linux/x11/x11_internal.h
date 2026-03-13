@@ -49,6 +49,7 @@ typedef struct MARU_X11DnDSession {
   uint32_t version;
   Time last_position_time;
   MARU_Vec2Dip dip_position;
+  MARU_DropActionMask offered_actions;
   MARU_DropAction selected_action;
   Atom selected_target_atom;
   char *selected_mime;
@@ -166,6 +167,7 @@ typedef struct MARU_Context_X11 {
   Atom xdnd_finished;
   Atom xdnd_selection;
   Atom xdnd_type_list;
+  Atom xdnd_action_list;
   Atom xdnd_action_copy;
   Atom xdnd_action_move;
   Atom xdnd_action_link;
@@ -314,6 +316,7 @@ void _maru_x11_dnd_set_position_from_packed(MARU_Context_X11 *ctx, MARU_X11DnDSe
 bool _maru_x11_set_dnd_selected_mime(MARU_Context_X11 *ctx, MARU_X11DnDSession *session, const char *mime, Atom atom);
 const char *_maru_x11_dnd_first_mime(const MARU_X11DnDSession *session, Atom *out_atom);
 bool _maru_x11_dnd_load_type_list(MARU_Context_X11 *ctx, MARU_X11DnDSession *session);
+bool _maru_x11_dnd_load_action_list(MARU_Context_X11 *ctx, MARU_X11DnDSession *session);
 bool _maru_x11_dnd_store_offer_atoms(MARU_Context_X11 *ctx, MARU_X11DnDSession *session, const Atom *atoms, uint32_t count);
 bool _maru_x11_dnd_find_mime(const MARU_X11DnDSession *session, const char *mime, Atom *out_atom);
 uint32_t _maru_x11_parse_uri_list(MARU_Context_X11 *ctx, const char *data, size_t size, const char ***out_paths);

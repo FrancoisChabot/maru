@@ -219,6 +219,8 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
       ctx->x11_lib.XInternAtom(ctx->display, "XdndSelection", False);
   ctx->xdnd_type_list =
       ctx->x11_lib.XInternAtom(ctx->display, "XdndTypeList", False);
+  ctx->xdnd_action_list =
+      ctx->x11_lib.XInternAtom(ctx->display, "XdndActionList", False);
   ctx->xdnd_action_copy =
       ctx->x11_lib.XInternAtom(ctx->display, "XdndActionCopy", False);
   ctx->xdnd_action_move =

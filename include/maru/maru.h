@@ -706,6 +706,13 @@ typedef struct MARU_DropEvent {
    * recover it through their own callback-scoped handle.
    */
   MARU_DropSession* session;
+  /*
+   * Source-offered drag actions as currently known to Maru for this session.
+   *
+   * This may be 0 if the backend has not yet observed any actionable offer for
+   * the current drag session.
+   */
+  MARU_DropActionMask available_actions;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   MARU_StringList paths;
   MARU_StringList available_types;
@@ -1481,6 +1488,13 @@ MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window* window,
  * application state to the underlying logical drag session so later DnD
  * callbacks in that same session can recover it through their own callback-
  * scoped handle.
+ *
+ * maru_getDropSessionAction() reports the current target-side selected action
+ * for that callback-scoped session handle. During
+ * MARU_EVENT_DROP_ENTERED / HOVERED, maru_setDropSessionAction() overrides the
+ * action Maru will report back to the backend for that callback. During
+ * MARU_EVENT_DROP_EXITED / DROPPED, the getter reports the last known selected
+ * action for the session; setting it there has no defined effect.
  *
  * maru_setDropSessionAction() is only meaningful during
  * MARU_EVENT_DROP_ENTERED and MARU_EVENT_DROP_HOVERED. The selected action is

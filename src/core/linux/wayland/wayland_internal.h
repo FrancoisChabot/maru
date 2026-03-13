@@ -34,6 +34,8 @@ typedef struct MARU_WaylandDataOfferMeta {
   const char **mime_types;
   uint32_t mime_count;
   uint32_t mime_capacity;
+  MARU_DropActionMask source_actions;
+  MARU_DropAction current_action;
   struct MARU_WaylandDataOfferMeta *next;
 } MARU_WaylandDataOfferMeta;
 
@@ -56,6 +58,7 @@ typedef struct MARU_WaylandClipboardState {
   struct wl_data_source *dnd_source;
   uint32_t dnd_serial;
   MARU_DropAction dnd_action;
+  MARU_DropAction dnd_target_action;
   void *dnd_session_userdata;
   struct MARU_Window_WL *dnd_window;
 

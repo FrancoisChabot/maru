@@ -42,6 +42,27 @@ static MARU_DropAction _maru_wl_to_drop_action(uint32_t wl_action) {
   }
 }
 
+static MARU_DropActionMask _maru_wl_to_drop_action_mask(uint32_t wl_actions) {
+  MARU_DropActionMask mask = 0;
+  if ((wl_actions & 1u) != 0) mask |= MARU_DROP_ACTION_COPY;
+  if ((wl_actions & 2u) != 0) mask |= MARU_DROP_ACTION_MOVE;
+  if ((wl_actions & 4u) != 0) mask |= MARU_DROP_ACTION_LINK;
+  return mask;
+}
+
+static uint32_t _maru_wl_from_drop_action(MARU_DropAction action) {
+  switch (action) {
+    case MARU_DROP_ACTION_COPY:
+      return 1u;
+    case MARU_DROP_ACTION_MOVE:
+      return 2u;
+    case MARU_DROP_ACTION_LINK:
+      return 4u;
+    default:
+      return 0u;
+  }
+}
+
 static uint32_t _maru_wl_parse_uri_list(MARU_Context_WL *ctx, const char *data,
                                         size_t size, const char ***out_paths) {
   uint32_t count = 0;
@@ -669,16 +690,18 @@ static void _clipboard_offer_handle_offer(void *data, struct wl_data_offer *offe
 static void _clipboard_offer_handle_source_actions(void *data,
                                                    struct wl_data_offer *offer,
                                                    uint32_t source_actions) {
-  (void)data;
   (void)offer;
-  (void)source_actions;
+  MARU_WaylandDataOfferMeta *meta = (MARU_WaylandDataOfferMeta *)data;
+  if (!meta || !meta->offer) return;
+  meta->source_actions = _maru_wl_to_drop_action_mask(source_actions);
 }
 
 static void _clipboard_offer_handle_action(void *data, struct wl_data_offer *offer,
                                            uint32_t dnd_action) {
-  (void)data;
   (void)offer;
-  (void)dnd_action;
+  MARU_WaylandDataOfferMeta *meta = (MARU_WaylandDataOfferMeta *)data;
+  if (!meta || !meta->offer) return;
+  meta->current_action = _maru_wl_to_drop_action(dnd_action);
 }
 
 static const struct wl_data_offer_listener _clipboard_offer_listener = {
@@ -739,13 +762,21 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
 
   ctx->clipboard.dnd_offer = offer;
   ctx->clipboard.dnd_serial = serial;
+  ctx->clipboard.dnd_target_action = MARU_DROP_ACTION_NONE;
   ctx->clipboard.dnd_session_userdata = NULL;
   ctx->clipboard.dnd_window = window;
 
   MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, offer);
   if (!meta) return;
 
-  MARU_DropAction action = MARU_DROP_ACTION_NONE;
+  MARU_DropAction action = ctx->clipboard.dnd_target_action;
+  if (action == MARU_DROP_ACTION_NONE &&
+      meta->current_action != MARU_DROP_ACTION_NONE) {
+    action = meta->current_action;
+  }
+  if ((meta->source_actions & action) == 0) {
+    action = MARU_DROP_ACTION_NONE;
+  }
   MARU_DropSessionPrefix session_exposed = {
       .action = &action,
       .session_userdata = &ctx->clipboard.dnd_session_userdata,
@@ -755,15 +786,16 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
   evt.drop_entered.dip_position.x = (MARU_Scalar)wl_fixed_to_double(x);
   evt.drop_entered.dip_position.y = (MARU_Scalar)wl_fixed_to_double(y);
   evt.drop_entered.session = (MARU_DropSession *)&session_exposed;
+  evt.drop_entered.available_actions = meta->source_actions;
   evt.drop_entered.available_types.strings = meta->mime_types;
   evt.drop_entered.available_types.count = meta->mime_count;
   evt.drop_entered.modifiers = _maru_wayland_get_modifiers(ctx);
 
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_ENTERED, (MARU_Window *)window, &evt);
 
-  uint32_t wl_action = 0;
-  if (action & MARU_DROP_ACTION_COPY) wl_action |= 1u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY */;
-  if (action & MARU_DROP_ACTION_MOVE) wl_action |= 2u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE */;
+  action = (meta->source_actions & action) ? action : MARU_DROP_ACTION_NONE;
+  ctx->clipboard.dnd_target_action = action;
+  const uint32_t wl_action = _maru_wl_from_drop_action(action);
 
   if (wl_action != 0) {
     const char *accepted_mime = (meta->mime_count > 0) ? meta->mime_types[0] : NULL;
@@ -781,17 +813,19 @@ static void _clipboard_data_device_leave(void *data, struct wl_data_device *data
 
   MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (window) {
-    MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
+    MARU_DropAction action = ctx->clipboard.dnd_target_action;
     MARU_DropSessionPrefix session_exposed = {
-        .action = &dummy_action,
+        .action = &action,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };
 
     MARU_Event evt = {0};
     evt.drop_exited.session = (MARU_DropSession *)&session_exposed;
-    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_EXITED, (MARU_Window *)window, &evt);  }
+    _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_EXITED, (MARU_Window *)window, &evt);
+  }
   ctx->clipboard.dnd_offer = NULL;
   ctx->clipboard.dnd_serial = 0;
+  ctx->clipboard.dnd_target_action = MARU_DROP_ACTION_NONE;
   ctx->clipboard.dnd_session_userdata = NULL;
   ctx->clipboard.dnd_window = NULL;
 }
@@ -811,7 +845,14 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_offer);
   if (!meta) return;
 
-  MARU_DropAction action = MARU_DROP_ACTION_NONE;
+  MARU_DropAction action = ctx->clipboard.dnd_target_action;
+  if (action == MARU_DROP_ACTION_NONE &&
+      meta->current_action != MARU_DROP_ACTION_NONE) {
+    action = meta->current_action;
+  }
+  if ((meta->source_actions & action) == 0) {
+    action = MARU_DROP_ACTION_NONE;
+  }
   MARU_DropSessionPrefix session_exposed = {
       .action = &action,
       .session_userdata = &ctx->clipboard.dnd_session_userdata,
@@ -821,15 +862,16 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   evt.drop_hovered.dip_position.x = (MARU_Scalar)wl_fixed_to_double(x);
   evt.drop_hovered.dip_position.y = (MARU_Scalar)wl_fixed_to_double(y);
   evt.drop_hovered.session = (MARU_DropSession *)&session_exposed;
+  evt.drop_hovered.available_actions = meta->source_actions;
   evt.drop_hovered.available_types.strings = meta->mime_types;
   evt.drop_hovered.available_types.count = meta->mime_count;
   evt.drop_hovered.modifiers = _maru_wayland_get_modifiers(ctx);
 
   _maru_dispatch_event(&ctx->base, MARU_EVENT_DROP_HOVERED, (MARU_Window *)window, &evt);
 
-  uint32_t wl_action = 0;
-  if (action & MARU_DROP_ACTION_COPY) wl_action |= 1u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY */;
-  if (action & MARU_DROP_ACTION_MOVE) wl_action |= 2u /* WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE */;
+  action = (meta->source_actions & action) ? action : MARU_DROP_ACTION_NONE;
+  ctx->clipboard.dnd_target_action = action;
+  const uint32_t wl_action = _maru_wl_from_drop_action(action);
 
   if (wl_action != 0) {
     const char *accepted_mime = (meta->mime_count > 0) ? meta->mime_types[0] : NULL;
@@ -870,9 +912,12 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
     maru_requestData_WL((MARU_Window *)window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
                          "text/uri-list", (void *)1);
   } else {
-    MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
+    MARU_DropAction action = ctx->clipboard.dnd_target_action;
+    if (meta->current_action != MARU_DROP_ACTION_NONE) {
+      action = meta->current_action;
+    }
     MARU_DropSessionPrefix session_exposed = {
-        .action = &dummy_action,
+        .action = &action,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };
 
@@ -880,6 +925,7 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
     evt.drop_dropped.dip_position.x = (MARU_Scalar)ctx->linux_common.pointer.x;
     evt.drop_dropped.dip_position.y = (MARU_Scalar)ctx->linux_common.pointer.y;
     evt.drop_dropped.session = (MARU_DropSession *)&session_exposed;
+    evt.drop_dropped.available_actions = meta->source_actions;
     evt.drop_dropped.available_types.strings = meta->mime_types;
     evt.drop_dropped.available_types.count = meta->mime_count;
     evt.drop_dropped.modifiers = _maru_wayland_get_modifiers(ctx);
@@ -892,6 +938,8 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
 
   ctx->clipboard.dnd_offer = NULL;
   ctx->clipboard.dnd_serial = 0;
+  ctx->clipboard.dnd_target_action = MARU_DROP_ACTION_NONE;
+  ctx->clipboard.dnd_session_userdata = NULL;
   ctx->clipboard.dnd_window = NULL;
 }
 
@@ -1433,9 +1481,12 @@ void _maru_wayland_dataexchange_handle_internal_transfer_complete(
 
     MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_drop.offer);
     
-    MARU_DropAction dummy_action = MARU_DROP_ACTION_NONE;
+    MARU_DropAction action = ctx->clipboard.dnd_target_action;
+    if (meta && meta->current_action != MARU_DROP_ACTION_NONE) {
+      action = meta->current_action;
+    }
     MARU_DropSessionPrefix session_exposed = {
-        .action = &dummy_action,
+        .action = &action,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };
 
@@ -1446,6 +1497,7 @@ void _maru_wayland_dataexchange_handle_internal_transfer_complete(
     drop_evt.drop_dropped.paths.strings = (const char *const *)paths;
     drop_evt.drop_dropped.paths.count = path_count;
     if (meta) {
+      drop_evt.drop_dropped.available_actions = meta->source_actions;
       drop_evt.drop_dropped.available_types.strings = meta->mime_types;
       drop_evt.drop_dropped.available_types.count = meta->mime_count;
     }
@@ -1467,5 +1519,6 @@ void _maru_wayland_dataexchange_handle_internal_transfer_complete(
     }
     
     ctx->clipboard.dnd_session_userdata = NULL;
+    ctx->clipboard.dnd_target_action = MARU_DROP_ACTION_NONE;
   }
 }
