@@ -46,7 +46,7 @@ typedef struct MARU_Win32WindowHandle {
  * The returned handles are borrowed and remain owned by Maru.
  */
 MARU_API MARU_Win32ContextHandle
-maru_getWin32ContextHandle(MARU_Context *context);
+maru_getWin32ContextHandle(const MARU_Context *context);
 /*
  * Returns the Win32 instance/HWND pair for a ready Windows window.
  *
@@ -56,7 +56,7 @@ maru_getWin32ContextHandle(MARU_Context *context);
  * The returned handles are borrowed and remain owned by Maru.
  */
 MARU_API MARU_Win32WindowHandle
-maru_getWin32WindowHandle(MARU_Window *window);
+maru_getWin32WindowHandle(const MARU_Window *window);
 
 #ifdef __cplusplus
 }

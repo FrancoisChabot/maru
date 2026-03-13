@@ -302,30 +302,34 @@ MARU_API MARU_Status maru_setMonitorMode(MARU_Monitor *monitor, MARU_VideoMode m
 }
 
 MARU_API MARU_WaylandContextHandle
-maru_getWaylandContextHandle(MARU_Context *context) {
+maru_getWaylandContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getWaylandContextHandle, context);
   MARU_WaylandContextHandle handle = {0};
-  handle.display = (wl_display *)maru_getContextNativeHandle_WL(context);
+  handle.display =
+      (wl_display *)maru_getContextNativeHandle_WL((MARU_Context *)context);
   return handle;
 }
 
 MARU_API MARU_WaylandWindowHandle
-maru_getWaylandWindowHandle(MARU_Window *window) {
+maru_getWaylandWindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getWaylandWindowHandle, window);
   MARU_WaylandWindowHandle handle = {0};
   const MARU_Context *context = maru_getWindowContext(window);
   handle.display = (wl_display *)maru_getContextNativeHandle_WL((MARU_Context *)context);
-  handle.surface = (wl_surface *)maru_getWindowNativeHandle_WL(window);
+  handle.surface =
+      (wl_surface *)maru_getWindowNativeHandle_WL((MARU_Window *)window);
   return handle;
 }
 
-MARU_API MARU_X11ContextHandle maru_getX11ContextHandle(MARU_Context *context) {
+MARU_API MARU_X11ContextHandle
+maru_getX11ContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getX11ContextHandle, context);
   (void)context;
   return _maru_stub_x11_context_handle_unsupported();
 }
 
-MARU_API MARU_X11WindowHandle maru_getX11WindowHandle(MARU_Window *window) {
+MARU_API MARU_X11WindowHandle
+maru_getX11WindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getX11WindowHandle, window);
   (void)window;
   return _maru_stub_x11_window_handle_unsupported();

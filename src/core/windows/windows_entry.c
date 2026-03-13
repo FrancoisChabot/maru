@@ -272,18 +272,21 @@ MARU_API MARU_Status maru_createVkSurface(MARU_Window *window, VkInstance instan
 // --- Win32 Native Handles ---
 
 MARU_API MARU_Win32ContextHandle
-maru_getWin32ContextHandle(MARU_Context *context) {
+maru_getWin32ContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getWin32ContextHandle, context);
   MARU_Win32ContextHandle handle = {0};
-  handle.instance = (HINSTANCE)_maru_getContextNativeHandle_Windows(context);
+  handle.instance =
+      (HINSTANCE)_maru_getContextNativeHandle_Windows((MARU_Context *)context);
   return handle;
 }
 
-MARU_API MARU_Win32WindowHandle maru_getWin32WindowHandle(MARU_Window *window) {
+MARU_API MARU_Win32WindowHandle
+maru_getWin32WindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getWin32WindowHandle, window);
   MARU_Win32WindowHandle handle = {0};
   const MARU_Context *context = maru_getWindowContext(window);
   handle.instance = (HINSTANCE)_maru_getContextNativeHandle_Windows((MARU_Context *)context);
-  handle.hwnd = (HWND)_maru_getWindowNativeHandle_Windows(window);
+  handle.hwnd =
+      (HWND)_maru_getWindowNativeHandle_Windows((MARU_Window *)window);
   return handle;
 }

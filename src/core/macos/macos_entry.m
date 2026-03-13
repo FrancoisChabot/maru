@@ -293,17 +293,19 @@ MARU_API MARU_Status maru_createVkSurface(
 }
 
 MARU_API MARU_CocoaContextHandle maru_getCocoaContextHandle(
-    MARU_Context *context) {
+    const MARU_Context *context) {
   MARU_API_VALIDATE(getCocoaContextHandle, context);
   MARU_CocoaContextHandle handle = {0};
-  handle.ns_application = _maru_getContextNativeHandle_Cocoa(context);
+  handle.ns_application =
+      _maru_getContextNativeHandle_Cocoa((MARU_Context *)context);
   return handle;
 }
 
-MARU_API MARU_CocoaWindowHandle maru_getCocoaWindowHandle(MARU_Window *window) {
+MARU_API MARU_CocoaWindowHandle
+maru_getCocoaWindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getCocoaWindowHandle, window);
   MARU_CocoaWindowHandle handle = {0};
-  handle.ns_window = _maru_getWindowNativeHandle_Cocoa(window);
+  handle.ns_window = _maru_getWindowNativeHandle_Cocoa((MARU_Window *)window);
   return handle;
 }
 #endif

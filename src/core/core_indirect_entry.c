@@ -400,72 +400,81 @@ static void *_maru_getWindowNativeHandleRaw(MARU_Window *window) {
 }
 
 MARU_API MARU_WaylandContextHandle
-maru_getWaylandContextHandle(MARU_Context *context) {
+maru_getWaylandContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getWaylandContextHandle, context);
   MARU_WaylandContextHandle handle = {0};
-  handle.display = (wl_display *)_maru_getContextNativeHandleRaw(context);
+  handle.display =
+      (wl_display *)_maru_getContextNativeHandleRaw((MARU_Context *)context);
   return handle;
 }
 
 MARU_API MARU_WaylandWindowHandle
-maru_getWaylandWindowHandle(MARU_Window *window) {
+maru_getWaylandWindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getWaylandWindowHandle, window);
   MARU_WaylandWindowHandle handle = {0};
   const MARU_Context *context = maru_getWindowContext(window);
   handle.display = (wl_display *)_maru_getContextNativeHandleRaw((MARU_Context *)context);
-  handle.surface = (wl_surface *)_maru_getWindowNativeHandleRaw(window);
+  handle.surface =
+      (wl_surface *)_maru_getWindowNativeHandleRaw((MARU_Window *)window);
   return handle;
 }
 
-MARU_API MARU_X11ContextHandle maru_getX11ContextHandle(MARU_Context *context) {
+MARU_API MARU_X11ContextHandle
+maru_getX11ContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getX11ContextHandle, context);
   MARU_X11ContextHandle handle = {0};
-  handle.display = (Display *)_maru_getContextNativeHandleRaw(context);
+  handle.display =
+      (Display *)_maru_getContextNativeHandleRaw((MARU_Context *)context);
   return handle;
 }
 
-MARU_API MARU_X11WindowHandle maru_getX11WindowHandle(MARU_Window *window) {
+MARU_API MARU_X11WindowHandle
+maru_getX11WindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getX11WindowHandle, window);
   MARU_X11WindowHandle handle = {0};
   const MARU_Context *context = maru_getWindowContext(window);
   handle.display = (Display *)_maru_getContextNativeHandleRaw((MARU_Context *)context);
-  handle.window = (Window)(uintptr_t)_maru_getWindowNativeHandleRaw(window);
+  handle.window =
+      (Window)(uintptr_t)_maru_getWindowNativeHandleRaw((MARU_Window *)window);
   return handle;
 }
 
 #ifdef MARU_ENABLE_BACKEND_WINDOWS
 MARU_API MARU_Win32ContextHandle
-maru_getWin32ContextHandle(MARU_Context *context) {
+maru_getWin32ContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getWin32ContextHandle, context);
   MARU_Win32ContextHandle handle = {0};
-  handle.instance = (HINSTANCE)_maru_getContextNativeHandleRaw(context);
+  handle.instance =
+      (HINSTANCE)_maru_getContextNativeHandleRaw((MARU_Context *)context);
   return handle;
 }
 
 MARU_API MARU_Win32WindowHandle
-maru_getWin32WindowHandle(MARU_Window *window) {
+maru_getWin32WindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getWin32WindowHandle, window);
   MARU_Win32WindowHandle handle = {0};
   const MARU_Context *context = maru_getWindowContext(window);
   handle.instance = (HINSTANCE)_maru_getContextNativeHandleRaw((MARU_Context *)context);
-  handle.hwnd = (HWND)_maru_getWindowNativeHandleRaw(window);
+  handle.hwnd = (HWND)_maru_getWindowNativeHandleRaw((MARU_Window *)window);
   return handle;
 }
 #endif
 
 #ifdef MARU_ENABLE_BACKEND_COCOA
 MARU_API MARU_CocoaContextHandle maru_getCocoaContextHandle(
-    MARU_Context *context) {
+    const MARU_Context *context) {
   MARU_API_VALIDATE(getCocoaContextHandle, context);
   MARU_CocoaContextHandle handle = {0};
-  handle.ns_application = _maru_getContextNativeHandleRaw(context);
+  handle.ns_application =
+      _maru_getContextNativeHandleRaw((MARU_Context *)context);
   return handle;
 }
 
-MARU_API MARU_CocoaWindowHandle maru_getCocoaWindowHandle(MARU_Window *window) {
+MARU_API MARU_CocoaWindowHandle
+maru_getCocoaWindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getCocoaWindowHandle, window);
   MARU_CocoaWindowHandle handle = {0};
-  handle.ns_window = _maru_getWindowNativeHandleRaw(window);
+  handle.ns_window = _maru_getWindowNativeHandleRaw((MARU_Window *)window);
   return handle;
 }
 #endif

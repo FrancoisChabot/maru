@@ -45,6 +45,12 @@
  * When MARU_VALIDATE_API_CALLS is enabled, invalid API usage is treated as a
  * contract violation and MARU may fail fast with abort() rather than trying to
  * return a recoverable MARU_Status.
+ *
+ * C language mode note:
+ *
+ * The public C headers use designated initializers and anonymous unions. In C
+ * builds, use C11 or newer, or an older dialect with equivalent compiler
+ * extensions for those features.
  */
 
 #include <stdbool.h>
@@ -101,8 +107,14 @@ typedef uint64_t MARU_WindowId;
  *
  * Handles owned by a lost context should be treated as inert. Status-returning
  * APIs on those child handles will typically short-circuit with
- * MARU_CONTEXT_LOST; destroy the context rather than trying to tear down
- * attached child objects one by one.
+ * MARU_CONTEXT_LOST.
+ *
+ * This includes child-object destroy functions such as maru_destroyWindow(),
+ * maru_destroyImage(), and maru_destroyCursor(): they are still backend-facing
+ * teardown requests, so they participate in normal CONTEXT_LOST propagation.
+ * By contrast, maru_destroyContext() is terminal local teardown and always
+ * proceeds. Once a context is lost, destroy the context rather than trying to
+ * tear down attached child objects one by one.
  *
  * Validation/early-out precedence for status-returning APIs is:
  * 1. Argument-related API violations are diagnosed first.
@@ -1052,8 +1064,9 @@ MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo* create_inf
  * You do not need to destroy windows, cursors, images, or other context-owned
  * child objects one by one before destroying the context.
  *
- * Note: Always returns void. Unlike other destroy functions, context destruction
- * is terminal and cannot fail - it tears down regardless of context state.
+ * This is unconditional local teardown, not a backend-facing request, so it
+ * always returns void and proceeds regardless of whether the context is live or
+ * already lost.
  */
 MARU_API void maru_destroyContext(MARU_Context* context);
 MARU_API MARU_Status maru_updateContext(MARU_Context* context,
@@ -1079,6 +1092,10 @@ MARU_API MARU_Status maru_createImage(MARU_Context* context,
  *
  * If the image is currently set as an icon for one or more windows, those
  * windows will automatically revert to their default icon.
+ *
+ * Unlike maru_destroyContext(), this is still a backend-facing teardown
+ * request. If the owning context is already lost, it short-circuits with
+ * MARU_CONTEXT_LOST; destroy the context itself for terminal cleanup.
  */
 MARU_API MARU_Status maru_destroyImage(MARU_Image* image);
 /* Userdata accessors follow the direct-inline-accessor threading rule. */
@@ -1141,6 +1158,10 @@ MARU_API MARU_Status maru_createCursor(MARU_Context* context,
  *
  * If the cursor is currently active on one or more windows, those windows
  * will automatically revert to the system default cursor.
+ *
+ * Unlike maru_destroyContext(), this is still a backend-facing teardown
+ * request. If the owning context is already lost, it short-circuits with
+ * MARU_CONTEXT_LOST; destroy the context itself for terminal cleanup.
  */
 MARU_API MARU_Status maru_destroyCursor(MARU_Cursor* cursor);
 
@@ -1251,6 +1272,7 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_ACCEPT_DROP MARU_BIT(13)
 #define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE MARU_BIT(14)
 #define MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT MARU_BIT(15)
+/* Bit 16 is intentionally reserved and is not a valid public update bit. */
 #define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(17)
 #define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(18)
 #define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(19)
@@ -1391,6 +1413,13 @@ typedef struct MARU_WindowCreateInfo {
 MARU_API MARU_Status maru_createWindow(MARU_Context* context,
                                        const MARU_WindowCreateInfo* create_info,
                                        MARU_Window** out_window);
+/*
+ * Destroys a window and releases its backend resources.
+ *
+ * Unlike maru_destroyContext(), this is still a backend-facing teardown
+ * request. If the owning context is already lost, it short-circuits with
+ * MARU_CONTEXT_LOST; destroy the context itself for terminal cleanup.
+ */
 MARU_API MARU_Status maru_destroyWindow(MARU_Window* window);
 MARU_API MARU_Status maru_updateWindow(MARU_Window* window,
                                        uint64_t field_mask,

@@ -35,7 +35,7 @@ typedef struct MARU_CocoaWindowHandle {
  * The returned pointers are borrowed and remain owned by Maru.
  */
 MARU_API MARU_CocoaContextHandle
-maru_getCocoaContextHandle(MARU_Context *context);
+maru_getCocoaContextHandle(const MARU_Context *context);
 /*
  * Returns the NSWindow pointer for a ready Cocoa window.
  *
@@ -45,7 +45,7 @@ maru_getCocoaContextHandle(MARU_Context *context);
  * The returned pointers are borrowed and remain owned by Maru.
  */
 MARU_API MARU_CocoaWindowHandle
-maru_getCocoaWindowHandle(MARU_Window *window);
+maru_getCocoaWindowHandle(const MARU_Window *window);
 
 #ifdef __cplusplus
 }

@@ -38,7 +38,7 @@ typedef struct MARU_WaylandWindowHandle {
  * The returned pointers are borrowed and remain owned by Maru.
  */
 MARU_API MARU_WaylandContextHandle
-maru_getWaylandContextHandle(MARU_Context *context);
+maru_getWaylandContextHandle(const MARU_Context *context);
 /*
  * Returns the Wayland display/surface pair for a ready Wayland window.
  *
@@ -48,7 +48,7 @@ maru_getWaylandContextHandle(MARU_Context *context);
  * The returned pointers are borrowed and remain owned by Maru.
  */
 MARU_API MARU_WaylandWindowHandle
-maru_getWaylandWindowHandle(MARU_Window *window);
+maru_getWaylandWindowHandle(const MARU_Window *window);
 
 #ifdef __cplusplus
 }
