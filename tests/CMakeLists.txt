@@ -3,6 +3,7 @@ add_executable(maru_tests
   unit/test_diagnostics.c
   unit/test_queue.c
   unit/test_text.c
+  ${PROJECT_SOURCE_DIR}/examples/support/ime_utils.c
 )
 
 if (MARU_ENABLE_BACKEND_X11)
@@ -15,6 +16,7 @@ endif()
 
 target_include_directories(maru_tests PRIVATE
   ${PROJECT_SOURCE_DIR}/src/core
+  ${PROJECT_SOURCE_DIR}/examples/support
   ${CMAKE_CURRENT_SOURCE_DIR}/unit
 )
 

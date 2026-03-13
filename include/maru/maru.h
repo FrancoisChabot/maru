@@ -1577,20 +1577,6 @@ static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool ena
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, const MARU_Image* icon);
-/*
- * Applies a byte-based UTF-8 IME commit to a caller-owned buffer in place.
- *
- * `buffer` must contain valid UTF-8 for the first `*inout_length` bytes and be
- * NUL-terminated at `buffer[*inout_length]`. `*inout_cursor_byte` and the
- * commit's delete spans must land on UTF-8 code point boundaries.
- * `capacity_bytes` must include room for the trailing NUL after the updated
- * text.
- */
-MARU_API bool maru_applyTextEditCommitUtf8(char* buffer,
-                                           uint32_t capacity_bytes,
-                                           uint32_t* inout_length,
-                                           uint32_t* inout_cursor_byte,
-                                           const MARU_TextEditCommittedEvent* commit);
 MARU_API const char* maru_getDiagnosticString(MARU_Diagnostic diagnostic);
 
 /* ----- Inline accessors and helper implementations ----- */

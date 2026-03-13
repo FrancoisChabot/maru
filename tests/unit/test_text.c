@@ -1,5 +1,5 @@
 #include "utest.h"
-#include "maru/maru.h"
+#include "ime_utils.h"
 #include <string.h>
 
 UTEST(TextTest, ApplyTextEditCommitUtf8AcceptsWholeCodepointEdits) {

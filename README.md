@@ -264,7 +264,7 @@ Instead, you `retain()` a reference. If the device is disconnected, Maru flags i
 
 Maru only provides a full IME-capable text input mechanism. It forces you to "eat your veggies" because quick-and-dirty keyboard-to-text hacks (like using `MARU_KeyChangedEvent`) fail on internationalization, keyboard layouts, and OS-level repeats.
 
-Use the `maru_applyTextEditCommitUtf8()` convenience function to apply commits to a buffer. If you also update `MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT`, you'll get proper Japanese/Korean/etc. support out-of-the-box.
+The examples include a ready-made UTF-8 commit helper in `examples/support/ime_utils.[h|c]`. Copy it into your app if you want a reference implementation for applying `MARU_TextEditCommittedEvent` commits to a buffer. If you also update `MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT`, you'll get proper Japanese/Korean/etc. support out-of-the-box.
 
 #### High DPI: Dip vs. Px Space
 **"What's the difference between dip vectors and px vectors?"**
