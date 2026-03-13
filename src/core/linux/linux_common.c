@@ -588,6 +588,9 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
       ctrl->button_channels[i].name = n;
       ctrl->allocated_names[ctrl->allocated_name_count++] = n;
     }
+
+    ctrl->button_channels[i].min_value = 0.0f;
+    ctrl->button_channels[i].max_value = 1.0f;
   }
 
   for (uint32_t i = 0; i < abs_count; ++i) {
@@ -610,11 +613,22 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
       ctrl->analog_channels[i].name = n;
       ctrl->allocated_names[ctrl->allocated_name_count++] = n;
     }
+
+    if (i == MARU_CONTROLLER_ANALOG_LEFT_X || i == MARU_CONTROLLER_ANALOG_LEFT_Y ||
+        i == MARU_CONTROLLER_ANALOG_RIGHT_X || i == MARU_CONTROLLER_ANALOG_RIGHT_Y) {
+      ctrl->analog_channels[i].min_value = -1.0f;
+      ctrl->analog_channels[i].max_value = 1.0f;
+    } else {
+      ctrl->analog_channels[i].min_value = 0.0f;
+      ctrl->analog_channels[i].max_value = 1.0f;
+    }
   }
 
   for (uint32_t i = 0; i < haptic_count; ++i) {
     ctrl->haptic_channels[i].name = std_haptic_names[i];
     ctrl->haptic_channels[i].native_code = UINT32_MAX;
+    ctrl->haptic_channels[i].min_value = 0.0f;
+    ctrl->haptic_channels[i].max_value = 1.0f;
   }
 
   char name[256];

@@ -138,10 +138,23 @@ typedef struct MARU_Allocator {
   void* userdata;
 } MARU_Allocator;
 
+typedef float MARU_Scalar;
+
 typedef struct MARU_ChannelInfo {
+  /* Human-readable channel label. Borrowed storage owned by the source handle. */
   const char* name;
+  /* Backend/native code when one exists; UINT32_MAX if there is no stable native code. */
   uint32_t native_code;
   uint32_t flags;
+  /*
+   * Inclusive public value range for this channel.
+   *
+   * For button channels, Maru uses 0..1 to mean released/pressed semantics.
+   * For scalar channels such as controller analogs and haptics, Maru guarantees
+   * published values and accepted writes stay within this range.
+   */
+  MARU_Scalar min_value;
+  MARU_Scalar max_value;
 } MARU_ChannelInfo;
 
 #define MARU_CHANNEL_FLAG_IS_DEFAULT MARU_BIT32(0)
@@ -149,8 +162,6 @@ typedef struct MARU_ChannelInfo {
 MARU_API MARU_Version maru_getVersion(void);
 
 /* ----- Geometry ----- */
-
-typedef float MARU_Scalar;
 
 typedef struct MARU_Fraction {
   int32_t num;
@@ -1390,6 +1401,11 @@ MARU_API void maru_retainController(MARU_Controller* controller);
 MARU_API void maru_releaseController(MARU_Controller* controller);
 MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller* controller,
                                             MARU_ControllerInfo* out_info);
+/*
+ * Each intensity must fall within the inclusive `[min_value, max_value]` range
+ * published by `maru_getControllerHapticChannelInfo()` for the targeted
+ * haptic channels. Standard Maru haptics use 0..1.
+ */
 MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller* controller,
                                                     uint32_t first_haptic,
                                                     uint32_t count,

@@ -180,14 +180,25 @@ static void _maru_windows_fill_standard_controller_layout(
   for (i = 0u; i < ctrl->button_count && i < MARU_CONTROLLER_BUTTON_STANDARD_COUNT;
        ++i) {
     ctrl->button_channels[i].name = MARU_STANDARD_BUTTON_NAMES[i];
+    ctrl->button_channels[i].min_value = 0.0f;
+    ctrl->button_channels[i].max_value = 1.0f;
   }
   for (i = 0u; i < ctrl->analog_count && i < MARU_CONTROLLER_ANALOG_STANDARD_COUNT;
        ++i) {
     ctrl->analog_channels[i].name = MARU_STANDARD_ANALOG_NAMES[i];
+    if (i < MARU_CONTROLLER_ANALOG_LEFT_TRIGGER) {
+      ctrl->analog_channels[i].min_value = -1.0f;
+      ctrl->analog_channels[i].max_value = 1.0f;
+    } else {
+      ctrl->analog_channels[i].min_value = 0.0f;
+      ctrl->analog_channels[i].max_value = 1.0f;
+    }
   }
   for (i = 0u; i < ctrl->haptic_count && i < MARU_CONTROLLER_HAPTIC_STANDARD_COUNT;
        ++i) {
     ctrl->haptic_channels[i].name = MARU_STANDARD_HAPTIC_NAMES[i];
+    ctrl->haptic_channels[i].min_value = 0.0f;
+    ctrl->haptic_channels[i].max_value = 1.0f;
   }
 }
 
@@ -504,6 +515,10 @@ static MARU_Controller_Windows *_maru_windows_controller_create_common(
     memset(ctrl->button_states, 0, sizeof(MARU_ButtonState8) * button_count);
     memset(ctrl->button_channels, 0,
            sizeof(MARU_ChannelInfo) * button_count);
+    for (uint32_t i = 0; i < button_count; ++i) {
+      ctrl->button_channels[i].min_value = 0.0f;
+      ctrl->button_channels[i].max_value = 1.0f;
+    }
   }
 
   if (analog_count > 0u) {
@@ -519,6 +534,10 @@ static MARU_Controller_Windows *_maru_windows_controller_create_common(
            sizeof(MARU_AnalogInputState) * analog_count);
     memset(ctrl->analog_channels, 0,
            sizeof(MARU_ChannelInfo) * analog_count);
+    for (uint32_t i = 0; i < analog_count; ++i) {
+      ctrl->analog_channels[i].min_value = 0.0f;
+      ctrl->analog_channels[i].max_value = 1.0f;
+    }
   }
 
   if (haptic_count > 0u) {
@@ -530,6 +549,10 @@ static MARU_Controller_Windows *_maru_windows_controller_create_common(
     }
     memset(ctrl->haptic_channels, 0,
            sizeof(MARU_ChannelInfo) * haptic_count);
+    for (uint32_t i = 0; i < haptic_count; ++i) {
+      ctrl->haptic_channels[i].min_value = 0.0f;
+      ctrl->haptic_channels[i].max_value = 1.0f;
+    }
   }
 
   ctrl->base.pub.context = (MARU_Context *)ctx;
@@ -1019,6 +1042,13 @@ static MARU_Controller_Windows *_maru_windows_controller_create_raw_hid(
             value_caps[i].LogicalMax;
         ctrl->hid_value_mappings[analog_index].is_centered =
             _maru_windows_hid_usage_is_centered(usage_iter);
+        if (ctrl->hid_value_mappings[analog_index].is_centered) {
+          ctrl->analog_channels[analog_index].min_value = -1.0f;
+          ctrl->analog_channels[analog_index].max_value = 1.0f;
+        } else {
+          ctrl->analog_channels[analog_index].min_value = 0.0f;
+          ctrl->analog_channels[analog_index].max_value = 1.0f;
+        }
         if (!usage_name) {
           snprintf(name_buf, sizeof(name_buf), "Usage 0x%02X",
                    (unsigned)usage_iter);

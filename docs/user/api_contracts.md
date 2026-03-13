@@ -59,6 +59,9 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
   `MARU_CONTROLLER_HAPTIC_STANDARD_COUNT` channels are always the Maru-defined
   standardized channels in enum order. Extra channels, if any, follow after
   that range.
+- `MARU_ChannelInfo.min_value` / `max_value` describe the inclusive public
+  range for that channel. Button channels use 0..1. Standard stick axes use
+  -1..1. Standard triggers and haptics use 0..1.
 
 ## Value And Mask Rules
 
@@ -70,6 +73,8 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - Logical sizes, min sizes, max sizes, viewport sizes, and rectangle sizes must be non-negative.
 - Image sizes must be strictly positive.
 - Monitor video modes passed to `maru_setMonitorMode()` must have strictly positive pixel dimensions.
+- `maru_setControllerHapticLevels()` requires every intensity to fall within the
+  published inclusive range for the targeted haptic channels.
 
 ## Special Value Semantics
 

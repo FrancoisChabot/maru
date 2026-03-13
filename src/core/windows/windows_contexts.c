@@ -26,22 +26,32 @@ static void _maru_windows_init_mouse_button_channels(MARU_Context_Windows *ctx) 
   ctx->base.mouse_button_channels[0].name = "Left";
   ctx->base.mouse_button_channels[0].native_code = VK_LBUTTON;
   ctx->base.mouse_button_channels[0].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx->base.mouse_button_channels[0].min_value = 0.0f;
+  ctx->base.mouse_button_channels[0].max_value = 1.0f;
 
   ctx->base.mouse_button_channels[1].name = "Right";
   ctx->base.mouse_button_channels[1].native_code = VK_RBUTTON;
   ctx->base.mouse_button_channels[1].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx->base.mouse_button_channels[1].min_value = 0.0f;
+  ctx->base.mouse_button_channels[1].max_value = 1.0f;
 
   ctx->base.mouse_button_channels[2].name = "Middle";
   ctx->base.mouse_button_channels[2].native_code = VK_MBUTTON;
   ctx->base.mouse_button_channels[2].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx->base.mouse_button_channels[2].min_value = 0.0f;
+  ctx->base.mouse_button_channels[2].max_value = 1.0f;
 
   ctx->base.mouse_button_channels[3].name = "X1";
   ctx->base.mouse_button_channels[3].native_code = VK_XBUTTON1;
   ctx->base.mouse_button_channels[3].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx->base.mouse_button_channels[3].min_value = 0.0f;
+  ctx->base.mouse_button_channels[3].max_value = 1.0f;
 
   ctx->base.mouse_button_channels[4].name = "X2";
   ctx->base.mouse_button_channels[4].native_code = VK_XBUTTON2;
   ctx->base.mouse_button_channels[4].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx->base.mouse_button_channels[4].min_value = 0.0f;
+  ctx->base.mouse_button_channels[4].max_value = 1.0f;
 
   ctx->base.pub.mouse_button_channels = ctx->base.mouse_button_channels;
   ctx->base.pub.mouse_button_state = ctx->base.mouse_button_states;

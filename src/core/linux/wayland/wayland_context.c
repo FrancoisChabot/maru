@@ -58,6 +58,8 @@ static bool _maru_wayland_init_context_mouse_channels(MARU_Context_WL *ctx) {
     ctx->base.mouse_button_channels[i].name = channel_defs[i].name;
     ctx->base.mouse_button_channels[i].native_code = channel_defs[i].native_code;
     ctx->base.mouse_button_channels[i].flags = 0;
+    ctx->base.mouse_button_channels[i].min_value = 0.0f;
+    ctx->base.mouse_button_channels[i].max_value = 1.0f;
   }
 
   ctx->base.pub.mouse_button_count = channel_count;

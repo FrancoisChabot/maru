@@ -108,11 +108,23 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     }
 
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_X].name = "Left X";
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_X].min_value = -1.0f;
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_X].max_value = 1.0f;
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_Y].name = "Left Y";
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_Y].min_value = -1.0f;
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_Y].max_value = 1.0f;
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_X].name = "Right X";
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_X].min_value = -1.0f;
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_X].max_value = 1.0f;
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_Y].name = "Right Y";
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_Y].min_value = -1.0f;
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_Y].max_value = 1.0f;
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_TRIGGER].name = "Left Trigger";
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_TRIGGER].min_value = 0.0f;
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_TRIGGER].max_value = 1.0f;
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_TRIGGER].name = "Right Trigger";
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_TRIGGER].min_value = 0.0f;
+    c->analog_channel_infos[MARU_CONTROLLER_ANALOG_RIGHT_TRIGGER].max_value = 1.0f;
 
     c->button_channel_infos[MARU_CONTROLLER_BUTTON_SOUTH].name = "South";
     c->button_channel_infos[MARU_CONTROLLER_BUTTON_EAST].name = "East";
@@ -129,6 +141,10 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     c->button_channel_infos[MARU_CONTROLLER_BUTTON_DPAD_RIGHT].name = "D-Pad Right";
     c->button_channel_infos[MARU_CONTROLLER_BUTTON_DPAD_DOWN].name = "D-Pad Down";
     c->button_channel_infos[MARU_CONTROLLER_BUTTON_DPAD_LEFT].name = "D-Pad Left";
+    for (uint32_t i = 0; i < c->base.pub.button_count; ++i) {
+        c->button_channel_infos[i].min_value = 0.0f;
+        c->button_channel_infos[i].max_value = 1.0f;
+    }
 
     __block MARU_Controller_Cocoa *block_c = c;
     gc.extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad * _Nonnull gamepad, GCControllerElement * _Nonnull element) {

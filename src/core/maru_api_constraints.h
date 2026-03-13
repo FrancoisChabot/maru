@@ -630,6 +630,15 @@ _maru_validate_setControllerHapticLevels(MARU_Controller *controller,
   MARU_CONSTRAINT_CHECK(count <= (haptic_count - first_haptic));
   if (count > 0) {
     MARU_CONSTRAINT_CHECK(intensities != NULL);
+    const MARU_ChannelInfo *channels =
+        maru_getControllerHapticChannelInfo(controller);
+    MARU_CONSTRAINT_CHECK(channels != NULL);
+    for (uint32_t i = 0; i < count; ++i) {
+      const MARU_Scalar value = intensities[i];
+      const MARU_ChannelInfo *channel = &channels[first_haptic + i];
+      MARU_CONSTRAINT_CHECK(value >= channel->min_value);
+      MARU_CONSTRAINT_CHECK(value <= channel->max_value);
+    }
   }
 }
 
