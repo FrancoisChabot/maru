@@ -94,6 +94,7 @@ extern void _maru_reportDiagnosticOn(const MARU_Context *ctx,
                                      MARU_Diagnostic diag, const char *msg);
 #endif
 extern MARU_ThreadId _maru_getCurrentThreadId(void);
+extern void _maru_validate_queue_creator_thread(const MARU_Queue *queue);
 
 static inline void _maru_validate_thread(const MARU_Context_Base *ctx_base) {
   MARU_CONSTRAINT_CHECK(ctx_base->creator_thread == _maru_getCurrentThreadId());
@@ -582,6 +583,7 @@ _maru_validate_createQueue(const MARU_QueueCreateInfo *create_info,
 
 static inline void _maru_validate_destroyQueue(MARU_Queue *queue) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
+  _maru_validate_queue_creator_thread(queue);
 }
 
 static inline void _maru_validate_pushQueue(MARU_Queue *queue,
@@ -589,6 +591,7 @@ static inline void _maru_validate_pushQueue(MARU_Queue *queue,
                                             MARU_WindowId window_id,
                                             const MARU_Event *event) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
+  _maru_validate_queue_creator_thread(queue);
   MARU_CONSTRAINT_CHECK(event != NULL);
   MARU_CONSTRAINT_CHECK(maru_isKnownEventId(type));
   MARU_CONSTRAINT_CHECK(maru_isQueueSafeEventId(type));
@@ -597,6 +600,7 @@ static inline void _maru_validate_pushQueue(MARU_Queue *queue,
 
 static inline void _maru_validate_commitQueue(MARU_Queue *queue) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
+  _maru_validate_queue_creator_thread(queue);
 }
 
 static inline void _maru_validate_scanQueue(MARU_Queue *queue,
@@ -613,6 +617,7 @@ static inline void _maru_validate_scanQueue(MARU_Queue *queue,
 
 static inline void _maru_validate_setQueueCoalesceMask(MARU_Queue *queue, MARU_EventMask mask) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
+  _maru_validate_queue_creator_thread(queue);
   (void)mask;
 }
 

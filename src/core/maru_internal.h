@@ -46,6 +46,7 @@ typedef struct MARU_Window_Base MARU_Window_Base;
 typedef struct MARU_Cursor_Base MARU_Cursor_Base;
 typedef struct MARU_DataRequestHandleBase {
   struct MARU_Context_Base *ctx_base;
+  MARU_DataExchangeTarget target;
 } MARU_DataRequestHandleBase;
 
 typedef struct MARU_CursorAnimationCallbacks {

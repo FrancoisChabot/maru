@@ -461,7 +461,8 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
     case WM_RENDERFORMAT: {
       MARU_WindowsDataRequestHandle handle = {
-          .base = {.ctx_base = &ctx->base},
+          .base = {.ctx_base = &ctx->base,
+                   .target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD},
           .kind = MARU_WINDOWS_DATA_REQUEST_RENDER_CLIPBOARD,
           .format = (UINT)wParam,
           .provided_data = NULL,

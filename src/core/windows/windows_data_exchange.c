@@ -259,6 +259,7 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
     }
     memset(handle, 0, sizeof(*handle));
     handle->base.ctx_base = ctx_base;
+    handle->base.target = target;
     handle->kind = MARU_WINDOWS_DATA_REQUEST_CAPTURE_LOCAL;
     handle->format = format;
     handle->window =

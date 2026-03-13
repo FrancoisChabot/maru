@@ -21,6 +21,9 @@ On the queue creator thread, call `maru_pumpEvents(...)` and forward queue-safe 
 
 Use `MARU_QUEUE_SAFE_EVENT_MASK` when pumping, or `maru_isQueueSafeEventId(type)` if you prefer to filter inside your callback.
 This mask intentionally excludes any event payload that contains transient handles or borrowed pointers, including data-exchange events, monitor/controller events, pointer-bearing text-edit updates, and window-state snapshots that carry a borrowed icon handle.
+It also excludes `MARU_EVENT_WINDOW_READY`: although the payload itself is
+copyable, queue replay only preserves `MARU_WindowId`, not the live
+`MARU_Window*` handle that usually makes readiness actionable.
 
 ### 2. Committing
 When ready to process pushed events, call `maru_commitQueue()` on the queue creator thread. This freezes the active buffer as the stable snapshot, then clears the active buffer for the next frame.
@@ -30,7 +33,8 @@ Call `maru_scanQueue()` to iterate the stable snapshot. Scanning can happen from
 
 ## Threading and Synchronization
 
-- `maru_pushQueue()` and `maru_commitQueue()` **MUST** be called from the queue creator thread.
+- Except for `maru_scanQueue()`, all queue APIs **MUST** be called from the
+  queue creator thread.
 - `maru_scanQueue()` may run on another thread, but you must externally synchronize it against `maru_commitQueue()`.
 - `MARU_Queue` is not a lock-free SPMC queue. A read-write lock, barrier, or equivalent handoff is required if worker threads scan snapshots.
 

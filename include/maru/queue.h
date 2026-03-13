@@ -29,11 +29,14 @@ typedef void (*MARU_QueueEventCallback)(MARU_EventId type,
  *
  * Queue-safe replay preserves only the event payload and the target
  * MARU_WindowId. It does not preserve a live MARU_Window* handle.
+ * `MARU_EVENT_WINDOW_READY` is therefore excluded even though its payload is
+ * copyable, because replay cannot directly provide the ready live window handle
+ * that normally makes the event useful.
  */
 #define MARU_QUEUE_SAFE_EVENT_MASK                                                              \
   (MARU_EVENT_MASK(MARU_EVENT_CLOSE_REQUESTED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_RESIZED) |   \
-   MARU_EVENT_MASK(MARU_EVENT_KEY_CHANGED) | MARU_EVENT_MASK(MARU_EVENT_WINDOW_READY) |         \
-   MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED) | MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_CHANGED) | \
+   MARU_EVENT_MASK(MARU_EVENT_KEY_CHANGED) | MARU_EVENT_MASK(MARU_EVENT_MOUSE_MOVED) |          \
+   MARU_EVENT_MASK(MARU_EVENT_MOUSE_BUTTON_CHANGED) |                                           \
    MARU_EVENT_MASK(MARU_EVENT_MOUSE_SCROLLED) | MARU_EVENT_MASK(MARU_EVENT_IDLE_CHANGED) |      \
    MARU_EVENT_MASK(MARU_EVENT_WINDOW_FRAME) | MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_STARTED) |   \
    MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_ENDED) |                                                 \
@@ -83,11 +86,11 @@ typedef struct MARU_QueueCreateInfo {
  *
  * Threading contract:
  * - maru_createQueue() establishes a fixed owner thread for the queue.
- * - maru_destroyQueue(), maru_pushQueue(), maru_commitQueue(),
- *   and maru_setQueueCoalesceMask() are creator-thread APIs.
- * - maru_scanQueue() is thread-safe and can be called from any thread.
- *   Application-level synchronization must ensure that a scan does not run
- *   concurrently with maru_commitQueue() for the same queue.
+ * - Except for maru_scanQueue(), all queue APIs are creator-thread APIs and
+ *   must be called from the thread that created the queue.
+ * - maru_scanQueue() is globally thread-safe and can be called from any
+ *   thread. Application-level synchronization must ensure that a scan does not
+ *   run concurrently with maru_commitQueue() for the same queue.
  * - Only queue-safe event ids may be pushed. Use MARU_QUEUE_SAFE_EVENT_MASK or
  *   maru_isQueueSafeEventId() when capturing events from maru_pumpEvents().
  * - Window-targeted events are keyed by the stable MARU_WindowId captured at

@@ -1892,6 +1892,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
       MARU_X11DataRequestHandle handle;
       memset(&handle, 0, sizeof(handle));
       handle.base.ctx_base = &ctx->base;
+      handle.base.target = target;
       handle.magic = MARU_X11_DATA_REQUEST_MAGIC;
       handle.target = target;
       handle.requestor = req->requestor;

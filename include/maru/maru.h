@@ -37,15 +37,10 @@
  *    payloads are borrowed views. Copy what you need if it must outlive the
  *    documented lifetime.
  *
- * Validation and build configuration note
+ * Validation note
  *
- * This header includes a generated maru_config.h exposing the build-time
- * feature macros used for this build, such as MARU_VALIDATE_API_CALLS
- * and MARU_ENABLE_DIAGNOSTICS.
- *
- * When MARU_VALIDATE_API_CALLS is enabled, invalid API usage is treated as a
- * contract violation and MARU may fail fast with abort() rather than trying to
- * return a recoverable MARU_Status.
+ * When MARU_VALIDATE_API_CALLS is enabled, invalid API usage is a contract
+ * violation and will abort().
  *
  * C language mode note:
  *

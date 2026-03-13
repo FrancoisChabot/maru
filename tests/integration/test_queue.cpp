@@ -25,22 +25,26 @@ TEST_CASE("Queue C++ API - C++20 Visitor Scan") {
     REQUIRE(queue_res.has_value());
     maru::Queue& queue = *queue_res;
 
-    MARU_Event ready_evt = {};
+    MARU_Event frame_evt = {};
+    frame_evt.window_frame.timestamp_ms = 123;
     MARU_Event close_evt = {};
-    queue.push(MARU_EVENT_WINDOW_READY, MARU_WINDOW_ID_NONE, ready_evt);
+    queue.push(MARU_EVENT_WINDOW_FRAME, MARU_WINDOW_ID_NONE, frame_evt);
     queue.push(MARU_EVENT_CLOSE_REQUESTED, MARU_WINDOW_ID_NONE, close_evt);
     queue.commit();
 
     // Scan with visitor, implicit mask should be generated
-    int ready_count = 0;
+    int frame_count = 0;
     int close_count = 0;
 
     queue.scan(maru::overloads{
-        [&](maru::QueuedWindowReadyEvent) { ready_count++; },
+        [&](maru::QueuedWindowFrameEvent evt) {
+            CHECK(evt.event.timestamp_ms == 123);
+            frame_count++;
+        },
         [&](maru::QueuedCloseRequestedEvent) { close_count++; }
     });
 
-    CHECK(ready_count == 1);
+    CHECK(frame_count == 1);
     CHECK(close_count == 1);
 }
 #endif

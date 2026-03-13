@@ -119,8 +119,16 @@ static void _maru_queue_report_diagnostic(MARU_Queue *queue,
 static void _maru_queue_validate_thread(const MARU_Queue *queue) {
     MARU_CONSTRAINT_CHECK(queue->creator_thread == _maru_getCurrentThreadId());
 }
+
+void _maru_validate_queue_creator_thread(const MARU_Queue *queue) {
+    _maru_queue_validate_thread(queue);
+}
 #else
 static void _maru_queue_validate_thread(const MARU_Queue *queue) {
+    (void)queue;
+}
+
+void _maru_validate_queue_creator_thread(const MARU_Queue *queue) {
     (void)queue;
 }
 #endif

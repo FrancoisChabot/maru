@@ -575,6 +575,7 @@ static void _clipboard_source_send(void *data, struct wl_data_source *source,
   }
 
   handle->base.ctx_base = &ctx->base;
+  handle->base.target = target;
   handle->magic = MARU_WL_DATA_REQUEST_MAGIC;
   handle->fd = fd;
   handle->target = target;
@@ -617,6 +618,7 @@ static void _primary_selection_source_send(
   if (!event_window) event_window = ctx->linux_common.pointer.focused_window;
 
   handle->base.ctx_base = &ctx->base;
+  handle->base.target = MARU_LINUX_PRIVATE_TARGET_PRIMARY;
   handle->magic = MARU_WL_DATA_REQUEST_MAGIC;
   handle->fd = fd;
   handle->target = MARU_LINUX_PRIVATE_TARGET_PRIMARY;
