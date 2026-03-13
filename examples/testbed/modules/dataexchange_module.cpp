@@ -134,13 +134,19 @@ void DataExchangeModule::onEvent(MARU_EventId type, MARU_Window* window, const M
         if (!_is_text_mime(req->mime_type)) return;
         if (req->target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
             clipboard_serves_large_payload_ && !large_clipboard_payload_.empty()) {
-            (void)maru_provideData(req->request, large_clipboard_payload_.data(),
-                                   large_clipboard_payload_.size(),
-                                   MARU_DATA_PROVIDE_FLAG_NONE);
+            (void)maru_provideClipboardData(req->request, large_clipboard_payload_.data(),
+                                            large_clipboard_payload_.size(),
+                                            MARU_DATA_PROVIDE_FLAG_NONE);
             return;
         }
         const size_t text_size = strnlen(input_buffer_, sizeof(input_buffer_));
-        (void)maru_provideData(req->request, input_buffer_, text_size, MARU_DATA_PROVIDE_FLAG_NONE);
+        if (req->target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
+            (void)maru_provideClipboardData(req->request, input_buffer_, text_size,
+                                            MARU_DATA_PROVIDE_FLAG_NONE);
+        } else {
+            (void)maru_provideDropData(req->request, input_buffer_, text_size,
+                                       MARU_DATA_PROVIDE_FLAG_NONE);
+        }
         return;
     }
 
@@ -178,16 +184,14 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         if (ImGui::Button("Announce Clipboard Text")) {
             clipboard_serves_large_payload_ = false;
             large_clipboard_payload_.clear();
-            last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                             {clipboard_mimes, 2}, 0);
+            last_status_ = maru_announceClipboardData(window, {clipboard_mimes, 2});
             owns_clipboard_ = (last_status_ == MARU_SUCCESS);
         }
         ImGui::SameLine();
         if (ImGui::Button("Announce Large Clipboard Text")) {
             large_clipboard_payload_ = _build_large_clipboard_payload();
             clipboard_serves_large_payload_ = true;
-            last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                             {clipboard_mimes, 2}, 0);
+            last_status_ = maru_announceClipboardData(window, {clipboard_mimes, 2});
             owns_clipboard_ = (last_status_ == MARU_SUCCESS);
             if (last_status_ != MARU_SUCCESS) {
                 clipboard_serves_large_payload_ = false;
@@ -196,8 +200,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         }
         ImGui::SameLine();
         if (ImGui::Button("Clear Clipboard Ownership")) {
-            last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                             {NULL, 0}, 0);
+            last_status_ = maru_announceClipboardData(window, {NULL, 0});
             owns_clipboard_ = false;
             clipboard_serves_large_payload_ = false;
             large_clipboard_payload_.clear();
@@ -210,19 +213,16 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         }
 
         if (ImGui::Button("Request Clipboard Text")) {
-            last_status_ = maru_requestData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                            "text/plain;charset=utf-8", this);
+            last_status_ = maru_requestClipboardData(window, "text/plain;charset=utf-8", this);
             if (last_status_ != MARU_SUCCESS) {
-                last_status_ = maru_requestData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                                "text/plain", this);
+                last_status_ = maru_requestClipboardData(window, "text/plain", this);
             }
         }
 
         if (ImGui::Button("Refresh MIME Types")) {
             clipboard_mime_types_.clear();
             MARU_StringList list = {};
-            last_status_ = maru_getAvailableMIMETypes(
-                window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, &list);
+            last_status_ = maru_getAvailableClipboardMIMETypes(window, &list);
             if (last_status_ == MARU_SUCCESS && list.strings) {
                 for (uint32_t i = 0; i < list.count; ++i) {
                     clipboard_mime_types_.emplace_back(list.strings[i] ? list.strings[i] : "");
@@ -271,8 +271,8 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         ImGui::Button("Announce DnD Text", ImVec2(0, 0));
         if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
             if (!is_dragging_) {
-                 last_status_ = maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
-                                             {clipboard_mimes, 2}, MARU_DROP_ACTION_COPY);
+                 last_status_ = maru_announceDragData(window, {clipboard_mimes, 2},
+                                                      MARU_DROP_ACTION_COPY);
                  if (last_status_ == MARU_SUCCESS) {
                      is_dragging_ = true;
                  }

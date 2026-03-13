@@ -687,6 +687,7 @@ typedef enum MARU_DropAction {
 typedef uint64_t MARU_DropActionMask;
 
 typedef enum MARU_DataExchangeTarget {
+  /* Public request/receive events report which data-exchange workflow they belong to. */
   MARU_DATA_EXCHANGE_TARGET_CLIPBOARD = 0,
   MARU_DATA_EXCHANGE_TARGET_DRAG_DROP = 1,
 } MARU_DataExchangeTarget;
@@ -736,6 +737,7 @@ typedef struct MARU_DropExitedEvent {
 typedef struct MARU_DataReceivedEvent {
   void* userdata;
   MARU_Status status;
+  /* Selects the matching request/provide workflow for this completed transfer. */
   MARU_DataExchangeTarget target;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   const char* mime_type;
@@ -744,6 +746,7 @@ typedef struct MARU_DataReceivedEvent {
 } MARU_DataReceivedEvent;
 
 typedef struct MARU_DataRequestEvent {
+  /* Selects whether maru_provideClipboardData() or maru_provideDropData() is valid. */
   MARU_DataExchangeTarget target;
   /*
    * `request` and `mime_type` are only valid for the duration of the
@@ -754,6 +757,7 @@ typedef struct MARU_DataRequestEvent {
 } MARU_DataRequestEvent;
 
 typedef struct MARU_DataConsumedEvent {
+  /* Identifies whether the consumed payload belonged to clipboard or drag/drop. */
   MARU_DataExchangeTarget target;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
   const char* mime_type;
@@ -1437,40 +1441,63 @@ MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller* controller,
 
 /* ----- Data exchange ----- */
 
+/* `mime_types` strings are copied before a successful return. */
+MARU_API MARU_Status maru_announceClipboardData(MARU_Window* window,
+                                                MARU_StringList mime_types);
+/* `mime_types` strings are copied before a successful return. */
+MARU_API MARU_Status maru_announceDragData(MARU_Window* window,
+                                           MARU_StringList mime_types,
+                                           MARU_DropActionMask allowed_actions);
 /*
- * `mime_types` strings are copied before maru_announceData() returns
- * successfully.
- */
-MARU_API MARU_Status maru_announceData(MARU_Window* window,
-                                       MARU_DataExchangeTarget target,
-                                       MARU_StringList mime_types,
-                                       MARU_DropActionMask allowed_actions);
-/*
- * Fulfills a callback-scoped MARU_EVENT_DATA_REQUESTED request.
+ * Fulfills a callback-scoped clipboard request delivered through
+ * MARU_EVENT_DATA_REQUESTED.
  *
  * If `flags` contains MARU_DATA_PROVIDE_FLAG_ZERO_COPY, `data` must remain
  * readable until the matching MARU_EVENT_DATA_CONSUMED callback fires or the
- * owning context is destroyed. Otherwise, the payload is copied before
- * maru_provideData() returns successfully.
+ * owning context is destroyed. Otherwise, the payload is copied before the API
+ * returns successfully.
  */
-MARU_API MARU_Status maru_provideData(MARU_DataRequest* request,
-                                      const void* data,
-                                      size_t size,
-                                      MARU_DataProvideFlags flags);
-/* `mime_type` is copied before maru_requestData() returns successfully. */
-MARU_API MARU_Status maru_requestData(MARU_Window* window,
-                                      MARU_DataExchangeTarget target,
-                                      const char* mime_type,
-                                      void* userdata);
+MARU_API MARU_Status maru_provideClipboardData(MARU_DataRequest* request,
+                                               const void* data,
+                                               size_t size,
+                                               MARU_DataProvideFlags flags);
 /*
- * Returns a borrowed snapshot of the currently available MIME types for the
- * requested target. The snapshot is invalidated by the next
- * maru_getAvailableMIMETypes() call on the same context/target, and may also
- * be replaced by a later pump cycle that changes the underlying offer.
+ * Fulfills a callback-scoped drag/drop request delivered through
+ * MARU_EVENT_DATA_REQUESTED.
+ *
+ * If `flags` contains MARU_DATA_PROVIDE_FLAG_ZERO_COPY, `data` must remain
+ * readable until the matching MARU_EVENT_DATA_CONSUMED callback fires or the
+ * owning context is destroyed. Otherwise, the payload is copied before the API
+ * returns successfully.
  */
-MARU_API MARU_Status maru_getAvailableMIMETypes(MARU_Window* window,
-                                                MARU_DataExchangeTarget target,
-                                                MARU_StringList* out_list);
+MARU_API MARU_Status maru_provideDropData(MARU_DataRequest* request,
+                                          const void* data,
+                                          size_t size,
+                                          MARU_DataProvideFlags flags);
+/* `mime_type` is copied before maru_requestClipboardData() returns successfully. */
+MARU_API MARU_Status maru_requestClipboardData(MARU_Window* window,
+                                               const char* mime_type,
+                                               void* userdata);
+/* `mime_type` is copied before maru_requestDropData() returns successfully. */
+MARU_API MARU_Status maru_requestDropData(MARU_Window* window,
+                                          const char* mime_type,
+                                          void* userdata);
+/*
+ * Returns a borrowed snapshot of the currently available clipboard MIME types.
+ * The snapshot is invalidated by the next
+ * maru_getAvailableClipboardMIMETypes() call on the same context, and may also
+ * be replaced by a later pump cycle that changes the clipboard offer.
+ */
+MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(MARU_Window* window,
+                                                         MARU_StringList* out_list);
+/*
+ * Returns a borrowed snapshot of the currently available drop-offer MIME
+ * types. The snapshot is invalidated by the next
+ * maru_getAvailableDropMIMETypes() call on the same context, and may also be
+ * replaced by a later pump cycle that changes the active drop offer.
+ */
+MARU_API MARU_Status maru_getAvailableDropMIMETypes(MARU_Window* window,
+                                                    MARU_StringList* out_list);
 
 /*
  * Drop-session helpers operate on callback-scoped handles delivered through

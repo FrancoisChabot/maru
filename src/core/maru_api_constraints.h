@@ -715,6 +715,20 @@ _maru_validate_announceData(MARU_Window *window, MARU_DataExchangeTarget target,
 }
 
 static inline void
+_maru_validate_announceClipboardData(MARU_Window *window,
+                                     MARU_StringList mime_types) {
+  _maru_validate_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                              mime_types, 0);
+}
+
+static inline void
+_maru_validate_announceDragData(MARU_Window *window, MARU_StringList mime_types,
+                                MARU_DropActionMask allowed_actions) {
+  _maru_validate_announceData(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                              mime_types, allowed_actions);
+}
+
+static inline void
 _maru_validate_provideData(MARU_DataRequest *request,
                            const void *data, size_t size,
                            MARU_DataProvideFlags flags) {
@@ -727,6 +741,25 @@ _maru_validate_provideData(MARU_DataRequest *request,
   }
   const uint32_t known_flags = (uint32_t)MARU_DATA_PROVIDE_FLAG_ZERO_COPY;
   MARU_CONSTRAINT_CHECK((((uint32_t)flags) & ~known_flags) == 0);
+}
+
+static inline void
+_maru_validate_provideClipboardData(MARU_DataRequest *request,
+                                    const void *data, size_t size,
+                                    MARU_DataProvideFlags flags) {
+  _maru_validate_provideData(request, data, size, flags);
+  MARU_CONSTRAINT_CHECK(
+      ((const MARU_DataRequestHandleBase *)request)->target ==
+      MARU_DATA_EXCHANGE_TARGET_CLIPBOARD);
+}
+
+static inline void
+_maru_validate_provideDropData(MARU_DataRequest *request, const void *data,
+                               size_t size, MARU_DataProvideFlags flags) {
+  _maru_validate_provideData(request, data, size, flags);
+  MARU_CONSTRAINT_CHECK(
+      ((const MARU_DataRequestHandleBase *)request)->target ==
+      MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
 }
 
 static inline void _maru_validate_requestData(MARU_Window *window,
@@ -743,6 +776,20 @@ static inline void _maru_validate_requestData(MARU_Window *window,
 }
 
 static inline void
+_maru_validate_requestClipboardData(MARU_Window *window, const char *mime_type,
+                                    void *userdata) {
+  _maru_validate_requestData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                             mime_type, userdata);
+}
+
+static inline void _maru_validate_requestDropData(MARU_Window *window,
+                                                  const char *mime_type,
+                                                  void *userdata) {
+  _maru_validate_requestData(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                             mime_type, userdata);
+}
+
+static inline void
 _maru_validate_getAvailableMIMETypes(MARU_Window *window,
                                      MARU_DataExchangeTarget target,
                                      MARU_StringList *out_list) {
@@ -751,6 +798,20 @@ _maru_validate_getAvailableMIMETypes(MARU_Window *window,
   MARU_CONSTRAINT_CHECK(target >= MARU_DATA_EXCHANGE_TARGET_CLIPBOARD &&
                         target <= MARU_DATA_EXCHANGE_TARGET_DRAG_DROP);
   MARU_CONSTRAINT_CHECK(out_list != NULL);
+}
+
+static inline void
+_maru_validate_getAvailableClipboardMIMETypes(MARU_Window *window,
+                                              MARU_StringList *out_list) {
+  _maru_validate_getAvailableMIMETypes(
+      window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, out_list);
+}
+
+static inline void
+_maru_validate_getAvailableDropMIMETypes(MARU_Window *window,
+                                         MARU_StringList *out_list) {
+  _maru_validate_getAvailableMIMETypes(
+      window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP, out_list);
 }
 
 static inline void _maru_validate_wakeContext(MARU_Context *context) {
@@ -934,6 +995,21 @@ static inline void _maru_validate_live_announceData(
   _maru_validate_window_ready(window);
 }
 
+static inline void
+_maru_validate_live_announceClipboardData(MARU_Window *window,
+                                          MARU_StringList mime_types) {
+  _maru_validate_live_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                   mime_types, 0);
+}
+
+static inline void
+_maru_validate_live_announceDragData(MARU_Window *window,
+                                     MARU_StringList mime_types,
+                                     MARU_DropActionMask allowed_actions) {
+  _maru_validate_live_announceData(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                                   mime_types, allowed_actions);
+}
+
 static inline void _maru_validate_live_requestData(
     MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type,
     void *userdata) {
@@ -943,12 +1019,41 @@ static inline void _maru_validate_live_requestData(
   _maru_validate_window_ready(window);
 }
 
+static inline void
+_maru_validate_live_requestClipboardData(MARU_Window *window,
+                                         const char *mime_type,
+                                         void *userdata) {
+  _maru_validate_live_requestData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                  mime_type, userdata);
+}
+
+static inline void _maru_validate_live_requestDropData(MARU_Window *window,
+                                                       const char *mime_type,
+                                                       void *userdata) {
+  _maru_validate_live_requestData(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                                  mime_type, userdata);
+}
+
 static inline void _maru_validate_live_getAvailableMIMETypes(
     MARU_Window *window, MARU_DataExchangeTarget target,
     MARU_StringList *out_list) {
   (void)target;
   (void)out_list;
   _maru_validate_window_ready(window);
+}
+
+static inline void
+_maru_validate_live_getAvailableClipboardMIMETypes(MARU_Window *window,
+                                                   MARU_StringList *out_list) {
+  _maru_validate_live_getAvailableMIMETypes(
+      window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, out_list);
+}
+
+static inline void
+_maru_validate_live_getAvailableDropMIMETypes(MARU_Window *window,
+                                              MARU_StringList *out_list) {
+  _maru_validate_live_getAvailableMIMETypes(
+      window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP, out_list);
 }
 
 static inline void _maru_validate_live_getMonitorModes(

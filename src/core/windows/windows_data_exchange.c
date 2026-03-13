@@ -26,7 +26,7 @@ const char *_maru_clipboard_format_to_mime(UINT format) {
     char name[256];
     if (GetClipboardFormatNameA(format, name, sizeof(name))) {
       // This is a bit dangerous due to the static buffer, but
-      // maru_getAvailableMIMETypes documentation says it's only valid
+      // The public MIME query APIs document this snapshot as callback/pump scoped.
       // until the next call to maru_pumpEvents.
       // Better would be to have a per-context or per-window cache.
       return name;

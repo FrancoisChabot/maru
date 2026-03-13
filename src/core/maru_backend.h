@@ -31,11 +31,14 @@ typedef struct MARU_Backend {
   __typeof__(maru_setControllerHapticLevels) *setControllerHapticLevels;
 
   MARU_Status (*announceData)(MARU_Window *window, MARU_DataExchangeTarget target,
-                             MARU_StringList mime_types,
-                             MARU_DropActionMask allowed_actions);
-  __typeof__(maru_provideData) *provideData;
-  __typeof__(maru_requestData) *requestData;
-  __typeof__(maru_getAvailableMIMETypes) *getAvailableMIMETypes;
+                              MARU_StringList mime_types,
+                              MARU_DropActionMask allowed_actions);
+  __typeof__(maru_provideClipboardData) *provideData;
+  MARU_Status (*requestData)(MARU_Window *window, MARU_DataExchangeTarget target,
+                             const char *mime_type, void *userdata);
+  MARU_Status (*getAvailableMIMETypes)(MARU_Window *window,
+                                       MARU_DataExchangeTarget target,
+                                       MARU_StringList *out_list);
   
   __typeof__(maru_getMonitors) *getMonitors;
   __typeof__(maru_retainMonitor) *retainMonitor;

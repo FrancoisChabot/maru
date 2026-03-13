@@ -172,42 +172,78 @@ MARU_API MARU_Status maru_setControllerHapticLevels(
   return maru_setControllerHapticLevels_Cocoa(controller, first_haptic, count, intensities);
 }
 
-MARU_API MARU_Status maru_announceData(MARU_Window *window,
-                                       MARU_DataExchangeTarget target,
-                                       MARU_StringList mime_types,
-                                       MARU_DropActionMask allowed_actions) {
-  MARU_API_VALIDATE(announceData, window, target, mime_types, allowed_actions);
+MARU_API MARU_Status maru_announceClipboardData(MARU_Window *window,
+                                                MARU_StringList mime_types) {
+  MARU_API_VALIDATE(announceClipboardData, window, mime_types);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(announceData, window, target, mime_types,
-                         allowed_actions);
-  return maru_announceData_Cocoa(window, target, mime_types, allowed_actions);
+  MARU_API_VALIDATE_LIVE(announceClipboardData, window, mime_types);
+  return maru_announceData_Cocoa(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                 mime_types, 0);
 }
 
-MARU_API MARU_Status maru_provideData(
+MARU_API MARU_Status maru_announceDragData(MARU_Window *window,
+                                           MARU_StringList mime_types,
+                                           MARU_DropActionMask allowed_actions) {
+  MARU_API_VALIDATE(announceDragData, window, mime_types, allowed_actions);
+  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(announceDragData, window, mime_types,
+                         allowed_actions);
+  return maru_announceData_Cocoa(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                                 mime_types, allowed_actions);
+}
+
+MARU_API MARU_Status maru_provideClipboardData(
     MARU_DataRequest *request, const void *data, size_t size,
     MARU_DataProvideFlags flags) {
-  MARU_API_VALIDATE(provideData, request, data, size, flags);
+  MARU_API_VALIDATE(provideClipboardData, request, data, size, flags);
   MARU_RETURN_ON_ERROR(_maru_status_if_request_context_lost(request));
   return maru_provideData_Cocoa(request, data, size, flags);
 }
 
-MARU_API MARU_Status maru_requestData(MARU_Window *window,
-                               MARU_DataExchangeTarget target,
-                               const char *mime_type,
-                               void *userdata) {
-  MARU_API_VALIDATE(requestData, window, target, mime_type, userdata);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(requestData, window, target, mime_type, userdata);
-  return maru_requestData_Cocoa(window, target, mime_type, userdata);
+MARU_API MARU_Status maru_provideDropData(MARU_DataRequest *request,
+                                          const void *data, size_t size,
+                                          MARU_DataProvideFlags flags) {
+  MARU_API_VALIDATE(provideDropData, request, data, size, flags);
+  MARU_RETURN_ON_ERROR(_maru_status_if_request_context_lost(request));
+  return maru_provideData_Cocoa(request, data, size, flags);
 }
 
-MARU_API MARU_Status maru_getAvailableMIMETypes(
-    MARU_Window *window, MARU_DataExchangeTarget target,
-    MARU_StringList *out_list) {
-  MARU_API_VALIDATE(getAvailableMIMETypes, window, target, out_list);
+MARU_API MARU_Status maru_requestClipboardData(MARU_Window *window,
+                                               const char *mime_type,
+                                               void *userdata) {
+  MARU_API_VALIDATE(requestClipboardData, window, mime_type, userdata);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(getAvailableMIMETypes, window, target, out_list);
-  return maru_getAvailableMIMETypes_Cocoa(window, target, out_list);
+  MARU_API_VALIDATE_LIVE(requestClipboardData, window, mime_type, userdata);
+  return maru_requestData_Cocoa(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                mime_type, userdata);
+}
+
+MARU_API MARU_Status maru_requestDropData(MARU_Window *window,
+                                          const char *mime_type,
+                                          void *userdata) {
+  MARU_API_VALIDATE(requestDropData, window, mime_type, userdata);
+  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(requestDropData, window, mime_type, userdata);
+  return maru_requestData_Cocoa(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                                mime_type, userdata);
+}
+
+MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(
+    MARU_Window *window, MARU_StringList *out_list) {
+  MARU_API_VALIDATE(getAvailableClipboardMIMETypes, window, out_list);
+  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, window, out_list);
+  return maru_getAvailableMIMETypes_Cocoa(
+      window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, out_list);
+}
+
+MARU_API MARU_Status
+maru_getAvailableDropMIMETypes(MARU_Window *window, MARU_StringList *out_list) {
+  MARU_API_VALIDATE(getAvailableDropMIMETypes, window, out_list);
+  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
+  MARU_API_VALIDATE_LIVE(getAvailableDropMIMETypes, window, out_list);
+  return maru_getAvailableMIMETypes_Cocoa(
+      window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP, out_list);
 }
 
 MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
