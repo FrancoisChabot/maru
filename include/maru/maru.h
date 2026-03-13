@@ -742,7 +742,9 @@ typedef struct MARU_ControllerButtonChangedEvent {
 } MARU_ControllerButtonChangedEvent;
 
 typedef struct MARU_TextRangeUtf8 {
+  /* Byte offset into the associated UTF-8 string. */
   uint32_t start_byte;
+  /* Byte length within the associated UTF-8 string. */
   uint32_t length_byte;
 } MARU_TextRangeUtf8;
 
@@ -752,7 +754,13 @@ typedef struct MARU_TextEditStartedEvent {
 
 typedef struct MARU_TextEditUpdatedEvent {
   uint64_t session_id;
-  /* Borrowed callback-scoped UTF-8. Copy what you need before returning. */
+  /*
+   * Borrowed callback-scoped UTF-8. Copy what you need before returning.
+   *
+   * `preedit_length_bytes` excludes the trailing NUL. `caret` and `selection`
+   * are byte ranges into `preedit_utf8` and always fall on UTF-8 code point
+   * boundaries.
+   */
   const char* preedit_utf8;
   uint32_t preedit_length_bytes;
   MARU_TextRangeUtf8 caret;
@@ -761,9 +769,18 @@ typedef struct MARU_TextEditUpdatedEvent {
 
 typedef struct MARU_TextEditCommittedEvent {
   uint64_t session_id;
+  /*
+   * Byte counts relative to the current insertion cursor in the target UTF-8
+   * buffer. These deletion spans always remove whole UTF-8 code points.
+   */
   uint32_t delete_before_bytes;
   uint32_t delete_after_bytes;
-  /* Borrowed callback-scoped UTF-8. Copy what you need before returning. */
+  /*
+   * Borrowed callback-scoped UTF-8. Copy what you need before returning.
+   *
+   * `committed_length_bytes` excludes the trailing NUL. When non-zero,
+   * `committed_utf8` always contains valid UTF-8.
+   */
   const char* committed_utf8;
   uint32_t committed_length_bytes;
 } MARU_TextEditCommittedEvent;
@@ -1165,6 +1182,12 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
  *
  * `dip_position` updates may act as a silent no-op or return MARU_FAILURE on 
  * certain backends (like Wayland) where positioning is compositor-controlled.
+ *
+ * `surrounding_text` is optional. When non-NULL, it must point to valid
+ * NUL-terminated UTF-8, and `surrounding_cursor_byte` /
+ * `surrounding_anchor_byte` must be byte offsets into that string landing on
+ * UTF-8 code point boundaries. When `surrounding_text` is NULL, both offsets
+ * must be 0, which clears the surrounding-text tuple.
  */
 typedef struct MARU_WindowAttributes {
   const char* title;
@@ -1541,12 +1564,21 @@ static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool ena
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, MARU_Image* icon);
-static inline bool maru_applyTextEditCommitUtf8(char* buffer,
-                                                uint32_t capacity_bytes,
-                                                uint32_t* inout_length,
-                                                uint32_t* inout_cursor_byte,
-                                                const MARU_TextEditCommittedEvent* commit);
-static inline const char* maru_getDiagnosticString(MARU_Diagnostic diagnostic);
+/*
+ * Applies a byte-based UTF-8 IME commit to a caller-owned buffer in place.
+ *
+ * `buffer` must contain valid UTF-8 for the first `*inout_length` bytes and be
+ * NUL-terminated at `buffer[*inout_length]`. `*inout_cursor_byte` and the
+ * commit's delete spans must land on UTF-8 code point boundaries.
+ * `capacity_bytes` must include room for the trailing NUL after the updated
+ * text.
+ */
+MARU_API bool maru_applyTextEditCommitUtf8(char* buffer,
+                                           uint32_t capacity_bytes,
+                                           uint32_t* inout_length,
+                                           uint32_t* inout_cursor_byte,
+                                           const MARU_TextEditCommittedEvent* commit);
+MARU_API const char* maru_getDiagnosticString(MARU_Diagnostic diagnostic);
 
 /* ----- Inline accessors and helper implementations ----- */
 

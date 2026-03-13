@@ -27,6 +27,8 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - Drop-session handles are callback-scoped. They are valid only for the duration of the DnD callback that delivered them and must not be stored.
 - Drop-session userdata persists across callbacks for the same logical drag session, but you recover it through the callback-scoped handle delivered to each callback.
 - A window handle may exist before it is ready. Operations that need the native window to exist must wait for `MARU_EVENT_WINDOW_READY` or `maru_isWindowReady(window)`.
+- `surrounding_text` is either NULL with zero offsets, or valid NUL-terminated UTF-8 with cursor/anchor byte offsets that are in-bounds and land on UTF-8 code point boundaries.
+- Text-edit event byte ranges and deletion spans are reported in UTF-8 byte units and always align to UTF-8 code point boundaries.
 - Validation builds require these window operations to target a ready window:
   - `maru_updateWindow()`
   - `maru_requestWindowFocus()`
@@ -54,6 +56,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - Any `field_mask` argument may only contain documented bits for that API.
 - Enum-like parameters must be within their documented ranges.
 - Pointers required by the API must be non-null.
+- `maru_applyTextEditCommitUtf8()` expects a valid UTF-8 buffer, UTF-8-aligned byte offsets, and buffer capacity that includes room for the trailing NUL.
 - String parameters such as titles and MIME types must be non-null. MIME types must also be non-empty.
 - Logical sizes, min sizes, max sizes, viewport sizes, and rectangle sizes must be non-negative.
 - Image sizes must be strictly positive.

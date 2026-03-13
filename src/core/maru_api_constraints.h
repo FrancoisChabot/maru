@@ -127,6 +127,130 @@ static inline bool _maru_validate_aspect_ratio(MARU_Fraction f) {
   return true;
 }
 
+static inline bool _maru_is_utf8_continuation_byte(unsigned char byte) {
+  return (byte & 0xC0u) == 0x80u;
+}
+
+static inline bool _maru_validate_utf8_sequence(const char *text,
+                                                uint32_t length_bytes) {
+  uint32_t i = 0;
+  while (i < length_bytes) {
+    const unsigned char lead = (unsigned char)text[i];
+
+    if (lead <= 0x7Fu) {
+      ++i;
+      continue;
+    }
+
+    if (lead >= 0xC2u && lead <= 0xDFu) {
+      if (i + 1u >= length_bytes ||
+          !_maru_is_utf8_continuation_byte((unsigned char)text[i + 1u])) {
+        return false;
+      }
+      i += 2u;
+      continue;
+    }
+
+    if (lead >= 0xE0u && lead <= 0xEFu) {
+      const unsigned char b1 =
+          (i + 1u < length_bytes) ? (unsigned char)text[i + 1u] : 0u;
+      const unsigned char b2 =
+          (i + 2u < length_bytes) ? (unsigned char)text[i + 2u] : 0u;
+      if (i + 2u >= length_bytes ||
+          !_maru_is_utf8_continuation_byte(b1) ||
+          !_maru_is_utf8_continuation_byte(b2)) {
+        return false;
+      }
+      if ((lead == 0xE0u && b1 < 0xA0u) ||
+          (lead == 0xEDu && b1 >= 0xA0u)) {
+        return false;
+      }
+      i += 3u;
+      continue;
+    }
+
+    if (lead >= 0xF0u && lead <= 0xF4u) {
+      const unsigned char b1 =
+          (i + 1u < length_bytes) ? (unsigned char)text[i + 1u] : 0u;
+      const unsigned char b2 =
+          (i + 2u < length_bytes) ? (unsigned char)text[i + 2u] : 0u;
+      const unsigned char b3 =
+          (i + 3u < length_bytes) ? (unsigned char)text[i + 3u] : 0u;
+      if (i + 3u >= length_bytes ||
+          !_maru_is_utf8_continuation_byte(b1) ||
+          !_maru_is_utf8_continuation_byte(b2) ||
+          !_maru_is_utf8_continuation_byte(b3)) {
+        return false;
+      }
+      if ((lead == 0xF0u && b1 < 0x90u) ||
+          (lead == 0xF4u && b1 >= 0x90u)) {
+        return false;
+      }
+      i += 4u;
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
+static inline bool _maru_validate_utf8_string(const char *text) {
+  uint32_t length = 0;
+  while (text[length] != '\0') {
+    if (length == UINT32_MAX) {
+      return false;
+    }
+    ++length;
+  }
+
+  return _maru_validate_utf8_sequence(text, length);
+}
+
+static inline bool _maru_validate_utf8_boundary(const char *text,
+                                                uint32_t byte_offset) {
+  uint32_t i = 0;
+
+  while (true) {
+    if (i == byte_offset) {
+      return true;
+    }
+    if (text[i] == '\0' || i > byte_offset) {
+      return false;
+    }
+
+    const unsigned char lead = (unsigned char)text[i];
+    if (lead <= 0x7Fu) {
+      ++i;
+    } else if (lead >= 0xC2u && lead <= 0xDFu) {
+      i += 2u;
+    } else if (lead >= 0xE0u && lead <= 0xEFu) {
+      i += 3u;
+    } else if (lead >= 0xF0u && lead <= 0xF4u) {
+      i += 4u;
+    } else {
+      return false;
+    }
+  }
+}
+
+static inline bool
+_maru_validate_surrounding_text_tuple(const char *text,
+                                      uint32_t cursor_byte,
+                                      uint32_t anchor_byte) {
+  if (text == NULL) {
+    return cursor_byte == 0u && anchor_byte == 0u;
+  }
+
+  if (!_maru_validate_utf8_string(text)) {
+    return false;
+  }
+
+  return _maru_validate_utf8_boundary(text, cursor_byte) &&
+         _maru_validate_utf8_boundary(text, anchor_byte);
+}
+
 static inline void
 _maru_validate_attributes(const MARU_Context_Base *ctx_base,
                           uint64_t field_mask,
@@ -217,7 +341,10 @@ _maru_validate_attributes(const MARU_Context_Base *ctx_base,
   }
 
   if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
-    MARU_CONSTRAINT_CHECK(attributes->surrounding_text != NULL);
+    if (attributes->surrounding_text != NULL) {
+      MARU_CONSTRAINT_CHECK(
+          _maru_validate_utf8_string(attributes->surrounding_text));
+    }
   }
 }
 
@@ -276,6 +403,10 @@ _maru_validate_createWindow(MARU_Context *context,
   _maru_validate_thread(ctx_base);
   _maru_validate_attributes(ctx_base, MARU_WINDOW_ATTR_ALL,
                             &create_info->attributes);
+  MARU_CONSTRAINT_CHECK(_maru_validate_surrounding_text_tuple(
+      create_info->attributes.surrounding_text,
+      create_info->attributes.surrounding_cursor_byte,
+      create_info->attributes.surrounding_anchor_byte));
 }
 
 static inline void _maru_validate_destroyWindow(MARU_Window *window) {
@@ -309,6 +440,26 @@ _maru_validate_updateWindow(MARU_Window *window, uint64_t field_mask,
     if (!max_unbounded_y) {
       MARU_CONSTRAINT_CHECK(new_max.y >= new_min.y);
     }
+  }
+
+  if ((field_mask & (MARU_WINDOW_ATTR_SURROUNDING_TEXT |
+                     MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE |
+                     MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE)) != 0) {
+    const char *new_text =
+        (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT)
+            ? attributes->surrounding_text
+            : win_base->attrs_requested.surrounding_text;
+    const uint32_t new_cursor =
+        (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE)
+            ? attributes->surrounding_cursor_byte
+            : win_base->attrs_requested.surrounding_cursor_byte;
+    const uint32_t new_anchor =
+        (field_mask & MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE)
+            ? attributes->surrounding_anchor_byte
+            : win_base->attrs_requested.surrounding_anchor_byte;
+
+    MARU_CONSTRAINT_CHECK(
+        _maru_validate_surrounding_text_tuple(new_text, new_cursor, new_anchor));
   }
 }
 

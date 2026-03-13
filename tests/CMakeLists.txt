@@ -2,6 +2,7 @@ add_executable(maru_tests
   unit/test_allocator.c
   unit/test_diagnostics.c
   unit/test_queue.c
+  unit/test_text.c
 )
 
 if (MARU_ENABLE_BACKEND_X11)
