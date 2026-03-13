@@ -74,9 +74,9 @@ void InputModule::render(MARU_Context* ctx, MARU_Window* window) {
                 mouse_raw_delta_ = {0, 0};
             }
 
-            const uint32_t ctx_btn_count = maru_getContextMouseButtonCount(ctx);
-            const MARU_ButtonState8* ctx_btn_states = maru_getContextMouseButtonStates(ctx);
-            const MARU_ChannelInfo* ctx_btn_channels = maru_getContextMouseButtonChannelInfo(ctx);
+            const uint32_t ctx_btn_count = maru_getMouseButtonCount(ctx);
+            const MARU_ButtonState8* ctx_btn_states = maru_getMouseButtonStates(ctx);
+            const MARU_ChannelInfo* ctx_btn_channels = maru_getMouseButtonChannelInfo(ctx);
 
             ImGui::Separator();
             ImGui::Text("Context Mouse Channels: %u", ctx_btn_count);
@@ -90,7 +90,7 @@ void InputModule::render(MARU_Context* ctx, MARU_Window* window) {
             ImGui::Text("Pressed Context Channels:");
             ImGui::BeginChild("PressedContextChannels", ImVec2(0, 80), true);
             for (uint32_t i = 0; i < ctx_btn_count; ++i) {
-                if (maru_isContextMouseButtonPressed(ctx, i)) {
+                if (maru_isMouseButtonPressed(ctx, i)) {
                     const char* name = (ctx_btn_channels && ctx_btn_channels[i].name) ? ctx_btn_channels[i].name : "(unnamed)";
                     ImGui::BulletText("%u (%s)", i, name);
                 }

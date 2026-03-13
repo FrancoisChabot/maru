@@ -43,7 +43,7 @@ MARU_Status maru_getVkExtensions_WL(const MARU_Context *context,
 MARU_Status maru_createVkSurface_WL(MARU_Window *window, VkInstance instance,
                                     MARU_VkGetInstanceProcAddrFunc vk_loader,
                                     VkSurfaceKHR *out_surface) {
-  MARU_Context *ctx = maru_getWindowContext(window);
+  const MARU_Context *ctx = maru_getWindowContext(window);
 
   PFN_vkCreateWaylandSurfaceKHR create_surface_fn =
       (PFN_vkCreateWaylandSurfaceKHR)vk_loader(instance,

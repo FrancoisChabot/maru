@@ -235,7 +235,7 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
                  case ImGuiMouseCursor_Hand: shape = MARU_CURSOR_SHAPE_HAND; break;
                  case ImGuiMouseCursor_NotAllowed: shape = MARU_CURSOR_SHAPE_NOT_ALLOWED; break;
              }
-             MARU_Context* ctx = maru_getWindowContext(bd->Window);
+             MARU_Context* ctx = const_cast<MARU_Context*>(maru_getWindowContext(bd->Window));
              MARU_CursorCreateInfo ci = {};
              ci.source = MARU_CURSOR_SOURCE_SYSTEM;
              ci.system_shape = shape;

@@ -353,8 +353,8 @@ MARU_API MARU_X11ContextHandle maru_getX11ContextHandle(MARU_Context *context) {
 MARU_API MARU_X11WindowHandle maru_getX11WindowHandle(MARU_Window *window) {
   MARU_API_VALIDATE(getX11WindowHandle, window);
   MARU_X11WindowHandle handle = {0};
-  MARU_Context *context = maru_getWindowContext(window);
-  handle.display = (Display *)maru_getContextNativeHandle_X11(context);
+  const MARU_Context *context = maru_getWindowContext(window);
+  handle.display = (Display *)maru_getContextNativeHandle_X11((MARU_Context *)context);
   handle.window = (Window)(uintptr_t)maru_getWindowNativeHandle_X11(window);
   return handle;
 }

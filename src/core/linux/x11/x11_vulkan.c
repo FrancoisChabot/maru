@@ -43,7 +43,7 @@ MARU_Status maru_getVkExtensions_X11(const MARU_Context *context,
 MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
                                      MARU_VkGetInstanceProcAddrFunc vk_loader,
                                      VkSurfaceKHR *out_surface) {
-  MARU_Context *ctx = maru_getWindowContext(window);
+  const MARU_Context *ctx = maru_getWindowContext(window);
 
   if (!vk_loader) {
     MARU_REPORT_DIAGNOSTIC(

@@ -53,7 +53,7 @@ if (maru_isKeyboardKeyPressed(context, MARU_KEY_W)) {
 ### Mouse Polling
 
 ```c
-if (maru_isContextMouseButtonPressed(context, MARU_MOUSE_DEFAULT_LEFT)) {
+if (maru_isMouseButtonPressed(context, MARU_MOUSE_DEFAULT_LEFT)) {
     // Shooting!
 }
 ```

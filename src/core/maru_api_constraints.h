@@ -751,7 +751,7 @@ static inline void _maru_validate_getWaylandContextHandle(MARU_Context *context)
 static inline void _maru_validate_getWaylandWindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  MARU_Context *context = maru_getWindowContext(window);
+  const MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_WAYLAND);
 }
@@ -764,7 +764,7 @@ static inline void _maru_validate_getX11ContextHandle(MARU_Context *context) {
 static inline void _maru_validate_getX11WindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  MARU_Context *context = maru_getWindowContext(window);
+  const MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_X11);
 }
@@ -777,7 +777,7 @@ static inline void _maru_validate_getWin32ContextHandle(MARU_Context *context) {
 static inline void _maru_validate_getWin32WindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  MARU_Context *context = maru_getWindowContext(window);
+  const MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_WINDOWS);
 }
@@ -790,7 +790,7 @@ static inline void _maru_validate_getCocoaContextHandle(MARU_Context *context) {
 static inline void _maru_validate_getCocoaWindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  MARU_Context *context = maru_getWindowContext(window);
+  const MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_COCOA);
 }
@@ -805,7 +805,7 @@ static inline void _maru_validate_getLinuxContextHandle(MARU_Context *context) {
 static inline void _maru_validate_getLinuxWindowHandle(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_window_ready(window);
-  MARU_Context *context = maru_getWindowContext(window);
+  const MARU_Context *context = maru_getWindowContext(window);
   MARU_CONSTRAINT_CHECK(context != NULL);
   const MARU_BackendType backend = maru_getContextBackend(context);
   MARU_CONSTRAINT_CHECK(backend == MARU_BACKEND_WAYLAND ||

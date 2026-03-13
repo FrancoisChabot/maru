@@ -263,8 +263,8 @@ maru_getWin32ContextHandle(MARU_Context *context) {
 MARU_API MARU_Win32WindowHandle maru_getWin32WindowHandle(MARU_Window *window) {
   MARU_API_VALIDATE(getWin32WindowHandle, window);
   MARU_Win32WindowHandle handle = {0};
-  MARU_Context *context = maru_getWindowContext(window);
-  handle.instance = (HINSTANCE)_maru_getContextNativeHandle_Windows(context);
+  const MARU_Context *context = maru_getWindowContext(window);
+  handle.instance = (HINSTANCE)_maru_getContextNativeHandle_Windows((MARU_Context *)context);
   handle.hwnd = (HWND)_maru_getWindowNativeHandle_Windows(window);
   return handle;
 }

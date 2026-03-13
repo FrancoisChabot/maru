@@ -55,7 +55,7 @@ public:
     MARU_Status setVisible(bool enabled);
     MARU_Status setMinimized(bool enabled);
     MARU_Status setCursorMode(MARU_CursorMode mode);
-    MARU_Status setCursor(MARU_Cursor* cursor);
+    MARU_Status setCursor(const MARU_Cursor* cursor);
 
 private:
     explicit Window(MARU_Window* handle) : m_handle(handle) {}

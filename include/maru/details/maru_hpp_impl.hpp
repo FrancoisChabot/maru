@@ -261,7 +261,7 @@ inline MARU_Status Window::setCursorMode(MARU_CursorMode mode) {
     return update(MARU_WINDOW_ATTR_CURSOR_MODE, attrs);
 }
 
-inline MARU_Status Window::setCursor(MARU_Cursor* cursor) {
+inline MARU_Status Window::setCursor(const MARU_Cursor* cursor) {
     MARU_WindowAttributes attrs = {};
     attrs.cursor = cursor;
     return update(MARU_WINDOW_ATTR_CURSOR, attrs);

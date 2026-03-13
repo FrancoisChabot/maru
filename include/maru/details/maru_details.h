@@ -152,18 +152,18 @@ static inline bool maru_isContextReady(const MARU_Context* context) {
   return (((const MARU_ContextPrefix*)context)->flags & MARU_CONTEXT_STATE_READY) != 0;
 }
 
-static inline uint32_t maru_getContextMouseButtonCount(const MARU_Context* context) {
+static inline uint32_t maru_getMouseButtonCount(const MARU_Context* context) {
   MARU_ASSUME(context != NULL);
   return ((const MARU_ContextPrefix*)context)->mouse_button_count;
 }
 
-static inline const MARU_ButtonState8* maru_getContextMouseButtonStates(
+static inline const MARU_ButtonState8* maru_getMouseButtonStates(
     const MARU_Context* context) {
   MARU_ASSUME(context != NULL);
   return ((const MARU_ContextPrefix*)context)->mouse_button_state;
 }
 
-static inline const MARU_ChannelInfo* maru_getContextMouseButtonChannelInfo(
+static inline const MARU_ChannelInfo* maru_getMouseButtonChannelInfo(
     const MARU_Context* context) {
   MARU_ASSUME(context != NULL);
   return ((const MARU_ContextPrefix*)context)->mouse_button_channels;
@@ -179,12 +179,12 @@ static inline const MARU_ButtonState8* maru_getKeyboardKeyStates(const MARU_Cont
   return ((const MARU_ContextPrefix*)context)->keyboard_state;
 }
 
-static inline bool maru_isContextMouseButtonPressed(const MARU_Context* context,
-                                                    uint32_t button_id) {
+static inline bool maru_isMouseButtonPressed(const MARU_Context* context,
+                                             uint32_t button_id) {
   MARU_ASSUME(context != NULL);
-  uint32_t count = maru_getContextMouseButtonCount(context);
+  uint32_t count = maru_getMouseButtonCount(context);
   MARU_ASSUME(button_id < count);
-  const MARU_ButtonState8* states = maru_getContextMouseButtonStates(context);
+  const MARU_ButtonState8* states = maru_getMouseButtonStates(context);
   return states ? (states[button_id] == MARU_BUTTON_STATE_PRESSED) : false;
 }
 
@@ -223,7 +223,7 @@ static inline void maru_setMonitorUserdata(MARU_Monitor* monitor, void* userdata
   ((MARU_MonitorPrefix*)monitor)->userdata = userdata;
 }
 
-static inline MARU_Context* maru_getMonitorContext(const MARU_Monitor* monitor) {
+static inline const MARU_Context* maru_getMonitorContext(const MARU_Monitor* monitor) {
   MARU_ASSUME(monitor != NULL);
   return ((const MARU_MonitorPrefix*)monitor)->context;
 }
@@ -278,7 +278,7 @@ static inline void maru_setWindowUserdata(MARU_Window* window, void* userdata) {
   ((MARU_WindowPrefix*)window)->userdata = userdata;
 }
 
-static inline MARU_Context* maru_getWindowContext(const MARU_Window* window) {
+static inline const MARU_Context* maru_getWindowContext(const MARU_Window* window) {
   MARU_ASSUME(window != NULL);
   return ((const MARU_WindowPrefix*)window)->context;
 }
@@ -358,7 +358,7 @@ static inline void maru_setControllerUserdata(MARU_Controller* controller, void*
   ((MARU_ControllerPrefix*)controller)->userdata = userdata;
 }
 
-static inline MARU_Context* maru_getControllerContext(const MARU_Controller* controller) {
+static inline const MARU_Context* maru_getControllerContext(const MARU_Controller* controller) {
   MARU_ASSUME(controller != NULL);
   return ((const MARU_ControllerPrefix*)controller)->context;
 }
@@ -575,7 +575,7 @@ static inline MARU_Status maru_setWindowCursorMode(MARU_Window* window, MARU_Cur
   return maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR_MODE, &attrs);
 }
 
-static inline MARU_Status maru_setWindowCursor(MARU_Window* window, MARU_Cursor* cursor) {
+static inline MARU_Status maru_setWindowCursor(MARU_Window* window, const MARU_Cursor* cursor) {
   MARU_ASSUME(window != NULL);
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
@@ -583,7 +583,7 @@ static inline MARU_Status maru_setWindowCursor(MARU_Window* window, MARU_Cursor*
   return maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR, &attrs);
 }
 
-static inline MARU_Status maru_setWindowMonitor(MARU_Window* window, MARU_Monitor* monitor) {
+static inline MARU_Status maru_setWindowMonitor(MARU_Window* window, const MARU_Monitor* monitor) {
   MARU_ASSUME(window != NULL);
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
@@ -665,7 +665,7 @@ static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool mini
   return maru_updateWindow(window, MARU_WINDOW_ATTR_MINIMIZED, &attrs);
 }
 
-static inline MARU_Status maru_setWindowIcon(MARU_Window* window, MARU_Image* icon) {
+static inline MARU_Status maru_setWindowIcon(MARU_Window* window, const MARU_Image* icon) {
   MARU_ASSUME(window != NULL);
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));

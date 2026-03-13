@@ -930,17 +930,17 @@ static inline void maru_setContextUserdata(MARU_Context* context, void* userdata
 static inline bool maru_isContextLost(const MARU_Context* context);
 static inline bool maru_isContextReady(const MARU_Context* context);
 static inline MARU_BackendType maru_getContextBackend(const MARU_Context* context);
-static inline uint32_t maru_getContextMouseButtonCount(const MARU_Context* context);
+static inline uint32_t maru_getMouseButtonCount(const MARU_Context* context);
 /*
  * The first `MARU_MOUSE_DEFAULT_COUNT` entries are always the default mouse
  * buttons in `MARU_MouseDefaultButton` order.
  */
-static inline const MARU_ButtonState8* maru_getContextMouseButtonStates(
+static inline const MARU_ButtonState8* maru_getMouseButtonStates(
     const MARU_Context* context);
-static inline const MARU_ChannelInfo* maru_getContextMouseButtonChannelInfo(
+static inline const MARU_ChannelInfo* maru_getMouseButtonChannelInfo(
     const MARU_Context* context);
-static inline bool maru_isContextMouseButtonPressed(const MARU_Context* context,
-                                                    uint32_t button_id);
+static inline bool maru_isMouseButtonPressed(const MARU_Context* context,
+                                             uint32_t button_id);
 
 typedef struct MARU_ContextAttributes {
   MARU_DiagnosticCallback diagnostic_cb;
@@ -1095,7 +1095,7 @@ typedef struct MARU_MonitorList {
 
 static inline void* maru_getMonitorUserdata(const MARU_Monitor* monitor);
 static inline void maru_setMonitorUserdata(MARU_Monitor* monitor, void* userdata);
-static inline MARU_Context* maru_getMonitorContext(const MARU_Monitor* monitor);
+static inline const MARU_Context* maru_getMonitorContext(const MARU_Monitor* monitor);
 static inline bool maru_isMonitorLost(const MARU_Monitor* monitor);
 static inline const char* maru_getMonitorName(const MARU_Monitor* monitor);
 static inline MARU_Vec2Mm maru_getMonitorPhysicalSize(const MARU_Monitor* monitor);
@@ -1141,7 +1141,7 @@ typedef enum MARU_TextInputType {
 
 static inline void* maru_getWindowUserdata(const MARU_Window* window);
 static inline void maru_setWindowUserdata(MARU_Window* window, void* userdata);
-static inline MARU_Context* maru_getWindowContext(const MARU_Window* window);
+static inline const MARU_Context* maru_getWindowContext(const MARU_Window* window);
 static inline MARU_WindowId maru_getWindowId(const MARU_Window* window);
 static inline const char* maru_getWindowTitle(const MARU_Window* window);
 static inline bool maru_isWindowReady(const MARU_Window* window);
@@ -1373,7 +1373,7 @@ typedef struct MARU_ControllerList {
 
 static inline void* maru_getControllerUserdata(const MARU_Controller* controller);
 static inline void maru_setControllerUserdata(MARU_Controller* controller, void* userdata);
-static inline MARU_Context* maru_getControllerContext(const MARU_Controller* controller);
+static inline const MARU_Context* maru_getControllerContext(const MARU_Controller* controller);
 static inline bool maru_isControllerLost(const MARU_Controller* controller);
 static inline const char* maru_getControllerName(const MARU_Controller* controller);
 static inline uint16_t maru_getControllerVendorId(const MARU_Controller* controller);
@@ -1578,8 +1578,8 @@ static inline MARU_Status maru_setWindowDipPosition(MARU_Window* window, MARU_Ve
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowMaximized(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowCursorMode(MARU_Window* window, MARU_CursorMode mode);
-static inline MARU_Status maru_setWindowCursor(MARU_Window* window, MARU_Cursor* cursor);
-static inline MARU_Status maru_setWindowMonitor(MARU_Window* window, MARU_Monitor* monitor);
+static inline MARU_Status maru_setWindowCursor(MARU_Window* window, const MARU_Cursor* cursor);
+static inline MARU_Status maru_setWindowMonitor(MARU_Window* window, const MARU_Monitor* monitor);
 static inline MARU_Status maru_setWindowDipMinSize(MARU_Window* window, MARU_Vec2Dip dip_min_size);
 static inline MARU_Status maru_setWindowDipMaxSize(MARU_Window* window, MARU_Vec2Dip dip_max_size);
 static inline MARU_Status maru_setWindowAspectRatio(MARU_Window* window,
@@ -1592,7 +1592,7 @@ static inline MARU_Status maru_setWindowSurroundingText(MARU_Window* window, con
 static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized);
-static inline MARU_Status maru_setWindowIcon(MARU_Window* window, MARU_Image* icon);
+static inline MARU_Status maru_setWindowIcon(MARU_Window* window, const MARU_Image* icon);
 /*
  * Applies a byte-based UTF-8 IME commit to a caller-owned buffer in place.
  *

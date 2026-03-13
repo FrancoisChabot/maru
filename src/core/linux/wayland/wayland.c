@@ -287,8 +287,8 @@ MARU_API MARU_WaylandWindowHandle
 maru_getWaylandWindowHandle(MARU_Window *window) {
   MARU_API_VALIDATE(getWaylandWindowHandle, window);
   MARU_WaylandWindowHandle handle = {0};
-  MARU_Context *context = maru_getWindowContext(window);
-  handle.display = (wl_display *)maru_getContextNativeHandle_WL(context);
+  const MARU_Context *context = maru_getWindowContext(window);
+  handle.display = (wl_display *)maru_getContextNativeHandle_WL((MARU_Context *)context);
   handle.surface = (wl_surface *)maru_getWindowNativeHandle_WL(window);
   return handle;
 }

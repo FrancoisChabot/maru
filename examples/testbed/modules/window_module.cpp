@@ -423,7 +423,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
                     MARU_ImageCreateInfo img_info = {};
                     img_info.px_size = {32, 32};
                     img_info.pixels = pixels;
-                    maru_createImage(maru_getWindowContext(target), &img_info, &test_icon_);
+                    maru_createImage(const_cast<MARU_Context*>(maru_getWindowContext(target)), &img_info, &test_icon_);
                 }
 
                 MARU_WindowAttributes attrs = {};
