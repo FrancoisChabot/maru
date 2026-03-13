@@ -44,7 +44,7 @@ TEST_CASE("DesktopIntegration.CrossThreadPostEventWithoutWindow") {
 
   std::thread poster([&]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    CHECK(maru_postEvent(ctx, test_type, nullptr, user_evt));
+    CHECK(maru_postEvent(ctx, test_type, user_evt));
   });
 
   auto started = Clock::now();

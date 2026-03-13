@@ -27,7 +27,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - Drop-session handles are callback-scoped. They are valid only for the duration of the DnD callback that delivered them and must not be stored.
 - Drop-session userdata persists across callbacks for the same logical drag session, but you recover it through the callback-scoped handle delivered to each callback.
 - A window handle may exist before it is ready. Operations that need the native window to exist must wait for `MARU_EVENT_WINDOW_READY` or `maru_isWindowReady(window)`.
-- Validation builds require these window operations to target a ready, non-lost window:
+- Validation builds require these window operations to target a ready window:
   - `maru_updateWindow()`
   - `maru_requestWindowFocus()`
   - `maru_requestWindowFrame()`
@@ -46,7 +46,8 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - Handles passed together must belong to the same `MARU_Context` when the API logically ties them together.
 - In window attributes, `monitor`, `cursor`, and `icon` must belong to the same context as the target window.
 - Custom cursor frame images must belong to the same context as the cursor being created.
-- `maru_postEvent()` may only target a window owned by the supplied context.
+- `maru_postEvent()` posts context-scoped user events only. Callbacks for those
+  events always receive `window == NULL`.
 
 ## Value And Mask Rules
 
@@ -85,7 +86,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 ### Native Handles And Vulkan
 
 - Native context handle getters require a context whose backend matches the getter.
-- Native window handle getters require a matching backend and a ready, non-lost window.
+- Native window handle getters require a matching backend and a ready window.
 - `maru_createVkSurface()` requires non-null `window`, `instance`, `vk_loader`, and `out_surface`, and must be called from the owner thread.
 
 If you are unsure whether a call is safe before the window is ready, assume it is not unless the API is documented as a direct-return cached state accessor.

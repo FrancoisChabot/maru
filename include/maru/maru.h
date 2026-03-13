@@ -826,7 +826,7 @@ MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 64,
  * from maru_pumpEvents().
  *
  * `window` is NULL for context-scoped events such as monitor/controller
- * changes, and for posted user events that do not target a window.
+ * changes, and for user events posted via maru_postEvent().
  *
  * Any borrowed pointer reachable through `evt` is only guaranteed to remain
  * valid for the duration of the callback unless a specific event says
@@ -865,11 +865,13 @@ MARU_API MARU_Status maru_pumpEvents(MARU_Context* context,
  *
  * This will also implicitly wake the context.
  *
+ * Posted user events are always dispatched as context-scoped events, so the
+ * callback receives `window == NULL`.
+ *
  * Returns true if the event was successfully queued, false otherwise.
  */
 MARU_API bool maru_postEvent(MARU_Context* context,
                              MARU_EventId type,
-                             MARU_Window* window,
                              MARU_UserDefinedEvent evt);
 
 /*
@@ -1432,7 +1434,7 @@ typedef MARU_VulkanVoidFunction (*MARU_VkGetInstanceProcAddrFunc)(VkInstance ins
  */
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context* context,
                                           MARU_StringList* out_list);
-/* Requires a ready, non-lost window. */
+/* Requires a ready window. */
 MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
                                           VkInstance instance,
                                           MARU_VkGetInstanceProcAddrFunc vk_loader,

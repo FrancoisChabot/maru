@@ -401,8 +401,8 @@ bool _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
 }
 
 MARU_API bool maru_postEvent(MARU_Context *context, MARU_EventId type,
-                             MARU_Window *window, MARU_UserDefinedEvent user_evt) {
-  MARU_API_VALIDATE(postEvent, context, type, window, user_evt);
+                             MARU_UserDefinedEvent user_evt) {
+  MARU_API_VALIDATE(postEvent, context, type, user_evt);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   if (maru_isContextLost(context)) {
     return false;
@@ -410,7 +410,7 @@ MARU_API bool maru_postEvent(MARU_Context *context, MARU_EventId type,
   MARU_Event evt;
   evt.user = user_evt;
 
-  return _maru_post_event_internal(ctx_base, type, window, &evt);
+  return _maru_post_event_internal(ctx_base, type, NULL, &evt);
 }
 
 

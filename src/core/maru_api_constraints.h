@@ -545,13 +545,9 @@ static inline void _maru_validate_wakeContext(MARU_Context *context) {
 
 static inline void _maru_validate_postEvent(MARU_Context *context,
                                             MARU_EventId type,
-                                            MARU_Window *window,
                                             MARU_UserDefinedEvent evt) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_isUserEventId(type));
-  if (window != NULL) {
-    MARU_CONSTRAINT_CHECK(maru_getWindowContext(window) == context);
-  }
   (void)type;
   (void)evt;
 }
@@ -765,8 +761,10 @@ _maru_validate_live_setMonitorMode(MARU_Monitor *monitor,
   (void)mode;
   _maru_validate_monitor_not_lost(monitor);
 }
-static inline void _maru_validate_live_createVkSurface(    MARU_Window *window, VkInstance instance,
-    MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
+static inline void
+_maru_validate_live_createVkSurface(MARU_Window *window, VkInstance instance,
+                                    MARU_VkGetInstanceProcAddrFunc vk_loader,
+                                    VkSurfaceKHR *out_surface) {
   (void)instance;
   (void)vk_loader;
   (void)out_surface;

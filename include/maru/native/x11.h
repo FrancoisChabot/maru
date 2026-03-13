@@ -17,6 +17,12 @@ typedef unsigned long Window;
 typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 
+/*
+ * Borrowed native handles owned by Maru.
+ *
+ * Do not close or destroy these objects yourself. Reacquire them if the
+ * owning Maru handle is destroyed and recreated.
+ */
 typedef struct MARU_X11ContextHandle {
   Display *display;
 } MARU_X11ContextHandle;
@@ -26,10 +32,32 @@ typedef struct MARU_X11WindowHandle {
   Window window;
 } MARU_X11WindowHandle;
 
+/*
+ * Returns the X11 Display for an X11-backed context.
+ *
+ * Requires `context` to use MARU_BACKEND_X11.
+ *
+ * The returned pointers are borrowed and remain owned by Maru.
+ */
 MARU_API MARU_X11ContextHandle
 maru_getX11ContextHandle(MARU_Context *context);
+/*
+ * Returns the X11 Display/Window pair for a ready X11 window.
+ *
+ * Requires `window` to belong to a MARU_BACKEND_X11 context and to be ready
+ * for native use.
+ *
+ * The returned handles are borrowed and remain owned by Maru.
+ */
 MARU_API MARU_X11WindowHandle
 maru_getX11WindowHandle(MARU_Window *window);
+/*
+ * Reports whether the current X11 connection/compositor supports Maru's
+ * extended frame-sync path.
+ *
+ * This query is only meaningful for X11-backed contexts. It returns false for
+ * NULL or non-X11 contexts.
+ */
 MARU_API bool maru_x11SupportsExtendedFrameSync(MARU_Context *context);
 
 #ifdef __cplusplus
