@@ -64,7 +64,7 @@ private:
         char title[256] = "";
         char app_id[128] = "org.birdsafe.maru.testbed";
         int size[2] = {640, 480};
-        bool decorated = true;
+        bool has_decorations = true;
         bool fullscreen = false;
         bool maximized = false;
         bool resizable = true;

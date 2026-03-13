@@ -511,7 +511,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   win->base.pub.current_cursor = (MARU_Cursor *)create_info->attributes.cursor;
   win->base.pub.title = NULL; // Updated when title is changed or requested
 
-  if (create_info->decorated) {
+  if (create_info->has_decorations) {
       win->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
   }
   if (create_info->attributes.resizable) {
@@ -526,7 +526,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   }
 
   DWORD style = WS_OVERLAPPEDWINDOW;
-  if (!create_info->decorated) {
+  if (!create_info->has_decorations) {
       style = WS_POPUP;
   } else if (!create_info->attributes.resizable) {
       style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);

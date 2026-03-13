@@ -160,7 +160,7 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
     win_info.attributes.resizable = secondary_create_.resizable;
     win_info.app_id = secondary_create_.app_id[0] != '\0' ? secondary_create_.app_id : nullptr;
     win_info.content_type = (MARU_ContentType)secondary_create_.content_type;
-    win_info.decorated = secondary_create_.decorated;
+    win_info.has_decorations = secondary_create_.has_decorations;
 
     MARU_Window* created_window = nullptr;
     if (maru_createWindow(ctx, &win_info, &created_window) != MARU_SUCCESS) {
@@ -318,7 +318,7 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
         ImGui::InputText("Create Title", secondary_create_.title, sizeof(secondary_create_.title));
         ImGui::InputText("Create App ID", secondary_create_.app_id, sizeof(secondary_create_.app_id));
         ImGui::InputInt2("Create Dip Size", secondary_create_.size);
-        ImGui::Checkbox("Create Decorated", &secondary_create_.decorated);
+        ImGui::Checkbox("Create Decorations", &secondary_create_.has_decorations);
         ImGui::Checkbox("Create Maximized", &secondary_create_.maximized);
         ImGui::SameLine();
         ImGui::Checkbox("Create Fullscreen", &secondary_create_.fullscreen);

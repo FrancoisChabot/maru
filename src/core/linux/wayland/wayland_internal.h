@@ -160,7 +160,7 @@ typedef struct MARU_Context_WL {
     } opt;
   } dlib;
 
-  MARU_WaylandDecorationMode decor_mode;
+  MARU_WaylandDecorationStrategy decor_mode;
   struct libdecor *libdecor_context;
 
   struct {
@@ -237,7 +237,7 @@ typedef struct MARU_Window_WL {
     bool has_delete;
   } text_input_pending;
   MARU_Scalar scale;
-  MARU_WaylandDecorationMode decor_mode;
+  MARU_WaylandDecorationStrategy decor_mode;
   MARU_Monitor **monitors;
   uint32_t monitor_count;
   uint32_t monitor_capacity;
@@ -512,7 +512,7 @@ void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
                                         const MARU_Window_WL *window);
 extern const struct zwp_relative_pointer_v1_listener _maru_wayland_relative_pointer_listener;
 extern const struct zwp_locked_pointer_v1_listener _maru_wayland_locked_pointer_listener;
-MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(MARU_Context_WL *ctx);
+MARU_WaylandDecorationStrategy _maru_wayland_get_decoration_strategy(MARU_Context_WL *ctx);
 
 bool _maru_wayland_create_ssd_decoration(MARU_Window_WL *window);
 void _maru_wayland_destroy_ssd_decoration(MARU_Window_WL *window);

@@ -404,7 +404,8 @@ int main(int, char**) {
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
   create_info.attributes.diagnostic_cb = handle_maru_diagnostic;
   create_info.backend = MARU_BACKEND_X11;
-  create_info.tuning.wayland.decoration_mode = MARU_WAYLAND_DECORATION_MODE_CSD;
+  create_info.tuning.wayland.decoration_strategy =
+      MARU_WAYLAND_DECORATION_STRATEGY_CSD;
 
   MARU_Context* context = NULL;
   if (maru_createContext(&create_info, &context) != MARU_SUCCESS) {

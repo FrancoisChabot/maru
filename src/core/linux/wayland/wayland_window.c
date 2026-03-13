@@ -203,7 +203,7 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
     size_changed = (attrs->dip_size.x != old_width || attrs->dip_size.y != old_height);
   }
 
-  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
     maru_libdecor_frame_set_min_content_size(ctx, window->libdecor.frame, min_w, min_h);
     maru_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame, max_w, max_h);
 
@@ -225,7 +225,7 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
 
   _maru_wayland_update_opaque_region(window);
 
-  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame &&
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame &&
       ((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) == 0) &&
       ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0)) {
     struct libdecor_state *state = maru_libdecor_state_new(
@@ -593,7 +593,7 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
     maru_xdg_toplevel_set_minimized(ctx, window->xdg.toplevel);
   }
 
-  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_SSD) {
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_SSD) {
     _maru_wayland_create_ssd_decoration(window);
   }
 
@@ -623,9 +623,9 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->scale = (MARU_Scalar)1.0;
 
   window->decor_mode = ctx->decor_mode;
-  if (!create_info->decorated &&
-      window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
-    window->decor_mode = MARU_WAYLAND_DECORATION_MODE_NONE;
+  if (!create_info->has_decorations &&
+      window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) {
+    window->decor_mode = MARU_WAYLAND_DECORATION_STRATEGY_NONE;
   }
   window->pending_resized_event = true;
   window->preferred_buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
@@ -647,7 +647,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   if (window->base.attrs_effective.resizable) {
     window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
   }
-  if (create_info->decorated) {
+  if (create_info->has_decorations) {
     window->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
   }
   
@@ -704,7 +704,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
     _maru_wayland_apply_viewport_size(window);
   }
 
-  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) {
     if (!_maru_wayland_create_libdecor_frame(window, create_info)) {
         goto cleanup_surface;
     }
@@ -746,7 +746,7 @@ cleanup_surface:
     maru_wl_callback_destroy(ctx, window->wl.frame_callback);
     window->wl.frame_callback = NULL;
   }
-  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) {
     _maru_wayland_destroy_libdecor_frame(window);
   } else {
     _maru_wayland_destroy_ssd_decoration(window);
@@ -881,7 +881,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           }
       }
 
-      if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+      if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) {
           _maru_wayland_libdecor_set_title(window, requested->title ? requested->title : "");
       } else if (window->xdg.toplevel) {
           maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel,
@@ -895,14 +895,14 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       effective->fullscreen = attributes->fullscreen;
       if (requested->fullscreen) {
           window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
               maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, NULL);
           } else if (window->xdg.toplevel) {
               maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, NULL);
           }
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
               maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
           } else if (window->xdg.toplevel) {
               maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
@@ -945,7 +945,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
           }
           window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
               maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
           } else if (window->xdg.toplevel) {
               maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
@@ -955,7 +955,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
           }
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
               maru_libdecor_frame_unset_maximized(ctx, window->libdecor.frame);
           } else if (window->xdg.toplevel) {
               maru_xdg_toplevel_unset_maximized(ctx, window->xdg.toplevel);
@@ -994,7 +994,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
               output = monitor->output;
           }
 
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
               maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, output);
           } else if (window->xdg.toplevel) {
               maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
@@ -1117,7 +1117,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
           }
           struct xdg_toplevel *toplevel = window->xdg.toplevel;
-          if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+          if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
               toplevel = maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
           }
           if (toplevel) {
@@ -1147,7 +1147,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
           }
           struct xdg_toplevel *toplevel = window->xdg.toplevel;
-          if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+          if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
               toplevel = maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
           }
           if (toplevel) {
@@ -1307,7 +1307,7 @@ MARU_Status maru_destroyWindow_WL(MARU_Window *window_handle) {
     window->wl.frame_callback = NULL;
   }
 
-  if (window->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+  if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) {
     _maru_wayland_destroy_libdecor_frame(window);
   } else {
     _maru_wayland_destroy_ssd_decoration(window);

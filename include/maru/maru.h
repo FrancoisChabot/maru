@@ -241,12 +241,12 @@ typedef struct MARU_WindowGeometry {
 
 /* ----- Tuning ----- */
 
-typedef enum MARU_WaylandDecorationMode {
-  MARU_WAYLAND_DECORATION_MODE_AUTO = 0,
-  MARU_WAYLAND_DECORATION_MODE_SSD = 1,
-  MARU_WAYLAND_DECORATION_MODE_CSD = 2,
-  MARU_WAYLAND_DECORATION_MODE_NONE = 3,
-} MARU_WaylandDecorationMode;
+typedef enum MARU_WaylandDecorationStrategy {
+  MARU_WAYLAND_DECORATION_STRATEGY_AUTO = 0,
+  MARU_WAYLAND_DECORATION_STRATEGY_SSD = 1,
+  MARU_WAYLAND_DECORATION_STRATEGY_CSD = 2,
+  MARU_WAYLAND_DECORATION_STRATEGY_NONE = 3,
+} MARU_WaylandDecorationStrategy;
 
 typedef enum MARU_CursorPolicy {
   MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK = 0,
@@ -267,7 +267,11 @@ typedef struct MARU_ContextTuning {
   MARU_CursorPolicy cursor_policy;
 
   struct {
-    MARU_WaylandDecorationMode decoration_mode;
+    /*
+     * Selects which Wayland decoration mechanism Maru should use for windows
+     * that opt into decorations.
+     */
+    MARU_WaylandDecorationStrategy decoration_strategy;
   } wayland;
 
   struct {
@@ -280,7 +284,7 @@ typedef struct MARU_ContextTuning {
   {                                                                            \
       .user_event_queue_size = 256,                                            \
       .cursor_policy = MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK,           \
-      .wayland = {.decoration_mode = MARU_WAYLAND_DECORATION_MODE_AUTO},       \
+      .wayland = {.decoration_strategy = MARU_WAYLAND_DECORATION_STRATEGY_AUTO}, \
       .x11 = {.idle_poll_interval_ms = 250, .selection_query_timeout_ms = 50}, \
   }
 
@@ -920,6 +924,15 @@ typedef struct MARU_TextEditNavigationEvent {
 typedef struct MARU_UserDefinedEvent {
   union {
     void* userdata;
+    /*
+     * Raw byte payload with the same starting address as `userdata`.
+     *
+     * Because this storage shares a union with `void*`, the union's alignment
+     * is at least the platform's default pointer alignment. Code that
+     * interprets `raw_payload` as some other type must still ensure that the
+     * target type fits in 64 bytes and does not require stricter alignment than
+     * `void*`.
+     */
     char raw_payload[64];
   };
 } MARU_UserDefinedEvent;
@@ -1391,11 +1404,16 @@ typedef struct MARU_WindowCreateInfo {
   const char* app_id;
   MARU_ContentType content_type;
 
-  /* 
-   * Decoration mode cannot be changed after creation in all backends, so it's
-   * a creation-time only property.
+  /*
+   * Controls whether this window should have decorations at all.
+   *
+   * This is distinct from Wayland's context-level decoration strategy, which
+   * chooses how Maru realizes decorated windows on that backend.
+   *
+   * Decoration presence cannot be changed after creation in all backends, so
+   * this is a creation-time only property.
    */
-  bool decorated;
+  bool has_decorations;
   void* userdata;
 } MARU_WindowCreateInfo;
 
@@ -1428,7 +1446,7 @@ typedef struct MARU_WindowCreateInfo {
                   .surrounding_anchor_byte = 0},                \
    .app_id = NULL,                                              \
    .content_type = MARU_CONTENT_TYPE_NONE,                      \
-   .decorated = true,                                           \
+   .has_decorations = true,                                     \
    .userdata = NULL}
 
 

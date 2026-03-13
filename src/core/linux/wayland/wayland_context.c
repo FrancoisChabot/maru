@@ -492,22 +492,24 @@ static const struct wl_registry_listener _registry_listener = {
     .global_remove = _registry_handle_global_remove,
 };
 
-MARU_WaylandDecorationMode _maru_wayland_get_decoration_mode(MARU_Context_WL *ctx) {
-  MARU_WaylandDecorationMode mode = ctx->base.tuning.wayland.decoration_mode;
+MARU_WaylandDecorationStrategy _maru_wayland_get_decoration_strategy(
+    MARU_Context_WL *ctx) {
+  MARU_WaylandDecorationStrategy mode =
+      ctx->base.tuning.wayland.decoration_strategy;
 
-  if (mode != MARU_WAYLAND_DECORATION_MODE_AUTO) {
+  if (mode != MARU_WAYLAND_DECORATION_STRATEGY_AUTO) {
     return mode;
   }
 
   if (ctx->protocols.opt.zxdg_decoration_manager_v1) {
-    return MARU_WAYLAND_DECORATION_MODE_SSD;
+    return MARU_WAYLAND_DECORATION_STRATEGY_SSD;
   }
 
   if (ctx->dlib.opt.decor.base.available) {
-    return MARU_WAYLAND_DECORATION_MODE_CSD;
+    return MARU_WAYLAND_DECORATION_STRATEGY_CSD;
   }
 
-  return MARU_WAYLAND_DECORATION_MODE_NONE;
+  return MARU_WAYLAND_DECORATION_STRATEGY_NONE;
 }
 
 MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
@@ -630,11 +632,11 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     goto cleanup_registry;
   }
 
-  ctx->decor_mode = _maru_wayland_get_decoration_mode(ctx);
+  ctx->decor_mode = _maru_wayland_get_decoration_strategy(ctx);
 
-  if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+  if (ctx->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) {
     if (!_maru_wayland_init_libdecor(ctx)) {
-      ctx->decor_mode = MARU_WAYLAND_DECORATION_MODE_NONE;
+      ctx->decor_mode = MARU_WAYLAND_DECORATION_STRATEGY_NONE;
     }
   }
 
@@ -699,7 +701,7 @@ void maru_destroyContext_WL(MARU_Context *context) {
   _maru_cleanup_context_base(&ctx->base);
   _maru_wayland_dataexchange_destroy(ctx);
 
-  if (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) {
+  if (ctx->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) {
     _maru_wayland_cleanup_libdecor(ctx);
   }
 
@@ -821,7 +823,7 @@ static bool _maru_wayland_pump_prepare_pollfds(MARU_Context_WL *ctx,
   step->display_fd = maru_wl_display_get_fd(ctx, ctx->wl.display);
   step->libdecor_fd = -1;
   step->have_libdecor_fd =
-      (ctx->decor_mode == MARU_WAYLAND_DECORATION_MODE_CSD) &&
+      (ctx->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) &&
       (ctx->libdecor_context != NULL);
   if (step->have_libdecor_fd) {
     step->libdecor_fd = maru_libdecor_get_fd(ctx, ctx->libdecor_context);

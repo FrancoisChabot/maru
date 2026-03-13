@@ -191,7 +191,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     if (win->base.attrs_effective.resizable) {
       win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
     }
-    if (create_info->decorated) {
+    if (create_info->has_decorations) {
       win->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
     }
     if (create_info->attributes.title) {

@@ -813,7 +813,7 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
   _maru_register_window(&ctx->base, (MARU_Window *)win);
 
   win->base.pub.flags = MARU_WINDOW_STATE_READY;
-  if (create_info->decorated) {
+  if (create_info->has_decorations) {
     win->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
   }
   _maru_x11_apply_decorations_local(ctx, win);

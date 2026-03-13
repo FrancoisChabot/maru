@@ -44,7 +44,7 @@ Use `maru_createWindow` to create a window. Like contexts, windows use a "Create
 MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
 window_info.attributes.title = "My App";
 window_info.attributes.dip_size = (MARU_Vec2Dip){1280, 720};
-window_info.decorated = true;
+window_info.has_decorations = true;
 
 MARU_Window *window = NULL;
 maru_createWindow(context, &window_info, &window);

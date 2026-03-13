@@ -29,6 +29,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - A window handle may exist before it is ready. Operations that need the native window to exist must wait for `MARU_EVENT_WINDOW_READY` or `maru_isWindowReady(window)`.
 - `surrounding_text` is either NULL with zero offsets, or valid NUL-terminated UTF-8 with cursor/anchor byte offsets that are in-bounds and land on UTF-8 code point boundaries.
 - Text-edit event byte ranges and deletion spans are reported in UTF-8 byte units and always align to UTF-8 code point boundaries.
+- `MARU_UserDefinedEvent.raw_payload` starts at the same address as `userdata` and therefore has at least pointer alignment. If you reinterpret it as some other type, that type must fit in 64 bytes and must not require stricter alignment than `void*`.
 - Validation builds require these window operations to target a ready window:
   - `maru_updateWindow()`
   - `maru_requestWindowFocus()`
