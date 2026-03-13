@@ -244,6 +244,9 @@ zero-copy retention semantics.
 *   Context-lifecycle functions returning `void` (e.g., `maru_destroyContext`) MUST be called from the owner thread.
 *   Standalone utility objects like `MARU_Queue` are owned by the thread that created them. All `maru_*Queue` APIs (except where noted) must be called from that creator thread.
 *   `maru_postEvent()` and `maru_wakeContext()` are globally thread-safe and return a `bool` to signal success/failure.
+    Setting `MARU_ContextTuning.user_event_queue_size` to `0` disables only
+    application-posted user events for that context. It does not disable
+    backend/internal deferred event processing.
 *   `maru_*retain()` and `maru_*release()` can be safely called from anywhere at any time. (The safety is provided via atomic operations, not locks).
 *   `maru_getVersion()` is globally thread-safe.
 
@@ -253,6 +256,11 @@ zero-copy retention semantics.
 Because hardware is physically volatile, and your threads are not. In a multi-threaded engine, your simulation thread might be reading from a `MARU_Controller*` at the exact millisecond the user unplugs it. If Maru automatically freed that memory, you'd segfault.
 
 Instead, you `retain()` a reference. If the device is disconnected, Maru flags it as "lost," but the pointer remains valid in memory until you explicitly `release()` it. This guarantees you will never suffer a use-after-free crash due to unpredictable hardware events.
+
+Once a monitor or controller handle is lost, operations that were legal before
+loss remain legal. Accessors continue to expose the last known snapshot, which
+may be stale, while backend-facing mutators become inert and return
+`MARU_FAILURE`.
 
 #### Transient Event Data
 **"Can I store event pointers for later?"**

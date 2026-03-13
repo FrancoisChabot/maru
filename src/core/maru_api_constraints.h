@@ -43,6 +43,22 @@ _maru_status_if_controller_context_lost(const MARU_Controller *controller) {
 }
 
 static inline MARU_Status
+_maru_status_if_monitor_lost(const MARU_Monitor *monitor) {
+  if (maru_isMonitorLost(monitor)) {
+    return MARU_FAILURE;
+  }
+  return MARU_SUCCESS;
+}
+
+static inline MARU_Status
+_maru_status_if_controller_lost(const MARU_Controller *controller) {
+  if (maru_isControllerLost(controller)) {
+    return MARU_FAILURE;
+  }
+  return MARU_SUCCESS;
+}
+
+static inline MARU_Status
 _maru_status_if_request_context_lost(MARU_DataRequest *request) {
   const MARU_DataRequestHandleBase *handle =
       (const MARU_DataRequestHandleBase *)request;
@@ -120,6 +136,10 @@ static inline bool _maru_validate_allocator_complete(MARU_Allocator allocator) {
   }
   return allocator.alloc_cb != NULL && allocator.realloc_cb != NULL &&
          allocator.free_cb != NULL;
+}
+
+static inline bool _maru_validate_optional_power_of_two_u32(uint32_t value) {
+  return value == 0u || (value & (value - 1u)) == 0u;
 }
 
 static inline bool _maru_validate_aspect_ratio(MARU_Fraction f) {
@@ -397,6 +417,8 @@ _maru_validate_createContext(const MARU_ContextCreateInfo *create_info,
                         create_info->backend <= MARU_BACKEND_COCOA);
   MARU_CONSTRAINT_CHECK(
       _maru_validate_allocator_complete(create_info->allocator));
+  MARU_CONSTRAINT_CHECK(_maru_validate_optional_power_of_two_u32(
+      create_info->tuning.user_event_queue_size));
 }
 
 static inline void _maru_validate_destroyContext(MARU_Context *context) {
@@ -981,10 +1003,10 @@ _maru_validate_live_requestWindowAttention(MARU_Window *window) {
 static inline void _maru_validate_live_setControllerHapticLevels(
     MARU_Controller *controller, uint32_t first_haptic, uint32_t count,
     const MARU_Scalar *intensities) {
+  (void)controller;
   (void)first_haptic;
   (void)count;
   (void)intensities;
-  _maru_validate_controller_not_lost(controller);
 }
 
 static inline void _maru_validate_live_announceData(
@@ -1059,15 +1081,15 @@ _maru_validate_live_getAvailableDropMIMETypes(MARU_Window *window,
 
 static inline void _maru_validate_live_getMonitorModes(
     const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
+  (void)monitor;
   (void)out_list;
-  _maru_validate_monitor_not_lost(monitor);
 }
 
 static inline void
 _maru_validate_live_setMonitorMode(MARU_Monitor *monitor,
                                    MARU_VideoMode mode) {
+  (void)monitor;
   (void)mode;
-  _maru_validate_monitor_not_lost(monitor);
 }
 static inline void
 _maru_validate_live_createVkSurface(MARU_Window *window, VkInstance instance,

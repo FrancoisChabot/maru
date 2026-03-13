@@ -255,6 +255,14 @@ typedef enum MARU_CursorPolicy {
 } MARU_CursorPolicy;
 
 typedef struct MARU_ContextTuning {
+  /*
+   * Capacity of the application-posted user-event queue used by
+   * maru_postEvent().
+   *
+   * A value of 0 disables application-posted user events for the context.
+   * Backend/internal deferred events are unaffected.
+   * Non-zero values must be powers of two.
+   */
   uint32_t user_event_queue_size;
   MARU_CursorPolicy cursor_policy;
 
@@ -777,6 +785,10 @@ typedef struct MARU_DropExitedEvent {
 } MARU_DropExitedEvent;
 
 typedef struct MARU_DataReceivedEvent {
+  /*
+   * Opaque request token round-tripped from the corresponding
+   * maru_requestClipboardData() or maru_requestDropData() call.
+   */
   void* userdata;
   MARU_Status status;
   /* Selects the matching request/provide workflow for this completed transfer. */
@@ -990,7 +1002,10 @@ MARU_API MARU_Status maru_pumpEvents(MARU_Context* context,
  * Posted user events are always dispatched as context-scoped events, so the
  * callback receives `window == NULL`.
  *
- * Returns true if the event was successfully queued, false otherwise.
+ * Returns true if the event was successfully queued, false otherwise. This
+ * returns false when application-posted user events are disabled for the
+ * context (`user_event_queue_size == 0`). Backend/internal deferred events are
+ * unaffected by this setting.
  */
 MARU_API bool maru_postEvent(MARU_Context* context,
                              MARU_EventId type,
@@ -1202,6 +1217,14 @@ typedef struct MARU_MonitorList {
   uint32_t count;
 } MARU_MonitorList;
 
+/*
+ * Lost-monitor contract:
+ *
+ * A lost monitor handle remains valid in memory until you release it.
+ * Accessors and getters continue to operate on the last known snapshot and may
+ * therefore return stale information after loss. Backend-facing mutators
+ * become inert and return MARU_FAILURE once the monitor is lost.
+ */
 /* Userdata accessors follow the direct-inline-accessor threading rule. */
 static inline void* maru_getMonitorUserdata(const MARU_Monitor* monitor);
 static inline void maru_setMonitorUserdata(MARU_Monitor* monitor, void* userdata);
@@ -1486,6 +1509,15 @@ typedef struct MARU_ControllerList {
   uint32_t count;
 } MARU_ControllerList;
 
+/*
+ * Lost-controller contract:
+ *
+ * A lost controller handle remains valid in memory until you release it.
+ * Accessors and polling getters continue to operate on the last known
+ * snapshot and may therefore return stale information after loss.
+ * Backend-facing mutators become inert and return MARU_FAILURE once the
+ * controller is lost.
+ */
 /* Userdata accessors follow the direct-inline-accessor threading rule. */
 static inline void* maru_getControllerUserdata(const MARU_Controller* controller);
 static inline void maru_setControllerUserdata(MARU_Controller* controller, void* userdata);
@@ -1570,11 +1602,24 @@ MARU_API MARU_Status maru_provideDropData(MARU_DataRequest* request,
                                           const void* data,
                                           size_t size,
                                           MARU_DataProvideFlags flags);
-/* `mime_type` is copied before maru_requestClipboardData() returns successfully. */
+/*
+ * `mime_type` is copied before maru_requestClipboardData() returns
+ * successfully.
+ *
+ * `userdata` is not interpreted by Maru. On completion, the matching
+ * MARU_EVENT_DATA_RECEIVED callback reports the same pointer in
+ * event->data_received.userdata.
+ */
 MARU_API MARU_Status maru_requestClipboardData(MARU_Window* window,
                                                const char* mime_type,
                                                void* userdata);
-/* `mime_type` is copied before maru_requestDropData() returns successfully. */
+/*
+ * `mime_type` is copied before maru_requestDropData() returns successfully.
+ *
+ * `userdata` is not interpreted by Maru. On completion, the matching
+ * MARU_EVENT_DATA_RECEIVED callback reports the same pointer in
+ * event->data_received.userdata.
+ */
 MARU_API MARU_Status maru_requestDropData(MARU_Window* window,
                                           const char* mime_type,
                                           void* userdata);

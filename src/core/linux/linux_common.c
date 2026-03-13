@@ -1096,11 +1096,11 @@ void _maru_linux_common_drain_internal_events(MARU_Context_Linux_Common *common)
   MARU_Window *window;
   MARU_Event evt;
 
-  while (_maru_event_queue_pop(&common->ctx_base->queued_events, &type, &window, &evt)) {
+  while (_maru_event_queue_pop(&common->ctx_base->internal_events, &type, &window, &evt)) {
     if (type >= (MARU_EventId)1000) {
       _maru_linux_common_handle_internal_event(common, (MARU_InternalEventId)type, window, &evt);
     } else {
-      _maru_event_queue_push(&common->ctx_base->queued_events, type, window, evt);
+      _maru_event_queue_push(&common->ctx_base->internal_events, type, window, evt);
       break; // Stop at first non-internal event to avoid infinite loop
     }
   }

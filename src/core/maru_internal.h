@@ -38,6 +38,7 @@ typedef struct MARU_PumpContext {
   MARU_EventMask mask;
   MARU_EventCallback callback;
   void *userdata;
+  bool user_events_drained;
 } MARU_PumpContext;
 
 typedef struct MARU_Window_Base MARU_Window_Base;
@@ -81,7 +82,8 @@ typedef struct MARU_Context_Base {
   uint32_t window_count;
   MARU_WindowId next_window_id;
 
-  MARU_EventQueue queued_events;
+  MARU_EventQueue internal_events;
+  MARU_EventQueue user_events;
   MARU_ButtonState8 keyboard_state[MARU_KEY_COUNT];
   MARU_ButtonState8 *mouse_button_states;
   MARU_ChannelInfo *mouse_button_channels;

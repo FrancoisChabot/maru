@@ -159,6 +159,7 @@ maru_setControllerHapticLevels(MARU_Controller *controller, uint32_t first_hapti
   MARU_API_VALIDATE(setControllerHapticLevels, controller, first_haptic, count,
                     intensities);
   MARU_RETURN_ON_ERROR(_maru_status_if_controller_context_lost(controller));
+  MARU_RETURN_ON_ERROR(_maru_status_if_controller_lost(controller));
   MARU_API_VALIDATE_LIVE(setControllerHapticLevels, controller, first_haptic,
                          count, intensities);
   return maru_setControllerHapticLevels_WL(controller, first_haptic, count,
@@ -297,6 +298,7 @@ MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_Vide
 MARU_API MARU_Status maru_setMonitorMode(MARU_Monitor *monitor, MARU_VideoMode mode) {
   MARU_API_VALIDATE(setMonitorMode, monitor, mode);
   MARU_RETURN_ON_ERROR(_maru_status_if_monitor_context_lost(monitor));
+  MARU_RETURN_ON_ERROR(_maru_status_if_monitor_lost(monitor));
   MARU_API_VALIDATE_LIVE(setMonitorMode, monitor, mode);
   return maru_setMonitorMode_WL(monitor, mode);
 }

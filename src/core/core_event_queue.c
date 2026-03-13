@@ -7,13 +7,8 @@
 #include <string.h>
 #include <stdio.h>
 
-static bool _maru_is_power_of_two_u32(uint32_t value) {
-  return value != 0u && (value & (value - 1u)) == 0u;
-}
-
 bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t capacity_power_of_2) {
   if (!q) return false;
-  if (!_maru_is_power_of_two_u32(capacity_power_of_2)) return false;
   
   q->capacity = capacity_power_of_2;
   q->mask = capacity_power_of_2 - 1;
