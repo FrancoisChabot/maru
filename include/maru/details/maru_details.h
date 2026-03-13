@@ -34,7 +34,6 @@ extern "C" {
 #endif
 
 #define MARU_CONTEXT_STATE_LOST MARU_BIT(0)
-#define MARU_CONTEXT_STATE_READY MARU_BIT(1)
 
 #define MARU_MONITOR_STATE_LOST MARU_BIT(0)
 
@@ -146,11 +145,6 @@ static inline void maru_setContextUserdata(MARU_Context* context, void* userdata
 static inline bool maru_isContextLost(const MARU_Context* context) {
   MARU_ASSUME(context != NULL);
   return (((const MARU_ContextPrefix*)context)->flags & MARU_CONTEXT_STATE_LOST) != 0;
-}
-
-static inline bool maru_isContextReady(const MARU_Context* context) {
-  MARU_ASSUME(context != NULL);
-  return (((const MARU_ContextPrefix*)context)->flags & MARU_CONTEXT_STATE_READY) != 0;
 }
 
 static inline uint32_t maru_getMouseButtonCount(const MARU_Context* context) {

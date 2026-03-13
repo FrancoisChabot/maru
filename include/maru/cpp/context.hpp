@@ -39,7 +39,6 @@ public:
     void* getUserData() const;
     void setUserData(void* userdata);
     bool isLost() const;
-    bool isReady() const;
 
     MARU_Status update(uint64_t field_mask, const MARU_ContextAttributes& attributes);
     

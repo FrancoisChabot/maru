@@ -293,7 +293,6 @@ inline Context& Context::operator=(Context&& other) noexcept {
 inline void* Context::getUserData() const { return maru_getContextUserdata(m_handle); }
 inline void Context::setUserData(void* userdata) { maru_setContextUserdata(m_handle, userdata); }
 inline bool Context::isLost() const { return maru_isContextLost(m_handle); }
-inline bool Context::isReady() const { return maru_isContextReady(m_handle); }
 
 inline MARU_Status Context::update(uint64_t field_mask, const MARU_ContextAttributes& attributes) {
     return maru_updateContext(m_handle, field_mask, &attributes);

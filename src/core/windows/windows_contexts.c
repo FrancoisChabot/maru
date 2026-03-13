@@ -126,7 +126,7 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
     return MARU_FAILURE;
   }
 
-  ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
+  ctx->base.pub.flags = 0;
   ctx->base.attrs_requested = create_info->attributes;
   ctx->base.attrs_effective = create_info->attributes;
   ctx->base.attrs_dirty_mask = 0;

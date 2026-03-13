@@ -252,7 +252,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
     ctx->ns_app = NSApp;
     ctx->last_modifiers = [NSEvent modifierFlags];
-    ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
+    ctx->base.pub.flags = 0;
     
     *out_context = (MARU_Context *)ctx;
     return MARU_SUCCESS;

@@ -1033,7 +1033,6 @@ MARU_API bool maru_wakeContext(MARU_Context* context);
 static inline void* maru_getContextUserdata(const MARU_Context* context);
 static inline void maru_setContextUserdata(MARU_Context* context, void* userdata);
 static inline bool maru_isContextLost(const MARU_Context* context);
-static inline bool maru_isContextReady(const MARU_Context* context);
 static inline MARU_BackendType maru_getContextBackend(const MARU_Context* context);
 static inline uint32_t maru_getMouseButtonCount(const MARU_Context* context);
 /*

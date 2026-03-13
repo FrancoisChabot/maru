@@ -641,7 +641,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   _maru_wayland_update_idle_notification(ctx);
   _wl_update_cursor_shape_device(ctx);
   ctx->base.attrs_dirty_mask = 0;
-  ctx->base.pub.flags = MARU_CONTEXT_STATE_READY;
+  ctx->base.pub.flags = 0;
 
   if (!_maru_linux_common_run(&ctx->linux_common)) {
     maru_destroyContext_WL((MARU_Context *)ctx);

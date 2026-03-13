@@ -359,7 +359,7 @@ static inline MARU_Context* maru_test_createContext(const MARU_ContextCreateInfo
         ctx->allocator.userdata = NULL;
     }
 
-    ctx->pub.flags = MARU_CONTEXT_STATE_READY;
+    ctx->pub.flags = 0;
     ctx->tuning = create_info->tuning;
     ctx->diagnostic_cb = create_info->attributes.diagnostic_cb;
     ctx->diagnostic_userdata = create_info->attributes.diagnostic_userdata;
