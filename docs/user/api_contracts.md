@@ -73,9 +73,12 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - String parameters such as titles and MIME types must be non-null. MIME types must also be non-empty.
 - Logical sizes, min sizes, max sizes, viewport sizes, and rectangle sizes must be non-negative.
 - Image sizes must be strictly positive.
+- `MARU_ImageCreateInfo.pixels` must be non-null.
 - Monitor video modes passed to `maru_setMonitorMode()` must have strictly positive pixel dimensions.
 - `maru_setControllerHapticLevels()` requires every intensity to fall within the
   published inclusive range for the targeted haptic channels.
+- `MARU_QueueCreateInfo.capacity` must be greater than zero.
+- `MARU_QueueCreateInfo.allocator` uses the default allocator only when all allocator callbacks are null; custom allocators are all-or-none.
 
 ## Special Value Semantics
 
@@ -93,14 +96,15 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - Every custom cursor frame must provide a non-null image.
 - A custom cursor hotspot must be inside the referenced image bounds.
 - A system cursor must use a valid `MARU_CursorShape`.
+- `maru_createCursor()` fails if the active backend cannot provide the requested system cursor shape. Maru does not substitute a fallback cursor.
 
 ### Data Exchange
 
 - `MARU_DataExchangeTarget` must be either `MARU_DATA_EXCHANGE_TARGET_CLIPBOARD` or `MARU_DATA_EXCHANGE_TARGET_DRAG_DROP`.
 - The allowed drop action mask may only contain `COPY`, `MOVE`, and `LINK`.
 - `maru_setDropSessionAction()` accepts only `NONE`, `COPY`, `MOVE`, or `LINK`. Multi-bit combinations are invalid, and any non-`NONE` action must be present in the callback's `available_actions` mask.
-- `maru_provideData()` requires `data != NULL` when `size > 0`.
-- `maru_provideData()` flags may only contain documented bits.
+- `maru_provideClipboardData()` and `maru_provideDropData()` require `data != NULL` when `size > 0`.
+- `maru_provideClipboardData()` and `maru_provideDropData()` flags may only contain documented bits.
 - `maru_setDropSessionAction()` is only meaningful during `MARU_EVENT_DROP_ENTERED` and `MARU_EVENT_DROP_HOVERED`.
 
 ### Native Handles And Vulkan

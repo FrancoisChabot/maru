@@ -10,6 +10,7 @@ struct ImGui_ImplMaru_Data {
     MARU_Window* Window;
     double Time;
     MARU_Cursor* MouseCursors[ImGuiMouseCursor_COUNT];
+    bool MouseCursorCreationFailed[ImGuiMouseCursor_COUNT];
 
     ImGui_ImplMaru_Data() { memset(this, 0, sizeof(*this)); }
 };
@@ -180,6 +181,7 @@ void ImGui_ImplMaru_Shutdown() {
     for (int i = 0; i < ImGuiMouseCursor_COUNT; i++) {
         if (bd->MouseCursors[i]) maru_destroyCursor(bd->MouseCursors[i]);
         bd->MouseCursors[i] = NULL;
+        bd->MouseCursorCreationFailed[i] = false;
     }
 
     io.BackendPlatformName = nullptr;
@@ -222,7 +224,7 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
         }
     } else {
         MARU_Cursor* cursor = bd->MouseCursors[imgui_cursor];
-        if (!cursor) {
+        if (!cursor && !bd->MouseCursorCreationFailed[imgui_cursor]) {
              MARU_CursorShape shape = MARU_CURSOR_SHAPE_DEFAULT;
              switch (imgui_cursor) {
                  case ImGuiMouseCursor_Arrow: shape = MARU_CURSOR_SHAPE_DEFAULT; break;
@@ -239,8 +241,11 @@ static void ImGui_ImplMaru_UpdateMouseCursor() {
              MARU_CursorCreateInfo ci = {};
              ci.source = MARU_CURSOR_SOURCE_SYSTEM;
              ci.system_shape = shape;
-             maru_createCursor(ctx, &ci, &cursor);
-             bd->MouseCursors[imgui_cursor] = cursor;
+             if (maru_createCursor(ctx, &ci, &cursor) == MARU_SUCCESS) {
+                 bd->MouseCursors[imgui_cursor] = cursor;
+             } else {
+                 bd->MouseCursorCreationFailed[imgui_cursor] = true;
+             }
         }
 
         const MARU_WindowPrefix* win = (const MARU_WindowPrefix*)bd->Window;

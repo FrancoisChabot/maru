@@ -53,9 +53,16 @@ static inline bool maru_isQueueSafeEventId(MARU_EventId type) {
 }
 
 typedef struct MARU_QueueCreateInfo {
+  /*
+   * Uses the default allocator when all callbacks are NULL.
+   *
+   * Custom allocators are all-or-none: if any callback is provided, `alloc_cb`,
+   * `realloc_cb`, and `free_cb` must all be non-null.
+   */
   MARU_Allocator allocator;
   MARU_DiagnosticCallback diagnostic_cb;
   void* diagnostic_userdata;
+  /* Queue capacity in events. Must be greater than zero. */
   uint32_t capacity;
 } MARU_QueueCreateInfo;
 

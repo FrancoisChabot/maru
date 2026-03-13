@@ -4,8 +4,6 @@
 #import "macos_internal.h"
 #import "maru_mem_internal.h"
 #import <Cocoa/Cocoa.h>
-#include <CoreGraphics/CoreGraphics.h>
-#include "maru_cursor_assets.h"
 
 static uint64_t _maru_cocoa_now_ms(void) {
     const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
@@ -103,102 +101,18 @@ static NSCursor *_maru_cocoa_get_system_cursor(MARU_CursorShape shape) {
     }
 }
 
-static bool _maru_cocoa_create_builtin_cursor(MARU_CursorShape shape,
-                                              NSCursor **out_cursor,
-                                              NSImage **out_image) {
-    if (!out_cursor || !out_image) {
-        return false;
-    }
-    *out_cursor = nil;
-    *out_image = nil;
-
-    if (shape > MARU_CURSOR_SHAPE_NWSE_RESIZE) {
-        return false;
-    }
-    const MARU_CursorBitmapAsset *bitmap = &g_maru_cursor_bitmap_assets[shape];
-    if (!bitmap->pixels_argb || bitmap->width == 0u || bitmap->height == 0u ||
-        bitmap->stride_bytes == 0u) {
-        return false;
-    }
-
-    CGColorSpaceRef color_space = CGColorSpaceCreateDeviceRGB();
-    if (!color_space) {
-        return false;
-    }
-
-    const size_t image_size =
-        (size_t)bitmap->stride_bytes * (size_t)bitmap->height;
-    CGDataProviderRef provider = CGDataProviderCreateWithData(
-        NULL, bitmap->pixels_argb, image_size, NULL);
-    if (!provider) {
-        CGColorSpaceRelease(color_space);
-        return false;
-    }
-
-    CGImageRef cg_image = CGImageCreate(
-        (size_t)bitmap->width, (size_t)bitmap->height,
-        8, 32, (size_t)bitmap->stride_bytes,
-        color_space,
-        kCGBitmapByteOrder32Little | kCGImageAlphaFirst,
-        provider, NULL, false, kCGRenderingIntentDefault);
-    CGDataProviderRelease(provider);
-    CGColorSpaceRelease(color_space);
-    if (!cg_image) {
-        return false;
-    }
-
-    NSImage *image = [[NSImage alloc] initWithCGImage:cg_image
-                                                 size:NSMakeSize((CGFloat)bitmap->width,
-                                                                 (CGFloat)bitmap->height)];
-    CGImageRelease(cg_image);
-    if (!image) {
-        return false;
-    }
-
-    NSCursor *cursor =
-        [[NSCursor alloc] initWithImage:image
-                                hotSpot:NSMakePoint((CGFloat)bitmap->hot_x,
-                                                    (CGFloat)bitmap->hot_y)];
-    if (!cursor) {
-        [image release];
-        return false;
-    }
-
-    *out_cursor = cursor;
-    *out_image = image;
-    return true;
-}
-
 static bool _maru_cocoa_resolve_system_cursor(MARU_Cursor_Cocoa *cursor,
                                               MARU_CursorShape shape) {
     if (!cursor || !cursor->base.ctx_base) {
         return false;
     }
 
-    const MARU_CursorPolicy policy = cursor->base.ctx_base->tuning.cursor_policy;
-    if (policy != MARU_CURSOR_POLICY_MARU_ONLY) {
-        NSCursor *system_cursor = _maru_cocoa_get_system_cursor(shape);
-        if (system_cursor) {
-            cursor->ns_cursor = [system_cursor retain];
-            return true;
-        }
+    NSCursor *system_cursor = _maru_cocoa_get_system_cursor(shape);
+    if (system_cursor) {
+        cursor->ns_cursor = [system_cursor retain];
+        return true;
     }
-
-    if (policy != MARU_CURSOR_POLICY_SYSTEM_ONLY) {
-        if (_maru_cocoa_create_builtin_cursor(shape, (NSCursor **)&cursor->ns_cursor,
-                                              (NSImage **)&cursor->ns_image)) {
-            return true;
-        }
-        if (shape != MARU_CURSOR_SHAPE_DEFAULT &&
-            _maru_cocoa_create_builtin_cursor(MARU_CURSOR_SHAPE_DEFAULT,
-                                              (NSCursor **)&cursor->ns_cursor,
-                                              (NSImage **)&cursor->ns_image)) {
-            return true;
-        }
-    }
-
-    cursor->ns_cursor = [[NSCursor arrowCursor] retain];
-    return cursor->ns_cursor != nil;
+    return false;
 }
 
 MARU_Status maru_createCursor_Cocoa(MARU_Context *context,
@@ -220,6 +134,9 @@ MARU_Status maru_createCursor_Cocoa(MARU_Context *context,
 
     if (create_info->source == MARU_CURSOR_SOURCE_SYSTEM) {
         if (!_maru_cocoa_resolve_system_cursor(cursor, create_info->system_shape)) {
+            MARU_REPORT_DIAGNOSTIC((MARU_Context *)context,
+                                   MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                                   "Requested system cursor shape is unsupported on macOS");
             maru_context_free(ctx_base, cursor);
             return MARU_FAILURE;
         }

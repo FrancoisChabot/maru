@@ -4,7 +4,8 @@ Welcome to the Maru user documentation. Maru is a high-performance, cross-platfo
 
 ## Introduction & Getting Started
 
-- [Installation & Integration](getting_started.md)
+- [Quickstart](getting_started.md)
+- [Integration & Building](integration.md)
 - [Basic Window Example](basic_window.md)
 
 ## Core Concepts

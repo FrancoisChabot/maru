@@ -4,7 +4,7 @@ Maru is designed to be easy to integrate into existing CMake projects.
 
 ## Installation & Integration
 
-The recommended way to use Maru is via CMake's `FetchContent`.
+The recommended way to use Maru is via CMake's `FetchContent`. See the [Integration Guide](integration.md) for alternative build paths and detailed instructions.
 
 ```cmake
 include(FetchContent)

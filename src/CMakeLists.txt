@@ -78,47 +78,6 @@ target_include_directories(maru_core_iface INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core>
 )
 
-find_program(MARU_PYTHON3_EXECUTABLE NAMES python3 REQUIRED)
-
-set(MARU_CURSOR_ASSET_DIR "${PROJECT_SOURCE_DIR}/assets/cursors/maru")
-set(MARU_CURSOR_ASSETS
-    "${MARU_CURSOR_ASSET_DIR}/default.png"
-    "${MARU_CURSOR_ASSET_DIR}/help.png"
-    "${MARU_CURSOR_ASSET_DIR}/hand.png"
-    "${MARU_CURSOR_ASSET_DIR}/wait.png"
-    "${MARU_CURSOR_ASSET_DIR}/crosshair.png"
-    "${MARU_CURSOR_ASSET_DIR}/text.png"
-    "${MARU_CURSOR_ASSET_DIR}/move.png"
-    "${MARU_CURSOR_ASSET_DIR}/not_allowed.png"
-    "${MARU_CURSOR_ASSET_DIR}/ew_resize.png"
-    "${MARU_CURSOR_ASSET_DIR}/ns_resize.png"
-    "${MARU_CURSOR_ASSET_DIR}/nesw_resize.png"
-    "${MARU_CURSOR_ASSET_DIR}/nwse_resize.png"
-)
-set(MARU_CURSOR_GEN_DIR "${PROJECT_BINARY_DIR}/generated/cursors")
-set(MARU_CURSOR_GEN_C "${MARU_CURSOR_GEN_DIR}/maru_cursor_assets.c")
-set(MARU_CURSOR_GEN_H "${MARU_CURSOR_GEN_DIR}/maru_cursor_assets.h")
-
-add_custom_command(
-    OUTPUT "${MARU_CURSOR_GEN_C}" "${MARU_CURSOR_GEN_H}"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${MARU_CURSOR_GEN_DIR}"
-    COMMAND "${MARU_PYTHON3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/scripts/png_cursor_to_c.py"
-            --input-dir "${MARU_CURSOR_ASSET_DIR}"
-            --output-c "${MARU_CURSOR_GEN_C}"
-            --output-h "${MARU_CURSOR_GEN_H}"
-    DEPENDS
-            "${PROJECT_SOURCE_DIR}/tools/scripts/png_cursor_to_c.py"
-            ${MARU_CURSOR_ASSETS}
-    VERBATIM
-)
-
-add_custom_target(maru_cursor_asset_codegen
-    DEPENDS "${MARU_CURSOR_GEN_C}" "${MARU_CURSOR_GEN_H}"
-)
-
-target_include_directories(maru_core_iface INTERFACE
-    $<BUILD_INTERFACE:${MARU_CURSOR_GEN_DIR}>
-)
 # 4. Final precision-specific interfaces
 set(MARU_ACTIVE_CORE_IFACE "maru_core_iface")
 set(MARU_ACTIVE_IFACE "maru_iface")
@@ -145,14 +104,12 @@ target_compile_definitions(${target_indirect} INTERFACE MARU_INDIRECT_BACKEND)
 install(TARGETS ${target_direct} ${target_indirect} EXPORT MaruTargets)
 
 # Base objects for this build
-add_library("maru_base_obj" OBJECT core/core.c core/core_event_queue.c core/maru_queue.c "${MARU_CURSOR_GEN_C}")
+add_library("maru_base_obj" OBJECT core/core.c core/core_event_queue.c core/maru_queue.c)
 target_link_libraries("maru_base_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
-add_dependencies("maru_base_obj" maru_cursor_asset_codegen)
 
-add_library("maru_base_indirect_obj" OBJECT core/core.c core/core_event_queue.c core/core_indirect_entry.c core/maru_queue.c "${MARU_CURSOR_GEN_C}")
+add_library("maru_base_indirect_obj" OBJECT core/core.c core/core_event_queue.c core/core_indirect_entry.c core/maru_queue.c)
 target_link_libraries("maru_base_indirect_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
 target_compile_definitions("maru_base_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
-add_dependencies("maru_base_indirect_obj" maru_cursor_asset_codegen)
 
 if (NOT WIN32)
   target_link_libraries("maru_base_obj" PRIVATE Threads::Threads)

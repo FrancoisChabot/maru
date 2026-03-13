@@ -80,6 +80,10 @@ maru_updateWindow(window, MARU_WINDOW_ATTR_CURSOR_MODE, &attrs);
 
 Maru supports hardware-accelerated custom cursors. You create a `MARU_Cursor` from a `MARU_Image` and then apply it to a window.
 
+System cursor support is backend-dependent. When you request a system cursor with
+`maru_createCursor()`, the call fails if the active backend cannot provide that
+native/system shape. Maru does not inject a library-provided fallback cursor.
+
 ```c
 // Assume 'my_image' is a MARU_Image*
 MARU_CursorFrame frame = {

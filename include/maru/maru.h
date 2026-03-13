@@ -248,12 +248,6 @@ typedef enum MARU_WaylandDecorationStrategy {
   MARU_WAYLAND_DECORATION_STRATEGY_NONE = 3,
 } MARU_WaylandDecorationStrategy;
 
-typedef enum MARU_CursorPolicy {
-  MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK = 0,
-  MARU_CURSOR_POLICY_SYSTEM_ONLY = 1,
-  MARU_CURSOR_POLICY_MARU_ONLY = 2,
-} MARU_CursorPolicy;
-
 typedef struct MARU_ContextTuning {
   /*
    * Capacity of the application-posted user-event queue used by
@@ -264,7 +258,6 @@ typedef struct MARU_ContextTuning {
    * Non-zero values must be powers of two.
    */
   uint32_t user_event_queue_size;
-  MARU_CursorPolicy cursor_policy;
 
   struct {
     /*
@@ -283,7 +276,6 @@ typedef struct MARU_ContextTuning {
 #define MARU_CONTEXT_TUNING_DEFAULT                                            \
   {                                                                            \
       .user_event_queue_size = 256,                                            \
-      .cursor_policy = MARU_CURSOR_POLICY_SYSTEM_WITH_MARU_FALLBACK,           \
       .wayland = {.decoration_strategy = MARU_WAYLAND_DECORATION_STRATEGY_AUTO}, \
       .x11 = {.idle_poll_interval_ms = 250, .selection_query_timeout_ms = 50}, \
   }
@@ -1116,10 +1108,18 @@ MARU_API MARU_Status maru_updateContext(MARU_Context* context,
 /* ----- Images ----- */
 
 typedef struct MARU_ImageCreateInfo {
+  /* Image dimensions in pixels. Both axes must be strictly positive. */
   MARU_Vec2Px px_size;
-  /* Copied into MARU-owned storage before maru_createImage() returns. */
+  /*
+   * Copied into MARU-owned storage before maru_createImage() returns.
+   *
+   * Must be non-null and point to at least `px_size.y` rows of pixel data.
+   */
   const uint32_t* pixels;
-  /* Number of bytes per row. If 0, assumes tightly packed (width * 4 bytes). */
+  /*
+   * Number of bytes per row. If 0, assumes tightly packed (width * 4 bytes).
+   * If nonzero, it must be at least `px_size.x * 4`.
+   */
   uint32_t stride_bytes;
   void* userdata;
 } MARU_ImageCreateInfo;
@@ -1179,6 +1179,11 @@ typedef struct MARU_CursorFrame {
 
 typedef struct MARU_CursorCreateInfo {
   MARU_CursorSource source;
+  /*
+   * For system cursors, creation fails if the backend cannot provide the
+   * requested native/system cursor shape. Maru does not synthesize fallback
+   * system cursors.
+   */
   MARU_CursorShape system_shape;
   /*
    * For custom cursors, the referenced image pixels are copied into

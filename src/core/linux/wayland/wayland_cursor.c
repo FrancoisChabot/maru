@@ -5,7 +5,6 @@
 #include "wayland_internal.h"
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
-#include "maru_cursor_assets.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -148,43 +147,17 @@ static void _maru_wayland_destroy_cursor_frames(MARU_Context_WL *ctx, MARU_Curso
 static bool _maru_wayland_resolve_system_cursor(MARU_Context_WL *ctx,
                                                 MARU_Cursor_WL *cursor,
                                                 MARU_CursorShape shape) {
-  const MARU_CursorPolicy policy = ctx->base.tuning.cursor_policy;
-
-  if (policy != MARU_CURSOR_POLICY_MARU_ONLY) {
-    if (_maru_wayland_ensure_cursor_theme(ctx)) {
-      cursor->wl_cursor = maru_wl_cursor_theme_get_cursor(
-          ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(shape));
-      if (cursor->wl_cursor) {
-        return true;
-      }
-    }
-    if (ctx->protocols.opt.wp_cursor_shape_manager_v1 != NULL) {
-      // If we have the protocol, we don't strictly need a wl_cursor here,
-      // wayland_input.c will handle it.
+  if (_maru_wayland_ensure_cursor_theme(ctx)) {
+    cursor->wl_cursor = maru_wl_cursor_theme_get_cursor(
+        ctx, ctx->wl.cursor_theme, _maru_cursor_shape_to_name(shape));
+    if (cursor->wl_cursor) {
       return true;
     }
   }
 
-  if (policy != MARU_CURSOR_POLICY_SYSTEM_ONLY) {
-    const MARU_CursorBitmapAsset *bitmap = &g_maru_cursor_bitmap_assets[shape];
-    if (bitmap->pixels_argb) {
-      cursor->frames = (MARU_WaylandCursorFrame *)maru_context_alloc(
-          &ctx->base, sizeof(MARU_WaylandCursorFrame));
-      if (cursor->frames) {
-        if (_maru_wayland_create_owned_cursor_frame_from_pixels(
-                ctx, bitmap->pixels_argb, (int32_t)bitmap->width, (int32_t)bitmap->height,
-                bitmap->hot_x, bitmap->hot_y, 0, &cursor->frames[0])) {
-          cursor->frame_count = 1;
-          return true;
-        }
-        maru_context_free(&ctx->base, cursor->frames);
-        cursor->frames = NULL;
-      }
-    }
-
-    if (shape != MARU_CURSOR_SHAPE_DEFAULT) {
-      return _maru_wayland_resolve_system_cursor(ctx, cursor, MARU_CURSOR_SHAPE_DEFAULT);
-    }
+  if (ctx->protocols.opt.wp_cursor_shape_manager_v1 != NULL) {
+    // wayland_input.c can apply system shapes through the compositor protocol.
+    return true;
   }
 
   return false;
@@ -213,6 +186,9 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
       return MARU_FAILURE;
     }
     if (!_maru_wayland_resolve_system_cursor(ctx, cursor, create_info->system_shape)) {
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx,
+                             MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Requested system cursor shape is unsupported on Wayland");
       maru_context_free(&ctx->base, cursor);
       return MARU_FAILURE;
     }
