@@ -36,8 +36,8 @@ private:
         std::string title;
         bool is_resizable = true;
         bool primary_selection = true;
-        MARU_Vec2Dip min_dip_size = {0, 0};
-        MARU_Vec2Dip max_dip_size = {0, 0};
+        MARU_Vec2Dip dip_min_size = {0, 0};
+        MARU_Vec2Dip dip_max_size = {0, 0};
         MARU_Fraction aspect_ratio = {0, 0};
         ImVec4 clear_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
     };

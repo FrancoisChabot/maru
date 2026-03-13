@@ -141,13 +141,13 @@ void _maru_x11_apply_size_hints_local(MARU_Context_X11 *ctx,
   memset(&hints, 0, sizeof(hints));
 
   int32_t min_w =
-      _maru_x11_optional_dip_to_px(win->base.attrs_effective.min_dip_size.x, scale);
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.dip_min_size.x, scale);
   int32_t min_h =
-      _maru_x11_optional_dip_to_px(win->base.attrs_effective.min_dip_size.y, scale);
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.dip_min_size.y, scale);
   int32_t max_w =
-      _maru_x11_optional_dip_to_px(win->base.attrs_effective.max_dip_size.x, scale);
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.dip_max_size.x, scale);
   int32_t max_h =
-      _maru_x11_optional_dip_to_px(win->base.attrs_effective.max_dip_size.y, scale);
+      _maru_x11_optional_dip_to_px(win->base.attrs_effective.dip_max_size.y, scale);
 
   if ((win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) == 0) {
     min_w = _maru_x11_dip_to_px(win->base.attrs_effective.dip_size.x, scale);
@@ -464,13 +464,13 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MIN_DIP_SIZE) {
-    requested->min_dip_size = attributes->min_dip_size;
-    effective->min_dip_size = attributes->min_dip_size;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_MIN_SIZE) {
+    requested->dip_min_size = attributes->dip_min_size;
+    effective->dip_min_size = attributes->dip_min_size;
   }
-  if (field_mask & MARU_WINDOW_ATTR_MAX_DIP_SIZE) {
-    requested->max_dip_size = attributes->max_dip_size;
-    effective->max_dip_size = attributes->max_dip_size;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_MAX_SIZE) {
+    requested->dip_max_size = attributes->dip_max_size;
+    effective->dip_max_size = attributes->dip_max_size;
   }
   if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
     requested->aspect_ratio = attributes->aspect_ratio;
@@ -491,7 +491,7 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     }
   }
   if (field_mask &
-      (MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE |
+      (MARU_WINDOW_ATTR_DIP_MIN_SIZE | MARU_WINDOW_ATTR_DIP_MAX_SIZE |
        MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE)) {
     _maru_x11_apply_size_hints_local(ctx, win);
   }
@@ -562,9 +562,9 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     effective->text_input_type = attributes->text_input_type;
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_RECT) {
-    requested->text_input_rect = attributes->text_input_rect;
-    effective->text_input_rect = attributes->text_input_rect;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT) {
+    requested->dip_text_input_rect = attributes->dip_text_input_rect;
+    effective->dip_text_input_rect = attributes->dip_text_input_rect;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
@@ -601,18 +601,18 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
   }
 
   if (field_mask &
-      (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
+      (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT |
        MARU_WINDOW_ATTR_SURROUNDING_TEXT |
        MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE)) {
     _maru_x11_refresh_text_input_state(ctx, win);
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE) {
-    requested->viewport_dip_size = attributes->viewport_dip_size;
-    effective->viewport_dip_size = attributes->viewport_dip_size;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE) {
+    requested->dip_viewport_size = attributes->dip_viewport_size;
+    effective->dip_viewport_size = attributes->dip_viewport_size;
     const bool viewport_disabled =
-        (effective->viewport_dip_size.x <= (MARU_Scalar)0.0) ||
-        (effective->viewport_dip_size.y <= (MARU_Scalar)0.0);
+        (effective->dip_viewport_size.x <= (MARU_Scalar)0.0) ||
+        (effective->dip_viewport_size.y <= (MARU_Scalar)0.0);
     if (viewport_disabled) {
       // When viewport override is disabled, consume the latest server size.
       const MARU_Scalar scale = _maru_x11_get_global_scale(ctx);
@@ -976,8 +976,8 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
         }
 
         const bool viewport_active =
-            (win->base.attrs_effective.viewport_dip_size.x > (MARU_Scalar)0.0) &&
-            (win->base.attrs_effective.viewport_dip_size.y > (MARU_Scalar)0.0);
+            (win->base.attrs_effective.dip_viewport_size.x > (MARU_Scalar)0.0) &&
+            (win->base.attrs_effective.dip_viewport_size.y > (MARU_Scalar)0.0);
         if (!viewport_active) {
           win->base.attrs_effective.dip_size.x =
               _maru_x11_px_to_dip(win->server_size.x, scale);
@@ -986,8 +986,8 @@ bool _maru_x11_process_window_event(MARU_Context_X11 *ctx, XEvent *ev) {
         }
       } else if (scale_changed) {
         const bool viewport_active =
-            (win->base.attrs_effective.viewport_dip_size.x > (MARU_Scalar)0.0) &&
-            (win->base.attrs_effective.viewport_dip_size.y > (MARU_Scalar)0.0);
+            (win->base.attrs_effective.dip_viewport_size.x > (MARU_Scalar)0.0) &&
+            (win->base.attrs_effective.dip_viewport_size.y > (MARU_Scalar)0.0);
         if (!viewport_active) {
           win->base.attrs_effective.dip_size.x =
               _maru_x11_px_to_dip(win->server_size.x, scale);

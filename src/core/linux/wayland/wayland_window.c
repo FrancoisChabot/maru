@@ -95,9 +95,9 @@ static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
     return;
   }
 
-  const MARU_Vec2Dip viewport_size = window->base.attrs_effective.viewport_dip_size;
-  const bool disabled = (viewport_size.x <= (MARU_Scalar)0.0 ||
-                         viewport_size.y <= (MARU_Scalar)0.0);
+  const MARU_Vec2Dip dip_viewport_size = window->base.attrs_effective.dip_viewport_size;
+  const bool disabled = (dip_viewport_size.x <= (MARU_Scalar)0.0 ||
+                         dip_viewport_size.y <= (MARU_Scalar)0.0);
 
   if (!window->ext.viewport) {
     if (!disabled && !window->missing_viewporter_reported) {
@@ -118,8 +118,8 @@ static void _maru_wayland_apply_viewport_size(MARU_Window_WL *window) {
     return;
   }
 
-  int32_t dst_w = (int32_t)viewport_size.x;
-  int32_t dst_h = (int32_t)viewport_size.y;
+  int32_t dst_w = (int32_t)dip_viewport_size.x;
+  int32_t dst_h = (int32_t)dip_viewport_size.y;
   if (dst_w <= 0 || dst_h <= 0) {
     return;
   }
@@ -139,10 +139,10 @@ void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
   if (*width == 0 || *height == 0) return;
   if (attrs->aspect_ratio.num == 0 || attrs->aspect_ratio.denom == 0) return;
 
-  uint32_t min_width = attrs->min_dip_size.x > 0 ? (uint32_t)attrs->min_dip_size.x : 0u;
-  uint32_t min_height = attrs->min_dip_size.y > 0 ? (uint32_t)attrs->min_dip_size.y : 0u;
-  uint32_t max_width = attrs->max_dip_size.x > 0 ? (uint32_t)attrs->max_dip_size.x : UINT32_MAX;
-  uint32_t max_height = attrs->max_dip_size.y > 0 ? (uint32_t)attrs->max_dip_size.y : UINT32_MAX;
+  uint32_t min_width = attrs->dip_min_size.x > 0 ? (uint32_t)attrs->dip_min_size.x : 0u;
+  uint32_t min_height = attrs->dip_min_size.y > 0 ? (uint32_t)attrs->dip_min_size.y : 0u;
+  uint32_t max_width = attrs->dip_max_size.x > 0 ? (uint32_t)attrs->dip_max_size.x : UINT32_MAX;
+  uint32_t max_height = attrs->dip_max_size.y > 0 ? (uint32_t)attrs->dip_max_size.y : UINT32_MAX;
 
   if (max_width < min_width) max_width = min_width;
   if (max_height < min_height) max_height = min_height;
@@ -177,10 +177,10 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
   const MARU_Scalar old_width = attrs->dip_size.x;
   const MARU_Scalar old_height = attrs->dip_size.y;
   bool size_changed = false;
-  int32_t min_w = (int32_t)attrs->min_dip_size.x;
-  int32_t min_h = (int32_t)attrs->min_dip_size.y;
-  int32_t max_w = (int32_t)attrs->max_dip_size.x;
-  int32_t max_h = (int32_t)attrs->max_dip_size.y;
+  int32_t min_w = (int32_t)attrs->dip_min_size.x;
+  int32_t min_h = (int32_t)attrs->dip_min_size.y;
+  int32_t max_w = (int32_t)attrs->dip_max_size.x;
+  int32_t max_h = (int32_t)attrs->dip_max_size.y;
 
   if ((window->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) == 0) {
     int32_t fixed_w = (int32_t)attrs->dip_size.x;
@@ -783,8 +783,8 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     const bool ime_requested =
         (attrs->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) ||
         (attrs->surrounding_text != NULL) ||
-        (attrs->text_input_rect.dip_size.x > (MARU_Scalar)0.0) ||
-        (attrs->text_input_rect.dip_size.y > (MARU_Scalar)0.0);
+        (attrs->dip_text_input_rect.dip_size.x > (MARU_Scalar)0.0) ||
+        (attrs->dip_text_input_rect.dip_size.y > (MARU_Scalar)0.0);
     if (ime_requested && !window->missing_text_input_v3_reported) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "zwp_text_input_manager_v3 unavailable; IME features running in fallback mode");
@@ -833,10 +833,10 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     maru_zwp_text_input_v3_enable(ctx, window->ext.text_input);
     maru_zwp_text_input_v3_set_content_type(ctx, window->ext.text_input, hint, purpose);
     maru_zwp_text_input_v3_set_cursor_rectangle(
-        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.text_input_rect.dip_position.x,
-        (int32_t)window->base.attrs_effective.text_input_rect.dip_position.y,
-        (int32_t)window->base.attrs_effective.text_input_rect.dip_size.x,
-        (int32_t)window->base.attrs_effective.text_input_rect.dip_size.y);
+        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.dip_text_input_rect.dip_position.x,
+        (int32_t)window->base.attrs_effective.dip_text_input_rect.dip_position.y,
+        (int32_t)window->base.attrs_effective.dip_text_input_rect.dip_size.x,
+        (int32_t)window->base.attrs_effective.dip_text_input_rect.dip_size.y);
     
     if (window->base.attrs_effective.surrounding_text) {
         maru_zwp_text_input_v3_set_surrounding_text(ctx, window->ext.text_input, 
@@ -922,14 +922,14 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MIN_DIP_SIZE) {
-      requested->min_dip_size = attributes->min_dip_size;
-      effective->min_dip_size = attributes->min_dip_size;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_MIN_SIZE) {
+      requested->dip_min_size = attributes->dip_min_size;
+      effective->dip_min_size = attributes->dip_min_size;
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MAX_DIP_SIZE) {
-      requested->max_dip_size = attributes->max_dip_size;
-      effective->max_dip_size = attributes->max_dip_size;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_MAX_SIZE) {
+      requested->dip_max_size = attributes->dip_max_size;
+      effective->dip_max_size = attributes->dip_max_size;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
@@ -1011,9 +1011,9 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       effective->text_input_type = attributes->text_input_type;
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_RECT) {
-      requested->text_input_rect = attributes->text_input_rect;
-      effective->text_input_rect = attributes->text_input_rect;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT) {
+      requested->dip_text_input_rect = attributes->dip_text_input_rect;
+      effective->dip_text_input_rect = attributes->dip_text_input_rect;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
@@ -1039,7 +1039,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       effective->surrounding_anchor_byte = attributes->surrounding_anchor_byte;
   }
 
-  if (field_mask & (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |
+  if (field_mask & (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT |
                     MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE)) {
       _maru_wayland_update_text_input(window);
   }
@@ -1071,9 +1071,9 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE) {
-      requested->viewport_dip_size = attributes->viewport_dip_size;
-      effective->viewport_dip_size = attributes->viewport_dip_size;
+  if (field_mask & MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE) {
+      requested->dip_viewport_size = attributes->dip_viewport_size;
+      effective->dip_viewport_size = attributes->dip_viewport_size;
       _maru_wayland_apply_viewport_size(window);
   }
 
@@ -1087,8 +1087,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       effective->primary_selection = attributes->primary_selection;
   }
 
-  if (field_mask & (MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_MIN_DIP_SIZE |
-                    MARU_WINDOW_ATTR_MAX_DIP_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO |
+  if (field_mask & (MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_DIP_MIN_SIZE |
+                    MARU_WINDOW_ATTR_DIP_MAX_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO |
                     MARU_WINDOW_ATTR_RESIZABLE)) {
       _maru_wayland_apply_size_constraints(window);
   }

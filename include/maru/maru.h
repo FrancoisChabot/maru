@@ -1128,15 +1128,15 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_CURSOR MARU_BIT(4)
 #define MARU_WINDOW_ATTR_MONITOR MARU_BIT(5)
 #define MARU_WINDOW_ATTR_MAXIMIZED MARU_BIT(6)
-#define MARU_WINDOW_ATTR_MIN_DIP_SIZE MARU_BIT(7)
-#define MARU_WINDOW_ATTR_MAX_DIP_SIZE MARU_BIT(8)
-#define MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE MARU_BIT(9)
+#define MARU_WINDOW_ATTR_DIP_MIN_SIZE MARU_BIT(7)
+#define MARU_WINDOW_ATTR_DIP_MAX_SIZE MARU_BIT(8)
+#define MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE MARU_BIT(9)
 #define MARU_WINDOW_ATTR_DIP_POSITION MARU_BIT(10)
 #define MARU_WINDOW_ATTR_ASPECT_RATIO MARU_BIT(11)
 #define MARU_WINDOW_ATTR_RESIZABLE MARU_BIT(12)
 #define MARU_WINDOW_ATTR_ACCEPT_DROP MARU_BIT(13)
 #define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE MARU_BIT(14)
-#define MARU_WINDOW_ATTR_TEXT_INPUT_RECT MARU_BIT(15)
+#define MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT MARU_BIT(15)
 #define MARU_WINDOW_ATTR_PRIMARY_SELECTION MARU_BIT(16)
 #define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(17)
 #define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(18)
@@ -1148,10 +1148,10 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_ALL                                                                    \
   (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_FULLSCREEN |           \
    MARU_WINDOW_ATTR_CURSOR_MODE | MARU_WINDOW_ATTR_CURSOR | MARU_WINDOW_ATTR_MONITOR |          \
-   MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE | \
-   MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE | MARU_WINDOW_ATTR_DIP_POSITION |                         \
+   MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_DIP_MIN_SIZE | MARU_WINDOW_ATTR_DIP_MAX_SIZE | \
+   MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE | MARU_WINDOW_ATTR_DIP_POSITION |                         \
    MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE | MARU_WINDOW_ATTR_ACCEPT_DROP |  \
-   MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT |                        \
+   MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT |                    \
    MARU_WINDOW_ATTR_PRIMARY_SELECTION | MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE |              \
    MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE |               \
    MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED | MARU_WINDOW_ATTR_ICON)
@@ -1172,11 +1172,11 @@ typedef struct MARU_WindowAttributes {
 
   MARU_Vec2Dip dip_size;
   MARU_Vec2Dip dip_position;
-  MARU_Vec2Dip viewport_dip_size;
+  MARU_Vec2Dip dip_viewport_size;
   bool fullscreen;
   const MARU_Monitor* monitor;
-  MARU_Vec2Dip min_dip_size;
-  MARU_Vec2Dip max_dip_size;
+  MARU_Vec2Dip dip_min_size;
+  MARU_Vec2Dip dip_max_size;
   MARU_Fraction aspect_ratio;
 
   bool visible;
@@ -1189,7 +1189,7 @@ typedef struct MARU_WindowAttributes {
   const MARU_Cursor* cursor;
 
   MARU_TextInputType text_input_type;
-  MARU_RectDip text_input_rect;
+  MARU_RectDip dip_text_input_rect;
   bool primary_selection;
   const char* surrounding_text;
   uint32_t surrounding_cursor_byte;
@@ -1220,11 +1220,11 @@ typedef struct MARU_WindowCreateInfo {
                                                                 \
                   .dip_size = {800, 600},                       \
                   .dip_position = {0, 0},                       \
-                  .viewport_dip_size = {0, 0},                  \
+                  .dip_viewport_size = {0, 0},                  \
                   .fullscreen = false,                          \
                   .monitor = NULL,                              \
-                  .min_dip_size = {0, 0},                       \
-                  .max_dip_size = {0, 0},                       \
+                  .dip_min_size = {0, 0},                       \
+                  .dip_max_size = {0, 0},                       \
                   .aspect_ratio = {0, 0},                       \
                                                                 \
                   .visible = true,                              \
@@ -1237,7 +1237,7 @@ typedef struct MARU_WindowCreateInfo {
                   .cursor = NULL,                               \
                                                                 \
                   .text_input_type = MARU_TEXT_INPUT_TYPE_NONE, \
-                  .text_input_rect = {{0, 0}, {0, 0}},          \
+                  .dip_text_input_rect = {{0, 0}, {0, 0}},      \
                   .primary_selection = true,                    \
                   .surrounding_text = NULL,                     \
                   .surrounding_cursor_byte = 0,                 \
@@ -1246,6 +1246,7 @@ typedef struct MARU_WindowCreateInfo {
    .content_type = MARU_CONTENT_TYPE_NONE,                      \
    .decorated = true,                                           \
    .userdata = NULL}
+
 
 /*
  * The returned handle may exist before the native window is ready for use.
@@ -1524,7 +1525,7 @@ static inline MARU_Status maru_setContextIdleTimeout(MARU_Context* context, uint
 static inline MARU_Status maru_setContextDiagnosticCallback(MARU_Context* context, MARU_DiagnosticCallback cb, void* userdata);
 static inline MARU_Status maru_setWindowTitle(MARU_Window* window, const char* title);
 static inline MARU_Status maru_setWindowDipSize(MARU_Window* window, MARU_Vec2Dip size);
-static inline MARU_Status maru_setWindowViewportDipSize(MARU_Window* window, MARU_Vec2Dip size);
+static inline MARU_Status maru_setWindowDipViewportSize(MARU_Window* window, MARU_Vec2Dip size);
 /* Note: Window positioning is compositor-controlled on certain backends (like Wayland), where this will act as a silent no-op or return MARU_FAILURE. */
 static inline MARU_Status maru_setWindowDipPosition(MARU_Window* window, MARU_Vec2Dip position);
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool enabled);
@@ -1532,13 +1533,13 @@ static inline MARU_Status maru_setWindowMaximized(MARU_Window* window, bool enab
 static inline MARU_Status maru_setWindowCursorMode(MARU_Window* window, MARU_CursorMode mode);
 static inline MARU_Status maru_setWindowCursor(MARU_Window* window, MARU_Cursor* cursor);
 static inline MARU_Status maru_setWindowMonitor(MARU_Window* window, MARU_Monitor* monitor);
-static inline MARU_Status maru_setWindowMinDipSize(MARU_Window* window, MARU_Vec2Dip min_dip_size);
-static inline MARU_Status maru_setWindowMaxDipSize(MARU_Window* window, MARU_Vec2Dip max_dip_size);
+static inline MARU_Status maru_setWindowDipMinSize(MARU_Window* window, MARU_Vec2Dip dip_min_size);
+static inline MARU_Status maru_setWindowDipMaxSize(MARU_Window* window, MARU_Vec2Dip dip_max_size);
 static inline MARU_Status maru_setWindowAspectRatio(MARU_Window* window,
                                                     MARU_Fraction aspect_ratio);
 static inline MARU_Status maru_setWindowResizable(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowTextInputType(MARU_Window* window, MARU_TextInputType type);
-static inline MARU_Status maru_setWindowTextInputRect(MARU_Window* window, MARU_RectDip rect);
+static inline MARU_Status maru_setWindowDipTextInputRect(MARU_Window* window, MARU_RectDip rect);
 static inline MARU_Status maru_setWindowPrimarySelection(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowSurroundingText(MARU_Window* window, const char* text, uint32_t cursor_byte, uint32_t anchor_byte);
 static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool enabled);

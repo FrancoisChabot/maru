@@ -143,12 +143,12 @@ static void ImGui_ImplMaru_SetImeData(ImGuiContext*, ImGuiViewport* viewport, Im
         const float line_h = (data->InputLineHeight > 1.0f) ? data->InputLineHeight : 1.0f;
 
         attrs.text_input_type = MARU_TEXT_INPUT_TYPE_TEXT;
-        attrs.text_input_rect.dip_position.x = (MARU_Scalar)local_x;
-        attrs.text_input_rect.dip_position.y = (MARU_Scalar)local_y;
-        attrs.text_input_rect.dip_size.x = (MARU_Scalar)1.0;
-        attrs.text_input_rect.dip_size.y = (MARU_Scalar)line_h;
+        attrs.dip_text_input_rect.dip_position.x = (MARU_Scalar)local_x;
+        attrs.dip_text_input_rect.dip_position.y = (MARU_Scalar)local_y;
+        attrs.dip_text_input_rect.dip_size.x = (MARU_Scalar)1.0;
+        attrs.dip_text_input_rect.dip_size.y = (MARU_Scalar)line_h;
         maru_updateWindow(
-            bd->Window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_TEXT_INPUT_RECT, &attrs);
+            bd->Window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT, &attrs);
     } else {
         attrs.text_input_type = MARU_TEXT_INPUT_TYPE_NONE;
         maru_updateWindow(bd->Window, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &attrs);

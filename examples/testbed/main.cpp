@@ -85,12 +85,12 @@ static uint64_t now_ms() {
 }
 
 static void set_window_viewport_size(MARU_Window *window,
-                                     MARU_Vec2Dip viewport_dip_size) {
+                                     MARU_Vec2Dip dip_viewport_size) {
   if (!window)
     return;
   MARU_WindowAttributes attrs = {};
-  attrs.viewport_dip_size = viewport_dip_size;
-  maru_updateWindow(window, MARU_WINDOW_ATTR_VIEWPORT_DIP_SIZE, &attrs);
+  attrs.dip_viewport_size = dip_viewport_size;
+  maru_updateWindow(window, MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE, &attrs);
 }
 
 static void handle_maru_diagnostic(const MARU_DiagnosticInfo *info,

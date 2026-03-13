@@ -401,10 +401,10 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             ImGui::InputInt2("Aspect Fraction (num/den)", &primary_aspect_ratio_.num);
             if (ImGui::Button("Commit Constraints")) {
                 MARU_WindowAttributes attrs = {};
-                attrs.min_dip_size = primary_min_size_;
-                attrs.max_dip_size = primary_max_size_;
+                attrs.dip_min_size = primary_min_size_;
+                attrs.dip_max_size = primary_max_size_;
                 attrs.aspect_ratio = primary_aspect_ratio_;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
+                maru_updateWindow(target, MARU_WINDOW_ATTR_DIP_MIN_SIZE | MARU_WINDOW_ATTR_DIP_MAX_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
             }
 
             if (ImGui::Button("Request Focus")) {
@@ -501,17 +501,17 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
 #else
             const ImGuiDataType scalar_type = ImGuiDataType_Double;
 #endif
-            ImGui::InputScalarN("Min Size", scalar_type, &sw.min_dip_size.x, 2, nullptr, nullptr, "%.0f");
-            ImGui::InputScalarN("Max Size", scalar_type, &sw.max_dip_size.x, 2, nullptr, nullptr, "%.0f");
+            ImGui::InputScalarN("Min Size", scalar_type, &sw.dip_min_size.x, 2, nullptr, nullptr, "%.0f");
+            ImGui::InputScalarN("Max Size", scalar_type, &sw.dip_max_size.x, 2, nullptr, nullptr, "%.0f");
             ImGui::InputInt2("Aspect Fraction (num/den)", &sw.aspect_ratio.num);
 
             if (ImGui::Button("Commit") && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
                 attrs.title = sw.title.c_str();
-                attrs.min_dip_size = sw.min_dip_size;
-                attrs.max_dip_size = sw.max_dip_size;
+                attrs.dip_min_size = sw.dip_min_size;
+                attrs.dip_max_size = sw.dip_max_size;
                 attrs.aspect_ratio = sw.aspect_ratio;
-                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_MIN_DIP_SIZE | MARU_WINDOW_ATTR_MAX_DIP_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
+                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_DIP_MIN_SIZE | MARU_WINDOW_ATTR_DIP_MAX_SIZE | MARU_WINDOW_ATTR_ASPECT_RATIO, &attrs);
             }
 
             ImGui::ColorEdit4("Clear Color", (float*)&sw.clear_color);
