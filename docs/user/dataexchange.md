@@ -19,15 +19,16 @@ To put data on the clipboard, you first announce the available formats.
 ```c
 const char *mimes[] = {"text/plain"};
 MARU_StringList mime_types = {mimes, 1};
-maru_announceData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_types, MARU_DROP_ACTION_NONE);
+maru_announceClipboardData(context, mime_types);
 ```
 
-When another app wants to paste, Maru will fire a `MARU_EVENT_DATA_REQUESTED` event. You must respond with `maru_provideData`.
+When another app wants to paste, Maru will fire a `MARU_EVENT_DATA_REQUESTED` event with `window == NULL`. You must respond with `maru_provideClipboardData`.
 
 ```c
 if (type == MARU_EVENT_DATA_REQUESTED) {
     const char *my_text = "Hello from Maru!";
-    maru_provideData(&event->data_requested, my_text, strlen(my_text), MARU_DATA_PROVIDE_FLAG_NONE);
+    maru_provideClipboardData(event->data_requested.request, my_text, strlen(my_text),
+                              MARU_DATA_PROVIDE_FLAG_NONE);
 }
 ```
 
@@ -36,10 +37,10 @@ if (type == MARU_EVENT_DATA_REQUESTED) {
 To get data, you first request it for a specific MIME type.
 
 ```c
-maru_requestData(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, "text/plain", my_tag);
+maru_requestClipboardData(context, "text/plain", my_tag);
 ```
 
-The data will arrive later in a `MARU_EVENT_DATA_RECEIVED` event.
+The data will arrive later in a `MARU_EVENT_DATA_RECEIVED` event with `window == NULL`.
 
 ```c
 if (type == MARU_EVENT_DATA_RECEIVED) {
@@ -83,10 +84,10 @@ if (type == MARU_EVENT_DROP_HOVERED) {
 }
 ```
 
-When `MARU_EVENT_DROP_DROPPED` occurs, you can then call `maru_requestData` with `MARU_DATA_EXCHANGE_TARGET_DRAG_DROP` to get the payload.
+When `MARU_EVENT_DROP_DROPPED` occurs, you can then call `maru_requestDropData()` to get the payload.
 
 ### Initiating Drags
 
-To start a drag, call `maru_announceData` with `MARU_DATA_EXCHANGE_TARGET_DRAG_DROP`. The OS will then take over the cursor until the drag is finished or cancelled.
+To start a drag, call `maru_announceDragData()`. The OS will then take over the cursor until the drag is finished or cancelled.
 
 Next: [Vulkan Integration](vulkan.md)

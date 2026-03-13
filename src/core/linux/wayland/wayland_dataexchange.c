@@ -570,6 +570,9 @@ static void _clipboard_source_send(void *data, struct wl_data_source *source,
   
   MARU_Window *event_window = ctx->linux_common.xkb.focused_window;
   if (!event_window) event_window = ctx->linux_common.pointer.focused_window;
+  if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
+    event_window = NULL;
+  }
 
   handle->base.ctx_base = &ctx->base;
   handle->magic = MARU_WL_DATA_REQUEST_MAGIC;
@@ -1339,8 +1342,9 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
   }
 
   return maru_linux_dataexchange_queueTransfer(
-      &ctx->base, &ctx->data_transfers, pipefd[0], window, target, mime_type,
-      userdata);
+      &ctx->base, &ctx->data_transfers, pipefd[0],
+      target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD ? NULL : window, target,
+      mime_type, userdata);
 }
 
 MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,

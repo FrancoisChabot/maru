@@ -184,14 +184,14 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         if (ImGui::Button("Announce Clipboard Text")) {
             clipboard_serves_large_payload_ = false;
             large_clipboard_payload_.clear();
-            last_status_ = maru_announceClipboardData(window, {clipboard_mimes, 2});
+            last_status_ = maru_announceClipboardData(ctx, {clipboard_mimes, 2});
             owns_clipboard_ = (last_status_ == MARU_SUCCESS);
         }
         ImGui::SameLine();
         if (ImGui::Button("Announce Large Clipboard Text")) {
             large_clipboard_payload_ = _build_large_clipboard_payload();
             clipboard_serves_large_payload_ = true;
-            last_status_ = maru_announceClipboardData(window, {clipboard_mimes, 2});
+            last_status_ = maru_announceClipboardData(ctx, {clipboard_mimes, 2});
             owns_clipboard_ = (last_status_ == MARU_SUCCESS);
             if (last_status_ != MARU_SUCCESS) {
                 clipboard_serves_large_payload_ = false;
@@ -200,7 +200,7 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         }
         ImGui::SameLine();
         if (ImGui::Button("Clear Clipboard Ownership")) {
-            last_status_ = maru_announceClipboardData(window, {NULL, 0});
+            last_status_ = maru_announceClipboardData(ctx, {NULL, 0});
             owns_clipboard_ = false;
             clipboard_serves_large_payload_ = false;
             large_clipboard_payload_.clear();
@@ -213,16 +213,16 @@ void DataExchangeModule::render(MARU_Context* ctx, MARU_Window* window) {
         }
 
         if (ImGui::Button("Request Clipboard Text")) {
-            last_status_ = maru_requestClipboardData(window, "text/plain;charset=utf-8", this);
+            last_status_ = maru_requestClipboardData(ctx, "text/plain;charset=utf-8", this);
             if (last_status_ != MARU_SUCCESS) {
-                last_status_ = maru_requestClipboardData(window, "text/plain", this);
+                last_status_ = maru_requestClipboardData(ctx, "text/plain", this);
             }
         }
 
         if (ImGui::Button("Refresh MIME Types")) {
             clipboard_mime_types_.clear();
             MARU_StringList list = {};
-            last_status_ = maru_getAvailableClipboardMIMETypes(window, &list);
+            last_status_ = maru_getAvailableClipboardMIMETypes(ctx, &list);
             if (last_status_ == MARU_SUCCESS && list.strings) {
                 for (uint32_t i = 0; i < list.count; ++i) {
                     clipboard_mime_types_.emplace_back(list.strings[i] ? list.strings[i] : "");

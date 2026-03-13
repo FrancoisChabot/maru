@@ -7,6 +7,17 @@
 #include <stdatomic.h>
 #include <string.h>
 
+static MARU_Window_Windows *maru_getClipboardWindow_Windows(MARU_Context *context) {
+  MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_Windows *win = (MARU_Window_Windows *)it;
+    if (win->hwnd != NULL) {
+      return win;
+    }
+  }
+  return NULL;
+}
+
 // --- Contexts (contexts.h) ---
 
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
@@ -202,11 +213,15 @@ MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller *controller,
 
 // --- Data Exchange (data_exchange.h) ---
 
-MARU_API MARU_Status maru_announceClipboardData(MARU_Window *window, MARU_StringList mime_types) {
-  MARU_API_VALIDATE(announceClipboardData, window, mime_types);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(announceClipboardData, window, mime_types);
-  return maru_announceData_Windows(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_types, 0);
+MARU_API MARU_Status maru_announceClipboardData(MARU_Context *context, MARU_StringList mime_types) {
+  MARU_API_VALIDATE(announceClipboardData, context, mime_types);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(announceClipboardData, context, mime_types);
+  MARU_Window_Windows *win = maru_getClipboardWindow_Windows(context);
+  if (!win) {
+    return MARU_FAILURE;
+  }
+  return maru_announceData_Windows((MARU_Window *)win, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_types, 0);
 }
 
 MARU_API MARU_Status maru_announceDragData(MARU_Window *window, MARU_StringList mime_types, MARU_DropActionMask allowed_actions) {
@@ -228,11 +243,15 @@ MARU_API MARU_Status maru_provideDropData(MARU_DataRequest *request, const void 
   return maru_provideData_Windows(request, data, size, flags);
 }
 
-MARU_API MARU_Status maru_requestClipboardData(MARU_Window *window, const char *mime_type, void *userdata) {
-  MARU_API_VALIDATE(requestClipboardData, window, mime_type, userdata);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(requestClipboardData, window, mime_type, userdata);
-  return maru_requestData_Windows(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_type, userdata);
+MARU_API MARU_Status maru_requestClipboardData(MARU_Context *context, const char *mime_type, void *userdata) {
+  MARU_API_VALIDATE(requestClipboardData, context, mime_type, userdata);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(requestClipboardData, context, mime_type, userdata);
+  MARU_Window_Windows *win = maru_getClipboardWindow_Windows(context);
+  if (!win) {
+    return MARU_FAILURE;
+  }
+  return maru_requestData_Windows((MARU_Window *)win, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_type, userdata);
 }
 
 MARU_API MARU_Status maru_requestDropData(MARU_Window *window, const char *mime_type, void *userdata) {
@@ -242,11 +261,17 @@ MARU_API MARU_Status maru_requestDropData(MARU_Window *window, const char *mime_
   return maru_requestData_Windows(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP, mime_type, userdata);
 }
 
-MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(MARU_Window *window, MARU_StringList *out_list) {
-  MARU_API_VALIDATE(getAvailableClipboardMIMETypes, window, out_list);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, window, out_list);
-  return maru_getAvailableMIMETypes_Windows(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, out_list);
+MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(MARU_Context *context, MARU_StringList *out_list) {
+  MARU_API_VALIDATE(getAvailableClipboardMIMETypes, context, out_list);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, context, out_list);
+  MARU_Window_Windows *win = maru_getClipboardWindow_Windows(context);
+  if (!win) {
+    out_list->strings = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+  return maru_getAvailableMIMETypes_Windows((MARU_Window *)win, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, out_list);
 }
 
 MARU_API MARU_Status maru_getAvailableDropMIMETypes(MARU_Window *window, MARU_StringList *out_list) {

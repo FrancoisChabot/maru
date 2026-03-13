@@ -30,15 +30,13 @@ typedef struct MARU_Backend {
   __typeof__(maru_releaseController) *releaseController;
   __typeof__(maru_setControllerHapticLevels) *setControllerHapticLevels;
 
-  MARU_Status (*announceData)(MARU_Window *window, MARU_DataExchangeTarget target,
-                              MARU_StringList mime_types,
-                              MARU_DropActionMask allowed_actions);
+  __typeof__(maru_announceClipboardData) *announceClipboardData;
+  __typeof__(maru_announceDragData) *announceDragData;
   __typeof__(maru_provideClipboardData) *provideData;
-  MARU_Status (*requestData)(MARU_Window *window, MARU_DataExchangeTarget target,
-                             const char *mime_type, void *userdata);
-  MARU_Status (*getAvailableMIMETypes)(MARU_Window *window,
-                                       MARU_DataExchangeTarget target,
-                                       MARU_StringList *out_list);
+  __typeof__(maru_requestClipboardData) *requestClipboardData;
+  __typeof__(maru_requestDropData) *requestDropData;
+  __typeof__(maru_getAvailableClipboardMIMETypes) *getAvailableClipboardMIMETypes;
+  __typeof__(maru_getAvailableDropMIMETypes) *getAvailableDropMIMETypes;
   
   __typeof__(maru_getMonitors) *getMonitors;
   __typeof__(maru_retainMonitor) *retainMonitor;

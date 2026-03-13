@@ -970,7 +970,8 @@ MARU_STATIC_ASSERT(sizeof(MARU_UserDefinedEvent) == 64,
  * from maru_pumpEvents().
  *
  * `window` is NULL for context-scoped events such as monitor/controller
- * changes, and for user events posted via maru_postEvent().
+ * changes, clipboard data-exchange events, and user events posted via
+ * maru_postEvent().
  *
  * Any borrowed pointer reachable through `evt` is only guaranteed to remain
  * valid for the duration of the callback unless a specific event says
@@ -1435,8 +1436,8 @@ typedef struct MARU_WindowCreateInfo {
  * Wait for MARU_EVENT_WINDOW_READY or maru_isWindowReady(window) before using
  * APIs that require a realized native window, such as maru_updateWindow(),
  * maru_requestWindowFocus(), maru_requestWindowFrame(),
- * maru_requestWindowAttention(), data exchange APIs, native window getters,
- * and maru_createVkSurface().
+ * maru_requestWindowAttention(), drag/drop window data-exchange APIs, native
+ * window getters, and maru_createVkSurface().
  *
  * If the owning context is already lost, status-returning APIs on that window
  * short-circuit with MARU_CONTEXT_LOST before runtime ready-window
@@ -1568,8 +1569,15 @@ MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller* controller,
 
 /* ----- Data exchange ----- */
 
-/* `mime_types` strings are copied before a successful return. */
-MARU_API MARU_Status maru_announceClipboardData(MARU_Window* window,
+/*
+ * Announces clipboard ownership for the context.
+ *
+ * Clipboard events associated with this ownership flow are delivered as
+ * context-scoped callbacks (`window == NULL`).
+ *
+ * `mime_types` strings are copied before a successful return.
+ */
+MARU_API MARU_Status maru_announceClipboardData(MARU_Context* context,
                                                 MARU_StringList mime_types);
 /* `mime_types` strings are copied before a successful return. */
 MARU_API MARU_Status maru_announceDragData(MARU_Window* window,
@@ -1602,6 +1610,11 @@ MARU_API MARU_Status maru_provideDropData(MARU_DataRequest* request,
                                           size_t size,
                                           MARU_DataProvideFlags flags);
 /*
+ * Requests clipboard data for the context.
+ *
+ * Clipboard events associated with this request flow are delivered as
+ * context-scoped callbacks (`window == NULL`).
+ *
  * `mime_type` is copied before maru_requestClipboardData() returns
  * successfully.
  *
@@ -1609,7 +1622,7 @@ MARU_API MARU_Status maru_provideDropData(MARU_DataRequest* request,
  * MARU_EVENT_DATA_RECEIVED callback reports the same pointer in
  * event->data_received.userdata.
  */
-MARU_API MARU_Status maru_requestClipboardData(MARU_Window* window,
+MARU_API MARU_Status maru_requestClipboardData(MARU_Context* context,
                                                const char* mime_type,
                                                void* userdata);
 /*
@@ -1628,7 +1641,7 @@ MARU_API MARU_Status maru_requestDropData(MARU_Window* window,
  * maru_getAvailableClipboardMIMETypes() call on the same context, and may also
  * be replaced by a later pump cycle that changes the clipboard offer.
  */
-MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(MARU_Window* window,
+MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(MARU_Context* context,
                                                          MARU_StringList* out_list);
 /*
  * Returns a borrowed snapshot of the currently available drop-offer MIME

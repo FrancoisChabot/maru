@@ -34,7 +34,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
   - `maru_requestWindowFocus()`
   - `maru_requestWindowFrame()`
   - `maru_requestWindowAttention()`
-  - data exchange APIs on a window
+  - drag-and-drop data exchange APIs on a window
   - `maru_createVkSurface()`
   - native window handle getters
 - Validation builds require these device operations to target a non-lost handle:

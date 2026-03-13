@@ -114,15 +114,13 @@ MARU_API void maru_releaseController(MARU_Controller *controller) {
 }
 
 MARU_API MARU_Status
-maru_announceClipboardData(MARU_Window *window, MARU_StringList mime_types) {
-  MARU_API_VALIDATE(announceClipboardData, window, mime_types);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(announceClipboardData, window, mime_types);
-  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
-  if (!win_base->backend->announceData) return MARU_FAILURE;
-  return win_base->backend->announceData(window,
-                                         MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                         mime_types, 0);
+maru_announceClipboardData(MARU_Context *context, MARU_StringList mime_types) {
+  MARU_API_VALIDATE(announceClipboardData, context, mime_types);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(announceClipboardData, context, mime_types);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  if (!ctx_base->backend->announceClipboardData) return MARU_FAILURE;
+  return ctx_base->backend->announceClipboardData(context, mime_types);
 }
 
 MARU_API MARU_Status
@@ -133,10 +131,9 @@ maru_announceDragData(MARU_Window *window, MARU_StringList mime_types,
   MARU_API_VALIDATE_LIVE(announceDragData, window, mime_types,
                          allowed_actions);
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
-  if (!win_base->backend->announceData) return MARU_FAILURE;
-  return win_base->backend->announceData(window,
-                                         MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
-                                         mime_types, allowed_actions);
+  if (!win_base->backend->announceDragData) return MARU_FAILURE;
+  return win_base->backend->announceDragData(window, mime_types,
+                                             allowed_actions);
 }
 
 MARU_API MARU_Status
@@ -168,16 +165,14 @@ maru_provideDropData(MARU_DataRequest *request, const void *data, size_t size,
 }
 
 MARU_API MARU_Status
-maru_requestClipboardData(MARU_Window *window, const char *mime_type,
+maru_requestClipboardData(MARU_Context *context, const char *mime_type,
                           void *userdata) {
-  MARU_API_VALIDATE(requestClipboardData, window, mime_type, userdata);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(requestClipboardData, window, mime_type, userdata);
-  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
-  if (!win_base->backend->requestData) return MARU_FAILURE;
-  return win_base->backend->requestData(window,
-                                        MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                                        mime_type, userdata);
+  MARU_API_VALIDATE(requestClipboardData, context, mime_type, userdata);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(requestClipboardData, context, mime_type, userdata);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  if (!ctx_base->backend->requestClipboardData) return MARU_FAILURE;
+  return ctx_base->backend->requestClipboardData(context, mime_type, userdata);
 }
 
 MARU_API MARU_Status
@@ -187,26 +182,23 @@ maru_requestDropData(MARU_Window *window, const char *mime_type,
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(requestDropData, window, mime_type, userdata);
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
-  if (!win_base->backend->requestData) return MARU_FAILURE;
-  return win_base->backend->requestData(window,
-                                        MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
-                                        mime_type, userdata);
+  if (!win_base->backend->requestDropData) return MARU_FAILURE;
+  return win_base->backend->requestDropData(window, mime_type, userdata);
 }
 
 MARU_API MARU_Status
-maru_getAvailableClipboardMIMETypes(MARU_Window *window,
+maru_getAvailableClipboardMIMETypes(MARU_Context *context,
                                     MARU_StringList *out_list) {
-  MARU_API_VALIDATE(getAvailableClipboardMIMETypes, window, out_list);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, window, out_list);
-  const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
-  if (!win_base->backend->getAvailableMIMETypes) {
+  MARU_API_VALIDATE(getAvailableClipboardMIMETypes, context, out_list);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, context, out_list);
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  if (!ctx_base->backend->getAvailableClipboardMIMETypes) {
     out_list->strings = NULL;
     out_list->count = 0;
     return MARU_FAILURE;
   }
-  return win_base->backend->getAvailableMIMETypes(
-      window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, out_list);
+  return ctx_base->backend->getAvailableClipboardMIMETypes(context, out_list);
 }
 
 MARU_API MARU_Status
@@ -216,13 +208,12 @@ maru_getAvailableDropMIMETypes(MARU_Window *window,
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(getAvailableDropMIMETypes, window, out_list);
   const MARU_Window_Base *win_base = (const MARU_Window_Base *)window;
-  if (!win_base->backend->getAvailableMIMETypes) {
+  if (!win_base->backend->getAvailableDropMIMETypes) {
     out_list->strings = NULL;
     out_list->count = 0;
     return MARU_FAILURE;
   }
-  return win_base->backend->getAvailableMIMETypes(
-      window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP, out_list);
+  return win_base->backend->getAvailableDropMIMETypes(window, out_list);
 }
 
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,

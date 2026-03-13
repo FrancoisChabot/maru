@@ -42,6 +42,8 @@ static void _maru_windows_emit_data_received(MARU_Context_Base *ctx_base,
                                              const char *mime_type,
                                              void *userdata, MARU_Status status,
                                              const void *data, size_t size) {
+  MARU_Window *event_window =
+      (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) ? NULL : window;
   MARU_Event evt = {0};
   evt.data_received.userdata = userdata;
   evt.data_received.target = target;
@@ -49,7 +51,7 @@ static void _maru_windows_emit_data_received(MARU_Context_Base *ctx_base,
   evt.data_received.status = status;
   evt.data_received.data = data;
   evt.data_received.dip_size = size;
-  _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_RECEIVED, window, &evt);
+  _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_RECEIVED, event_window, &evt);
 }
 
 static char *_maru_windows_copy_string(MARU_Context_Base *ctx_base,
@@ -97,7 +99,10 @@ void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx) {
         req_evt.data_requested.mime_type = handle->mime_type;
         req_evt.data_requested.request = (MARU_DataRequest *)handle;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_DATA_REQUESTED,
-                             handle->window, &req_evt);
+                             handle->target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD
+                                 ? NULL
+                                 : handle->window,
+                             &req_evt);
 
         _maru_windows_emit_data_received(
             &ctx->base, handle->window, handle->target, handle->mime_type,
@@ -256,7 +261,8 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
     handle->base.ctx_base = ctx_base;
     handle->kind = MARU_WINDOWS_DATA_REQUEST_CAPTURE_LOCAL;
     handle->format = format;
-    handle->window = window;
+    handle->window =
+        (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) ? NULL : window;
     handle->target = target;
     handle->userdata = userdata;
     handle->status = MARU_FAILURE;
@@ -271,7 +277,10 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
       req_evt.data_requested.target = target;
       req_evt.data_requested.mime_type = handle->mime_type;
       req_evt.data_requested.request = (MARU_DataRequest *)handle;
-      _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_REQUESTED, window,
+      _maru_dispatch_event(ctx_base, MARU_EVENT_DATA_REQUESTED,
+                           target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD
+                               ? NULL
+                               : window,
                            &req_evt);
 
       _maru_windows_emit_data_received(
@@ -294,7 +303,8 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
     }
     memset(deferred, 0, sizeof(*deferred));
     deferred->kind = MARU_WINDOWS_DEFERRED_EVENT_DATA_REQUESTED;
-    deferred->window = window;
+    deferred->window =
+        (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) ? NULL : window;
     deferred->request_handle = handle;
     _maru_windows_enqueue_deferred_event(ctx, deferred);
     return maru_wakeContext((MARU_Context *)ctx);
@@ -368,7 +378,8 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
     }
     memset(deferred, 0, sizeof(*deferred));
     deferred->kind = MARU_WINDOWS_DEFERRED_EVENT_DATA_RECEIVED;
-    deferred->window = window;
+    deferred->window =
+        (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) ? NULL : window;
     deferred->received.target = target;
     deferred->received.mime_type = mime_copy;
     deferred->received.userdata = userdata;

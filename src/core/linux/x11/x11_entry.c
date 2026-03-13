@@ -76,6 +76,73 @@ MARU_API bool maru_x11SupportsExtendedFrameSync(const MARU_Context *context) {
   return ((MARU_Context_X11 *)context)->compositor_supports_extended_frame_sync;
 }
 
+static MARU_Window_X11 *maru_getClipboardWindow_X11(MARU_Context *context) {
+  MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
+    MARU_Window_X11 *win = (MARU_Window_X11 *)it;
+    if (win->handle != None) {
+      return win;
+    }
+  }
+  return NULL;
+}
+
+static MARU_Status maru_announceClipboardData_X11_ctx(MARU_Context *context,
+                                                      MARU_StringList mime_types) {
+  MARU_Window_X11 *win = maru_getClipboardWindow_X11(context);
+  if (!win) {
+    return MARU_FAILURE;
+  }
+  return maru_announceData_X11((MARU_Window *)win, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                               mime_types, 0);
+}
+
+static MARU_Status maru_requestClipboardData_X11_ctx(MARU_Context *context,
+                                                     const char *mime_type,
+                                                     void *userdata) {
+  MARU_Window_X11 *win = maru_getClipboardWindow_X11(context);
+  if (!win) {
+    return MARU_FAILURE;
+  }
+  return maru_requestData_X11((MARU_Window *)win, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                              mime_type, userdata);
+}
+
+static MARU_Status
+maru_getAvailableClipboardMIMETypes_X11_ctx(MARU_Context *context,
+                                            MARU_StringList *out_list) {
+  MARU_Window_X11 *win = maru_getClipboardWindow_X11(context);
+  if (!win) {
+    out_list->strings = NULL;
+    out_list->count = 0;
+    return MARU_FAILURE;
+  }
+  return maru_getAvailableMIMETypes_X11((MARU_Window *)win,
+                                        MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                        out_list);
+}
+
+static MARU_Status maru_announceDragData_X11_win(MARU_Window *window,
+                                                 MARU_StringList mime_types,
+                                                 MARU_DropActionMask allowed_actions) {
+  return maru_announceData_X11(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                               mime_types, allowed_actions);
+}
+
+static MARU_Status maru_requestDropData_X11_win(MARU_Window *window,
+                                                const char *mime_type,
+                                                void *userdata) {
+  return maru_requestData_X11(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                              mime_type, userdata);
+}
+
+static MARU_Status
+maru_getAvailableDropMIMETypes_X11_win(MARU_Window *window,
+                                       MARU_StringList *out_list) {
+  return maru_getAvailableMIMETypes_X11(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
+                                        out_list);
+}
+
 #ifdef MARU_INDIRECT_BACKEND
 static void *maru_getWindowNativeHandle_X11_internal(MARU_Window *window) {
   return maru_getWindowNativeHandle_X11(window);
@@ -100,10 +167,13 @@ const MARU_Backend maru_backend_X11 = {
   .retainController = maru_retainController_X11,
   .releaseController = maru_releaseController_X11,
   .setControllerHapticLevels = maru_setControllerHapticLevels_X11,
-  .announceData = maru_announceData_X11,
+  .announceClipboardData = maru_announceClipboardData_X11_ctx,
+  .announceDragData = maru_announceDragData_X11_win,
   .provideData = maru_provideData_X11,
-  .requestData = maru_requestData_X11,
-  .getAvailableMIMETypes = maru_getAvailableMIMETypes_X11,
+  .requestClipboardData = maru_requestClipboardData_X11_ctx,
+  .requestDropData = maru_requestDropData_X11_win,
+  .getAvailableClipboardMIMETypes = maru_getAvailableClipboardMIMETypes_X11_ctx,
+  .getAvailableDropMIMETypes = maru_getAvailableDropMIMETypes_X11_win,
   .getMonitors = maru_getMonitors_X11,
   .retainMonitor = maru_retainMonitor_X11,
   .releaseMonitor = maru_releaseMonitor_X11,
@@ -223,13 +293,12 @@ maru_setControllerHapticLevels(MARU_Controller *controller, uint32_t first_hapti
                                             intensities);
 }
 
-MARU_API MARU_Status maru_announceClipboardData(MARU_Window *window,
+MARU_API MARU_Status maru_announceClipboardData(MARU_Context *context,
                                                 MARU_StringList mime_types) {
-  MARU_API_VALIDATE(announceClipboardData, window, mime_types);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(announceClipboardData, window, mime_types);
-  return maru_announceData_X11(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                               mime_types, 0);
+  MARU_API_VALIDATE(announceClipboardData, context, mime_types);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(announceClipboardData, context, mime_types);
+  return maru_announceClipboardData_X11_ctx(context, mime_types);
 }
 
 MARU_API MARU_Status maru_announceDragData(MARU_Window *window,
@@ -239,8 +308,7 @@ MARU_API MARU_Status maru_announceDragData(MARU_Window *window,
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(announceDragData, window, mime_types,
                          allowed_actions);
-  return maru_announceData_X11(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
-                               mime_types, allowed_actions);
+  return maru_announceDragData_X11_win(window, mime_types, allowed_actions);
 }
 
 MARU_API MARU_Status maru_provideClipboardData(MARU_DataRequest *request,
@@ -259,14 +327,13 @@ MARU_API MARU_Status maru_provideDropData(MARU_DataRequest *request,
   return maru_provideData_X11(request, data, size, flags);
 }
 
-MARU_API MARU_Status maru_requestClipboardData(MARU_Window *window,
+MARU_API MARU_Status maru_requestClipboardData(MARU_Context *context,
                                                const char *mime_type,
                                                void *userdata) {
-  MARU_API_VALIDATE(requestClipboardData, window, mime_type, userdata);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(requestClipboardData, window, mime_type, userdata);
-  return maru_requestData_X11(window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
-                              mime_type, userdata);
+  MARU_API_VALIDATE(requestClipboardData, context, mime_type, userdata);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(requestClipboardData, context, mime_type, userdata);
+  return maru_requestClipboardData_X11_ctx(context, mime_type, userdata);
 }
 
 MARU_API MARU_Status maru_requestDropData(MARU_Window *window,
@@ -275,17 +342,15 @@ MARU_API MARU_Status maru_requestDropData(MARU_Window *window,
   MARU_API_VALIDATE(requestDropData, window, mime_type, userdata);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(requestDropData, window, mime_type, userdata);
-  return maru_requestData_X11(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
-                              mime_type, userdata);
+  return maru_requestDropData_X11_win(window, mime_type, userdata);
 }
 
 MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(
-    MARU_Window *window, MARU_StringList *out_list) {
-  MARU_API_VALIDATE(getAvailableClipboardMIMETypes, window, out_list);
-  MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
-  MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, window, out_list);
-  return maru_getAvailableMIMETypes_X11(
-      window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, out_list);
+    MARU_Context *context, MARU_StringList *out_list) {
+  MARU_API_VALIDATE(getAvailableClipboardMIMETypes, context, out_list);
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+  MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, context, out_list);
+  return maru_getAvailableClipboardMIMETypes_X11_ctx(context, out_list);
 }
 
 MARU_API MARU_Status
@@ -293,8 +358,7 @@ maru_getAvailableDropMIMETypes(MARU_Window *window, MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableDropMIMETypes, window, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(getAvailableDropMIMETypes, window, out_list);
-  return maru_getAvailableMIMETypes_X11(
-      window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP, out_list);
+  return maru_getAvailableDropMIMETypes_X11_win(window, out_list);
 }
 
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window *window) {
