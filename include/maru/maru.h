@@ -482,8 +482,9 @@ typedef enum MARU_EventId {
   MARU_EVENT_DRAG_FINISHED = 23,
   MARU_EVENT_CONTROLLER_CHANGED = 24,
   MARU_EVENT_CONTROLLER_BUTTON_CHANGED = 25,
+  MARU_EVENT_TEXT_EDIT_NAVIGATION = 26,
 
-  /* Ids 26 to 47 are reserved for future additions.
+  /* Ids 27 to 47 are reserved for future additions.
   * 
   * User event bits are permanently pinned to the end of the range.
   */
@@ -540,6 +541,7 @@ typedef enum MARU_EventId {
 #define MARU_MASK_DRAG_FINISHED MARU_EVENT_MASK(MARU_EVENT_DRAG_FINISHED)
 #define MARU_MASK_CONTROLLER_CHANGED MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_CHANGED)
 #define MARU_MASK_CONTROLLER_BUTTON_CHANGED MARU_EVENT_MASK(MARU_EVENT_CONTROLLER_BUTTON_CHANGED)
+#define MARU_MASK_TEXT_EDIT_NAVIGATION MARU_EVENT_MASK(MARU_EVENT_TEXT_EDIT_NAVIGATION)
 #define MARU_MASK_USER_0 MARU_EVENT_MASK(MARU_EVENT_USER_0)
 #define MARU_MASK_USER_1 MARU_EVENT_MASK(MARU_EVENT_USER_1)
 #define MARU_MASK_USER_2 MARU_EVENT_MASK(MARU_EVENT_USER_2)
@@ -565,9 +567,10 @@ typedef enum MARU_EventId {
    MARU_MASK_TEXT_EDIT_ENDED | MARU_MASK_DROP_ENTERED | MARU_MASK_DROP_HOVERED |                   \
    MARU_MASK_DROP_EXITED | MARU_MASK_DROP_DROPPED | MARU_MASK_DATA_RECEIVED |                      \
    MARU_MASK_DATA_REQUESTED | MARU_MASK_DATA_CONSUMED | MARU_MASK_DRAG_FINISHED |                  \
-   MARU_MASK_CONTROLLER_CHANGED | MARU_MASK_CONTROLLER_BUTTON_CHANGED | MARU_MASK_USER_0 |         \
-   MARU_MASK_USER_1 | MARU_MASK_USER_2 | MARU_MASK_USER_3 | MARU_MASK_USER_4 | MARU_MASK_USER_5 |  \
-   MARU_MASK_USER_6 | MARU_MASK_USER_7 | MARU_MASK_USER_8 | MARU_MASK_USER_9 | MARU_MASK_USER_10 | \
+   MARU_MASK_CONTROLLER_CHANGED | MARU_MASK_CONTROLLER_BUTTON_CHANGED |                             \
+   MARU_MASK_TEXT_EDIT_NAVIGATION | MARU_MASK_USER_0 | MARU_MASK_USER_1 | MARU_MASK_USER_2 |      \
+   MARU_MASK_USER_3 | MARU_MASK_USER_4 | MARU_MASK_USER_5 | MARU_MASK_USER_6 |                     \
+   MARU_MASK_USER_7 | MARU_MASK_USER_8 | MARU_MASK_USER_9 | MARU_MASK_USER_10 |                    \
    MARU_MASK_USER_11 | MARU_MASK_USER_12 | MARU_MASK_USER_13 | MARU_MASK_USER_14 |                 \
    MARU_MASK_USER_15)
 
@@ -832,6 +835,36 @@ typedef struct MARU_TextEditEndedEvent {
   bool canceled;
 } MARU_TextEditEndedEvent;
 
+typedef enum MARU_TextEditNavigationCommand {
+  MARU_TEXT_EDIT_NAVIGATE_LEFT = 0,
+  MARU_TEXT_EDIT_NAVIGATE_RIGHT = 1,
+  MARU_TEXT_EDIT_NAVIGATE_UP = 2,
+  MARU_TEXT_EDIT_NAVIGATE_DOWN = 3,
+  MARU_TEXT_EDIT_NAVIGATE_WORD_LEFT = 4,
+  MARU_TEXT_EDIT_NAVIGATE_WORD_RIGHT = 5,
+  MARU_TEXT_EDIT_NAVIGATE_LINE_START = 6,
+  MARU_TEXT_EDIT_NAVIGATE_LINE_END = 7,
+  MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_START = 8,
+  MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_END = 9,
+} MARU_TextEditNavigationCommand;
+
+/*
+ * Semantic caret-navigation command for active text editing.
+ *
+ * This exists because raw keyboard events intentionally do not auto-repeat, but
+ * text boxes still need repeated caret movement and selection navigation while
+ * an IME/text-input session is active. Unlike UTF-8 commit events, this does
+ * not edit text directly; it reports navigation intent for the app's own text
+ * model and layout.
+ */
+typedef struct MARU_TextEditNavigationEvent {
+  uint64_t session_id;
+  MARU_TextEditNavigationCommand command;
+  bool extend_selection;
+  bool is_repeat;
+  MARU_ModifierFlags modifiers;
+} MARU_TextEditNavigationEvent;
+
 typedef struct MARU_UserDefinedEvent {
   union {
     void* userdata;
@@ -867,6 +900,7 @@ typedef struct MARU_Event {
     MARU_TextEditUpdatedEvent text_edit_updated;
     MARU_TextEditCommittedEvent text_edit_committed;
     MARU_TextEditEndedEvent text_edit_ended;
+    MARU_TextEditNavigationEvent text_edit_navigation;
     MARU_UserDefinedEvent user;
   };
 } MARU_Event;

@@ -67,6 +67,12 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
         ss << "IME Commit: Session=" << e.text_edit_committed.session_id
            << " Del: (" << e.text_edit_committed.delete_before_bytes << ", " << e.text_edit_committed.delete_after_bytes << ")"
            << " Text: '" << committed << "'";
+    } else if (type == MARU_EVENT_TEXT_EDIT_NAVIGATION) {
+        ss << "IME Nav: Session=" << e.text_edit_navigation.session_id
+           << " Cmd: " << (int)e.text_edit_navigation.command
+           << " Extend: " << (e.text_edit_navigation.extend_selection ? "YES" : "NO")
+           << " Repeat: " << (e.text_edit_navigation.is_repeat ? "YES" : "NO")
+           << " Mods: " << formatModifiers(e.text_edit_navigation.modifiers);
     } else if (type == MARU_EVENT_TEXT_EDIT_ENDED) {
         ss << "IME End: Session=" << e.text_edit_ended.session_id << " Canceled: " << (e.text_edit_ended.canceled ? "YES" : "NO");
     } else if (type == MARU_EVENT_WINDOW_STATE_CHANGED) {
@@ -224,6 +230,7 @@ const char* EventLogModule::typeToString(MARU_EventId type) {
     if (type == MARU_EVENT_TEXT_EDIT_STARTED) return "TEXT_EDIT_STARTED";
     if (type == MARU_EVENT_TEXT_EDIT_UPDATED) return "TEXT_EDIT_UPDATED";
     if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) return "TEXT_EDIT_COMMITTED";
+    if (type == MARU_EVENT_TEXT_EDIT_NAVIGATION) return "TEXT_EDIT_NAVIGATION";
     if (type == MARU_EVENT_TEXT_EDIT_ENDED) return "TEXT_EDIT_ENDED";
     if (type == MARU_EVENT_DROP_ENTERED) return "DROP_ENTERED";
     if (type == MARU_EVENT_DROP_HOVERED) return "DROP_HOVERED";

@@ -46,6 +46,7 @@ void EventModule::render(MARU_Context* ctx, MARU_Window* window) {
         event_checkbox("TEXT_EDIT_STARTED", MARU_MASK_TEXT_EDIT_STARTED);
         event_checkbox("TEXT_EDIT_UPDATED", MARU_MASK_TEXT_EDIT_UPDATED);
         event_checkbox("TEXT_EDIT_COMMITTED", MARU_MASK_TEXT_EDIT_COMMITTED);
+        event_checkbox("TEXT_EDIT_NAVIGATION", MARU_MASK_TEXT_EDIT_NAVIGATION);
         event_checkbox("TEXT_EDIT_ENDED", MARU_MASK_TEXT_EDIT_ENDED);
 
         ImGui::Separator();
