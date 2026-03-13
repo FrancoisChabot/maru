@@ -17,6 +17,8 @@ typedef struct MARU_QueueBuffer {
 
 typedef struct MARU_Queue {
     MARU_Allocator allocator;
+    MARU_DiagnosticCallback diagnostic_cb;
+    void *diagnostic_userdata;
     MARU_QueueBuffer active;
     MARU_QueueBuffer stable;
 
@@ -83,6 +85,34 @@ static void _maru_queue_free_aligned64(const MARU_Allocator *allocator, void *pt
         void *original_ptr = ((void **)ptr)[-1];
         _maru_queue_free_raw(allocator, original_ptr);
     }
+}
+
+static void _maru_queue_report_diagnostic_raw(MARU_DiagnosticCallback cb,
+                                              void *userdata,
+                                              MARU_Diagnostic diagnostic,
+                                              const char *message) {
+    if (!cb) {
+        return;
+    }
+
+    MARU_DiagnosticInfo info = {
+        .diagnostic = diagnostic,
+        .message = message,
+        .context = NULL,
+        .subject_kind = MARU_DIAGNOSTIC_SUBJECT_NONE,
+    };
+    cb(&info, userdata);
+}
+
+static void _maru_queue_report_diagnostic(MARU_Queue *queue,
+                                          MARU_Diagnostic diagnostic,
+                                          const char *message) {
+    if (!queue) {
+        return;
+    }
+    _maru_queue_report_diagnostic_raw(queue->diagnostic_cb,
+                                      queue->diagnostic_userdata,
+                                      diagnostic, message);
 }
 
 #ifdef MARU_VALIDATE_API_CALLS
@@ -276,6 +306,9 @@ static bool _maru_queue_push_internal(MARU_Queue *q, MARU_EventId type,
         q->active.events[idx] = *evt;
         return true;
     } else {
+        _maru_queue_report_diagnostic(
+            q, MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+            "Queue push failed because the active queue buffer is full");
         return false;
     }
 }
@@ -315,22 +348,42 @@ static void _maru_queue_buffer_cleanup(const MARU_Allocator *allocator, MARU_Que
 bool maru_createQueue(const MARU_QueueCreateInfo *create_info, MARU_Queue **out_queue) {
     MARU_API_VALIDATE(createQueue, create_info, out_queue);
 
+    if (out_queue) {
+        *out_queue = NULL;
+    }
+
     if (!create_info || !out_queue || create_info->capacity == 0u) {
+        if (create_info) {
+            _maru_queue_report_diagnostic_raw(
+                create_info->diagnostic_cb, create_info->diagnostic_userdata,
+                MARU_DIAGNOSTIC_INVALID_ARGUMENT,
+                "Queue creation failed because capacity must be greater than zero");
+        }
         return false;
     }
     const bool any_custom = create_info->allocator.alloc_cb != NULL || create_info->allocator.realloc_cb != NULL || create_info->allocator.free_cb != NULL;
     if (any_custom && (create_info->allocator.alloc_cb == NULL || create_info->allocator.realloc_cb == NULL || create_info->allocator.free_cb == NULL)) {
+        _maru_queue_report_diagnostic_raw(
+            create_info->diagnostic_cb, create_info->diagnostic_userdata,
+            MARU_DIAGNOSTIC_INVALID_ARGUMENT,
+            "Queue creation failed because custom allocators must provide alloc, realloc, and free callbacks");
         return false;
     }
 
     MARU_Allocator allocator = _maru_queue_resolve_allocator(&create_info->allocator);
     MARU_Queue *q = (MARU_Queue *)_maru_queue_alloc_raw(&allocator, sizeof(MARU_Queue));
     if (!q) {
+        _maru_queue_report_diagnostic_raw(
+            create_info->diagnostic_cb, create_info->diagnostic_userdata,
+            MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+            "Queue creation failed because the queue object allocation failed");
         return false;
     }
 
     memset(q, 0, sizeof(*q));
     q->allocator = allocator;
+    q->diagnostic_cb = create_info->diagnostic_cb;
+    q->diagnostic_userdata = create_info->diagnostic_userdata;
     q->capacity = create_info->capacity;
     q->active_count = 0;
     q->stable_count = 0;
@@ -340,11 +393,17 @@ bool maru_createQueue(const MARU_QueueCreateInfo *create_info, MARU_Queue **out_
 #endif
 
     if (!_maru_queue_buffer_init(&q->allocator, &q->buffers[0], q->capacity)) {
+        _maru_queue_report_diagnostic(
+            q, MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+            "Queue creation failed because the active buffer allocation failed");
         _maru_queue_free_raw(&q->allocator, q);
         return false;
     }
 
     if (!_maru_queue_buffer_init(&q->allocator, &q->buffers[1], q->capacity)) {
+        _maru_queue_report_diagnostic(
+            q, MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+            "Queue creation failed because the stable buffer allocation failed");
         _maru_queue_buffer_cleanup(&q->allocator, &q->buffers[0]);
         _maru_queue_free_raw(&q->allocator, q);
         return false;

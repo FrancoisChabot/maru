@@ -54,12 +54,16 @@ static inline bool maru_isQueueSafeEventId(MARU_EventId type) {
 
 typedef struct MARU_QueueCreateInfo {
   MARU_Allocator allocator;
+  MARU_DiagnosticCallback diagnostic_cb;
+  void* diagnostic_userdata;
   uint32_t capacity;
 } MARU_QueueCreateInfo;
 
 #define MARU_QUEUE_CREATE_INFO_DEFAULT                                                              \
   {                                                                                                 \
       .allocator = {.alloc_cb = NULL, .realloc_cb = NULL, .free_cb = NULL, .userdata = NULL},     \
+      .diagnostic_cb = NULL,                                                                        \
+      .diagnostic_userdata = NULL,                                                                  \
       .capacity = 256u,                                                                             \
   }
 
@@ -101,9 +105,15 @@ typedef struct MARU_QueueCreateInfo {
  * - Queue APIs intentionally use `bool` rather than `MARU_Status`.
  * - Because a queue is not bound to a context, there is no queue-specific
  *   equivalent of `MARU_CONTEXT_LOST`.
+ * - `MARU_QueueCreateInfo.diagnostic_cb`, if non-null, receives best-effort
+ *   queue-local diagnostics for runtime failures. Queue diagnostics always
+ *   report `info->context == NULL` and `info->subject_kind ==
+ *   MARU_DIAGNOSTIC_SUBJECT_NONE`.
  * - A `false` result means the requested queue operation failed for queue-local
  *   reasons such as invalid configuration, allocation failure, or queue
  *   overflow/compaction failure.
+ * - The diagnostic callback runs synchronously on the queue owner thread and
+ *   must not re-enter the same queue.
  */
 MARU_API bool maru_createQueue(const MARU_QueueCreateInfo* create_info,
                                MARU_Queue** out_queue);

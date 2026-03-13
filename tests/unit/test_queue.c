@@ -10,6 +10,14 @@ struct QueueTestState {
     MARU_WindowId last_window_id;
 };
 
+struct QueueDiagnosticState {
+    int call_count;
+    MARU_Diagnostic last_diag;
+    MARU_DiagnosticSubjectKind last_subject_kind;
+    const MARU_Context *last_context;
+    const char *last_message;
+};
+
 static void on_queue_event(MARU_EventId type,
                            MARU_WindowId window_id,
                            const MARU_Event *evt,
@@ -31,6 +39,15 @@ static bool create_queue(uint32_t capacity, MARU_Queue **out_queue) {
     MARU_QueueCreateInfo create_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
     create_info.capacity = capacity;
     return maru_createQueue(&create_info, out_queue);
+}
+
+static void on_queue_diagnostic(const MARU_DiagnosticInfo *info, void *userdata) {
+    struct QueueDiagnosticState *state = (struct QueueDiagnosticState *)userdata;
+    state->call_count++;
+    state->last_diag = info->diagnostic;
+    state->last_subject_kind = info->subject_kind;
+    state->last_context = info->context;
+    state->last_message = info->message;
 }
 
 UTEST(QueueTest, CreateDestroy) {
@@ -271,6 +288,80 @@ UTEST(QueueTest, OverflowDropsWhenCompactionCannotFreeSpace) {
     maru_destroyQueue(queue);
 }
 
+struct QueueFailAllocatorState {
+    uint32_t alloc_count;
+    uint32_t fail_after;
+};
+
+static void *queue_fail_alloc(size_t size, void *userdata) {
+    struct QueueFailAllocatorState *state =
+        (struct QueueFailAllocatorState *)userdata;
+    state->alloc_count++;
+    if (state->alloc_count > state->fail_after) {
+        return NULL;
+    }
+    return malloc(size);
+}
+
+static void *queue_fail_realloc(void *ptr, size_t new_size, void *userdata) {
+    (void)userdata;
+    return realloc(ptr, new_size);
+}
+
+static void queue_fail_free(void *ptr, void *userdata) {
+    (void)userdata;
+    free(ptr);
+}
+
+UTEST(QueueTest, ReportsCreateOutOfMemoryDiagnostics) {
+    struct QueueFailAllocatorState alloc_state = {.alloc_count = 0, .fail_after = 0};
+    struct QueueDiagnosticState diag_state = {0};
+    MARU_QueueCreateInfo create_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
+    create_info.capacity = 8;
+    create_info.allocator.alloc_cb = queue_fail_alloc;
+    create_info.allocator.realloc_cb = queue_fail_realloc;
+    create_info.allocator.free_cb = queue_fail_free;
+    create_info.allocator.userdata = &alloc_state;
+    create_info.diagnostic_cb = on_queue_diagnostic;
+    create_info.diagnostic_userdata = &diag_state;
+
+    MARU_Queue *queue = (MARU_Queue *)0x1;
+    EXPECT_FALSE(maru_createQueue(&create_info, &queue));
+    EXPECT_TRUE(queue == NULL);
+    EXPECT_EQ(diag_state.call_count, 1);
+    EXPECT_EQ(diag_state.last_diag, (MARU_Diagnostic)MARU_DIAGNOSTIC_OUT_OF_MEMORY);
+    EXPECT_EQ(diag_state.last_subject_kind,
+              (MARU_DiagnosticSubjectKind)MARU_DIAGNOSTIC_SUBJECT_NONE);
+    EXPECT_TRUE(diag_state.last_context == NULL);
+    EXPECT_TRUE(diag_state.last_message != NULL);
+}
+
+UTEST(QueueTest, ReportsOverflowDiagnostics) {
+    struct QueueDiagnosticState diag_state = {0};
+    MARU_QueueCreateInfo create_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
+    create_info.capacity = 2;
+    create_info.diagnostic_cb = on_queue_diagnostic;
+    create_info.diagnostic_userdata = &diag_state;
+
+    MARU_Queue *queue = NULL;
+    EXPECT_TRUE(maru_createQueue(&create_info, &queue));
+    ASSERT_TRUE(queue != NULL);
+
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_0));
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_1));
+    EXPECT_FALSE(push_user_event(queue, MARU_EVENT_USER_2));
+
+    EXPECT_EQ(diag_state.call_count, 1);
+    EXPECT_EQ(diag_state.last_diag,
+              (MARU_Diagnostic)MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE);
+    EXPECT_EQ(diag_state.last_subject_kind,
+              (MARU_DiagnosticSubjectKind)MARU_DIAGNOSTIC_SUBJECT_NONE);
+    EXPECT_TRUE(diag_state.last_context == NULL);
+    EXPECT_TRUE(diag_state.last_message != NULL);
+
+    maru_destroyQueue(queue);
+}
+
 struct QueueAllocatorStats {
     uint32_t alloc_count;
     uint32_t free_count;
@@ -317,16 +408,25 @@ UTEST(QueueTest, RejectsPartialAllocator) {
     return;
 #else
     struct QueueAllocatorStats stats = {0};
+    struct QueueDiagnosticState diag_state = {0};
     MARU_QueueCreateInfo create_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
     create_info.capacity = 8;
     create_info.allocator.alloc_cb = queue_test_alloc;
     create_info.allocator.userdata = &stats;
+    create_info.diagnostic_cb = on_queue_diagnostic;
+    create_info.diagnostic_userdata = &diag_state;
 
     MARU_Queue *queue = NULL;
     EXPECT_FALSE(maru_createQueue(&create_info, &queue));
     EXPECT_TRUE(queue == NULL);
     EXPECT_EQ(stats.alloc_count, (uint32_t)0);
     EXPECT_EQ(stats.free_count, (uint32_t)0);
+    EXPECT_EQ(diag_state.call_count, 1);
+    EXPECT_EQ(diag_state.last_diag,
+              (MARU_Diagnostic)MARU_DIAGNOSTIC_INVALID_ARGUMENT);
+    EXPECT_EQ(diag_state.last_subject_kind,
+              (MARU_DiagnosticSubjectKind)MARU_DIAGNOSTIC_SUBJECT_NONE);
+    EXPECT_TRUE(diag_state.last_context == NULL);
 #endif
 }
 
