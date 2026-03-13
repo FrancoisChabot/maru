@@ -172,10 +172,18 @@ typedef struct MARU_Controller_Base {
 } MARU_Controller_Base;
 
 #ifdef MARU_ENABLE_DIAGNOSTICS
-void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag, const char *msg);
+void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
+                            const char *msg);
+void _maru_reportDiagnosticOn(const MARU_Context *ctx,
+                              MARU_DiagnosticSubjectKind subject_kind,
+                              MARU_DiagnosticSubject subject,
+                              MARU_Diagnostic diag, const char *msg);
 #define MARU_REPORT_DIAGNOSTIC(ctx, diag, msg) _maru_reportDiagnostic(ctx, diag, msg)
+#define MARU_REPORT_DIAGNOSTIC_ON(ctx, subject_kind, subject, diag, msg) \
+  _maru_reportDiagnosticOn(ctx, subject_kind, subject, diag, msg)
 #else
 #define MARU_REPORT_DIAGNOSTIC(ctx, diag, msg) (void)0
+#define MARU_REPORT_DIAGNOSTIC_ON(ctx, subject_kind, subject, diag, msg) (void)0
 #endif
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type, MARU_Window *window, const MARU_Event *event);

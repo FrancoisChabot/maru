@@ -38,31 +38,29 @@ MARU_ThreadId _maru_getCurrentThreadId(void) {
 #endif
 
 #ifdef MARU_ENABLE_DIAGNOSTICS
-#ifdef MARU_VALIDATE_API_CALLS
-void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
-                            const char *msg) {
+void _maru_reportDiagnosticOn(const MARU_Context *ctx,
+                              MARU_DiagnosticSubjectKind subject_kind,
+                              MARU_DiagnosticSubject subject,
+                              MARU_Diagnostic diag, const char *msg) {
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)ctx;
   if (ctx_base && ctx_base->diagnostic_cb) {
-    MARU_DiagnosticInfo info = {.diagnostic = diag,
-                                .message = msg,
-                                .context = ctx,
-                                .window = NULL};
+    MARU_DiagnosticInfo info = {
+        .diagnostic = diag,
+        .message = msg,
+        .context = ctx,
+        .subject_kind = subject_kind,
+        .subject = subject,
+    };
     ctx_base->diagnostic_cb(&info, ctx_base->diagnostic_userdata);
   }
 }
-#else
+
 void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
                             const char *msg) {
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)ctx;
-  if (ctx_base && ctx_base->diagnostic_cb) {
-    MARU_DiagnosticInfo info = {.diagnostic = diag,
-                                .message = msg,
-                                .context = ctx,
-                                .window = NULL};
-    ctx_base->diagnostic_cb(&info, ctx_base->diagnostic_userdata);
-  }
+  _maru_reportDiagnosticOn(
+      ctx, MARU_DIAGNOSTIC_SUBJECT_NONE,
+      (MARU_DiagnosticSubject){.window = NULL}, diag, msg);
 }
-#endif
 #endif
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,

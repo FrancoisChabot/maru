@@ -16,7 +16,9 @@ void InstrumentationModule::onDiagnostic(const MARU_DiagnosticInfo* info) {
     entry.diagnostic = info->diagnostic;
     entry.message = info->message ? info->message : "";
     entry.context = info->context;
-    entry.window = info->window;
+    entry.window = (info->subject_kind == MARU_DIAGNOSTIC_SUBJECT_WINDOW)
+                       ? info->subject.window
+                       : NULL;
     logs_.push_back(std::move(entry));
     
     if (logs_.size() > 1000) {

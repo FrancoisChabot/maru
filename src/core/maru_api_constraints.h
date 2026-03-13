@@ -70,6 +70,10 @@ _maru_status_if_request_context_lost(MARU_DataRequest *request) {
 #ifdef MARU_ENABLE_DIAGNOSTICS
 extern void _maru_reportDiagnostic(const MARU_Context *ctx,
                                    MARU_Diagnostic diag, const char *msg);
+extern void _maru_reportDiagnosticOn(const MARU_Context *ctx,
+                                     MARU_DiagnosticSubjectKind subject_kind,
+                                     MARU_DiagnosticSubject subject,
+                                     MARU_Diagnostic diag, const char *msg);
 #endif
 extern MARU_ThreadId _maru_getCurrentThreadId(void);
 

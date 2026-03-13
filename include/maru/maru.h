@@ -286,11 +286,31 @@ typedef enum MARU_Diagnostic {
   MARU_DIAGNOSTIC_INTERNAL = 12,
 } MARU_Diagnostic;
 
+typedef enum MARU_DiagnosticSubjectKind {
+  MARU_DIAGNOSTIC_SUBJECT_NONE = 0,
+  MARU_DIAGNOSTIC_SUBJECT_WINDOW = 1,
+  MARU_DIAGNOSTIC_SUBJECT_MONITOR = 2,
+  MARU_DIAGNOSTIC_SUBJECT_CONTROLLER = 3,
+  MARU_DIAGNOSTIC_SUBJECT_CURSOR = 4,
+  MARU_DIAGNOSTIC_SUBJECT_IMAGE = 5,
+  MARU_DIAGNOSTIC_SUBJECT_DATA_REQUEST = 6,
+} MARU_DiagnosticSubjectKind;
+
+typedef union MARU_DiagnosticSubject {
+  const MARU_Window* window;
+  const MARU_Monitor* monitor;
+  const MARU_Controller* controller;
+  const MARU_Cursor* cursor;
+  const MARU_Image* image;
+  const MARU_DataRequest* data_request;
+} MARU_DiagnosticSubject;
+
 typedef struct MARU_DiagnosticInfo {
   MARU_Diagnostic diagnostic;
   const char* message;
   const MARU_Context* context;
-  const MARU_Window* window;
+  MARU_DiagnosticSubjectKind subject_kind;
+  MARU_DiagnosticSubject subject;
 } MARU_DiagnosticInfo;
 
 typedef void (*MARU_DiagnosticCallback)(const MARU_DiagnosticInfo* info, void* userdata);
