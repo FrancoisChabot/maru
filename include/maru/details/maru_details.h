@@ -553,17 +553,6 @@ static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool ena
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
   attrs.fullscreen = enabled;
-  if (enabled) {
-    attrs.visible = true;
-    attrs.minimized = false;
-    attrs.maximized = false;
-    return maru_updateWindow(window,
-                             MARU_WINDOW_ATTR_VISIBLE |
-                                 MARU_WINDOW_ATTR_MINIMIZED |
-                                 MARU_WINDOW_ATTR_MAXIMIZED |
-                                 MARU_WINDOW_ATTR_FULLSCREEN,
-                             &attrs);
-  }
   return maru_updateWindow(window, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
 }
 
@@ -572,17 +561,6 @@ static inline MARU_Status maru_setWindowMaximized(MARU_Window* window, bool enab
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
   attrs.maximized = enabled;
-  if (enabled) {
-    attrs.visible = true;
-    attrs.minimized = false;
-    attrs.fullscreen = false;
-    return maru_updateWindow(window,
-                             MARU_WINDOW_ATTR_VISIBLE |
-                                 MARU_WINDOW_ATTR_MINIMIZED |
-                                 MARU_WINDOW_ATTR_MAXIMIZED |
-                                 MARU_WINDOW_ATTR_FULLSCREEN,
-                             &attrs);
-  }
   return maru_updateWindow(window, MARU_WINDOW_ATTR_MAXIMIZED, &attrs);
 }
 
@@ -673,22 +651,7 @@ static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visibl
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
   attrs.visible = visible;
-  if (visible) {
-    attrs.minimized = false;
-    return maru_updateWindow(window,
-                             MARU_WINDOW_ATTR_VISIBLE |
-                                 MARU_WINDOW_ATTR_MINIMIZED,
-                             &attrs);
-  }
-  attrs.minimized = false;
-  attrs.maximized = false;
-  attrs.fullscreen = false;
-  return maru_updateWindow(window,
-                           MARU_WINDOW_ATTR_VISIBLE |
-                               MARU_WINDOW_ATTR_MINIMIZED |
-                               MARU_WINDOW_ATTR_MAXIMIZED |
-                               MARU_WINDOW_ATTR_FULLSCREEN,
-                           &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_VISIBLE, &attrs);
 }
 
 static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized) {
@@ -696,22 +659,7 @@ static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool mini
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
   attrs.minimized = minimized;
-  if (minimized) {
-    attrs.visible = false;
-    attrs.maximized = false;
-    attrs.fullscreen = false;
-    return maru_updateWindow(window,
-                             MARU_WINDOW_ATTR_VISIBLE |
-                                 MARU_WINDOW_ATTR_MINIMIZED |
-                                 MARU_WINDOW_ATTR_MAXIMIZED |
-                                 MARU_WINDOW_ATTR_FULLSCREEN,
-                             &attrs);
-  }
-  attrs.visible = true;
-  return maru_updateWindow(window,
-                           MARU_WINDOW_ATTR_VISIBLE |
-                               MARU_WINDOW_ATTR_MINIMIZED,
-                           &attrs);
+  return maru_updateWindow(window, MARU_WINDOW_ATTR_MINIMIZED, &attrs);
 }
 
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, const MARU_Image* icon) {

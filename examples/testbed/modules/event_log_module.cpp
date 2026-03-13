@@ -56,7 +56,7 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
         ss << "IME Update: Session=" << e.text_edit_updated.session_id 
            << " Preedit: '" << (e.text_edit_updated.preedit_utf8 ? e.text_edit_updated.preedit_utf8 : "") << "'"
            << " Caret: " << e.text_edit_updated.caret.start_byte 
-           << " Sel: [" << e.text_edit_updated.selection.start_byte << ", " << e.text_edit_updated.selection.length_byte << "]";
+           << " Sel: [" << e.text_edit_updated.selection.start_byte << ", " << e.text_edit_updated.selection.length_bytes << "]";
     } else if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) {
         const std::string committed =
             (e.text_edit_committed.committed_utf8 &&

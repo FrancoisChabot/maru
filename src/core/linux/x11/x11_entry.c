@@ -71,11 +71,6 @@ maru_setControllerHapticLevels_X11(MARU_Controller *controller,
   return _maru_linux_common_set_haptic_levels(&ctx->linux_common, ctrl, first_haptic, count, intensities);
 }
 
-MARU_API bool maru_getX11SupportsExtendedFrameSync(const MARU_Context *context) {
-  MARU_API_VALIDATE(getX11SupportsExtendedFrameSync, context);
-  return ((MARU_Context_X11 *)context)->compositor_supports_extended_frame_sync;
-}
-
 static MARU_Window_X11 *maru_getClipboardWindow_X11(MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {

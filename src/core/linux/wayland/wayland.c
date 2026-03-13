@@ -401,11 +401,4 @@ maru_getX11WindowHandle(const MARU_Window *window) {
   return _maru_stub_x11_window_handle_unsupported();
 }
 
-MARU_API bool
-maru_getX11SupportsExtendedFrameSync(const MARU_Context *context) {
-  MARU_API_VALIDATE(getX11SupportsExtendedFrameSync, context);
-  (void)context;
-  return _maru_stub_x11_extended_frame_sync_unsupported();
-}
-
 #endif

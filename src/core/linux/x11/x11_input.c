@@ -388,9 +388,9 @@ static void _maru_x11_dispatch_preedit_update(MARU_Context_X11 *ctx,
   evt.text_edit_updated.preedit_utf8 = preedit;
   evt.text_edit_updated.preedit_length_bytes = len;
   evt.text_edit_updated.caret.start_byte = caret;
-  evt.text_edit_updated.caret.length_byte = 0;
+  evt.text_edit_updated.caret.length_bytes = 0;
   evt.text_edit_updated.selection.start_byte = caret;
-  evt.text_edit_updated.selection.length_byte = 0;
+  evt.text_edit_updated.selection.length_bytes = 0;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_UPDATED, (MARU_Window *)win,
                        &evt);
 }

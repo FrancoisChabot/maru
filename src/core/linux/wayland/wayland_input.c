@@ -947,9 +947,9 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
         evt.text_edit_updated.preedit_utf8 = preedit;
         evt.text_edit_updated.preedit_length_bytes = preedit_length;
         evt.text_edit_updated.caret.start_byte = safe_begin;
-        evt.text_edit_updated.caret.length_byte = 0;
+        evt.text_edit_updated.caret.length_bytes = 0;
         evt.text_edit_updated.selection.start_byte = safe_begin;
-        evt.text_edit_updated.selection.length_byte = safe_end - safe_begin;
+        evt.text_edit_updated.selection.length_bytes = safe_end - safe_begin;
         _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_UPDATED, (MARU_Window *)window, &evt);
 
         window->ime_preedit_active = (preedit_length != 0);

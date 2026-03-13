@@ -928,12 +928,6 @@ _maru_validate_getX11WindowHandle(const MARU_Window *window) {
 }
 
 static inline void
-_maru_validate_getX11SupportsExtendedFrameSync(const MARU_Context *context) {
-  MARU_CONSTRAINT_CHECK(context != NULL);
-  MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_X11);
-}
-
-static inline void
 _maru_validate_getWin32ContextHandle(const MARU_Context *context) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_getContextBackend(context) == MARU_BACKEND_WINDOWS);

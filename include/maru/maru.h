@@ -835,7 +835,7 @@ typedef struct MARU_TextRangeUtf8 {
   /* Byte offset into the associated UTF-8 string. */
   uint32_t start_byte;
   /* Byte length within the associated UTF-8 string. */
-  uint32_t length_byte;
+  uint32_t length_bytes;
 } MARU_TextRangeUtf8;
 
 typedef struct MARU_TextEditStartedEvent {
@@ -1745,6 +1745,13 @@ static inline MARU_Status maru_setWindowDipSize(MARU_Window* window, MARU_Vec2Di
 static inline MARU_Status maru_setWindowDipViewportSize(MARU_Window* window, MARU_Vec2Dip size);
 /* Note: Window positioning is compositor-controlled on certain backends (like Wayland), where this will act as a silent no-op or return MARU_FAILURE. */
 static inline MARU_Status maru_setWindowDipPosition(MARU_Window* window, MARU_Vec2Dip position);
+/*
+ * Convenience window setters update only the named attribute.
+ *
+ * For coordinated presentation-state transitions involving multiple fields
+ * (`visible`, `minimized`, `maximized`, `fullscreen`), use maru_updateWindow()
+ * directly and submit all affected fields in one call.
+ */
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowMaximized(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowCursorMode(MARU_Window* window, MARU_CursorMode mode);

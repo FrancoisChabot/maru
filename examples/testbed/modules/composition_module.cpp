@@ -21,7 +21,7 @@ void CompositionModule::onEvent(MARU_EventId type, MARU_Window* window, const MA
             current_session_.preedit = event.text_edit_updated.preedit_utf8 ? event.text_edit_updated.preedit_utf8 : "";
             current_session_.caret = event.text_edit_updated.caret.start_byte;
             current_session_.sel_start = event.text_edit_updated.selection.start_byte;
-            current_session_.sel_len = event.text_edit_updated.selection.length_byte;
+            current_session_.sel_len = event.text_edit_updated.selection.length_bytes;
         }
     } else if (type == MARU_EVENT_TEXT_EDIT_COMMITTED) {
         if (event.text_edit_committed.committed_length_bytes > 0 &&
