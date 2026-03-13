@@ -30,10 +30,6 @@ typedef struct MARU_EventQueue {
   // We use separate cache lines to avoid false sharing
   alignas(64) _MARU_ATOMIC(size_t) head; // Producers write here
   alignas(64) _MARU_ATOMIC(size_t) tail; // Consumer reads here
-#ifdef MARU_GATHER_METRICS
-  alignas(64) _MARU_ATOMIC(size_t) high_watermark; // Track peak usage
-  alignas(64) _MARU_ATOMIC(size_t) drop_count; // Track failed pushes
-#endif
 } MARU_EventQueue;
 
 typedef struct MARU_Context_Base MARU_Context_Base;
@@ -41,9 +37,6 @@ typedef struct MARU_Context_Base MARU_Context_Base;
 // Returns true on success
 bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t capacity_power_of_2);
 void _maru_event_queue_cleanup(MARU_EventQueue *q, MARU_Context_Base *ctx);
-
-// Updates the provided metrics struct with current atomic counters
-void _maru_event_queue_update_metrics(MARU_EventQueue *q, MARU_UserEventMetrics *metrics);
 
 // Thread-safe push. Returns false if queue is full.
 bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type, 

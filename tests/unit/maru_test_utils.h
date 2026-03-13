@@ -367,9 +367,6 @@ static inline MARU_Context* maru_test_createContext(const MARU_ContextCreateInfo
     ctx->inhibit_idle = create_info->attributes.inhibit_idle;
 
     _maru_init_context_base(ctx);
-#ifdef MARU_GATHER_METRICS
-    _maru_update_mem_metrics_alloc(ctx, sizeof(MARU_Context_Base));
-#endif
 
 #ifdef MARU_INDIRECT_BACKEND
     ctx->backend = &_maru_mock_backend;

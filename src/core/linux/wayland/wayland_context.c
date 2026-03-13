@@ -186,31 +186,6 @@ uint64_t _maru_wayland_get_monotonic_time_ns(void) {
   return ((uint64_t)ts.tv_sec * 1000000000ull) + (uint64_t)ts.tv_nsec;
 }
 
-static void _maru_wayland_record_pump_duration_ns(MARU_Context_WL *ctx,
-                                                  uint64_t duration_ns) {
-  MARU_ContextMetrics *metrics = &ctx->base.metrics;
-  metrics->pump_call_count_total++;
-  if (metrics->pump_call_count_total == 1) {
-    metrics->pump_duration_avg_ns = duration_ns;
-    metrics->pump_duration_peak_ns = duration_ns;
-    return;
-  }
-
-  if (duration_ns > metrics->pump_duration_peak_ns) {
-    metrics->pump_duration_peak_ns = duration_ns;
-  }
-
-  if (duration_ns >= metrics->pump_duration_avg_ns) {
-    metrics->pump_duration_avg_ns +=
-        (duration_ns - metrics->pump_duration_avg_ns) /
-        metrics->pump_call_count_total;
-  } else {
-    metrics->pump_duration_avg_ns -=
-        (metrics->pump_duration_avg_ns - duration_ns) /
-        metrics->pump_call_count_total;
-  }
-}
-
 static void _maru_wayland_disconnect_display(MARU_Context_WL *ctx) {
   if (ctx->wl.display) {
     maru_wl_display_disconnect(ctx, ctx->wl.display);
@@ -561,9 +536,6 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_WL;
   ctx->base.backend = &maru_backend_WL;
-#endif
-#ifdef MARU_GATHER_METRICS
-  _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_WL));
 #endif
   if (!_maru_wayland_init_context_mouse_channels(ctx)) {
     _maru_cleanup_context_base(&ctx->base);
@@ -1175,10 +1147,6 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
   _maru_wayland_pump_post_tick(ctx);
 
 pump_exit:;
-  const uint64_t pump_end_ns = _maru_wayland_get_monotonic_time_ns();
-  if (pump_start_ns != 0 && pump_end_ns != 0 && pump_end_ns >= pump_start_ns) {
-    _maru_wayland_record_pump_duration_ns(ctx, pump_end_ns - pump_start_ns);
-  }
   if (status == MARU_SUCCESS && maru_isContextLost(context)) {
     status = MARU_CONTEXT_LOST;
   }

@@ -19,7 +19,6 @@ Welcome to the Maru user documentation. Maru is a high-performance, cross-platfo
 - [Monitors & Displays](monitors.md)
 - [Data Exchange (Clipboard/DnD)](dataexchange.md)
 - [Vulkan Integration](vulkan.md)
-- [Metrics & Instrumentation](metrics.md)
 
 ## Backend-specific Guides
 

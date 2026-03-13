@@ -104,9 +104,6 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   extern const MARU_Backend maru_backend_X11;
   ctx->base.backend = &maru_backend_X11;
 #endif
-#ifdef MARU_GATHER_METRICS
-  _maru_update_mem_metrics_alloc(&ctx->base, sizeof(MARU_Context_X11));
-#endif
 
   if (!_maru_x11_init_context_mouse_channels(ctx)) {
     _maru_cleanup_context_base(&ctx->base);
@@ -522,31 +519,6 @@ MARU_Scalar _maru_x11_get_global_scale(MARU_Context_X11 *ctx) {
   return (fallback > (MARU_Scalar)0.0) ? fallback : (MARU_Scalar)1.0;
 }
 
-void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx,
-                                       uint64_t duration_ns) {
-  MARU_ContextMetrics *metrics = &ctx->base.metrics;
-  metrics->pump_call_count_total++;
-  if (metrics->pump_call_count_total == 1) {
-    metrics->pump_duration_avg_ns = duration_ns;
-    metrics->pump_duration_peak_ns = duration_ns;
-    return;
-  }
-
-  if (duration_ns > metrics->pump_duration_peak_ns) {
-    metrics->pump_duration_peak_ns = duration_ns;
-  }
-
-  if (duration_ns >= metrics->pump_duration_avg_ns) {
-    metrics->pump_duration_avg_ns +=
-        (duration_ns - metrics->pump_duration_avg_ns) /
-        metrics->pump_call_count_total;
-  } else {
-    metrics->pump_duration_avg_ns -=
-        (metrics->pump_duration_avg_ns - duration_ns) /
-        metrics->pump_call_count_total;
-  }
-}
-
 static int _maru_x11_compute_poll_timeout_ms(MARU_Context_X11 *ctx,
                                              uint32_t timeout_ms) {
   const uint64_t now_ms = _maru_x11_get_monotonic_time_ms();
@@ -736,11 +708,6 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_x11_dispatch_pending_frames(ctx);
   ctx->base.pump_ctx = NULL;
-
-  const uint64_t pump_end_ns = _maru_x11_get_monotonic_time_ns();
-  if (pump_start_ns != 0 && pump_end_ns != 0 && pump_end_ns >= pump_start_ns) {
-    _maru_x11_record_pump_duration_ns(ctx, pump_end_ns - pump_start_ns);
-  }
 
   return MARU_SUCCESS;
 }

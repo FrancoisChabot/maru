@@ -35,8 +35,8 @@
  * Validation and build configuration note
  *
  * This header includes a generated maru_config.h exposing the build-time
- * feature macros used for this build, such as MARU_VALIDATE_API_CALLS,
- * MARU_ENABLE_DIAGNOSTICS, and MARU_GATHER_METRICS.
+ * feature macros used for this build, such as MARU_VALIDATE_API_CALLS
+ * and MARU_ENABLE_DIAGNOSTICS.
  *
  * When MARU_VALIDATE_API_CALLS is enabled, invalid API usage is treated as a
  * contract violation and MARU may fail fast with abort() rather than trying to
@@ -197,28 +197,7 @@ typedef struct MARU_WindowGeometry {
   MARU_BufferTransform buffer_transform;
 } MARU_WindowGeometry;
 
-/* ----- Metrics and tuning ----- */
-
-typedef struct MARU_UserEventMetrics {
-  uint32_t peak_count;
-  uint32_t current_capacity;
-  uint32_t drop_count;
-} MARU_UserEventMetrics;
-
-typedef struct MARU_ContextMetrics {
-  const MARU_UserEventMetrics* user_events;
-  uint64_t cursor_create_count_total;
-  uint64_t cursor_destroy_count_total;
-  uint64_t cursor_create_count_system;
-  uint64_t cursor_create_count_custom;
-  uint64_t cursor_alive_current;
-  uint64_t cursor_alive_peak;
-  uint64_t pump_call_count_total;
-  uint64_t pump_duration_avg_ns;
-  uint64_t pump_duration_peak_ns;
-  uint64_t memory_allocated_current;
-  uint64_t memory_allocated_peak;
-} MARU_ContextMetrics;
+/* ----- Tuning ----- */
 
 typedef enum MARU_WaylandDecorationMode {
   MARU_WAYLAND_DECORATION_MODE_AUTO = 0,
@@ -921,7 +900,6 @@ static inline void maru_setContextUserdata(MARU_Context* context, void* userdata
 static inline bool maru_isContextLost(const MARU_Context* context);
 static inline bool maru_isContextReady(const MARU_Context* context);
 static inline MARU_BackendType maru_getContextBackend(const MARU_Context* context);
-static inline const MARU_ContextMetrics* maru_getContextMetrics(const MARU_Context* context);
 static inline uint32_t maru_getContextMouseButtonCount(const MARU_Context* context);
 static inline const MARU_ButtonState8* maru_getContextMouseButtonStates(
     const MARU_Context* context);
@@ -971,7 +949,6 @@ MARU_API MARU_Status maru_destroyContext(MARU_Context* context);
 MARU_API MARU_Status maru_updateContext(MARU_Context* context,
                                         uint64_t field_mask,
                                         const MARU_ContextAttributes* attributes);
-MARU_API MARU_Status maru_resetContextMetrics(MARU_Context* context);
 
 /* ----- Images ----- */
 
@@ -1498,14 +1475,6 @@ static inline bool maru_isQueueSafeEventId(MARU_EventId type) {
   return maru_eventMaskHas(MARU_QUEUE_SAFE_EVENT_MASK, type);
 }
 
-typedef struct MARU_QueueMetrics {
-  uint32_t peak_active_count;
-  uint32_t overflow_drop_count;
-  uint32_t overflow_compact_count;
-  uint32_t overflow_events_compacted;
-  uint32_t overflow_drop_count_by_event[MARU_EVENT_USER_15 + 1];
-} MARU_QueueMetrics;
-
 typedef struct MARU_QueueCreateInfo {
   MARU_Allocator allocator;
   uint32_t capacity;
@@ -1547,8 +1516,6 @@ MARU_API void maru_scanQueue(MARU_Queue* queue,
                              MARU_QueueEventCallback callback,
                              void* userdata);
 MARU_API void maru_setQueueCoalesceMask(MARU_Queue* queue, MARU_EventMask mask);
-MARU_API void maru_getQueueMetrics(const MARU_Queue* queue, MARU_QueueMetrics* out_metrics);
-MARU_API void maru_resetQueueMetrics(MARU_Queue* queue);
 
 /* ----- Convenience helpers ----- */
 
@@ -1583,7 +1550,6 @@ static inline bool maru_applyTextEditCommitUtf8(char* buffer,
                                                 uint32_t* inout_length,
                                                 uint32_t* inout_cursor_byte,
                                                 const MARU_TextEditCommittedEvent* commit);
-static inline const MARU_UserEventMetrics* maru_getContextEventMetrics(const MARU_Context* context);
 static inline const char* maru_getDiagnosticString(MARU_Diagnostic diagnostic);
 
 /* ----- Inline accessors and helper implementations ----- */

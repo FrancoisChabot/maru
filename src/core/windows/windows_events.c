@@ -275,16 +275,6 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
   _maru_windows_drain_deferred_events(ctx);
   ctx->base.pump_ctx = NULL;
 
-  const uint64_t pump_end_ns = _maru_windows_get_time_ns();
-  if (pump_end_ns >= pump_start_ns) {
-    uint64_t duration = pump_end_ns - pump_start_ns;
-    ctx->base.metrics.pump_call_count_total++;
-    if (duration > ctx->base.metrics.pump_duration_peak_ns) {
-      ctx->base.metrics.pump_duration_peak_ns = duration;
-    }
-    // Simple moving average or similar could go here, but for now let's just update peak
-  }
-
   return MARU_SUCCESS;
 }
 

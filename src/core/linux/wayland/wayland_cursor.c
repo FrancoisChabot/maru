@@ -244,14 +244,6 @@ MARU_Status maru_createCursor_WL(MARU_Context *context,
     cursor->frame_count = create_info->frame_count;
   }
 
-  ctx->base.metrics.cursor_create_count_total++;
-  if (system_cursor) ctx->base.metrics.cursor_create_count_system++;
-  else ctx->base.metrics.cursor_create_count_custom++;
-  ctx->base.metrics.cursor_alive_current++;
-  if (ctx->base.metrics.cursor_alive_current > ctx->base.metrics.cursor_alive_peak) {
-    ctx->base.metrics.cursor_alive_peak = ctx->base.metrics.cursor_alive_current;
-  }
-
   *out_cursor = (MARU_Cursor *)cursor;
   return MARU_SUCCESS;
 }
@@ -280,11 +272,6 @@ MARU_Status maru_destroyCursor_WL(MARU_Cursor *cursor) {
   }
 
   _maru_wayland_destroy_cursor_frames(ctx, cursor_wl);
-
-  ctx->base.metrics.cursor_destroy_count_total++;
-  if (ctx->base.metrics.cursor_alive_current > 0) {
-    ctx->base.metrics.cursor_alive_current--;
-  }
 
   maru_context_free(&ctx->base, cursor);
   return MARU_SUCCESS;

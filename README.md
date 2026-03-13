@@ -160,18 +160,16 @@ Maru provides a few different options to control the validation behavior. These 
 
 * **MARU_ENABLE_DIAGNOSTICS**: `ON` by default. Setting it to `OFF` will strip virtually all logging and reporting overhead from the library, including the string literals.
 
-* **MARU_GATHER_METRICS**: `ON` by default. Setting it to `OFF` will stop the gathering of internal metrics.
-
 * **MARU_ENABLE_INTERNAL_CHECKS**: `OFF` by default. Setting it to `ON` will enable internal validation logic double-checks. Only use this if you suspect a bug in Maru itself.
 
 ### Recommended configurations
 
-| Build Type         | `MARU_VALIDATE_API_CALLS` | `MARU_ENABLE_DIAGNOSTICS` | `MARU_GATHER_METRICS` | `MARU_ENABLE_INTERNAL_CHECKS` |
-| :---               | :---:                     | :---:                     | :---:                 | :---:                         |
-| **Development**    | `ON`                      | `ON`                      | `ON`                  | `OFF`                         |
-| **Release**        | `OFF`                     | `ON`                      | `ON`                  | `OFF`                         |
-| **Production**     | `OFF`                     | `OFF`                     | `OFF`                 | `OFF`                         |
-| **Debugging Maru** | `ON`                      | `ON`                      | `ON`                  | `ON`                          |
+| Build Type         | `MARU_VALIDATE_API_CALLS` | `MARU_ENABLE_DIAGNOSTICS` | `MARU_ENABLE_INTERNAL_CHECKS` |
+| :---               | :---:                     | :---:                     | :---:                         |
+| **Development**    | `ON`                      | `ON`                      | `OFF`                         |
+| **Release**        | `OFF`                     | `ON`                      | `OFF`                         |
+| **Production**     | `OFF`                     | `OFF`                     | `OFF`                         |
+| **Debugging Maru** | `ON`                      | `ON`                      | `ON`                          |
 
 **N.B.** `MARU_ENABLE_INTERNAL_CHECKS` can have subtle implications beyond performance in some cases. See [Internal Checks Caveats](docs/dev/internal_checks_caveats.md) for details.
 

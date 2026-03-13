@@ -328,11 +328,6 @@ static inline void _maru_validate_requestWindowAttention(MARU_Window *window) {
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
 }
 
-static inline void _maru_validate_resetContextMetrics(MARU_Context *context) {
-  MARU_CONSTRAINT_CHECK(context != NULL);
-  _maru_validate_thread((const MARU_Context_Base *)context);
-}
-
 static inline void
 _maru_validate_createQueue(const MARU_QueueCreateInfo *create_info,
                            MARU_Queue **out_queue) {
@@ -377,15 +372,6 @@ static inline void _maru_validate_scanQueue(MARU_Queue *queue,
 static inline void _maru_validate_setQueueCoalesceMask(MARU_Queue *queue, MARU_EventMask mask) {
   MARU_CONSTRAINT_CHECK(queue != NULL);
   (void)mask;
-}
-
-static inline void _maru_validate_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metrics) {
-  MARU_CONSTRAINT_CHECK(queue != NULL);
-  MARU_CONSTRAINT_CHECK(out_metrics != NULL);
-}
-
-static inline void _maru_validate_resetQueueMetrics(MARU_Queue *queue) {
-  MARU_CONSTRAINT_CHECK(queue != NULL);
 }
 
 static inline void

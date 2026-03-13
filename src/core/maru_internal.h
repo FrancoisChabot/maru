@@ -72,9 +72,6 @@ typedef struct MARU_Context_Base {
   MARU_PumpContext *pump_ctx;
   bool inhibit_idle;
 
-  MARU_ContextMetrics metrics;
-  MARU_UserEventMetrics user_event_metrics;
-
   MARU_Monitor **monitor_cache;
   uint32_t monitor_cache_count;
   uint32_t monitor_cache_capacity;

@@ -104,21 +104,6 @@ When the active queue reaches capacity, `MARU_Queue` attempts a compaction sweep
 - Non-coalescible events preserve relative order.
 - If no space is freed, the new event is dropped.
 
-You can inspect cumulative queue metrics (including peak occupancy and per-event drop counters):
-
-```c
-MARU_QueueMetrics metrics = {0};
-maru_getQueueMetrics(queue, &metrics);
-
-// Reset between sampling windows if desired
-maru_resetQueueMetrics(queue);
-```
-
-```cpp
-MARU_QueueMetrics metrics = queue.metrics();
-queue.resetMetrics();
-```
-
 ## C++ API Example (RAII)
 
 ```cpp

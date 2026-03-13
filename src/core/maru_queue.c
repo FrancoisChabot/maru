@@ -25,11 +25,6 @@ typedef struct MARU_Queue {
     uint32_t capacity;
 
     MARU_EventMask coalesce_mask;
-    uint32_t peak_active_count;
-    uint32_t overflow_drop_count;
-    uint32_t overflow_compact_count;
-    uint32_t overflow_events_compacted;
-    uint32_t overflow_drop_count_by_event[MARU_EVENT_USER_15 + 1];
 
     MARU_QueueBuffer buffers[2];
 #ifdef MARU_VALIDATE_API_CALLS
@@ -99,29 +94,6 @@ static void _maru_queue_validate_thread(const MARU_Queue *queue) {
     (void)queue;
 }
 #endif
-
-static void _maru_queue_reset_metrics_internal(MARU_Queue *q) {
-    q->peak_active_count = 0;
-    q->overflow_drop_count = 0;
-    q->overflow_compact_count = 0;
-    q->overflow_events_compacted = 0;
-    memset(q->overflow_drop_count_by_event, 0, sizeof(q->overflow_drop_count_by_event));
-}
-
-static void _maru_queue_update_peak_active_count(MARU_Queue *q) {
-    if (q->active_count > q->peak_active_count) {
-        q->peak_active_count = q->active_count;
-    }
-}
-
-static void _maru_queue_count_drop(MARU_Queue *q, MARU_EventId type) {
-    q->overflow_drop_count++;
-
-    uint32_t idx = (uint32_t)type;
-    if (idx < MARU_QUEUE_EVENT_BUCKET_COUNT) {
-        q->overflow_drop_count_by_event[idx]++;
-    }
-}
 
 static void _maru_queue_coalesce_latest(MARU_EventId type, MARU_Event *dst, const MARU_Event *src) {
     switch (type) {
@@ -294,8 +266,7 @@ static bool _maru_queue_push_internal(MARU_Queue *q, MARU_EventId type,
     }
 
     if (q->active_count >= q->capacity) {
-        q->overflow_compact_count++;
-        q->overflow_events_compacted += _maru_queue_compact_active(q);
+        _maru_queue_compact_active(q);
     }
 
     if (q->active_count < q->capacity) {
@@ -303,10 +274,8 @@ static bool _maru_queue_push_internal(MARU_Queue *q, MARU_EventId type,
         q->active.types[idx] = type;
         q->active.window_ids[idx] = window_id;
         q->active.events[idx] = *evt;
-        _maru_queue_update_peak_active_count(q);
         return true;
     } else {
-        _maru_queue_count_drop(q, type);
         return false;
     }
 }
@@ -366,7 +335,6 @@ MARU_Status maru_createQueue(const MARU_QueueCreateInfo *create_info, MARU_Queue
     q->active_count = 0;
     q->stable_count = 0;
     q->coalesce_mask = 0;
-    _maru_queue_reset_metrics_internal(q);
 #ifdef MARU_VALIDATE_API_CALLS
     q->creator_thread = _maru_getCurrentThreadId();
 #endif
@@ -455,30 +423,4 @@ void maru_setQueueCoalesceMask(MARU_Queue *queue, MARU_EventMask mask) {
         _maru_queue_validate_thread(queue);
         queue->coalesce_mask = mask;
     }
-}
-
-void maru_getQueueMetrics(const MARU_Queue *queue, MARU_QueueMetrics *out_metrics) {
-    MARU_API_VALIDATE(getQueueMetrics, queue, out_metrics);
-    if (!out_metrics) return;
-
-    if (!queue) {
-        memset(out_metrics, 0, sizeof(*out_metrics));
-        return;
-    }
-    _maru_queue_validate_thread(queue);
-
-    out_metrics->peak_active_count = queue->peak_active_count;
-    out_metrics->overflow_drop_count = queue->overflow_drop_count;
-    out_metrics->overflow_compact_count = queue->overflow_compact_count;
-    out_metrics->overflow_events_compacted = queue->overflow_events_compacted;
-    memcpy(out_metrics->overflow_drop_count_by_event,
-           queue->overflow_drop_count_by_event,
-           sizeof(out_metrics->overflow_drop_count_by_event));
-}
-
-void maru_resetQueueMetrics(MARU_Queue *queue) {
-    MARU_API_VALIDATE(resetQueueMetrics, queue);
-    if (!queue) return;
-    _maru_queue_validate_thread(queue);
-    _maru_queue_reset_metrics_internal(queue);
 }

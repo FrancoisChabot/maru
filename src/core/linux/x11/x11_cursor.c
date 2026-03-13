@@ -473,14 +473,6 @@ MARU_Status maru_createCursor_X11(MARU_Context *context,
     }
   }
 
-  ctx->base.metrics.cursor_create_count_total++;
-  if (is_system) ctx->base.metrics.cursor_create_count_system++;
-  else ctx->base.metrics.cursor_create_count_custom++;
-  ctx->base.metrics.cursor_alive_current++;
-  if (ctx->base.metrics.cursor_alive_current > ctx->base.metrics.cursor_alive_peak) {
-    ctx->base.metrics.cursor_alive_peak = ctx->base.metrics.cursor_alive_current;
-  }
-
   *out_cursor = (MARU_Cursor *)cursor;
   return MARU_SUCCESS;
 }
@@ -522,11 +514,6 @@ MARU_Status maru_destroyCursor_X11(MARU_Cursor *cursor) {
   } else if (cur->handle) {
     ctx->x11_lib.XFreeCursor(ctx->display, cur->handle);
     cur->handle = 0;
-  }
-
-  ctx->base.metrics.cursor_destroy_count_total++;
-  if (ctx->base.metrics.cursor_alive_current > 0) {
-    ctx->base.metrics.cursor_alive_current--;
   }
 
   maru_context_free(&ctx->base, cur);

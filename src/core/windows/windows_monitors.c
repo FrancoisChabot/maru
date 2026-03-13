@@ -60,7 +60,6 @@ static BOOL CALLBACK _maru_windows_monitor_enum_proc(HMONITOR hmonitor, HDC hdc,
 
   monitor->base.is_active = true;
 
-  // Update metrics
   int32_t width = info.rcMonitor.right - info.rcMonitor.left;
   int32_t height = info.rcMonitor.bottom - info.rcMonitor.top;
 

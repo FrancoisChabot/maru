@@ -119,9 +119,6 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
                            "Failed to initialize internal event queue");
   }
 
-  ctx_base->metrics.user_events = &ctx_base->user_event_metrics;
-  ctx_base->pub.metrics = &ctx_base->metrics;
-
   ctx_base->monitor_cache = NULL;
   ctx_base->monitor_cache_count = 0;
   ctx_base->monitor_cache_capacity = 0;
@@ -162,8 +159,6 @@ void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {
 #endif
     _maru_dispatch_event(ctx_base, type, window, &evt);
   }
-  
-  _maru_event_queue_update_metrics(&ctx_base->queued_events, &ctx_base->user_event_metrics);
 }
 
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask,
@@ -418,23 +413,6 @@ MARU_API bool maru_postEvent(MARU_Context *context, MARU_EventId type,
   return _maru_post_event_internal(ctx_base, type, window, &evt);
 }
 
-
-MARU_API MARU_Status maru_resetContextMetrics(MARU_Context *context) {
-  MARU_API_VALIDATE(resetContextMetrics, context);
-  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
-  memset(&ctx_base->user_event_metrics, 0, sizeof(MARU_UserEventMetrics));
-  ctx_base->metrics.cursor_create_count_total = 0;
-  ctx_base->metrics.cursor_destroy_count_total = 0;
-  ctx_base->metrics.cursor_create_count_system = 0;
-  ctx_base->metrics.cursor_create_count_custom = 0;
-  ctx_base->metrics.cursor_alive_peak = ctx_base->metrics.cursor_alive_current;
-  ctx_base->metrics.pump_call_count_total = 0;
-  ctx_base->metrics.pump_duration_avg_ns = 0;
-  ctx_base->metrics.pump_duration_peak_ns = 0;
-  ctx_base->metrics.memory_allocated_peak = ctx_base->metrics.memory_allocated_current;
-  return MARU_SUCCESS;
-}
 
 MARU_API MARU_Version maru_getVersion(void) {
   return (MARU_Version){.major = MARU_VERSION_MAJOR,

@@ -19,31 +19,6 @@ TEST_CASE("Queue C++ API - Basic") {
     CHECK(count == 1);
 }
 
-TEST_CASE("Queue C++ API - Overflow Metrics") {
-    auto queue_res = maru::Queue::create(2);
-    REQUIRE(queue_res.has_value());
-    maru::Queue& queue = *queue_res;
-
-    MARU_Event queued_evt = {};
-    queue.push(MARU_EVENT_USER_0, MARU_WINDOW_ID_NONE, queued_evt);
-    queue.push(MARU_EVENT_USER_1, MARU_WINDOW_ID_NONE, queued_evt);
-    queue.push(MARU_EVENT_USER_2, MARU_WINDOW_ID_NONE, queued_evt);
-    queue.commit();
-
-    MARU_QueueMetrics metrics = queue.metrics();
-    CHECK(metrics.peak_active_count == 2u);
-    CHECK(metrics.overflow_drop_count == 1u);
-    CHECK(metrics.overflow_compact_count == 1u);
-    CHECK(metrics.overflow_events_compacted == 0u);
-    CHECK(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_2] == 1u);
-
-    queue.resetMetrics();
-    metrics = queue.metrics();
-    CHECK(metrics.peak_active_count == 0u);
-    CHECK(metrics.overflow_drop_count == 0u);
-    CHECK(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_2] == 0u);
-}
-
 #if __cplusplus >= 202002L
 TEST_CASE("Queue C++ API - C++20 Visitor Scan") {
     auto queue_res = maru::Queue::create(16);

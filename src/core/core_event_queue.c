@@ -19,10 +19,6 @@ bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t
   q->mask = capacity_power_of_2 - 1;
   atomic_init(&q->head, 0);
   atomic_init(&q->tail, 0);
-#ifdef MARU_GATHER_METRICS
-  atomic_init(&q->high_watermark, 0);
-  atomic_init(&q->drop_count, 0);
-#endif
 
   q->buffer = maru_context_alloc_aligned64(ctx, sizeof(MARU_QueuedEvent) * capacity_power_of_2);
   if (!q->buffer) return false;
@@ -41,17 +37,6 @@ void _maru_event_queue_cleanup(MARU_EventQueue *q, MARU_Context_Base *ctx) {
   }
 }
 
-void _maru_event_queue_update_metrics(MARU_EventQueue *q, MARU_UserEventMetrics *metrics) {
-  if (!q || !metrics) return;
-#ifdef MARU_GATHER_METRICS
-  metrics->current_capacity = q->capacity;
-  metrics->peak_count = (uint32_t)atomic_load_explicit(&q->high_watermark, memory_order_relaxed);
-  metrics->drop_count = (uint32_t)atomic_load_explicit(&q->drop_count, memory_order_relaxed);
-#else
-  (void)q; (void)metrics;
-#endif
-}
-
 bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type, 
                             MARU_Window *window, MARU_Event evt) {
   if (!q || !q->buffer || q->capacity == 0) return false;
@@ -63,30 +48,10 @@ bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type,
     tail = atomic_load_explicit(&q->tail, memory_order_acquire);
     
     if (head - tail >= q->capacity) {
-#ifdef MARU_GATHER_METRICS
-      atomic_fetch_add_explicit(&q->drop_count, 1, memory_order_relaxed);
-#endif
       return false; // Full
     }
   } while (!atomic_compare_exchange_weak_explicit(&q->head, &head, head + 1, 
                                                   memory_order_relaxed, memory_order_relaxed));
-
-#ifdef MARU_GATHER_METRICS
-  // Track High Watermark
-  // This is a "relaxed" upper bound of usage. 
-  // 'tail' might have moved forward since we loaded it, so actual usage might be lower.
-  // This ensures we never underestimate the peak.
-  size_t usage = (head + 1) - tail;
-  size_t hwm = atomic_load_explicit(&q->high_watermark, memory_order_relaxed);
-  while (usage > hwm) {
-    if (atomic_compare_exchange_weak_explicit(&q->high_watermark, &hwm, usage, 
-                                              memory_order_relaxed, memory_order_relaxed)) {
-        break;
-    }
-    // If CAS failed, hwm was updated by another thread. 
-    // Loop checks again if our usage is still higher than the new hwm.
-  }
-#endif
 
   // We reserved the slot at 'head'
   MARU_QueuedEvent *slot = &q->buffer[head & q->mask];

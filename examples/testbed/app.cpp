@@ -3,7 +3,6 @@
 
 #include "app.h"
 #include "modules/event_log_module.h"
-#include "modules/metrics_module.h"
 #include "modules/monitor_module.h"
 #include "modules/cursor_module.h"
 #include "modules/window_module.h"
@@ -27,7 +26,6 @@ App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_dev
     event_module_ = event_module.get();
     modules_.push_back(std::move(event_module));
     modules_.push_back(std::make_unique<EventLogModule>());
-    modules_.push_back(std::make_unique<MetricsModule>());
     modules_.push_back(std::make_unique<MonitorModule>());
     modules_.push_back(std::make_unique<CursorModule>());
     modules_.push_back(std::make_unique<WindowModule>(window, instance, physical_device, device, queue_family, queue));

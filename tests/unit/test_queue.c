@@ -250,16 +250,6 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     EXPECT_EQ(trace.events[1].mouse_moved.raw_dip_delta.x, (MARU_Scalar)14.0);
     EXPECT_EQ(trace.events[1].mouse_moved.raw_dip_delta.y, (MARU_Scalar)17.0);
 
-    MARU_QueueMetrics metrics = {0};
-    maru_getQueueMetrics(queue, &metrics);
-    EXPECT_EQ(metrics.peak_active_count, (uint32_t)3);
-    EXPECT_EQ(metrics.overflow_drop_count, (uint32_t)0);
-    EXPECT_EQ(metrics.overflow_compact_count, (uint32_t)1);
-    EXPECT_EQ(metrics.overflow_events_compacted, (uint32_t)1);
-    EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_0], (uint32_t)0);
-    EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_1], (uint32_t)0);
-    EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_MOUSE_MOVED], (uint32_t)0);
-
     maru_destroyQueue(queue);
 }
 
@@ -283,44 +273,6 @@ UTEST(QueueTest, OverflowDropsWhenCompactionCannotFreeSpace) {
     EXPECT_EQ(trace.count, (uint32_t)2);
     EXPECT_EQ(trace.types[0], (MARU_EventId)MARU_EVENT_USER_0);
     EXPECT_EQ(trace.types[1], (MARU_EventId)MARU_EVENT_USER_1);
-
-    MARU_QueueMetrics metrics = {0};
-    maru_getQueueMetrics(queue, &metrics);
-    EXPECT_EQ(metrics.peak_active_count, (uint32_t)2);
-    EXPECT_EQ(metrics.overflow_drop_count, (uint32_t)1);
-    EXPECT_EQ(metrics.overflow_compact_count, (uint32_t)1);
-    EXPECT_EQ(metrics.overflow_events_compacted, (uint32_t)0);
-    EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_2], (uint32_t)1);
-    EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_0], (uint32_t)0);
-
-    maru_destroyQueue(queue);
-}
-
-UTEST(QueueTest, ResetMetricsClearsOverflowCounters) {
-    MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(2, &queue), (MARU_Status)MARU_SUCCESS);
-    ASSERT_TRUE(queue != NULL);
-
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
-              (MARU_Status)MARU_SUCCESS);
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
-              (MARU_Status)MARU_SUCCESS);
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_2),
-              (MARU_Status)MARU_FAILURE);
-
-    MARU_QueueMetrics metrics = {0};
-    maru_getQueueMetrics(queue, &metrics);
-    EXPECT_EQ(metrics.peak_active_count, (uint32_t)2);
-    EXPECT_EQ(metrics.overflow_drop_count, (uint32_t)1);
-    EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_2], (uint32_t)1);
-
-    maru_resetQueueMetrics(queue);
-    maru_getQueueMetrics(queue, &metrics);
-    EXPECT_EQ(metrics.peak_active_count, (uint32_t)0);
-    EXPECT_EQ(metrics.overflow_drop_count, (uint32_t)0);
-    EXPECT_EQ(metrics.overflow_compact_count, (uint32_t)0);
-    EXPECT_EQ(metrics.overflow_events_compacted, (uint32_t)0);
-    EXPECT_EQ(metrics.overflow_drop_count_by_event[MARU_EVENT_USER_2], (uint32_t)0);
 
     maru_destroyQueue(queue);
 }

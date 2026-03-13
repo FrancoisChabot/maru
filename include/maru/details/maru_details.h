@@ -43,7 +43,6 @@ typedef struct MARU_ContextPrefix {
   void* userdata;
   uint64_t flags;
   MARU_BackendType backend_type;
-  const MARU_ContextMetrics* metrics;
   const MARU_ButtonState8* mouse_button_state;
   const MARU_ChannelInfo* mouse_button_channels;
   uint32_t mouse_button_count;
@@ -128,10 +127,6 @@ static inline bool maru_isContextLost(const MARU_Context* context) {
 
 static inline bool maru_isContextReady(const MARU_Context* context) {
   return (((const MARU_ContextPrefix*)context)->flags & MARU_CONTEXT_STATE_READY) != 0;
-}
-
-static inline const MARU_ContextMetrics* maru_getContextMetrics(const MARU_Context* context) {
-  return ((const MARU_ContextPrefix*)context)->metrics;
 }
 
 static inline uint32_t maru_getContextMouseButtonCount(const MARU_Context* context) {
@@ -629,12 +624,6 @@ static inline bool maru_applyTextEditCommitUtf8(char* buffer,
     buffer[new_length] = '\0';
   }
   return true;
-}
-
-static inline const MARU_UserEventMetrics* maru_getContextEventMetrics(
-    const MARU_Context* context) {
-  const MARU_ContextMetrics* metrics = maru_getContextMetrics(context);
-  return metrics ? metrics->user_events : NULL;
 }
 
 static inline const char* maru_getDiagnosticString(MARU_Diagnostic diagnostic) {

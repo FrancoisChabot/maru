@@ -65,4 +65,4 @@ if (type == MARU_EVENT_WINDOW_RESIZED) {
 }
 ```
 
-Next: [Metrics & Instrumentation](metrics.md) or [Backend-specific Guides](index.md#backend-specific-guides)
+Next: [Backend-specific Guides](index.md#backend-specific-guides)
