@@ -29,7 +29,6 @@ const MARU_Backend maru_backend_Cocoa = {
   .getControllers = maru_getControllers_Cocoa,
   .retainController = maru_retainController_Cocoa,
   .releaseController = maru_releaseController_Cocoa,
-  .getControllerInfo = maru_getControllerInfo_Cocoa,
   .setControllerHapticLevels = maru_setControllerHapticLevels_Cocoa,
 
   .announceData = maru_announceData_Cocoa,
@@ -162,14 +161,6 @@ MARU_API MARU_Status maru_getControllers(MARU_Context *context,
 MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
   maru_releaseController_Cocoa(controller);
-}
-
-MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
-                                            MARU_ControllerInfo *out_info) {
-  MARU_API_VALIDATE(getControllerInfo, controller, out_info);
-  MARU_RETURN_ON_ERROR(_maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(getControllerInfo, controller, out_info);
-  return maru_getControllerInfo_Cocoa(controller, out_info);
 }
 
 MARU_API MARU_Status maru_setControllerHapticLevels(

@@ -23,7 +23,6 @@ public:
 private:
     struct ControllerState {
         MARU_Controller* controller = nullptr;
-        MARU_ControllerInfo info = {};
         std::vector<float> haptic_levels;
     };
 
@@ -35,4 +34,3 @@ private:
     void releaseAll();
     void renderController(MARU_Controller* handle, ControllerState& state);
 };
-

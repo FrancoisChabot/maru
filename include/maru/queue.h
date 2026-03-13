@@ -70,14 +70,31 @@ typedef struct MARU_QueueCreateInfo {
  * failure only; MARU_CONTEXT_LOST is not meaningful here.
  *
  * Threading contract:
- * - maru_createQueue(), maru_pushQueue() and maru_commitQueue() are
- *   single-owner APIs. Call them from the queue's creator thread only.
- * - maru_scanQueue() may be called from any thread, but the caller must ensure
- *   it does not race with maru_commitQueue().
+ * - maru_createQueue() establishes a fixed owner thread for the queue.
+ * - maru_destroyQueue(), maru_pushQueue(), maru_commitQueue(),
+ *   maru_scanQueue() and maru_setQueueCoalesceMask() are creator-thread APIs.
+ *   A queue is a single-owner helper; cross-thread scanning or mutation is not
+ *   part of the public contract.
  * - Only queue-safe event ids may be pushed. Use MARU_QUEUE_SAFE_EVENT_MASK or
  *   maru_isQueueSafeEventId() when capturing events from maru_pumpEvents().
  * - Window-targeted events are keyed by the stable MARU_WindowId captured at
  *   enqueue time. Use MARU_WINDOW_ID_NONE for context-scoped events.
+ *
+ * Coalescing contract:
+ * - maru_setQueueCoalesceMask() marks event ids as eligible for coalescing in
+ *   the queue's active buffer.
+ * - Only events with the same `(type, window_id)` pair may coalesce.
+ * - Adjacent eligible pushes coalesce immediately instead of appending a new
+ *   active entry.
+ * - If the active buffer fills, the queue may compact it by folding older
+ *   eligible entries into the latest surviving entry with the same
+ *   `(type, window_id)` pair while preserving the order of surviving entries.
+ * - `MARU_EVENT_MOUSE_MOVED` and `MARU_EVENT_MOUSE_SCROLLED` accumulate their
+ *   deltas/steps into the latest survivor.
+ * - `MARU_EVENT_WINDOW_RESIZED` keeps the latest geometry.
+ * - Other eligible event ids keep the latest payload.
+ * - Mask bits for event ids that are never pushed into the queue have no
+ *   observable effect.
  *
  * Diagnostic model:
  * - Queue APIs intentionally use `bool` rather than `MARU_Status`.

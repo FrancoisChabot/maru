@@ -78,21 +78,6 @@ MARU_API void maru_retainController(MARU_Controller *controller) {
   atomic_fetch_add_explicit(&ctrl_base->ref_count, 1u, memory_order_relaxed);
 }
 
-MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
-                                            MARU_ControllerInfo *out_info) {
-  MARU_API_VALIDATE(getControllerInfo, controller, out_info);
-  MARU_RETURN_ON_ERROR(
-      _maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(getControllerInfo, controller, out_info);
-  MARU_ControllerPrefix *ctrl = (MARU_ControllerPrefix *)controller;
-  MARU_Context_Base *ctx_base = (MARU_Context_Base *)ctrl->context;
-  if (!ctx_base->backend->getControllerInfo) {
-    memset(out_info, 0, sizeof(*out_info));
-    return MARU_FAILURE;
-  }
-  return ctx_base->backend->getControllerInfo(controller, out_info);
-}
-
 MARU_API MARU_Status
 maru_setControllerHapticLevels(MARU_Controller *controller, uint32_t first_haptic,
                                uint32_t count,

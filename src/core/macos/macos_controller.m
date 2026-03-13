@@ -106,6 +106,7 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     } else {
         c->base.pub.name = "Unknown Game Controller";
     }
+    c->base.pub.is_standardized = (gc.extendedGamepad != nil);
 
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_X].name = "Left X";
     c->analog_channel_infos[MARU_CONTROLLER_ANALOG_LEFT_X].min_value = -1.0f;
@@ -315,15 +316,6 @@ void maru_releaseController_Cocoa(MARU_Controller *controller) {
             return;
         }
     }
-}
-
-MARU_Status maru_getControllerInfo_Cocoa(const MARU_Controller *controller,
-                                         MARU_ControllerInfo *out_info) {
-    MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)controller;
-    memset(out_info, 0, sizeof(MARU_ControllerInfo));
-    out_info->name = c->base.pub.name;
-    out_info->is_standardized = (c->gc_controller.extendedGamepad != nil);
-    return MARU_SUCCESS;
 }
 
 MARU_Status maru_setControllerHapticLevels_Cocoa(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities) {

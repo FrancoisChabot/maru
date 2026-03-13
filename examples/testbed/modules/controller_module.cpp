@@ -29,10 +29,6 @@ void ControllerModule::retainController(MARU_Controller* controller) {
 
     ControllerState state = {};
     state.controller = controller;
-    if (maru_getControllerInfo(controller, &state.info) != MARU_SUCCESS) {
-        maru_releaseController(controller);
-        return;
-    }
     state.haptic_levels.resize(maru_getControllerHapticCount(controller), 0.0f);
     controllers_.emplace(controller, std::move(state));
 }
@@ -77,7 +73,10 @@ void ControllerModule::update(MARU_Context* ctx, MARU_Window* window) {
 }
 
 void ControllerModule::renderController(MARU_Controller* handle, ControllerState& state) {
-    const char* controller_name = state.info.name ? state.info.name : "Unknown Controller";
+    const char* controller_name = maru_getControllerName(state.controller);
+    if (!controller_name) {
+        controller_name = "Unknown Controller";
+    }
     char label[160];
     (void)snprintf(label, sizeof(label), "%s###ctrl_%p", controller_name, (void*)handle);
 
@@ -85,9 +84,10 @@ void ControllerModule::renderController(MARU_Controller* handle, ControllerState
         return;
     }
 
-    ImGui::Text("VID: 0x%04X PID: 0x%04X Ver: %u", state.info.vendor_id,
-                state.info.product_id, state.info.version);
-    ImGui::Text("Standardized: %s", state.info.is_standardized ? "Yes" : "No");
+    ImGui::Text("VID: 0x%04X PID: 0x%04X Ver: %u", maru_getControllerVendorId(state.controller),
+                maru_getControllerProductId(state.controller),
+                maru_getControllerVersion(state.controller));
+    ImGui::Text("Standardized: %s", maru_isControllerStandardized(state.controller) ? "Yes" : "No");
 
     const uint32_t analog_count = maru_getControllerAnalogCount(state.controller);
     const uint32_t button_count = maru_getControllerButtonCount(state.controller);

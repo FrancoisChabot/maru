@@ -671,15 +671,6 @@ _maru_validate_releaseController(MARU_Controller *controller) {
 }
 
 static inline void
-_maru_validate_getControllerInfo(const MARU_Controller *controller,
-                                 MARU_ControllerInfo *out_info) {
-  MARU_CONSTRAINT_CHECK(controller != NULL);
-  MARU_CONSTRAINT_CHECK(out_info != NULL);
-  _maru_validate_thread(
-      (const MARU_Context_Base *)maru_getControllerContext(controller));
-}
-
-static inline void
 _maru_validate_setControllerHapticLevels(MARU_Controller *controller,
                                          uint32_t first_haptic, uint32_t count,
                                          const MARU_Scalar *intensities) {
@@ -923,13 +914,6 @@ static inline void _maru_validate_live_requestWindowFrame(MARU_Window *window) {
 static inline void
 _maru_validate_live_requestWindowAttention(MARU_Window *window) {
   _maru_validate_window_ready(window);
-}
-
-static inline void
-_maru_validate_live_getControllerInfo(const MARU_Controller *controller,
-                                      MARU_ControllerInfo *out_info) {
-  (void)out_info;
-  _maru_validate_controller_not_lost(controller);
 }
 
 static inline void _maru_validate_live_setControllerHapticLevels(

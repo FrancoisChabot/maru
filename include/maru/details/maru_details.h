@@ -112,6 +112,7 @@ typedef struct MARU_ControllerPrefix {
   uint16_t product_id;
   uint16_t version;
   uint8_t guid[16];
+  bool is_standardized;
   const MARU_ChannelInfo* analog_channels;
   const MARU_AnalogInputState* analogs;
   uint32_t analog_count;
@@ -386,6 +387,11 @@ static inline uint16_t maru_getControllerVersion(const MARU_Controller* controll
 static inline const uint8_t* maru_getControllerGUID(const MARU_Controller* controller) {
   MARU_ASSUME(controller != NULL);
   return ((const MARU_ControllerPrefix*)controller)->guid;
+}
+
+static inline bool maru_isControllerStandardized(const MARU_Controller* controller) {
+  MARU_ASSUME(controller != NULL);
+  return ((const MARU_ControllerPrefix*)controller)->is_standardized;
 }
 
 static inline uint32_t maru_getControllerAnalogCount(const MARU_Controller* controller) {

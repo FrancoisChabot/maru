@@ -94,7 +94,6 @@ void _maru_cocoa_cleanup_controller_observer(MARU_Context_Cocoa *ctx);
 void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base);
 void maru_retainController_Cocoa(MARU_Controller *controller);
 void maru_releaseController_Cocoa(MARU_Controller *controller);
-MARU_Status maru_getControllerInfo_Cocoa(const MARU_Controller *controller, MARU_ControllerInfo *out_info);
 MARU_Status maru_setControllerHapticLevels_Cocoa(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
 
 MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions);

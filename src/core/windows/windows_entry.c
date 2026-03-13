@@ -191,13 +191,6 @@ MARU_API void maru_releaseController(MARU_Controller *controller) {
   maru_releaseController_Windows(controller);
 }
 
-MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller, MARU_ControllerInfo *out_info) {
-  MARU_API_VALIDATE(getControllerInfo, controller, out_info);
-  MARU_RETURN_ON_ERROR(_maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(getControllerInfo, controller, out_info);
-  return maru_getControllerInfo_Windows(controller, out_info);
-}
-
 MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities) {
   MARU_API_VALIDATE(setControllerHapticLevels, controller, first_haptic, count, intensities);
   MARU_RETURN_ON_ERROR(_maru_status_if_controller_context_lost(controller));

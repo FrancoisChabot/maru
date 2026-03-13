@@ -31,7 +31,7 @@ public:
     void setUserData(void* userdata);
     bool isLost() const;
 
-    expected<MARU_ControllerInfo> getInfo() const;
+    bool isStandardized() const;
     uint32_t getAnalogCount() const;
     const MARU_ChannelInfo* getAnalogChannelInfo() const;
     const MARU_AnalogInputState* getAnalogStates() const;

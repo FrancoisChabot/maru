@@ -42,7 +42,6 @@ const MARU_Backend maru_backend_WL = {
   .getControllers = maru_getControllers_WL,
   .retainController = maru_retainController_WL,
   .releaseController = maru_releaseController_WL,
-  .getControllerInfo = maru_getControllerInfo_WL,
   .setControllerHapticLevels = maru_setControllerHapticLevels_WL,
   .announceData = maru_announceData_WL,
   .provideData = maru_provideData_WL,
@@ -152,14 +151,6 @@ MARU_API void maru_retainController(MARU_Controller *controller) {
 MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
   maru_releaseController_WL(controller);
-}
-
-MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
-                                            MARU_ControllerInfo *out_info) {
-  MARU_API_VALIDATE(getControllerInfo, controller, out_info);
-  MARU_RETURN_ON_ERROR(_maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(getControllerInfo, controller, out_info);
-  return maru_getControllerInfo_WL(controller, out_info);
 }
 
 MARU_API MARU_Status

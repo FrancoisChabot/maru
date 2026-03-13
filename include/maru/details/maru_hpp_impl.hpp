@@ -149,12 +149,7 @@ inline void* Controller::getUserData() const { return maru_getControllerUserdata
 inline void Controller::setUserData(void* userdata) { maru_setControllerUserdata(m_handle, userdata); }
 inline bool Controller::isLost() const { return maru_isControllerLost(m_handle); }
 
-inline expected<MARU_ControllerInfo> Controller::getInfo() const {
-    MARU_ControllerInfo info;
-    MARU_Status status = maru_getControllerInfo(m_handle, &info);
-    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
-    return info;
-}
+inline bool Controller::isStandardized() const { return maru_isControllerStandardized(m_handle); }
 
 inline uint32_t Controller::getAnalogCount() const { return maru_getControllerAnalogCount(m_handle); }
 inline const MARU_ChannelInfo* Controller::getAnalogChannelInfo() const { return maru_getControllerAnalogChannelInfo(m_handle); }

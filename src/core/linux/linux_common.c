@@ -648,6 +648,7 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   ctrl->base.product_id = ctrl->product_id;
   ctrl->base.version = ctrl->version;
   memcpy((void *)ctrl->base.guid, ctrl->guid, 16);
+  ctrl->base.is_standardized = ctrl->is_standardized;
   ctrl->base.analog_channels = ctrl->analog_channels;
   ctrl->base.analogs = ctrl->analog_states;
   ctrl->base.analog_count = abs_count;

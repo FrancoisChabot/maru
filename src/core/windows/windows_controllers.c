@@ -163,6 +163,7 @@ static void _maru_windows_controller_sync_pub(MARU_Controller_Windows *ctrl) {
   ctrl->base.pub.product_id = ctrl->product_id;
   ctrl->base.pub.version = ctrl->version;
   memcpy((void *)ctrl->base.pub.guid, ctrl->guid, 16);
+  ctrl->base.pub.is_standardized = ctrl->is_standardized;
   ctrl->base.pub.analog_channels = ctrl->analog_channels;
   ctrl->base.pub.analogs = ctrl->analog_states;
   ctrl->base.pub.analog_count = ctrl->analog_count;
@@ -1352,19 +1353,6 @@ void maru_releaseController_Windows(MARU_Controller *controller) {
                                 memory_order_acq_rel) == 1u) {
     _maru_controller_free(&ctrl->base);
   }
-}
-
-MARU_Status maru_getControllerInfo_Windows(const MARU_Controller *controller,
-                                           MARU_ControllerInfo *out_info) {
-  MARU_Controller_Windows *ctrl = (MARU_Controller_Windows *)controller;
-  memset(out_info, 0, sizeof(*out_info));
-  out_info->name = ctrl->base.pub.name;
-  out_info->vendor_id = ctrl->base.pub.vendor_id;
-  out_info->product_id = ctrl->base.pub.product_id;
-  out_info->version = ctrl->base.pub.version;
-  memcpy(out_info->guid, ctrl->base.pub.guid, sizeof(out_info->guid));
-  out_info->is_standardized = ctrl->is_standardized;
-  return MARU_SUCCESS;
 }
 
 MARU_Status maru_setControllerHapticLevels_Windows(MARU_Controller *controller,

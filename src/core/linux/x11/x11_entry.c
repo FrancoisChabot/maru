@@ -63,19 +63,6 @@ static void maru_releaseController_X11(MARU_Controller *controller) {
   }
 }
 
-static MARU_Status maru_getControllerInfo_X11(const MARU_Controller *controller,
-                                              MARU_ControllerInfo *out_info) {
-  MARU_LinuxController *ctrl = (MARU_LinuxController *)controller;
-  memset(out_info, 0, sizeof(*out_info));
-  out_info->name = ctrl->base.name;
-  out_info->vendor_id = ctrl->base.vendor_id;
-  out_info->product_id = ctrl->base.product_id;
-  out_info->version = ctrl->base.version;
-  memcpy(out_info->guid, ctrl->base.guid, 16);
-  out_info->is_standardized = ctrl->is_standardized;
-  return MARU_SUCCESS;
-}
-
 static MARU_Status
 maru_setControllerHapticLevels_X11(MARU_Controller *controller,
                                    uint32_t first_haptic, uint32_t count,
@@ -117,7 +104,6 @@ const MARU_Backend maru_backend_X11 = {
   .getControllers = maru_getControllers_X11,
   .retainController = maru_retainController_X11,
   .releaseController = maru_releaseController_X11,
-  .getControllerInfo = maru_getControllerInfo_X11,
   .setControllerHapticLevels = maru_setControllerHapticLevels_X11,
   .announceData = maru_announceData_X11,
   .provideData = maru_provideData_X11,
@@ -226,14 +212,6 @@ MARU_API void maru_retainController(MARU_Controller *controller) {
 MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
   maru_releaseController_X11(controller);
-}
-
-MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller *controller,
-                                            MARU_ControllerInfo *out_info) {
-  MARU_API_VALIDATE(getControllerInfo, controller, out_info);
-  MARU_RETURN_ON_ERROR(_maru_status_if_controller_context_lost(controller));
-  MARU_API_VALIDATE_LIVE(getControllerInfo, controller, out_info);
-  return maru_getControllerInfo_X11(controller, out_info);
 }
 
 MARU_API MARU_Status

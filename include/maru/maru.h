@@ -1344,21 +1344,6 @@ MARU_API MARU_Status maru_requestWindowAttention(MARU_Window* window);
 
 /* ----- Controllers ----- */
 
-typedef struct MARU_ControllerInfo {
-  const char* name;
-  uint16_t vendor_id;
-  uint16_t product_id;
-  uint16_t version;
-  uint8_t guid[16];
-  /*
-   * When true, the first `MARU_CONTROLLER_*_STANDARD_COUNT` channels in each
-   * controller state/channel-info array are guaranteed to be the Maru-defined
-   * standardized channels in enum order. Extra channels, if any, follow after
-   * that range.
-   */
-  bool is_standardized;
-} MARU_ControllerInfo;
-
 typedef enum MARU_ControllerAnalog {
   MARU_CONTROLLER_ANALOG_LEFT_X = 0,
   MARU_CONTROLLER_ANALOG_LEFT_Y = 1,
@@ -1414,6 +1399,13 @@ static inline uint16_t maru_getControllerVendorId(const MARU_Controller* control
 static inline uint16_t maru_getControllerProductId(const MARU_Controller* controller);
 static inline uint16_t maru_getControllerVersion(const MARU_Controller* controller);
 static inline const uint8_t* maru_getControllerGUID(const MARU_Controller* controller);
+/*
+ * When true, the first `MARU_CONTROLLER_*_STANDARD_COUNT` channels in each
+ * controller state/channel-info array are guaranteed to be the Maru-defined
+ * standardized channels in enum order. Extra channels, if any, follow after
+ * that range.
+ */
+static inline bool maru_isControllerStandardized(const MARU_Controller* controller);
 static inline uint32_t maru_getControllerAnalogCount(const MARU_Controller* controller);
 static inline const MARU_ChannelInfo* maru_getControllerAnalogChannelInfo(
     const MARU_Controller* controller);
@@ -1433,8 +1425,6 @@ static inline const MARU_ChannelInfo* maru_getControllerHapticChannelInfo(
 MARU_API MARU_Status maru_getControllers(MARU_Context* context, MARU_ControllerList* out_list);
 MARU_API void maru_retainController(MARU_Controller* controller);
 MARU_API void maru_releaseController(MARU_Controller* controller);
-MARU_API MARU_Status maru_getControllerInfo(const MARU_Controller* controller,
-                                            MARU_ControllerInfo* out_info);
 /*
  * Each intensity must fall within the inclusive `[min_value, max_value]` range
  * published by `maru_getControllerHapticChannelInfo()` for the targeted
