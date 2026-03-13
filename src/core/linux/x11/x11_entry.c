@@ -140,9 +140,9 @@ MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_inf
   return maru_createContext_X11(create_info, out_context);
 }
 
-MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
+MARU_API void maru_destroyContext(MARU_Context *context) {
   MARU_API_VALIDATE(destroyContext, context);
-  return maru_destroyContext_X11(context);
+  maru_destroyContext_X11(context);
 }
 
 MARU_API MARU_Status

@@ -312,21 +312,21 @@ static void _maru_queue_buffer_cleanup(const MARU_Allocator *allocator, MARU_Que
     }
 }
 
-MARU_Status maru_createQueue(const MARU_QueueCreateInfo *create_info, MARU_Queue **out_queue) {
+bool maru_createQueue(const MARU_QueueCreateInfo *create_info, MARU_Queue **out_queue) {
     MARU_API_VALIDATE(createQueue, create_info, out_queue);
 
     if (!create_info || !out_queue || create_info->capacity == 0u) {
-        return MARU_FAILURE;
+        return false;
     }
     const bool any_custom = create_info->allocator.alloc_cb != NULL || create_info->allocator.realloc_cb != NULL || create_info->allocator.free_cb != NULL;
     if (any_custom && (create_info->allocator.alloc_cb == NULL || create_info->allocator.realloc_cb == NULL || create_info->allocator.free_cb == NULL)) {
-        return MARU_FAILURE;
+        return false;
     }
 
     MARU_Allocator allocator = _maru_queue_resolve_allocator(&create_info->allocator);
     MARU_Queue *q = (MARU_Queue *)_maru_queue_alloc_raw(&allocator, sizeof(MARU_Queue));
     if (!q) {
-        return MARU_FAILURE;
+        return false;
     }
 
     memset(q, 0, sizeof(*q));
@@ -341,20 +341,20 @@ MARU_Status maru_createQueue(const MARU_QueueCreateInfo *create_info, MARU_Queue
 
     if (!_maru_queue_buffer_init(&q->allocator, &q->buffers[0], q->capacity)) {
         _maru_queue_free_raw(&q->allocator, q);
-        return MARU_FAILURE;
+        return false;
     }
 
     if (!_maru_queue_buffer_init(&q->allocator, &q->buffers[1], q->capacity)) {
         _maru_queue_buffer_cleanup(&q->allocator, &q->buffers[0]);
         _maru_queue_free_raw(&q->allocator, q);
-        return MARU_FAILURE;
+        return false;
     }
 
     q->active = q->buffers[0];
     q->stable = q->buffers[1];
 
     *out_queue = q;
-    return MARU_SUCCESS;
+    return true;
 }
 
 void maru_destroyQueue(MARU_Queue *queue) {
@@ -368,22 +368,20 @@ void maru_destroyQueue(MARU_Queue *queue) {
     _maru_queue_free_raw(&allocator, queue);
 }
 
-MARU_Status maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
+bool maru_pushQueue(MARU_Queue *queue, MARU_EventId type,
                            MARU_WindowId window_id, const MARU_Event *event) {
     MARU_API_VALIDATE(pushQueue, queue, type, window_id, event);
 
-    if (!queue || !event) return MARU_FAILURE;
+    if (!queue || !event) return false;
     _maru_queue_validate_thread(queue);
 
-    return _maru_queue_push_internal(queue, type, window_id, event)
-               ? MARU_SUCCESS
-               : MARU_FAILURE;
+    return _maru_queue_push_internal(queue, type, window_id, event);
 }
 
-MARU_Status maru_commitQueue(MARU_Queue *queue) {
+bool maru_commitQueue(MARU_Queue *queue) {
     MARU_API_VALIDATE(commitQueue, queue);
 
-    if (!queue) return MARU_FAILURE;
+    if (!queue) return false;
     _maru_queue_validate_thread(queue);
 
     // O(1) swap
@@ -395,7 +393,7 @@ MARU_Status maru_commitQueue(MARU_Queue *queue) {
     queue->active = (tmp_buf.types == queue->buffers[0].types) ? queue->buffers[1] : queue->buffers[0];
     queue->active_count = 0;
 
-    return MARU_SUCCESS;
+    return true;
 }
 
 void maru_scanQueue(MARU_Queue *queue,

@@ -378,19 +378,17 @@ inline bool Context::wake() {
 
 /* --- Queue Implementations --- */
 
-inline expected<Queue> Queue::create(const MARU_QueueCreateInfo& create_info) {
+inline expected<Queue, bool> Queue::create(const MARU_QueueCreateInfo& create_info) {
     MARU_Queue* handle = nullptr;
-    MARU_Status status = maru_createQueue(&create_info, &handle);
-    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
+    if (!maru_createQueue(&create_info, &handle)) return unexpected<bool>(false);
     return Queue(handle);
 }
 
-inline expected<Queue> Queue::create(uint32_t capacity) {
+inline expected<Queue, bool> Queue::create(uint32_t capacity) {
     MARU_QueueCreateInfo create_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
     create_info.capacity = capacity;
     MARU_Queue* handle = nullptr;
-    MARU_Status status = maru_createQueue(&create_info, &handle);
-    if (status != MARU_SUCCESS) return unexpected<MARU_Status>(status);
+    if (!maru_createQueue(&create_info, &handle)) return unexpected<bool>(false);
     return Queue(handle);
 }
 
@@ -411,12 +409,12 @@ inline Queue& Queue::operator=(Queue&& other) noexcept {
     return *this;
 }
 
-inline MARU_Status Queue::push(MARU_EventId type, MARU_WindowId window_id,
+inline bool Queue::push(MARU_EventId type, MARU_WindowId window_id,
                                const MARU_Event& event) {
     return maru_pushQueue(m_handle, type, window_id, &event);
 }
 
-inline MARU_Status Queue::commit() {
+inline bool Queue::commit() {
     return maru_commitQueue(m_handle);
 }
 

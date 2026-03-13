@@ -685,7 +685,7 @@ cleanup_symbols:
   return MARU_FAILURE;
 }
 
-MARU_Status maru_destroyContext_WL(MARU_Context *context) {
+void maru_destroyContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
 
   while (ctx->base.window_list_head) {
@@ -767,7 +767,6 @@ MARU_Status maru_destroyContext_WL(MARU_Context *context) {
   ctx->wake_fd = -1;
 
   maru_context_free(&ctx->base, context);
-  return MARU_SUCCESS;
 }
 
 MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,

@@ -258,7 +258,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     return MARU_SUCCESS;
 }
 
-MARU_Status maru_destroyContext_Cocoa(MARU_Context *context) {
+void maru_destroyContext_Cocoa(MARU_Context *context) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
 
     while (ctx->base.window_list_head) {
@@ -275,7 +275,6 @@ MARU_Status maru_destroyContext_Cocoa(MARU_Context *context) {
 
     _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
-    return MARU_SUCCESS;
 }
 
 MARU_Status maru_updateContext_Cocoa(MARU_Context *context, uint64_t field_mask,

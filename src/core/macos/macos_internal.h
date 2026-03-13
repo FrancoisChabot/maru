@@ -53,7 +53,7 @@ typedef struct MARU_Cursor_Cocoa {
 
 MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
                                       MARU_Context **out_context);
-MARU_Status maru_destroyContext_Cocoa(MARU_Context *context);
+void maru_destroyContext_Cocoa(MARU_Context *context);
 MARU_Status maru_updateContext_Cocoa(MARU_Context *context, uint64_t field_mask,
                                        const MARU_ContextAttributes *attributes);
 MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,

@@ -18,7 +18,7 @@ TEST_CASE("DesktopIntegration.ContextCreateOOMReplayPerAllocationEvent") {
     return;
   }
 
-  CHECK(maru_destroyContext(context) == MARU_SUCCESS);
+  maru_destroyContext(context);
   CHECK(baseline_tracking.is_clean());
 
   const size_t alloc_events = baseline_tracking.alloc_event_count();
@@ -35,7 +35,7 @@ TEST_CASE("DesktopIntegration.ContextCreateOOMReplayPerAllocationEvent") {
     MARU_Status trial_status = maru_createContext(&trial_info, &trial_ctx);
 
     if (trial_status == MARU_SUCCESS && trial_ctx) {
-      CHECK(maru_destroyContext(trial_ctx) == MARU_SUCCESS);
+      maru_destroyContext(trial_ctx);
     }
 
     CHECK_MESSAGE(tracking.oom_triggered(),

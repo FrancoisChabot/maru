@@ -12,7 +12,7 @@ TEST_CASE("DesktopIntegration.ProbeDesktopEnvironment") {
   MARU_Context *ctx = nullptr;
   MARU_Status status = maru_createContext(&create_info, &ctx);
   if (status == MARU_SUCCESS && ctx) {
-    CHECK(maru_destroyContext(ctx) == MARU_SUCCESS);
+    maru_destroyContext(ctx);
     CHECK(tracking.is_clean());
   } else {
     MESSAGE("Context creation unavailable; skipping create/destroy assertion.");
@@ -29,7 +29,7 @@ TEST_CASE("DesktopIntegration.ContextLifecycleCreateDestroyRepeated") {
     MARU_Context *ctx = nullptr;
     MARU_Status status = maru_createContext(&create_info, &ctx);
     if (status == MARU_SUCCESS && ctx) {
-      CHECK(maru_destroyContext(ctx) == MARU_SUCCESS);
+      maru_destroyContext(ctx);
       CHECK(tracking.is_clean());
     } else {
       MESSAGE("Context creation unavailable for iteration " << i << "; skipping create/destroy assertion.");

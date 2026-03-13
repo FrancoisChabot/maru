@@ -422,7 +422,7 @@ extern const struct zwp_text_input_v3_listener _maru_wayland_text_input_listener
 
 MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
                                   MARU_Context **out_context);
-MARU_Status maru_destroyContext_WL(MARU_Context *context);
+void maru_destroyContext_WL(MARU_Context *context);
 MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
                                   const MARU_ContextAttributes *attributes);
 bool maru_wakeContext_WL(MARU_Context *context);

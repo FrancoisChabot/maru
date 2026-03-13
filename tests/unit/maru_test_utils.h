@@ -287,11 +287,10 @@ maru_test_tracking_allocator_shutdown(MARU_TestTrackingAllocator *tracking) {
 
 #ifndef __cplusplus
 // A dummy destroy function for the mock backend
-static inline MARU_Status _mock_destroyContext(MARU_Context* context) {
+static inline void _mock_destroyContext(MARU_Context* context) {
     MARU_Context_Base* ctx_base = (MARU_Context_Base*)context;
     _maru_cleanup_context_base(ctx_base);
     maru_context_free(ctx_base, context);
-    return MARU_SUCCESS;
 }
 
 static inline MARU_Status _mock_updateContext(MARU_Context* context, uint64_t field_mask,

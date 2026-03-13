@@ -12,10 +12,10 @@
 #include "maru/native/x11.h"
 
 #ifdef MARU_INDIRECT_BACKEND
-MARU_API MARU_Status maru_destroyContext(MARU_Context *context) {
+MARU_API void maru_destroyContext(MARU_Context *context) {
   MARU_API_VALIDATE(destroyContext, context);
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  return ctx_base->backend->destroyContext(context);
+  ctx_base->backend->destroyContext(context);
 }
 
 MARU_API MARU_Status

@@ -60,7 +60,7 @@ TEST_CASE("DesktopIntegration.CrossThreadPostEventWithoutWindow") {
   CHECK(cb.called);
   CHECK(cb.last_type == test_type);
 
-  CHECK(maru_destroyContext(ctx) == MARU_SUCCESS);
+  maru_destroyContext(ctx);
   CHECK(tracking.is_clean());
 }
 
@@ -96,6 +96,6 @@ TEST_CASE("DesktopIntegration.CrossThreadWakeContextWithoutWindow") {
   REQUIRE(status == MARU_SUCCESS);
   CHECK(elapsed_ms < 1000);
 
-  CHECK(maru_destroyContext(ctx) == MARU_SUCCESS);
+  maru_destroyContext(ctx);
   CHECK(tracking.is_clean());
 }

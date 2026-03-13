@@ -293,7 +293,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_destroyContext_X11(MARU_Context *context) {
+void maru_destroyContext_X11(MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   _maru_x11_release_pointer_lock(ctx, NULL);
 
@@ -359,7 +359,6 @@ MARU_Status maru_destroyContext_X11(MARU_Context *context) {
 
   _maru_cleanup_context_base(&ctx->base);
   maru_context_free(&ctx->base, context);
-  return MARU_SUCCESS;
 }
 
 bool maru_wakeContext_X11(MARU_Context *context) {

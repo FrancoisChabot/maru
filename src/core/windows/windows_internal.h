@@ -209,7 +209,7 @@ typedef struct MARU_Window_Windows {
 // contexts.h
 MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info,
                                         MARU_Context **out_context);
-MARU_Status maru_destroyContext_Windows(MARU_Context *context);
+void maru_destroyContext_Windows(MARU_Context *context);
 MARU_Status maru_updateContext_Windows(MARU_Context *context, uint64_t field_mask,
                                           const MARU_ContextAttributes *attributes);
 

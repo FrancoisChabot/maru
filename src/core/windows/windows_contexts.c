@@ -138,7 +138,7 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
+void maru_destroyContext_Windows(MARU_Context *context) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
 
   while (ctx->base.window_list_head) {
@@ -174,7 +174,6 @@ MARU_Status maru_destroyContext_Windows(MARU_Context *context) {
 
   _maru_cleanup_context_base(&ctx->base);
   maru_context_free(&ctx->base, context);
-  return MARU_SUCCESS;
 }
 
 MARU_Status maru_updateContext_Windows(MARU_Context *context, uint64_t field_mask,

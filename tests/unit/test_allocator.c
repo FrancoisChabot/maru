@@ -48,7 +48,7 @@ UTEST(AllocatorTest, DefaultAllocatorWorks) {
     MARU_Context* context = maru_test_createContext(&create_info);
     ASSERT_TRUE(context != NULL);
     
-    EXPECT_EQ(maru_destroyContext(context), (MARU_Status)MARU_SUCCESS);
+    maru_destroyContext(context);
     EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));
     maru_test_tracking_allocator_shutdown(&tracking);
 }

@@ -320,7 +320,7 @@ uint32_t _maru_x11_parse_uri_list(MARU_Context_X11 *ctx, const char *data, size_
 
 // Internal API implementations
 MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info, MARU_Context **out_context);
-MARU_Status maru_destroyContext_X11(MARU_Context *context);
+void maru_destroyContext_X11(MARU_Context *context);
 MARU_Status maru_updateContext_X11(MARU_Context *context, uint64_t field_mask, const MARU_ContextAttributes *attributes);
 MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
                                 MARU_EventMask mask,

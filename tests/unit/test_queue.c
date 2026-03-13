@@ -20,13 +20,13 @@ static void on_queue_event(MARU_EventId type,
     state->last_window_id = window_id;
 }
 
-static MARU_Status push_user_event(MARU_Queue *queue, MARU_EventId type) {
+static bool push_user_event(MARU_Queue *queue, MARU_EventId type) {
     MARU_Event evt = {0};
     evt.user = (MARU_UserDefinedEvent){0};
     return maru_pushQueue(queue, type, MARU_WINDOW_ID_NONE, &evt);
 }
 
-static MARU_Status create_queue(uint32_t capacity, MARU_Queue **out_queue) {
+static bool create_queue(uint32_t capacity, MARU_Queue **out_queue) {
     MARU_QueueCreateInfo create_info = MARU_QUEUE_CREATE_INFO_DEFAULT;
     create_info.capacity = capacity;
     return maru_createQueue(&create_info, out_queue);
@@ -34,7 +34,7 @@ static MARU_Status create_queue(uint32_t capacity, MARU_Queue **out_queue) {
 
 UTEST(QueueTest, CreateDestroy) {
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(16, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(create_queue(16, &queue));
     ASSERT_TRUE(queue != NULL);
 
     maru_destroyQueue(queue);
@@ -42,7 +42,7 @@ UTEST(QueueTest, CreateDestroy) {
 
 UTEST(QueueTest, PushCommitScan) {
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(256u, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(create_queue(256u, &queue));
     ASSERT_TRUE(queue != NULL);
 
     // 1. Push an event
@@ -57,7 +57,7 @@ UTEST(QueueTest, PushCommitScan) {
     EXPECT_EQ(state.event_count, 0);
 
     // 4. Commit
-    EXPECT_EQ(maru_commitQueue(queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(maru_commitQueue(queue));
 
     // 5. Scan should now find the event
     maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &state);
@@ -70,12 +70,11 @@ UTEST(QueueTest, PushCommitScan) {
 
 UTEST(QueueTest, MultipleCommits) {
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(16, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(create_queue(16, &queue));
     ASSERT_TRUE(queue != NULL);
 
     // Push Event A
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
-              (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_0));
     maru_commitQueue(queue);
 
     struct QueueTestState state = {0};
@@ -83,8 +82,7 @@ UTEST(QueueTest, MultipleCommits) {
     EXPECT_EQ(state.event_count, 1);
 
     // Push Event B
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
-              (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_1));
     
     // Before second commit, scan still shows only A
     state.event_count = 0;
@@ -104,13 +102,11 @@ UTEST(QueueTest, MultipleCommits) {
 
 UTEST(QueueTest, Masking) {
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(16, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(create_queue(16, &queue));
     ASSERT_TRUE(queue != NULL);
 
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
-              (MARU_Status)MARU_SUCCESS);
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
-              (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_0));
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_1));
     maru_commitQueue(queue);
 
     struct QueueTestState state = {0};
@@ -153,7 +149,7 @@ static void on_coalesce_event(MARU_EventId type,
 
 UTEST(QueueTest, Coalescence) {
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(16, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(create_queue(16, &queue));
     ASSERT_TRUE(queue != NULL);
 
     maru_setQueueCoalesceMask(queue, MARU_MASK_MOUSE_MOVED);
@@ -208,7 +204,7 @@ static void on_trace_event(MARU_EventId type,
 
 UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(3, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(create_queue(3, &queue));
     ASSERT_TRUE(queue != NULL);
     maru_setQueueCoalesceMask(queue, MARU_MASK_MOUSE_MOVED);
 
@@ -255,16 +251,13 @@ UTEST(QueueTest, OverflowCompactionAccumulatesAndPreservesOrder) {
 
 UTEST(QueueTest, OverflowDropsWhenCompactionCannotFreeSpace) {
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(2, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(create_queue(2, &queue));
     ASSERT_TRUE(queue != NULL);
     maru_setQueueCoalesceMask(queue, MARU_MASK_MOUSE_MOVED);
 
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0),
-              (MARU_Status)MARU_SUCCESS);
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_1),
-              (MARU_Status)MARU_SUCCESS);
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_2),
-              (MARU_Status)MARU_FAILURE);
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_0));
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_1));
+    EXPECT_FALSE(push_user_event(queue, MARU_EVENT_USER_2));
     maru_commitQueue(queue);
 
     struct QueueTrace trace = {0};
@@ -309,7 +302,7 @@ UTEST(QueueTest, UsesCustomAllocator) {
     create_info.allocator.userdata = &stats;
 
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(maru_createQueue(&create_info, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(maru_createQueue(&create_info, &queue));
     ASSERT_TRUE(queue != NULL);
     EXPECT_EQ(stats.alloc_count, (uint32_t)3);
     EXPECT_EQ(stats.free_count, (uint32_t)0);
@@ -329,7 +322,7 @@ UTEST(QueueTest, RejectsPartialAllocator) {
     create_info.allocator.userdata = &stats;
 
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(maru_createQueue(&create_info, &queue), (MARU_Status)MARU_FAILURE);
+    EXPECT_FALSE(maru_createQueue(&create_info, &queue));
     EXPECT_TRUE(queue == NULL);
     EXPECT_EQ(stats.alloc_count, (uint32_t)0);
     EXPECT_EQ(stats.free_count, (uint32_t)0);
@@ -338,16 +331,16 @@ UTEST(QueueTest, RejectsPartialAllocator) {
 
 UTEST(QueueTest, SurvivesUnrelatedContextDestruction) {
     MARU_Queue *queue = NULL;
-    EXPECT_EQ(create_queue(16, &queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(create_queue(16, &queue));
     ASSERT_TRUE(queue != NULL);
 
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
     MARU_Context *context = maru_test_createContext(&create_info);
     ASSERT_TRUE(context != NULL);
-    EXPECT_EQ(maru_destroyContext(context), (MARU_Status)MARU_SUCCESS);
+    maru_destroyContext(context);
 
-    EXPECT_EQ(push_user_event(queue, MARU_EVENT_USER_0), (MARU_Status)MARU_SUCCESS);
-    EXPECT_EQ(maru_commitQueue(queue), (MARU_Status)MARU_SUCCESS);
+    EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_0));
+    EXPECT_TRUE(maru_commitQueue(queue));
 
     struct QueueTestState state = {0};
     maru_scanQueue(queue, MARU_ALL_EVENTS, on_queue_event, &state);

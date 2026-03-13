@@ -15,8 +15,8 @@ namespace maru {
  */
 class Queue {
 public:
-    [[nodiscard]] static expected<Queue> create(const MARU_QueueCreateInfo& create_info = MARU_QUEUE_CREATE_INFO_DEFAULT);
-    [[nodiscard]] static expected<Queue> create(uint32_t capacity);
+    [[nodiscard]] static expected<Queue, bool> create(const MARU_QueueCreateInfo& create_info = MARU_QUEUE_CREATE_INFO_DEFAULT);
+    [[nodiscard]] static expected<Queue, bool> create(uint32_t capacity);
 
     ~Queue();
 
@@ -29,10 +29,10 @@ public:
     MARU_Queue* get() const { return m_handle; }
     operator MARU_Queue*() const { return m_handle; }
 
-    MARU_Status push(MARU_EventId type, MARU_WindowId window_id,
-                     const MARU_Event& event);
+    bool push(MARU_EventId type, MARU_WindowId window_id,
+              const MARU_Event& event);
 
-    MARU_Status commit();
+    bool commit();
 
     void scan(MARU_EventMask mask, MARU_QueueEventCallback callback,
               void* userdata = nullptr);

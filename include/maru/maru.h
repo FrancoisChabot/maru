@@ -945,7 +945,7 @@ MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo* create_inf
  * You do not need to destroy windows, cursors, images, or other context-owned
  * child objects one by one before destroying the context.
  */
-MARU_API MARU_Status maru_destroyContext(MARU_Context* context);
+MARU_API void maru_destroyContext(MARU_Context* context);
 MARU_API MARU_Status maru_updateContext(MARU_Context* context,
                                         uint64_t field_mask,
                                         const MARU_ContextAttributes* attributes);
@@ -1495,8 +1495,8 @@ typedef struct MARU_QueueCreateInfo {
  * only; they never report MARU_CONTEXT_LOST.
  *
  * Threading contract:
- * - maru_pushQueue() and maru_commitQueue() are single-owner APIs. Call them
- *   from the queue's creator thread only.
+ * - maru_createQueue(), maru_pushQueue() and maru_commitQueue() are
+ *   single-owner APIs. Call them from the queue's creator thread only.
  * - maru_scanQueue() may be called from any thread, but the caller must ensure
  *   it does not race with maru_commitQueue().
  * - Only queue-safe event ids may be pushed. Use MARU_QUEUE_SAFE_EVENT_MASK or
@@ -1504,14 +1504,14 @@ typedef struct MARU_QueueCreateInfo {
  * - Window-targeted events are keyed by the stable MARU_WindowId captured at
  *   enqueue time. Use MARU_WINDOW_ID_NONE for context-scoped events.
  */
-MARU_API MARU_Status maru_createQueue(const MARU_QueueCreateInfo* create_info,
-                                      MARU_Queue** out_queue);
+MARU_API bool maru_createQueue(const MARU_QueueCreateInfo* create_info,
+                               MARU_Queue** out_queue);
 MARU_API void maru_destroyQueue(MARU_Queue* queue);
-MARU_API MARU_Status maru_pushQueue(MARU_Queue* queue,
-                                    MARU_EventId type,
-                                    MARU_WindowId window_id,
-                                    const MARU_Event* event);
-MARU_API MARU_Status maru_commitQueue(MARU_Queue* queue);
+MARU_API bool maru_pushQueue(MARU_Queue* queue,
+                             MARU_EventId type,
+                             MARU_WindowId window_id,
+                             const MARU_Event* event);
+MARU_API bool maru_commitQueue(MARU_Queue* queue);
 MARU_API void maru_scanQueue(MARU_Queue* queue,
                              MARU_EventMask mask,
                              MARU_QueueEventCallback callback,
