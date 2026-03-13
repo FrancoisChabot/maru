@@ -46,12 +46,6 @@ static void _maru_windows_init_mouse_button_channels(MARU_Context_Windows *ctx) 
   ctx->base.pub.mouse_button_channels = ctx->base.mouse_button_channels;
   ctx->base.pub.mouse_button_state = ctx->base.mouse_button_states;
   ctx->base.pub.mouse_button_count = count;
-
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_LEFT] = 0;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_RIGHT] = 1;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_MIDDLE] = 2;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_BACK] = 3;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_FORWARD] = 4;
 }
 
 static void _maru_windows_apply_idle_inhibit(MARU_Context_Windows *ctx) {

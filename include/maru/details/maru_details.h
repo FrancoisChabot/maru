@@ -67,7 +67,6 @@ typedef struct MARU_ContextPrefix {
   uint32_t mouse_button_count;
   const MARU_ButtonState8* keyboard_state;
   uint32_t keyboard_key_count;
-  int32_t mouse_default_button_channels[MARU_MOUSE_DEFAULT_COUNT];
 } MARU_ContextPrefix;
 
 typedef struct MARU_ImagePrefix {
@@ -178,13 +177,6 @@ static inline uint32_t maru_getKeyboardKeyCount(const MARU_Context* context) {
 static inline const MARU_ButtonState8* maru_getKeyboardKeyStates(const MARU_Context* context) {
   MARU_ASSUME(context != NULL);
   return ((const MARU_ContextPrefix*)context)->keyboard_state;
-}
-
-static inline int32_t maru_getContextMouseDefaultButtonChannel(const MARU_Context* context,
-                                                               MARU_MouseDefaultButton which) {
-  MARU_ASSUME(context != NULL);
-  MARU_ASSUME((uint32_t)which < MARU_MOUSE_DEFAULT_COUNT);
-  return ((const MARU_ContextPrefix*)context)->mouse_default_button_channels[which];
 }
 
 static inline bool maru_isContextMouseButtonPressed(const MARU_Context* context,

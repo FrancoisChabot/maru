@@ -412,6 +412,11 @@ typedef enum MARU_MouseDefaultButton {
   MARU_MOUSE_DEFAULT_FORWARD = 4,
   MARU_MOUSE_DEFAULT_COUNT = 5,
 } MARU_MouseDefaultButton;
+/*
+ * Default mouse buttons are always present in the first
+ * `MARU_MOUSE_DEFAULT_COUNT` mouse button channels, in enum order. Extra
+ * backend-specific mouse buttons, if any, always follow after that range.
+ */
 
 typedef struct MARU_AnalogInputState {
   MARU_Scalar value;
@@ -915,12 +920,14 @@ static inline bool maru_isContextLost(const MARU_Context* context);
 static inline bool maru_isContextReady(const MARU_Context* context);
 static inline MARU_BackendType maru_getContextBackend(const MARU_Context* context);
 static inline uint32_t maru_getContextMouseButtonCount(const MARU_Context* context);
+/*
+ * The first `MARU_MOUSE_DEFAULT_COUNT` entries are always the default mouse
+ * buttons in `MARU_MouseDefaultButton` order.
+ */
 static inline const MARU_ButtonState8* maru_getContextMouseButtonStates(
     const MARU_Context* context);
 static inline const MARU_ChannelInfo* maru_getContextMouseButtonChannelInfo(
     const MARU_Context* context);
-static inline int32_t maru_getContextMouseDefaultButtonChannel(const MARU_Context* context,
-                                                               MARU_MouseDefaultButton which);
 static inline bool maru_isContextMouseButtonPressed(const MARU_Context* context,
                                                     uint32_t button_id);
 
@@ -1299,6 +1306,12 @@ typedef struct MARU_ControllerInfo {
   uint16_t product_id;
   uint16_t version;
   uint8_t guid[16];
+  /*
+   * When true, the first `MARU_CONTROLLER_*_STANDARD_COUNT` channels in each
+   * controller state/channel-info array are guaranteed to be the Maru-defined
+   * standardized channels in enum order. Extra channels, if any, follow after
+   * that range.
+   */
   bool is_standardized;
 } MARU_ControllerInfo;
 

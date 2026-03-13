@@ -83,7 +83,7 @@ void InputModule::render(MARU_Context* ctx, MARU_Window* window) {
             render_mouse_channels("ContextMouseChannels", ctx_btn_count, ctx_btn_states, ctx_btn_channels);
             int32_t ctx_defaults[MARU_MOUSE_DEFAULT_COUNT];
             for (uint32_t i = 0; i < MARU_MOUSE_DEFAULT_COUNT; ++i) {
-                ctx_defaults[i] = maru_getContextMouseDefaultButtonChannel(ctx, (MARU_MouseDefaultButton)i);
+                ctx_defaults[i] = (int32_t)i;
             }
             render_default_map("Context Default Mapping", ctx_defaults);
 

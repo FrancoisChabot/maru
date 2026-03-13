@@ -50,6 +50,15 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 - Custom cursor frame images must belong to the same context as the cursor being created.
 - `maru_postEvent()` posts context-scoped user events only. Callbacks for those
   events always receive `window == NULL`.
+- The first `MARU_MOUSE_DEFAULT_COUNT` mouse button channels are always present
+  and always correspond to `MARU_MouseDefaultButton` in enum order. Extra mouse
+  button channels, if any, follow after that range.
+- For controllers with `MARU_ControllerInfo.is_standardized == true`, the first
+  `MARU_CONTROLLER_ANALOG_STANDARD_COUNT`,
+  `MARU_CONTROLLER_BUTTON_STANDARD_COUNT`, and
+  `MARU_CONTROLLER_HAPTIC_STANDARD_COUNT` channels are always the Maru-defined
+  standardized channels in enum order. Extra channels, if any, follow after
+  that range.
 
 ## Value And Mask Rules
 

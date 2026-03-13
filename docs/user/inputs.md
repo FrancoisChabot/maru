@@ -53,8 +53,7 @@ if (maru_isKeyboardKeyPressed(context, MARU_KEY_W)) {
 ### Mouse Polling
 
 ```c
-int32_t left_button = maru_getContextMouseDefaultButtonChannel(context, MARU_MOUSE_DEFAULT_LEFT);
-if (left_button >= 0 && maru_isContextMouseButtonPressed(context, (uint32_t)left_button)) {
+if (maru_isContextMouseButtonPressed(context, MARU_MOUSE_DEFAULT_LEFT)) {
     // Shooting!
 }
 ```

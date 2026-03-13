@@ -355,6 +355,8 @@ _maru_validate_createContext(const MARU_ContextCreateInfo *create_info,
   MARU_CONSTRAINT_CHECK(out_context != NULL);
   MARU_CONSTRAINT_CHECK(create_info->backend >= MARU_BACKEND_UNKNOWN &&
                         create_info->backend <= MARU_BACKEND_COCOA);
+  MARU_CONSTRAINT_CHECK(
+      _maru_validate_allocator_complete(create_info->allocator));
 }
 
 static inline void _maru_validate_destroyContext(MARU_Context *context) {

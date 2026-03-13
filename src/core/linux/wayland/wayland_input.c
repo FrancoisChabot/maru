@@ -51,10 +51,10 @@ static bool _maru_wayland_map_native_mouse_button(uint32_t native_code,
         case BTN_LEFT: *out_channel = 0; return true;
         case BTN_RIGHT: *out_channel = 1; return true;
         case BTN_MIDDLE: *out_channel = 2; return true;
-        case BTN_SIDE: *out_channel = 3; return true;
-        case BTN_EXTRA: *out_channel = 4; return true;
-        case BTN_FORWARD: *out_channel = 5; return true;
-        case BTN_BACK: *out_channel = 6; return true;
+        case BTN_BACK: *out_channel = 3; return true;
+        case BTN_FORWARD: *out_channel = 4; return true;
+        case BTN_SIDE: *out_channel = 5; return true;
+        case BTN_EXTRA: *out_channel = 6; return true;
         case BTN_TASK: *out_channel = 7; return true;
         default: return false;
     }
@@ -984,4 +984,3 @@ const struct zwp_text_input_v3_listener _maru_wayland_text_input_listener = {
     .delete_surrounding_text = _text_input_handle_delete_surrounding_text,
     .done = _text_input_handle_done,
 };
-

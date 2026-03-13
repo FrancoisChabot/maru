@@ -97,9 +97,6 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
   ctx_base->pub.mouse_button_state = NULL;
   ctx_base->pub.mouse_button_channels = NULL;
   ctx_base->pub.mouse_button_count = 0;
-  for (uint32_t i = 0; i < MARU_MOUSE_DEFAULT_COUNT; ++i) {
-    ctx_base->pub.mouse_default_button_channels[i] = -1;
-  }
 
   memset(ctx_base->keyboard_state, 0, sizeof(ctx_base->keyboard_state));
   ctx_base->pub.keyboard_state = ctx_base->keyboard_state;

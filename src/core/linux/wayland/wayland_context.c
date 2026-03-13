@@ -32,9 +32,9 @@ static bool _maru_wayland_init_context_mouse_channels(MARU_Context_WL *ctx) {
     const char *name;
     uint32_t native_code;
   } channel_defs[] = {
-      {"left", BTN_LEFT},       {"right", BTN_RIGHT},     {"middle", BTN_MIDDLE},
-      {"side", BTN_SIDE},       {"extra", BTN_EXTRA},     {"forward", BTN_FORWARD},
-      {"back", BTN_BACK},       {"task", BTN_TASK},
+      {"left", BTN_LEFT},       {"right", BTN_RIGHT},   {"middle", BTN_MIDDLE},
+      {"back", BTN_BACK},       {"forward", BTN_FORWARD}, {"side", BTN_SIDE},
+      {"extra", BTN_EXTRA},     {"task", BTN_TASK},
   };
   const uint32_t channel_count = (uint32_t)(sizeof(channel_defs) / sizeof(channel_defs[0]));
 
@@ -63,17 +63,12 @@ static bool _maru_wayland_init_context_mouse_channels(MARU_Context_WL *ctx) {
   ctx->base.pub.mouse_button_count = channel_count;
   ctx->base.pub.mouse_button_channels = ctx->base.mouse_button_channels;
   ctx->base.pub.mouse_button_state = ctx->base.mouse_button_states;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_LEFT] = 0;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_RIGHT] = 1;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_MIDDLE] = 2;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_BACK] = 6;
-  ctx->base.pub.mouse_default_button_channels[MARU_MOUSE_DEFAULT_FORWARD] = 5;
 
   ctx->base.mouse_button_channels[0].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
   ctx->base.mouse_button_channels[1].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
   ctx->base.mouse_button_channels[2].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  ctx->base.mouse_button_channels[5].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  ctx->base.mouse_button_channels[6].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx->base.mouse_button_channels[3].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx->base.mouse_button_channels[4].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
 
   return true;
 }
