@@ -766,7 +766,8 @@ typedef struct MARU_DropEvent {
    * Source-offered drag actions as currently known to Maru for this session.
    *
    * This may be 0 if the backend has not yet observed any actionable offer for
-   * the current drag session.
+   * the current drag session. maru_setDropSessionAction() accepts only
+   * MARU_DROP_ACTION_NONE or one of these single-bit actions.
    */
   MARU_DropActionMask available_actions;
   /* Borrowed callback-scoped pointers. Copy what you need before returning. */
@@ -1673,7 +1674,10 @@ MARU_API MARU_Status maru_getAvailableDropMIMETypes(MARU_Window* window,
  *
  * maru_setDropSessionAction() is only meaningful during
  * MARU_EVENT_DROP_ENTERED and MARU_EVENT_DROP_HOVERED. The selected action is
- * consumed by the backend before that callback returns. Calling it during
+ * consumed by the backend before that callback returns. The supplied action
+ * must be MARU_DROP_ACTION_NONE or exactly one of COPY / MOVE / LINK, and any
+ * non-NONE choice must be present in the callback's available_actions mask.
+ * Calling it during
  * MARU_EVENT_DROP_EXITED or MARU_EVENT_DROP_DROPPED has no defined effect.
  */
 static inline void maru_setDropSessionAction(MARU_DropSession* session, MARU_DropAction action);

@@ -782,6 +782,7 @@ static void _clipboard_data_device_enter(void *data, struct wl_data_device *data
   }
   MARU_DropSessionPrefix session_exposed = {
       .action = &action,
+      .available_actions = &meta->source_actions,
       .session_userdata = &ctx->clipboard.dnd_session_userdata,
   };
 
@@ -817,8 +818,15 @@ static void _clipboard_data_device_leave(void *data, struct wl_data_device *data
   MARU_Window_WL *window = ctx->clipboard.dnd_window;
   if (window) {
     MARU_DropAction action = ctx->clipboard.dnd_target_action;
+    MARU_DropActionMask available_actions = 0;
+    MARU_WaylandDataOfferMeta *meta =
+        _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_offer);
+    if (meta) {
+      available_actions = meta->source_actions;
+    }
     MARU_DropSessionPrefix session_exposed = {
         .action = &action,
+        .available_actions = &available_actions,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };
 
@@ -858,6 +866,7 @@ static void _clipboard_data_device_motion(void *data, struct wl_data_device *dat
   }
   MARU_DropSessionPrefix session_exposed = {
       .action = &action,
+      .available_actions = &meta->source_actions,
       .session_userdata = &ctx->clipboard.dnd_session_userdata,
   };
 
@@ -921,6 +930,7 @@ static void _clipboard_data_device_drop(void *data, struct wl_data_device *data_
     }
     MARU_DropSessionPrefix session_exposed = {
         .action = &action,
+        .available_actions = &meta->source_actions,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };
 
@@ -1486,11 +1496,16 @@ void _maru_wayland_dataexchange_handle_internal_transfer_complete(
     MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_drop.offer);
     
     MARU_DropAction action = ctx->clipboard.dnd_target_action;
+    MARU_DropActionMask available_actions = 0;
     if (meta && meta->current_action != MARU_DROP_ACTION_NONE) {
       action = meta->current_action;
     }
+    if (meta) {
+      available_actions = meta->source_actions;
+    }
     MARU_DropSessionPrefix session_exposed = {
         .action = &action,
+        .available_actions = &available_actions,
         .session_userdata = &ctx->clipboard.dnd_session_userdata,
     };
 

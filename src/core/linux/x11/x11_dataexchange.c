@@ -1036,6 +1036,7 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
     MARU_DropAction action = ctx->dnd_session.selected_action;
     MARU_DropSessionPrefix session_exposed = {
         .action = &action,
+        .available_actions = &ctx->dnd_session.offered_actions,
         .session_userdata = &ctx->dnd_session.session_userdata,
     };
 
@@ -1080,6 +1081,7 @@ static void _maru_x11_finish_data_request(MARU_Context_X11 *ctx,
     MARU_DropAction action = ctx->dnd_session.selected_action;
     MARU_DropSessionPrefix session_exposed = {
         .action = &action,
+        .available_actions = &ctx->dnd_session.offered_actions,
         .session_userdata = &ctx->dnd_session.session_userdata,
     };
 
@@ -2054,6 +2056,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
                                                         : MARU_DROP_ACTION_NONE;
         MARU_DropSessionPrefix session_exposed = {
             .action = &action,
+            .available_actions = &session->offered_actions,
             .session_userdata = &session->session_userdata,
         };
         MARU_Event enter_evt = {0};
@@ -2098,6 +2101,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
             session->selected_mime ? session->selected_action : MARU_DROP_ACTION_NONE;
         MARU_DropSessionPrefix session_exposed = {
             .action = &action,
+            .available_actions = &session->offered_actions,
             .session_userdata = &session->session_userdata,
         };
         MARU_Event hover_evt = {0};
@@ -2137,6 +2141,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
           MARU_DropAction action = session->selected_action;
           MARU_DropSessionPrefix session_exposed = {
               .action = &action,
+              .available_actions = &session->offered_actions,
               .session_userdata = &session->session_userdata,
           };
           MARU_Event leave_evt = {0};
@@ -2183,6 +2188,7 @@ bool _maru_x11_process_dataexchange_event(MARU_Context_X11 *ctx, XEvent *ev) {
         MARU_DropAction action = session->selected_action;
         MARU_DropSessionPrefix session_exposed = {
             .action = &action,
+            .available_actions = &session->offered_actions,
             .session_userdata = &ctx->dnd_session.session_userdata,
         };
 

@@ -124,6 +124,7 @@ typedef struct MARU_ControllerPrefix {
 
 typedef struct MARU_DropSessionPrefix {
   MARU_DropAction* action;
+  const MARU_DropActionMask* available_actions;
   void** session_userdata;
 } MARU_DropSessionPrefix;
 
@@ -443,7 +444,15 @@ static inline const MARU_ChannelInfo* maru_getControllerHapticChannelInfo(
 
 static inline void maru_setDropSessionAction(MARU_DropSession* session, MARU_DropAction action) {
   MARU_ASSUME(session != NULL);
-  *(((MARU_DropSessionPrefix*)session)->action) = action;
+  const MARU_DropSessionPrefix* prefix = (const MARU_DropSessionPrefix*)session;
+  MARU_ASSUME(prefix->action != NULL);
+  MARU_ASSUME(prefix->available_actions != NULL);
+  MARU_ASSUME(action == MARU_DROP_ACTION_NONE || action == MARU_DROP_ACTION_COPY ||
+              action == MARU_DROP_ACTION_MOVE || action == MARU_DROP_ACTION_LINK);
+  MARU_ASSUME(action == MARU_DROP_ACTION_NONE ||
+              (((MARU_DropActionMask)action &
+                *prefix->available_actions) == (MARU_DropActionMask)action));
+  *(prefix->action) = action;
 }
 
 static inline MARU_DropAction maru_getDropSessionAction(const MARU_DropSession* session) {

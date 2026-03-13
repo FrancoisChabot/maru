@@ -97,6 +97,7 @@ Context loss is not an API violation. Once a context is lost, most `MARU_Status`
 
 - `MARU_DataExchangeTarget` must be either `MARU_DATA_EXCHANGE_TARGET_CLIPBOARD` or `MARU_DATA_EXCHANGE_TARGET_DRAG_DROP`.
 - The allowed drop action mask may only contain `COPY`, `MOVE`, and `LINK`.
+- `maru_setDropSessionAction()` accepts only `NONE`, `COPY`, `MOVE`, or `LINK`. Multi-bit combinations are invalid, and any non-`NONE` action must be present in the callback's `available_actions` mask.
 - `maru_provideData()` requires `data != NULL` when `size > 0`.
 - `maru_provideData()` flags may only contain documented bits.
 - `maru_setDropSessionAction()` is only meaningful during `MARU_EVENT_DROP_ENTERED` and `MARU_EVENT_DROP_HOVERED`.
