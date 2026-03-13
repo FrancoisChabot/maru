@@ -444,7 +444,12 @@ typedef struct MARU_AnalogInputState {
   MARU_Scalar value;
 } MARU_AnalogInputState;
 
-static inline uint32_t maru_getKeyboardKeyCount(const MARU_Context* context);
+/*
+ * Keyboard polling is indexed directly by `MARU_Key`.
+ *
+ * The returned state array always contains exactly `MARU_KEY_COUNT` entries in
+ * enum order, including `MARU_KEY_UNKNOWN` at index 0.
+ */
 static inline const MARU_ButtonState8* maru_getKeyboardKeyStates(const MARU_Context* context);
 static inline bool maru_isKeyboardKeyPressed(const MARU_Context* context, MARU_Key key);
 

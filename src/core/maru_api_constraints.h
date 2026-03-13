@@ -874,11 +874,6 @@ static inline void _maru_validate_getLinuxWindowHandle(MARU_Window *window) {
 }
 
 static inline void
-_maru_validate_getKeyboardKeyCount(const MARU_Context *context) {
-  MARU_CONSTRAINT_CHECK(context != NULL);
-}
-
-static inline void
 _maru_validate_getKeyboardKeyStates(const MARU_Context *context) {
   MARU_CONSTRAINT_CHECK(context != NULL);
 }

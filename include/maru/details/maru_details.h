@@ -169,11 +169,6 @@ static inline const MARU_ChannelInfo* maru_getMouseButtonChannelInfo(
   return ((const MARU_ContextPrefix*)context)->mouse_button_channels;
 }
 
-static inline uint32_t maru_getKeyboardKeyCount(const MARU_Context* context) {
-  MARU_ASSUME(context != NULL);
-  return ((const MARU_ContextPrefix*)context)->keyboard_key_count;
-}
-
 static inline const MARU_ButtonState8* maru_getKeyboardKeyStates(const MARU_Context* context) {
   MARU_ASSUME(context != NULL);
   return ((const MARU_ContextPrefix*)context)->keyboard_state;

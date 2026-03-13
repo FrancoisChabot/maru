@@ -99,14 +99,13 @@ void InputModule::render(MARU_Context* ctx, MARU_Window* window) {
         }
 
         if (ImGui::CollapsingHeader("Keyboard", ImGuiTreeNodeFlags_DefaultOpen)) {
-            uint32_t key_count = maru_getKeyboardKeyCount(ctx);
             const MARU_ButtonState8* states = maru_getKeyboardKeyStates(ctx);
 
-            ImGui::Text("Key Count: %u", key_count);            
+            ImGui::Text("Standard Key Count: %u", MARU_KEY_COUNT);
             ImGui::Text("Pressed Keys:");
             ImGui::BeginChild("PressedKeys", ImVec2(0, 100), true);
-            for (uint32_t i = 0; i < key_count; ++i) {
-                if (states[i] == MARU_BUTTON_STATE_PRESSED) {
+            for (uint32_t i = 0; i < MARU_KEY_COUNT; ++i) {
+                if (states && states[i] == MARU_BUTTON_STATE_PRESSED) {
                     ImGui::Text("Key %u", i);
                 }
             }
