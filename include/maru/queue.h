@@ -84,9 +84,10 @@ typedef struct MARU_QueueCreateInfo {
  * Threading contract:
  * - maru_createQueue() establishes a fixed owner thread for the queue.
  * - maru_destroyQueue(), maru_pushQueue(), maru_commitQueue(),
- *   maru_scanQueue() and maru_setQueueCoalesceMask() are creator-thread APIs.
- *   A queue is a single-owner helper; cross-thread scanning or mutation is not
- *   part of the public contract.
+ *   and maru_setQueueCoalesceMask() are creator-thread APIs.
+ * - maru_scanQueue() is thread-safe and can be called from any thread.
+ *   Application-level synchronization must ensure that a scan does not run
+ *   concurrently with maru_commitQueue() for the same queue.
  * - Only queue-safe event ids may be pushed. Use MARU_QUEUE_SAFE_EVENT_MASK or
  *   maru_isQueueSafeEventId() when capturing events from maru_pumpEvents().
  * - Window-targeted events are keyed by the stable MARU_WindowId captured at

@@ -461,7 +461,6 @@ void maru_scanQueue(MARU_Queue *queue,
                     void *userdata) {
     MARU_API_VALIDATE(scanQueue, queue, mask, callback, userdata);
     if (!queue || !callback) return;
-    _maru_queue_validate_thread(queue);
 
     MARU_QueueBuffer stable = queue->stable;
     uint32_t count = queue->stable_count;
