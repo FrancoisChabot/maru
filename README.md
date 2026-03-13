@@ -231,6 +231,10 @@ create_info.allocator.userdata = &my_memory_arena;
 maru_createContext(&create_info, &context);
 ```
 
+As a general lifetime rule, payloads that Maru persists after a successful call
+are copied before that call returns unless a specific API explicitly documents
+zero-copy retention semantics.
+
 #### One Context, One Universe
 **"Is Maru Thread-safe?"**
 

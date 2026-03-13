@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+#ifdef MARU_ENABLE_BACKEND_COCOA
+
 typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 
@@ -46,6 +48,8 @@ maru_getCocoaContextHandle(const MARU_Context *context);
  */
 MARU_API MARU_CocoaWindowHandle
 maru_getCocoaWindowHandle(const MARU_Window *window);
+
+#endif
 
 #ifdef __cplusplus
 }

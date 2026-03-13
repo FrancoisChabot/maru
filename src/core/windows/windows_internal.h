@@ -126,7 +126,7 @@ typedef struct MARU_Controller_Windows {
   uint16_t vendor_id;
   uint16_t product_id;
   uint16_t version;
-  uint8_t guid[16];
+  uint8_t guid[MARU_GUID_SIZE];
   bool is_standardized;
 
   MARU_ButtonState8 *button_states;

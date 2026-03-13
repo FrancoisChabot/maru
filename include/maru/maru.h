@@ -31,7 +31,8 @@
  * 1. Handle arguments are borrowed references. MARU does not take ownership of
  *    passed-in handles unless an API explicitly says so.
  * 2. Text and pixel payloads that MARU persists after a successful call are
- *    copied before that call returns.
+ *    copied before that call returns unless an API explicitly documents
+ *    zero-copy retention semantics.
  * 3. Lists, strings, and buffers returned by getters or exposed through event
  *    payloads are borrowed views. Copy what you need if it must outlive the
  *    documented lifetime.
@@ -150,6 +151,12 @@ typedef struct MARU_Version {
   uint32_t minor;
   uint32_t patch;
 } MARU_Version;
+
+#define MARU_GUID_SIZE 16u
+
+typedef struct MARU_Guid {
+  uint8_t bytes[MARU_GUID_SIZE];
+} MARU_Guid;
 
 typedef void* (*MARU_AllocationFunction)(size_t size, void* userdata);
 typedef void* (*MARU_ReallocationFunction)(void* ptr, size_t new_size, void* userdata);
@@ -1030,6 +1037,10 @@ static inline bool maru_isMouseButtonPressed(const MARU_Context* context,
                                              uint32_t button_id);
 
 typedef struct MARU_ContextAttributes {
+  /*
+   * When MARU_ENABLE_DIAGNOSTICS is disabled, registering this callback is
+   * still valid but the callback is never invoked.
+   */
   MARU_DiagnosticCallback diagnostic_cb;
   void* diagnostic_userdata;
   bool inhibit_idle;
@@ -1272,13 +1283,12 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_ACCEPT_DROP MARU_BIT(13)
 #define MARU_WINDOW_ATTR_TEXT_INPUT_TYPE MARU_BIT(14)
 #define MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT MARU_BIT(15)
-/* Bit 16 is intentionally reserved and is not a valid public update bit. */
-#define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(17)
-#define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(18)
-#define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(19)
-#define MARU_WINDOW_ATTR_VISIBLE MARU_BIT(20)
-#define MARU_WINDOW_ATTR_MINIMIZED MARU_BIT(21)
-#define MARU_WINDOW_ATTR_ICON MARU_BIT(22)
+#define MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE MARU_BIT(16)
+#define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(17)
+#define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(18)
+#define MARU_WINDOW_ATTR_VISIBLE MARU_BIT(19)
+#define MARU_WINDOW_ATTR_MINIMIZED MARU_BIT(20)
+#define MARU_WINDOW_ATTR_ICON MARU_BIT(21)
 
 #define MARU_WINDOW_ATTR_ALL                                                                    \
   (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_FULLSCREEN |           \
@@ -1485,7 +1495,10 @@ static inline const char* maru_getControllerName(const MARU_Controller* controll
 static inline uint16_t maru_getControllerVendorId(const MARU_Controller* controller);
 static inline uint16_t maru_getControllerProductId(const MARU_Controller* controller);
 static inline uint16_t maru_getControllerVersion(const MARU_Controller* controller);
-static inline const uint8_t* maru_getControllerGUID(const MARU_Controller* controller);
+/*
+ * Returns the controller's stable 16-byte identifier by value.
+ */
+static inline MARU_Guid maru_getControllerGuid(const MARU_Controller* controller);
 /*
  * When true, the first `MARU_CONTROLLER_*_STANDARD_COUNT` channels in each
  * controller state/channel-info array are guaranteed to be the Maru-defined
@@ -1660,6 +1673,12 @@ static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool ena
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);
 static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, const MARU_Image* icon);
+/*
+ * Returns a stable diagnostic label when diagnostics are compiled in.
+ *
+ * When MARU_ENABLE_DIAGNOSTICS is disabled, diagnostic string literals are
+ * compiled out and this returns an empty string.
+ */
 MARU_API const char* maru_getDiagnosticString(MARU_Diagnostic diagnostic);
 
 /* ----- Inline accessors and helper implementations ----- */

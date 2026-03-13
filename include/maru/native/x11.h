@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+#ifdef MARU_ENABLE_BACKEND_X11
+
 typedef struct _XDisplay Display;
 typedef unsigned long Window;
 
@@ -58,6 +60,8 @@ maru_getX11WindowHandle(const MARU_Window *window);
  * Requires `context` to use MARU_BACKEND_X11.
  */
 MARU_API bool maru_x11SupportsExtendedFrameSync(const MARU_Context *context);
+
+#endif
 
 #ifdef __cplusplus
 }

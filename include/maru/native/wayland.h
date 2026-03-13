@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+#ifdef MARU_ENABLE_BACKEND_WAYLAND
+
 typedef struct wl_display wl_display;
 typedef struct wl_surface wl_surface;
 typedef struct MARU_Context MARU_Context;
@@ -49,6 +51,8 @@ maru_getWaylandContextHandle(const MARU_Context *context);
  */
 MARU_API MARU_WaylandWindowHandle
 maru_getWaylandWindowHandle(const MARU_Window *window);
+
+#endif
 
 #ifdef __cplusplus
 }

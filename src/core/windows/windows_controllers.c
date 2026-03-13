@@ -162,7 +162,7 @@ static void _maru_windows_controller_sync_pub(MARU_Controller_Windows *ctrl) {
   ctrl->base.pub.vendor_id = ctrl->vendor_id;
   ctrl->base.pub.product_id = ctrl->product_id;
   ctrl->base.pub.version = ctrl->version;
-  memcpy((void *)ctrl->base.pub.guid, ctrl->guid, 16);
+  memcpy(ctrl->base.pub.guid.bytes, ctrl->guid, MARU_GUID_SIZE);
   ctrl->base.pub.is_standardized = ctrl->is_standardized;
   ctrl->base.pub.analog_channels = ctrl->analog_channels;
   ctrl->base.pub.analogs = ctrl->analog_states;

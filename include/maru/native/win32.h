@@ -20,6 +20,8 @@ typedef struct HINSTANCE__* HINSTANCE;
 extern "C" {
 #endif
 
+#ifdef MARU_ENABLE_BACKEND_WINDOWS
+
 typedef struct MARU_Context MARU_Context;
 typedef struct MARU_Window MARU_Window;
 
@@ -57,6 +59,8 @@ maru_getWin32ContextHandle(const MARU_Context *context);
  */
 MARU_API MARU_Win32WindowHandle
 maru_getWin32WindowHandle(const MARU_Window *window);
+
+#endif
 
 #ifdef __cplusplus
 }

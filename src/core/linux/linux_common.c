@@ -486,7 +486,7 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
     ctrl->vendor_id = id.vendor;
     ctrl->product_id = id.product;
     ctrl->version = id.version;
-    // Basic Linux GUID (bus, vendor, product, version)
+    // Basic Linux guid (bus, vendor, product, version)
     memcpy(ctrl->guid, &id.bustype, 2);
     memcpy(ctrl->guid + 4, &id.vendor, 2);
     memcpy(ctrl->guid + 8, &id.product, 2);
@@ -647,7 +647,7 @@ static MARU_LinuxController* _maru_linux_controller_create(MARU_Context_Linux_Co
   ctrl->base.vendor_id = ctrl->vendor_id;
   ctrl->base.product_id = ctrl->product_id;
   ctrl->base.version = ctrl->version;
-  memcpy((void *)ctrl->base.guid, ctrl->guid, 16);
+  memcpy(ctrl->base.guid.bytes, ctrl->guid, MARU_GUID_SIZE);
   ctrl->base.is_standardized = ctrl->is_standardized;
   ctrl->base.analog_channels = ctrl->analog_channels;
   ctrl->base.analogs = ctrl->analog_states;

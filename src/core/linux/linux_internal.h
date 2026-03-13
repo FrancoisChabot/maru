@@ -31,7 +31,7 @@ typedef struct MARU_LinuxController {
   uint16_t vendor_id;
   uint16_t product_id;
   uint16_t version;
-  uint8_t guid[16];
+  uint8_t guid[MARU_GUID_SIZE];
   bool is_standardized;
 
   // Dynamically discovered capabilities
