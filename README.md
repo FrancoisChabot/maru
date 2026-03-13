@@ -181,14 +181,7 @@ Unfortunately, asynchronous window creation is absolutely necessary to get a smo
 
 In any case, for a single-window app or game, you can easily work around this with a dedicated pump loop immediately after the creation call, as shown in the usage example.
 
-#### Honest Concurrency: Adressing the big thread in the room
-**"Why does Maru create a worker thread in some backends?"**
-
-Maru isn't "lightweight" for the sake of a low binary size; it is lightweight so that your application can run as fast and smoothly as possible. 
-
-Certain OS operations (e.g., scanning for gamepads on Linux via udev or handling device-change notifications on Windows) can block for several milliseconds. If we ran these on your main thread, you would see a hitch in your frame rate every time a controller was plugged in. We offload these non-deterministic blocking calls to a dedicated worker thread to ensure `maru_pumpEvents()` remains fast and predictable, even during unusual OS events.
-
-  #### Control Flow vs. Diagnostics
+#### Control Flow vs. Diagnostics
 **"Why are there so few error codes?"**
 
 `MARU_Status` is not meant to tell you *what* went wrong, but rather *what you can do about it*.
@@ -316,7 +309,7 @@ If a future event type requires more data than the 64-byte budget allows, Maru's
 #### Consistent Attribute Updates
 **"What's up with the attribute substructs?"**
 
-Attributes represent properties that can change on the fly. We use the same struct type for both `CreateInfo` (initial state) and `maru_update*` calls (live changes). That keeps the API nice and consistent.
+Attributes are the payload shape for initial state and live updates. We reuse the same struct type for both `CreateInfo` and `maru_update*` calls to keep the API surface consistent, but that does not imply a symmetric bulk readback API for every attribute field.
 
 ## Acknowledgements
 

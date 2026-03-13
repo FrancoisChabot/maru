@@ -1315,30 +1315,32 @@ void _maru_windows_resync_controllers(MARU_Context_Windows *ctx) {
 MARU_Status maru_getControllers_Windows(const MARU_Context *context,
                                         MARU_ControllerList *out_list) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
-  uint32_t i = 0u;
-  MARU_Controller_Windows *it;
+  if (ctx->controller_snapshot_dirty) {
+    uint32_t i = 0u;
+    MARU_Controller_Windows *it;
 
-  _maru_windows_resync_controllers(ctx);
-
-  if (ctx->controller_count > ctx->controller_list_capacity) {
-    uint32_t new_capacity = ctx->controller_count;
-    MARU_Controller **new_list = (MARU_Controller **)maru_context_realloc(
-        &ctx->base, ctx->controller_list_storage,
-        ctx->controller_list_capacity * sizeof(MARU_Controller *),
-        new_capacity * sizeof(MARU_Controller *));
-    if (!new_list) {
-      return MARU_FAILURE;
+    if (ctx->controller_count > ctx->controller_list_capacity) {
+      uint32_t new_capacity = ctx->controller_count;
+      MARU_Controller **new_list = (MARU_Controller **)maru_context_realloc(
+          &ctx->base, ctx->controller_list_storage,
+          ctx->controller_list_capacity * sizeof(MARU_Controller *),
+          new_capacity * sizeof(MARU_Controller *));
+      if (!new_list) {
+        return MARU_FAILURE;
+      }
+      ctx->controller_list_storage = new_list;
+      ctx->controller_list_capacity = new_capacity;
     }
-    ctx->controller_list_storage = new_list;
-    ctx->controller_list_capacity = new_capacity;
-  }
 
-  for (it = ctx->controller_list_head; it; it = it->next) {
-    ctx->controller_list_storage[i++] = (MARU_Controller *)it;
+    for (it = ctx->controller_list_head; it; it = it->next) {
+      ctx->controller_list_storage[i++] = (MARU_Controller *)it;
+    }
+    ctx->controller_snapshot_count = i;
+    ctx->controller_snapshot_dirty = false;
   }
 
   out_list->controllers = ctx->controller_list_storage;
-  out_list->count = i;
+  out_list->count = ctx->controller_snapshot_count;
   return MARU_SUCCESS;
 }
 

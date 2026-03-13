@@ -28,6 +28,8 @@ typedef struct MARU_Context_Windows {
   
   MARU_Controller **controller_list_storage;
   uint32_t controller_list_capacity;
+  uint32_t controller_snapshot_count;
+  bool controller_snapshot_dirty;
 
   HMODULE xinput_module;
   HMODULE runtime_object_module;

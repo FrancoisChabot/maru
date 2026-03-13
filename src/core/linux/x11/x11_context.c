@@ -99,6 +99,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->base.tuning = create_info->tuning;
   _maru_init_context_base(&ctx->base);
   ctx->base.pub.userdata = create_info->userdata;
+  ctx->controller_snapshot_dirty = true;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_X11;
@@ -631,6 +632,7 @@ MARU_Status maru_pumpEvents_X11(MARU_Context *context, uint32_t timeout_ms,
   const uint64_t pump_start_ns = _maru_x11_get_monotonic_time_ns();
   MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
+  ctx->controller_snapshot_dirty = true;
   _maru_x11_clear_mime_query_cache(ctx);
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);

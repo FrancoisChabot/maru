@@ -658,6 +658,13 @@ typedef struct MARU_CloseRequestedEvent {
 } MARU_CloseRequestedEvent;
 
 typedef struct MARU_WindowFrameEvent {
+  /*
+   * Backend-provided millisecond frame timestamp.
+   *
+   * This value is 32-bit and may wrap after roughly 49.7 days of uptime.
+   * Callers that care about long-running timeline arithmetic must handle
+   * wraparound themselves.
+   */
   uint32_t timestamp_ms;
 } MARU_WindowFrameEvent;
 
@@ -822,6 +829,10 @@ typedef struct MARU_DataConsumedEvent {
   const char* mime_type;
   const void* data;
   size_t size;
+  /*
+   * Meaningful only for drag/drop consumption. When `target` is
+   * MARU_DATA_EXCHANGE_TARGET_CLIPBOARD, ignore this field.
+   */
   MARU_DropAction action;
 } MARU_DataConsumedEvent;
 
@@ -1211,8 +1222,14 @@ static inline void maru_setCursorUserdata(MARU_Cursor* cursor, void* userdata);
 static inline bool maru_isCursorSystem(const MARU_Cursor* cursor);
 
 typedef struct MARU_CursorFrame {
+  /* Referenced image copied into cursor-owned storage during creation. */
   const MARU_Image* image;
   MARU_Vec2Px px_hot_spot;
+  /*
+   * Display duration for this frame in milliseconds when used in a multi-frame
+   * custom cursor. A value of 0 is treated as 1 ms. Single-frame custom
+   * cursors ignore this field.
+   */
   uint32_t delay_ms;
 } MARU_CursorFrame;
 
@@ -1221,12 +1238,15 @@ typedef struct MARU_CursorCreateInfo {
   /*
    * For system cursors, creation fails if the backend cannot provide the
    * requested native/system cursor shape. Maru does not synthesize fallback
-   * system cursors.
+   * system cursors. Ignore `frames` and `frame_count` in this mode.
    */
   MARU_CursorShape system_shape;
   /*
    * For custom cursors, the referenced image pixels are copied into
-   * cursor-owned frames during maru_createCursor().
+   * cursor-owned frames during maru_createCursor(). Ignore `system_shape` in
+   * this mode. `frame_count` must be non-zero and `frames` must point to that
+   * many entries. `frame_count > 1` creates an animated cursor that advances
+   * through the frames in order and loops.
    */
   const MARU_CursorFrame* frames;
   uint32_t frame_count;
@@ -1586,9 +1606,8 @@ typedef enum MARU_ControllerHaptic {
 
 typedef struct MARU_ControllerList {
   /*
-   * Borrowed snapshot whose storage may be reused by a later
-   * maru_getControllers() call or by a later pump cycle. Retain handles you
-   * need to keep.
+   * Borrowed snapshot valid until the next maru_pumpEvents() call on the same
+   * context. Retain handles you need to keep beyond that pump cycle.
    */
   MARU_Controller* const* controllers;
   uint32_t count;

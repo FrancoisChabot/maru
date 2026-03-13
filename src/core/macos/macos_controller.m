@@ -288,10 +288,13 @@ void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base) {
 
 MARU_Status maru_getControllers_Cocoa(const MARU_Context *context,
                                       MARU_ControllerList *out_list) {
-    _maru_cocoa_sync_controllers((MARU_Context_Base *)context);
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
+    if (ctx->controller_snapshot_dirty) {
+        ctx->controller_snapshot_count = ctx->controller_cache_count;
+        ctx->controller_snapshot_dirty = false;
+    }
     out_list->controllers = (MARU_Controller **)ctx->controller_cache;
-    out_list->count = ctx->controller_cache_count;
+    out_list->count = ctx->controller_snapshot_count;
     
     return MARU_SUCCESS;
 }

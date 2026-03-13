@@ -214,6 +214,7 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
 
   MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
+  ctx->controller_snapshot_dirty = true;
 
   _maru_drain_queued_events(&ctx->base);
   _maru_windows_drain_deferred_events(ctx);

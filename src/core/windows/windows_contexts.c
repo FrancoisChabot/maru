@@ -133,10 +133,12 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
   ctx->base.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx->base.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx->base.inhibit_idle = create_info->attributes.inhibit_idle;
+  ctx->controller_snapshot_dirty = true;
 
   _maru_windows_apply_idle_inhibit(ctx);
 
   maru_updateMonitors_Windows((MARU_Context *)ctx);
+  _maru_windows_resync_controllers(ctx);
 
   *out_context = (MARU_Context *)ctx;
   return MARU_SUCCESS;

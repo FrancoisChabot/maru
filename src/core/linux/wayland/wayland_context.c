@@ -531,6 +531,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   _maru_init_context_base(&ctx->base);
   ctx->base.pub.userdata = create_info->userdata;
+  ctx->controller_snapshot_dirty = true;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_WL;
@@ -1124,6 +1125,7 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
 
   MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
+  ctx->controller_snapshot_dirty = true;
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_drain_queued_events(&ctx->base);

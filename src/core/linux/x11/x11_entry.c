@@ -19,25 +19,29 @@ static MARU_Status maru_getControllers_X11(const MARU_Context *context,
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   MARU_Context_Linux_Common *common = &ctx->linux_common;
 
-  if (common->controller_count > ctx->controller_list_capacity) {
-    uint32_t new_capacity = common->controller_count;
-    if (new_capacity < 8) new_capacity = 8;
-    MARU_Controller **new_list = (MARU_Controller **)maru_context_realloc(
-        &ctx->base, ctx->controller_list_storage,
-        ctx->controller_list_capacity * sizeof(MARU_Controller *),
-        new_capacity * sizeof(MARU_Controller *));
-    if (!new_list) return MARU_FAILURE;
-    ctx->controller_list_storage = new_list;
-    ctx->controller_list_capacity = new_capacity;
-  }
+  if (ctx->controller_snapshot_dirty) {
+    if (common->controller_count > ctx->controller_list_capacity) {
+      uint32_t new_capacity = common->controller_count;
+      if (new_capacity < 8) new_capacity = 8;
+      MARU_Controller **new_list = (MARU_Controller **)maru_context_realloc(
+          &ctx->base, ctx->controller_list_storage,
+          ctx->controller_list_capacity * sizeof(MARU_Controller *),
+          new_capacity * sizeof(MARU_Controller *));
+      if (!new_list) return MARU_FAILURE;
+      ctx->controller_list_storage = new_list;
+      ctx->controller_list_capacity = new_capacity;
+    }
 
-  uint32_t i = 0;
-  for (MARU_LinuxController * it = common->controllers; it; it = it->next) {
-    ctx->controller_list_storage[i++] = (MARU_Controller *)it;
+    uint32_t i = 0;
+    for (MARU_LinuxController *it = common->controllers; it; it = it->next) {
+      ctx->controller_list_storage[i++] = (MARU_Controller *)it;
+    }
+    ctx->controller_snapshot_count = common->controller_count;
+    ctx->controller_snapshot_dirty = false;
   }
 
   out_list->controllers = ctx->controller_list_storage;
-  out_list->count = common->controller_count;
+  out_list->count = ctx->controller_snapshot_count;
   return MARU_SUCCESS;
 }
 

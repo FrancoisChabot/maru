@@ -253,6 +253,9 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     ctx->ns_app = NSApp;
     ctx->last_modifiers = [NSEvent modifierFlags];
     ctx->base.pub.flags = 0;
+    ctx->controller_snapshot_dirty = true;
+    atomic_store(&ctx->controllers_dirty, true);
+    _maru_cocoa_sync_controllers(&ctx->base);
     
     *out_context = (MARU_Context *)ctx;
     return MARU_SUCCESS;
@@ -291,6 +294,7 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
     
     MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
     ctx->base.pump_ctx = &pump_ctx;
+    ctx->controller_snapshot_dirty = true;
 
     if (atomic_load(&ctx->controllers_dirty)) {
         _maru_cocoa_sync_controllers(&ctx->base);

@@ -24,7 +24,9 @@ typedef struct MARU_Context_Cocoa {
   MARU_Controller_Base **controller_cache;
   uint32_t controller_cache_count;
   uint32_t controller_cache_capacity;
+  uint32_t controller_snapshot_count;
   _Atomic bool controllers_dirty;
+  bool controller_snapshot_dirty;
 } MARU_Context_Cocoa;
 
 typedef struct MARU_Window_Cocoa {

@@ -593,7 +593,6 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
 
   win->hdc = GetDC(win->hwnd);
   _maru_register_rawinput_window(win->hwnd);
-  _maru_windows_resync_controllers(ctx);
   
   if (create_info->attributes.icon) {
       _maru_windows_set_window_icon(win, create_info->attributes.icon);

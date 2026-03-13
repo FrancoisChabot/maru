@@ -193,6 +193,8 @@ typedef struct MARU_Context_WL {
 
   MARU_Controller **controller_list_storage;
   uint32_t controller_list_capacity;
+  uint32_t controller_snapshot_count;
+  bool controller_snapshot_dirty;
 } MARU_Context_WL;
 
 typedef struct MARU_Window_WL {
