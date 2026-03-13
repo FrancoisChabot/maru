@@ -1510,7 +1510,7 @@ MARU_Status _maru_x11_requestData(MARU_Window *window,
   return MARU_SUCCESS;
 }
 
-MARU_Status _maru_x11_getAvailableMIMETypes(MARU_Window *window,
+MARU_Status _maru_x11_getAvailableMIMETypes(const MARU_Window *window,
                                             MARU_DataExchangeTarget target,
                                             MARU_StringList *out_list) {
   MARU_Window_X11 *win = (MARU_Window_X11 *)window;
@@ -1826,7 +1826,7 @@ MARU_Status maru_requestData_X11(MARU_Window *window,
 }
 
 MARU_Status maru_getAvailableMIMETypes_X11(
-    MARU_Window *window, MARU_DataExchangeTarget target,
+    const MARU_Window *window, MARU_DataExchangeTarget target,
     MARU_StringList *out_list) {
   return _maru_x11_getAvailableMIMETypes(window, target, out_list);
 }

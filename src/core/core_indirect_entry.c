@@ -54,7 +54,7 @@ MARU_API bool maru_wakeContext(MARU_Context *context) {
   return ctx_base->backend->wakeContext(context);
 }
 
-MARU_API MARU_Status maru_getControllers(MARU_Context *context,
+MARU_API MARU_Status maru_getControllers(const MARU_Context *context,
                                          MARU_ControllerList *out_list) {
   MARU_API_VALIDATE(getControllers, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
@@ -187,7 +187,7 @@ maru_requestDropData(MARU_Window *window, const char *mime_type,
 }
 
 MARU_API MARU_Status
-maru_getAvailableClipboardMIMETypes(MARU_Context *context,
+maru_getAvailableClipboardMIMETypes(const MARU_Context *context,
                                     MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableClipboardMIMETypes, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
@@ -202,7 +202,7 @@ maru_getAvailableClipboardMIMETypes(MARU_Context *context,
 }
 
 MARU_API MARU_Status
-maru_getAvailableDropMIMETypes(MARU_Window *window,
+maru_getAvailableDropMIMETypes(const MARU_Window *window,
                                MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableDropMIMETypes, window, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
@@ -233,7 +233,7 @@ MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
 }
 
 MARU_API MARU_Status maru_createVkSurface(
-    MARU_Window *window, VkInstance instance,
+    const MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
   MARU_API_VALIDATE(createVkSurface, window, instance, vk_loader, out_surface);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
@@ -328,7 +328,7 @@ MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
   return MARU_FAILURE;
 }
 
-MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+MARU_API MARU_Status maru_getMonitors(const MARU_Context *context, MARU_MonitorList *out_list) {
   MARU_API_VALIDATE(getMonitors, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;

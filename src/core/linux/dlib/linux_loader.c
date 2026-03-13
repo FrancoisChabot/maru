@@ -14,7 +14,7 @@
 #include "maru_internal.h"
 
 #ifdef MARU_VALIDATE_API_CALLS
-static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...) {
+static void _set_linux_loader_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   char msg[256];
@@ -23,7 +23,7 @@ static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...)
   MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
 }
 #else
-#define _set_diagnostic(...) ((void)0)
+#define _set_linux_loader_diagnostic(...) ((void)0)
 #endif
 
 // dlsym causes unavoidable cast warnings...
@@ -33,7 +33,7 @@ static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...)
 static bool _lib_load_base(struct MARU_Context_Base* ctx, const char* name, MARU_External_Lib_Base* tgt) {
   tgt->handle = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
   if (!tgt->handle) {
-    _set_diagnostic(ctx, "dlopen(%s) failed: %s", name, dlerror());
+    _set_linux_loader_diagnostic(ctx, "dlopen(%s) failed: %s", name, dlerror());
     tgt->available = false;
     return false;
   }
@@ -60,7 +60,7 @@ bool maru_linux_xkb_load(struct MARU_Context_Base *ctx, MARU_Lib_Xkb *out_lib) {
 #define MARU_LIB_FN(name)                                            \
   out_lib->name = dlsym(out_lib->base.handle, "xkb_" #name);         \
   if (!out_lib->name) {                                              \
-    _set_diagnostic(ctx, "dlsym(xkb_" #name ") failed");             \
+    _set_linux_loader_diagnostic(ctx, "dlsym(xkb_" #name ") failed");             \
     functions_ok = false;                                            \
   }
   MARU_XKB_FUNCTIONS_TABLE
@@ -86,7 +86,7 @@ bool maru_linux_udev_load(struct MARU_Context_Base *ctx, MARU_Lib_Udev *out_lib)
 #define MARU_LIB_FN(name)                                             \
   out_lib->name = dlsym(out_lib->base.handle, #name);                 \
   if (!out_lib->name) {                                               \
-    _set_diagnostic(ctx, "dlsym(" #name ") failed");                  \
+    _set_linux_loader_diagnostic(ctx, "dlsym(" #name ") failed");                  \
     functions_ok = false;                                             \
   }
   MARU_UDEV_FUNCTIONS_TABLE

@@ -38,7 +38,7 @@ static void _maru_cocoa_populate_video_modes(MARU_Monitor_Cocoa *mon) {
     CFRelease(displayModes);
 }
 
-MARU_Status maru_getMonitors_Cocoa(MARU_Context *context, MARU_MonitorList *out_list) {
+MARU_Status maru_getMonitors_Cocoa(const MARU_Context *context, MARU_MonitorList *out_list) {
     MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
 
     if (ctx_base->monitor_cache) {

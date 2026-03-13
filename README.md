@@ -9,7 +9,7 @@ Maru is less flexible than other similar libraries. It is highly opinionated, ha
 - It goes out of its way to provide steady and predictable timing, even during unusual events like controller hot-plugs.
 - It has ruthless API validation that can be completely stripped out. It will abort() on any invalid API usage in validation builds.
 - It has no dynamic global state unless the OS mandates it.
-- It stays in its lane. It provides windowing, surface creation, and user inputs. That's it.
+- It stays in its lane. It provides windowing (including OS features you'd expect like cursors and DnD), surface creation, and user inputs . That's it.
 
 Why is it called Maru? This library was built to support a bird-themed game, so it's named after my pet parrot: Marula.
 
@@ -23,16 +23,14 @@ Run the following, and you should be presented with an ImGui-based playground to
 
 You'll need: 
   - A basic development environment (MSVC / XCode / gcc+make)
-  - [git](https://git-scm.com/)
   - [CMake](https://cmake.org/) (3.20 or above)
-  - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home). (N.B. only needed for the examples, the Maru library itself doesn't require it)
+  - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home). 
+    - The full SDK is only needed to build the examples.
+    - Building Maru itself doesn't require anything vulkan-specific.
+    - The public `maru/vulkan.h` header has a dependency on the `<vulkan/vulkan.h>` header.
   - On Windows and MacOS, we only depend on libraries that come packaged with the dev environment. On Linux, we vendor all needed headers.
 
 ```bash 
-# Linux/macOS: you may have to do this depending on your environment.
-# source path/to/vulkan/sdk/setup-env.sh
-
-git clone https://github.com/birdsafe/maru
 cd maru
 cmake -S . -B build
 cmake --build build --config Release

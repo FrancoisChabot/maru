@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #ifndef MARU_INDIRECT_BACKEND
 #define MARU_INDIRECT_BACKEND
 #endif
@@ -29,6 +33,7 @@
 // Wayland Backend (as Indirect)
 #include "../core/linux/wayland/wayland.c"
 #include "../core/linux/wayland/wayland_context.c"
+#include "../core/linux/wayland/wayland_cursor.c"
 #include "../core/linux/wayland/wayland_image.c"
 #include "../core/linux/wayland/wayland_controller.c"
 #include "../core/linux/wayland/wayland_input.c"
@@ -50,5 +55,6 @@
 #include "../core/linux/x11/x11_input.c"
 #include "../core/linux/x11/x11_dataexchange.c"
 #include "../core/linux/x11/x11_monitor.c"
+#include "../core/linux/x11/x11_cursor.c"
 #include "../core/linux/x11/x11_vulkan.c"
 #include "../core/linux/x11/dlib/loader.c"

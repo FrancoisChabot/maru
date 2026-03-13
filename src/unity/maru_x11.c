@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #ifndef MARU_ENABLE_BACKEND_X11
 #define MARU_ENABLE_BACKEND_X11
 #endif
@@ -24,5 +28,6 @@
 #include "../core/linux/x11/x11_input.c"
 #include "../core/linux/x11/x11_dataexchange.c"
 #include "../core/linux/x11/x11_monitor.c"
+#include "../core/linux/x11/x11_cursor.c"
 #include "../core/linux/x11/x11_vulkan.c"
 #include "../core/linux/x11/dlib/loader.c"

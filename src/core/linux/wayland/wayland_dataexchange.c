@@ -1359,7 +1359,7 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
       mime_type, userdata);
 }
 
-MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
+MARU_Status maru_getAvailableMIMETypes_WL(const MARU_Window *window,
                                           MARU_DataExchangeTarget target,
                                           MARU_StringList *out_list) {
   MARU_Window_WL *wl_window = (MARU_Window_WL *)window;

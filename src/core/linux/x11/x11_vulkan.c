@@ -9,10 +9,6 @@
 // Vulkan types and function pointers needed for the implementation.
 // We define them locally to avoid a hard dependency on Vulkan headers.
 
-typedef enum VkResult {
-  VK_SUCCESS = 0,
-} VkResult;
-
 #define VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR 1000004000
 
 typedef struct VkXlibSurfaceCreateInfoKHR {
@@ -40,7 +36,7 @@ MARU_Status maru_getVkExtensions_X11(const MARU_Context *context,
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_createVkSurface_X11(MARU_Window *window, VkInstance instance,
+MARU_Status maru_createVkSurface_X11(const MARU_Window *window, VkInstance instance,
                                      MARU_VkGetInstanceProcAddrFunc vk_loader,
                                      VkSurfaceKHR *out_surface) {
   const MARU_Context *ctx = maru_getWindowContext(window);
@@ -91,7 +87,7 @@ MARU_API MARU_Status maru_getVkExtensions(const MARU_Context *context,
 }
 
 MARU_API MARU_Status maru_createVkSurface(
-    MARU_Window *window, VkInstance instance,
+    const MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
   MARU_API_VALIDATE(createVkSurface, window, instance, vk_loader,
                            out_surface);

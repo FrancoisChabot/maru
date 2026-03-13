@@ -9,7 +9,7 @@
 MARU_Status maru_getVkExtensions_WL(const MARU_Context *context,
                                    MARU_StringList *out_list);
 extern MARU_Status maru_createVkSurface_WL(
-    MARU_Window *window, VkInstance instance,
+    const MARU_Window *window, VkInstance instance,
     MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 void *maru_getContextNativeHandle_WL(MARU_Context *context) {
@@ -22,7 +22,7 @@ void *maru_getWindowNativeHandle_WL(MARU_Window *window) {
   return window_wl->wl.surface;
 }
 
-static MARU_Window_WL *maru_getClipboardWindow_WL(MARU_Context *context) {
+static MARU_Window_WL *maru_getClipboardWindow_WL(const MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
     MARU_Window_WL *win = (MARU_Window_WL *)it;
@@ -55,7 +55,7 @@ static MARU_Status maru_requestClipboardData_WL_ctx(MARU_Context *context,
 }
 
 static MARU_Status
-maru_getAvailableClipboardMIMETypes_WL_ctx(MARU_Context *context,
+maru_getAvailableClipboardMIMETypes_WL_ctx(const MARU_Context *context,
                                            MARU_StringList *out_list) {
   MARU_Window_WL *win = maru_getClipboardWindow_WL(context);
   if (!win) {
@@ -83,7 +83,7 @@ static MARU_Status maru_requestDropData_WL_win(MARU_Window *window,
 }
 
 static MARU_Status
-maru_getAvailableDropMIMETypes_WL_win(MARU_Window *window,
+maru_getAvailableDropMIMETypes_WL_win(const MARU_Window *window,
                                       MARU_StringList *out_list) {
   return maru_getAvailableMIMETypes_WL(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
                                        out_list);
@@ -205,7 +205,7 @@ MARU_API MARU_Status maru_destroyImage(MARU_Image *image) {
   return maru_destroyImage_WL(image);
 }
 
-MARU_API MARU_Status maru_getControllers(MARU_Context *context,
+MARU_API MARU_Status maru_getControllers(const MARU_Context *context,
                                          MARU_ControllerList *out_list) {
   MARU_API_VALIDATE(getControllers, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
@@ -289,7 +289,7 @@ MARU_API MARU_Status maru_requestDropData(MARU_Window *window,
 }
 
 MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(
-    MARU_Context *context, MARU_StringList *out_list) {
+    const MARU_Context *context, MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableClipboardMIMETypes, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, context, out_list);
@@ -297,7 +297,7 @@ MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(
 }
 
 MARU_API MARU_Status
-maru_getAvailableDropMIMETypes(MARU_Window *window, MARU_StringList *out_list) {
+maru_getAvailableDropMIMETypes(const MARU_Window *window, MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableDropMIMETypes, window, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(getAvailableDropMIMETypes, window, out_list);
@@ -330,7 +330,7 @@ MARU_API bool maru_wakeContext(MARU_Context *context) {
   return maru_wakeContext_WL(context);
 }
 
-MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+MARU_API MARU_Status maru_getMonitors(const MARU_Context *context, MARU_MonitorList *out_list) {
   MARU_API_VALIDATE(getMonitors, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   MARU_Status res = maru_updateMonitors_WL(context);

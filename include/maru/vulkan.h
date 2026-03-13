@@ -22,7 +22,7 @@ typedef PFN_vkGetInstanceProcAddr MARU_VkGetInstanceProcAddrFunc;
 MARU_API MARU_Status maru_getVkExtensions(const MARU_Context* context,
                                           MARU_StringList* out_list);
 /* Requires a ready window. */
-MARU_API MARU_Status maru_createVkSurface(MARU_Window* window,
+MARU_API MARU_Status maru_createVkSurface(const MARU_Window* window,
                                           VkInstance instance,
                                           MARU_VkGetInstanceProcAddrFunc vk_loader,
                                           VkSurfaceKHR* out_surface);

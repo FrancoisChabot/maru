@@ -89,7 +89,7 @@ MARU_Status maru_createImage_Cocoa(MARU_Context *context,
                                     MARU_Image **out_image);
 MARU_Status maru_destroyImage_Cocoa(MARU_Image *image);
 
-MARU_Status maru_getControllers_Cocoa(MARU_Context *context, MARU_ControllerList *out_list);
+MARU_Status maru_getControllers_Cocoa(const MARU_Context *context, MARU_ControllerList *out_list);
 void _maru_cocoa_cleanup_controller_observer(MARU_Context_Cocoa *ctx);
 void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base);
 void maru_retainController_Cocoa(MARU_Controller *controller);
@@ -99,9 +99,9 @@ MARU_Status maru_setControllerHapticLevels_Cocoa(MARU_Controller *controller, ui
 MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_Cocoa(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata);
-MARU_Status maru_getAvailableMIMETypes_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list);
+MARU_Status maru_getAvailableMIMETypes_Cocoa(const MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list);
 
-MARU_Status maru_getMonitors_Cocoa(MARU_Context *context,
+MARU_Status maru_getMonitors_Cocoa(const MARU_Context *context,
                                    MARU_MonitorList *out_list);
 void maru_retainMonitor_Cocoa(MARU_Monitor *monitor);
 void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor);
@@ -110,7 +110,8 @@ MARU_Status maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor,
 MARU_Status maru_setMonitorMode_Cocoa(MARU_Monitor *monitor,
                                       MARU_VideoMode mode);
 
-MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_StringList *out_list);MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
+MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_StringList *out_list);
+MARU_Status maru_createVkSurface_Cocoa(const MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 void _maru_cocoa_associate_window(id ns_window, MARU_Window_Cocoa *window);
 MARU_Window_Cocoa *_maru_cocoa_window_from_ns_window(id ns_window);

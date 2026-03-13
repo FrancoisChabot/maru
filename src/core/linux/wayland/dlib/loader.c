@@ -16,7 +16,7 @@
 #include "linux_loader.h"
 
 #ifdef MARU_VALIDATE_API_CALLS
-static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...) {
+static void _set_wayland_loader_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   char msg[256];
@@ -25,7 +25,7 @@ static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...)
   MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
 }
 #else
-#define _set_diagnostic(...) ((void)0)
+#define _set_wayland_loader_diagnostic(...) ((void)0)
 #endif
 
 // dlsym causes unavoidable cast warnings...
@@ -35,7 +35,7 @@ static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...)
 static bool _wl_load_lib_base(struct MARU_Context_Base* ctx, const char* name, MARU_External_Lib_Base* tgt) {
   tgt->handle = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
   if (!tgt->handle) {
-    _set_diagnostic(ctx, "dlopen(%s) failed: %s", name, dlerror());
+    _set_wayland_loader_diagnostic(ctx, "dlopen(%s) failed: %s", name, dlerror());
     tgt->available = false;
     return false;
   }
@@ -63,7 +63,7 @@ static bool wl_load(struct MARU_Context_Base* ctx, MARU_Lib_WaylandClient *lib) 
 #define MARU_LIB_FN(name)                                  \
   lib->name = dlsym(lib->base.handle, "wl_" #name);        \
   if (!lib->name) {                                        \
-    _set_diagnostic(ctx, "dlsym(wl_" #name ") failed");    \
+    _set_wayland_loader_diagnostic(ctx, "dlsym(wl_" #name ") failed");    \
     functions_ok = false;                                  \
   }
   MARU_WL_FUNCTIONS_TABLE
@@ -86,7 +86,7 @@ static bool wlc_load(struct MARU_Context_Base* ctx, MARU_Lib_WaylandCursor *lib)
 #define MARU_LIB_FN(name)                                           \
   lib->name = dlsym(lib->base.handle, "wl_cursor_" #name);          \
   if (!lib->name) {                                                 \
-    _set_diagnostic(ctx, "dlsym(wl_cursor_" #name ") failed");      \
+    _set_wayland_loader_diagnostic(ctx, "dlsym(wl_cursor_" #name ") failed");      \
     functions_ok = false;                                           \
   }
   MARU_WL_CURSOR_FUNCTIONS_TABLE
@@ -109,7 +109,7 @@ static bool decor_load(struct MARU_Context_Base* ctx, MARU_Lib_Decor *lib) {
 #define MARU_LIB_FN(name)                                              \
   lib->name = dlsym(lib->base.handle, "libdecor_" #name);              \
   if (!lib->name) {                                                    \
-    _set_diagnostic(ctx, "dlsym(libdecor_" #name ") failed");          \
+    _set_wayland_loader_diagnostic(ctx, "dlsym(libdecor_" #name ") failed");          \
     functions_ok = false;                                              \
   }
 #define MARU_LIB_OPT_FN(name) \

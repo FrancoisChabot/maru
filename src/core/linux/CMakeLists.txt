@@ -31,12 +31,18 @@ add_subdirectory(wayland)
 add_subdirectory(x11)
 
 # Combined Linux library (Indirect)
-add_library(maru_linux ${MARU_LIB_TYPE}
-    $<TARGET_OBJECTS:maru_linux_indirect_obj>
-    $<TARGET_OBJECTS:maru_base_indirect_obj>
-    $<TARGET_OBJECTS:maru_wayland_indirect_obj>
-    $<TARGET_OBJECTS:maru_x11_indirect_obj>
-)
+if (MARU_BUILD_UNITY)
+  add_library(maru_linux ${MARU_LIB_TYPE} "${PROJECT_SOURCE_DIR}/src/unity/maru_linux_dynamic.c")
+  target_link_libraries(maru_linux PRIVATE ${MARU_ACTIVE_CORE_IFACE} maru_linux_internal_iface maru_wayland_internal_iface ${CMAKE_DL_LIBS})
+  target_include_directories(maru_linux PRIVATE .)
+else()
+  add_library(maru_linux ${MARU_LIB_TYPE}
+      $<TARGET_OBJECTS:maru_linux_indirect_obj>
+      $<TARGET_OBJECTS:maru_base_indirect_obj>
+      $<TARGET_OBJECTS:maru_wayland_indirect_obj>
+      $<TARGET_OBJECTS:maru_x11_indirect_obj>
+  )
+endif()
 target_link_libraries(maru_linux PUBLIC maru_iface_indirect)
 if(MARU_BUILD_SHARED)
   target_compile_definitions(maru_linux PRIVATE MARU_BUILDING_DLL)

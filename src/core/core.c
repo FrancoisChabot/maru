@@ -7,10 +7,6 @@
 #include <stdlib.h>
 
 #include "maru/maru.h"
-#include "maru/native/cocoa.h"
-#include "maru/native/wayland.h"
-#include "maru/native/win32.h"
-#include "maru/native/x11.h"
 #ifdef __linux__
 #include "linux/linux_internal.h"
 typedef struct MARU_Context_Linux {

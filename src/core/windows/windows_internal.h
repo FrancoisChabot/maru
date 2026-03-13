@@ -253,7 +253,7 @@ MARU_Status maru_setMonitorMode_Windows(MARU_Monitor *monitor,
                                         MARU_VideoMode mode);
 
 // controllers.h
-MARU_Status maru_getControllers_Windows(MARU_Context *context, MARU_ControllerList *out_list);
+MARU_Status maru_getControllers_Windows(const MARU_Context *context, MARU_ControllerList *out_list);
 void maru_retainController_Windows(MARU_Controller *controller);
 void maru_releaseController_Windows(MARU_Controller *controller);
 MARU_Status maru_setControllerHapticLevels_Windows(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities);
@@ -268,12 +268,12 @@ void _maru_windows_process_raw_input(MARU_Context_Windows *ctx,
 MARU_Status maru_announceData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions);
 MARU_Status maru_provideData_Windows(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_Windows(MARU_Window *window, MARU_DataExchangeTarget target, const char *mime_type, void *userdata);
-MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list);
+MARU_Status maru_getAvailableMIMETypes_Windows(const MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list);
 void _maru_windows_drain_deferred_events(MARU_Context_Windows *ctx);
 
 // vulkan.h
 MARU_Status maru_getVkExtensions_Windows(const MARU_Context *context, MARU_StringList *out_list);
-MARU_Status maru_createVkSurface_Windows(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
+MARU_Status maru_createVkSurface_Windows(const MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface);
 
 // Native handles
 void *_maru_getContextNativeHandle_Windows(MARU_Context *context);

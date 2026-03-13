@@ -50,7 +50,7 @@ typedef struct MARU_Backend {
 
   MARU_Status (*getVkExtensions)(const MARU_Context *context,
                                  MARU_StringList *out_list);
-  MARU_Status (*createVkSurface)(MARU_Window *window, VkInstance instance,
+  MARU_Status (*createVkSurface)(const MARU_Window *window, VkInstance instance,
                                  MARU_VkGetInstanceProcAddrFunc vk_loader,
                                  VkSurfaceKHR *out_surface);
 

@@ -394,7 +394,7 @@ MARU_Status maru_requestData_Windows(MARU_Window *window,
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_getAvailableMIMETypes_Windows(MARU_Window *window,
+MARU_Status maru_getAvailableMIMETypes_Windows(const MARU_Window *window,
                                                MARU_DataExchangeTarget target,
                                                MARU_StringList *out_list) {
   if (target != MARU_DATA_EXCHANGE_TARGET_CLIPBOARD || !out_list) {

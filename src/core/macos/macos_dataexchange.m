@@ -19,6 +19,6 @@ MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget 
   return MARU_FAILURE;
 }
 
-MARU_Status maru_getAvailableMIMETypes_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list) {
+MARU_Status maru_getAvailableMIMETypes_Cocoa(const MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList *out_list) {
   return MARU_FAILURE;
 }

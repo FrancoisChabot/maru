@@ -58,6 +58,10 @@ else()
   endif()
 endif()
 
+if(MARU_BUILD_UNITY AND NOT MSVC)
+  target_compile_options(maru_common_settings INTERFACE -Wno-shadow)
+endif()
+
 # Public interface: only public headers
 add_library(maru_iface INTERFACE)
 target_link_libraries(maru_iface INTERFACE maru_common_settings)

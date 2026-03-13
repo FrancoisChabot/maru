@@ -14,6 +14,7 @@
 #import "../core/macos/macos_entry.m"
 #import "../core/macos/macos_context.m"
 #import "../core/macos/macos_window.m"
+#import "../core/macos/macos_cursor.m"
 #import "../core/macos/macos_image.m"
 #import "../core/macos/macos_controller.m"
 #import "../core/macos/macos_dataexchange.m"

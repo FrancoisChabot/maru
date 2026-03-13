@@ -286,8 +286,8 @@ void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base) {
     }
 }
 
-MARU_Status maru_getControllers_Cocoa(MARU_Context *context,
-                                        MARU_ControllerList *out_list) {
+MARU_Status maru_getControllers_Cocoa(const MARU_Context *context,
+                                      MARU_ControllerList *out_list) {
     _maru_cocoa_sync_controllers((MARU_Context_Base *)context);
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
     out_list->controllers = (MARU_Controller **)ctx->controller_cache;

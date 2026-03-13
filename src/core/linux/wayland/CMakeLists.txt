@@ -41,8 +41,13 @@ target_compile_definitions("maru_wayland_indirect_obj" PRIVATE MARU_INDIRECT_BAC
 set_property(TARGET "maru_wayland_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
 
 # Standalone library
-add_library("maru_wayland" ${MARU_LIB_TYPE}
-    $<TARGET_OBJECTS:maru_wayland_obj>
-    $<TARGET_OBJECTS:maru_base_obj>
-)
+if (MARU_BUILD_UNITY)
+  add_library("maru_wayland" ${MARU_LIB_TYPE} "${PROJECT_SOURCE_DIR}/src/unity/maru_wayland.c")
+  target_link_libraries("maru_wayland" PRIVATE ${MARU_ACTIVE_CORE_IFACE} maru_wayland_internal_iface)
+else()
+  add_library("maru_wayland" ${MARU_LIB_TYPE}
+      $<TARGET_OBJECTS:maru_wayland_obj>
+      $<TARGET_OBJECTS:maru_base_obj>
+  )
+endif()
 target_link_libraries("maru_wayland" PUBLIC ${iface_direct})

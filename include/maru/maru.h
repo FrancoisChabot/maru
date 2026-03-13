@@ -263,7 +263,18 @@ typedef struct MARU_ContextTuning {
   } wayland;
 
   struct {
-    uint32_t idle_poll_interval_ms;
+    /*
+     * X11-only timeout budget, in milliseconds, for synchronous selection /
+     * clipboard round-trips that may be needed to complete a data-exchange
+     * request during a pump.
+     *
+     * `0` means "do not wait": operations that would need to block for a
+     * SelectionNotify/selection-owner reply fail immediately instead.
+     *
+     * This tuning does not affect the lifetime of clipboard ownership after
+     * maru_announceClipboardData(); it only bounds how long Maru will block on
+     * these X11 selection handshakes when it has to wait for another party.
+     */
     uint32_t selection_query_timeout_ms;
   } x11;
 } MARU_ContextTuning;
@@ -272,7 +283,7 @@ typedef struct MARU_ContextTuning {
   {                                                                            \
       .user_event_queue_size = 256,                                            \
       .wayland = {.decoration_strategy = MARU_WAYLAND_DECORATION_STRATEGY_AUTO}, \
-      .x11 = {.idle_poll_interval_ms = 250, .selection_query_timeout_ms = 50}, \
+      .x11 = {.selection_query_timeout_ms = 50},                                \
   }
 
 /* ----- Public handles ----- */
@@ -1064,7 +1075,23 @@ typedef struct MARU_ContextAttributes {
    */
   MARU_DiagnosticCallback diagnostic_cb;
   void* diagnostic_userdata;
+  /*
+   * Requests that Maru inhibit the OS/system idle mechanism while the context
+   * is alive.
+   *
+   * This is advisory and backend-dependent. Backends that cannot honor the
+   * request keep running normally and may report a diagnostic.
+   */
   bool inhibit_idle;
+  /*
+   * Idle threshold, in milliseconds, used for `MARU_EVENT_IDLE_CHANGED`.
+   *
+   * `0` disables idle-change tracking for the context and no
+   * `MARU_EVENT_IDLE_CHANGED` events will be emitted.
+   *
+   * When non-zero, the event reports this same configured threshold in
+   * `event->idle_changed.timeout_ms`.
+   */
   uint32_t idle_timeout_ms;
 } MARU_ContextAttributes;
 
@@ -1269,7 +1296,7 @@ static inline MARU_Vec2Dip maru_getMonitorDipSize(const MARU_Monitor* monitor);
 static inline bool maru_isMonitorPrimary(const MARU_Monitor* monitor);
 static inline MARU_Scalar maru_getMonitorScale(const MARU_Monitor* monitor);
 
-MARU_API MARU_Status maru_getMonitors(MARU_Context* context, MARU_MonitorList* out_list);
+MARU_API MARU_Status maru_getMonitors(const MARU_Context* context, MARU_MonitorList* out_list);
 MARU_API void maru_retainMonitor(MARU_Monitor* monitor);
 MARU_API void maru_releaseMonitor(MARU_Monitor* monitor);
 /*
@@ -1289,6 +1316,16 @@ typedef enum MARU_CursorMode {
 } MARU_CursorMode;
 
 typedef enum MARU_ContentType {
+  /*
+   * Advisory window content classification.
+   *
+   * This is creation-time metadata only. Maru forwards it to platform
+   * facilities when a backend exposes a native concept for content type; on
+   * backends without such a facility it has no observable effect.
+   *
+   * It does not affect Maru's rendering, event delivery, timing, or input
+   * semantics.
+   */
   MARU_CONTENT_TYPE_NONE = 0,
   MARU_CONTENT_TYPE_PHOTO = 1,
   MARU_CONTENT_TYPE_VIDEO = 2,
@@ -1602,7 +1639,7 @@ static inline uint32_t maru_getControllerHapticCount(const MARU_Controller* cont
 static inline const MARU_ChannelInfo* maru_getControllerHapticChannelInfo(
     const MARU_Controller* controller);
 
-MARU_API MARU_Status maru_getControllers(MARU_Context* context, MARU_ControllerList* out_list);
+MARU_API MARU_Status maru_getControllers(const MARU_Context* context, MARU_ControllerList* out_list);
 MARU_API void maru_retainController(MARU_Controller* controller);
 MARU_API void maru_releaseController(MARU_Controller* controller);
 /*
@@ -1691,7 +1728,7 @@ MARU_API MARU_Status maru_requestDropData(MARU_Window* window,
  * maru_getAvailableClipboardMIMETypes() call on the same context, and may also
  * be replaced by a later pump cycle that changes the clipboard offer.
  */
-MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(MARU_Context* context,
+MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(const MARU_Context* context,
                                                          MARU_StringList* out_list);
 /*
  * Returns a borrowed snapshot of the currently available drop-offer MIME
@@ -1700,7 +1737,7 @@ MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(MARU_Context* context,
  * replaced by a later pump cycle that changes that window's active drop offer.
  */
 /* Requires a ready window. */
-MARU_API MARU_Status maru_getAvailableDropMIMETypes(MARU_Window* window,
+MARU_API MARU_Status maru_getAvailableDropMIMETypes(const MARU_Window* window,
                                                     MARU_StringList* out_list);
 
 /*

@@ -7,7 +7,7 @@
 
 #include <string.h>
 
-MARU_Status maru_getControllers_WL(MARU_Context *context,
+MARU_Status maru_getControllers_WL(const MARU_Context *context,
                                    MARU_ControllerList *out_list) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
   MARU_Context_Linux_Common *common = &ctx->linux_common;

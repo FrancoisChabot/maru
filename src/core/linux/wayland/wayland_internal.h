@@ -443,11 +443,11 @@ MARU_Status maru_requestWindowFrame_WL(MARU_Window *window);
 MARU_Status maru_requestWindowAttention_WL(MARU_Window *window);
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 
-MARU_Status maru_getMonitors_WL(MARU_Context *context, MARU_MonitorList *out_list);
+MARU_Status maru_getMonitors_WL(const MARU_Context *context, MARU_MonitorList *out_list);
 void maru_retainMonitor_WL(MARU_Monitor *monitor);
 void maru_releaseMonitor_WL(MARU_Monitor *monitor);
 void maru_destroyMonitor_WL(MARU_Monitor *monitor);
-MARU_Status maru_updateMonitors_WL(MARU_Context *context);
+MARU_Status maru_updateMonitors_WL(const MARU_Context *context);
 MARU_Status maru_getMonitorModes_WL(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_WL(MARU_Monitor *monitor,
                                    MARU_VideoMode mode);
@@ -463,7 +463,7 @@ MARU_Status maru_createImage_WL(MARU_Context *context,
                                 const MARU_ImageCreateInfo *create_info,
                                 MARU_Image **out_image);
 MARU_Status maru_destroyImage_WL(MARU_Image *image);
-MARU_Status maru_getControllers_WL(MARU_Context *context,
+MARU_Status maru_getControllers_WL(const MARU_Context *context,
                                    MARU_ControllerList *out_list);
 void maru_retainController_WL(MARU_Controller *controller);
 void maru_releaseController_WL(MARU_Controller *controller);
@@ -479,7 +479,7 @@ MARU_Status maru_provideData_WL(MARU_DataRequest *request,
                                 MARU_DataProvideFlags flags);
 MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget target,
                                 const char *mime_type, void *userdata);
-MARU_Status maru_getAvailableMIMETypes_WL(MARU_Window *window,
+MARU_Status maru_getAvailableMIMETypes_WL(const MARU_Window *window,
                                           MARU_DataExchangeTarget target,
                                           MARU_StringList *out_list);
 void _maru_wayland_dataexchange_handle_internal_transfer_complete(

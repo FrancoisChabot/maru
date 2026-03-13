@@ -35,7 +35,7 @@ MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_StringL
     return MARU_SUCCESS;
 }
 
-MARU_Status maru_createVkSurface_Cocoa(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
+MARU_Status maru_createVkSurface_Cocoa(const MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
     MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
 
     if (!vk_loader) {

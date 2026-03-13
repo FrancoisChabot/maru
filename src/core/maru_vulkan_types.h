@@ -6,6 +6,10 @@
 
 #include <stdint.h>
 
+typedef enum VkResult {
+  VK_SUCCESS = 0,
+} VkResult;
+
 typedef void (*MARU_VulkanVoidFunction)(void);
 typedef struct VkInstance_T* VkInstance;
 

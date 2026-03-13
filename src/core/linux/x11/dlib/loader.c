@@ -8,7 +8,7 @@
 #include "maru_internal.h"
 
 #ifdef MARU_ENABLE_DIAGNOSTICS
-static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...) {
+static void _set_x11_loader_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   char msg[256];
@@ -17,7 +17,7 @@ static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...)
   MARU_REPORT_DIAGNOSTIC((MARU_Context*)ctx, MARU_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
 }
 #else
-#define _set_diagnostic(...) ((void)0)
+#define _set_x11_loader_diagnostic(...) ((void)0)
 #endif
 
 // dlsym causes unavoidable cast warnings...
@@ -27,7 +27,7 @@ static void _set_diagnostic(struct MARU_Context_Base* ctx, const char* fmt, ...)
 static bool _x11_load_lib_base(struct MARU_Context_Base* ctx, const char* name, MARU_External_Lib_Base* tgt) {
   tgt->handle = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
   if (!tgt->handle) {
-    _set_diagnostic(ctx, "dlopen(%s) failed: %s", name, dlerror());
+    _set_x11_loader_diagnostic(ctx, "dlopen(%s) failed: %s", name, dlerror());
     tgt->available = false;
     return false;
   }
@@ -55,7 +55,7 @@ bool maru_load_x11_symbols(struct MARU_Context_Base *ctx, MARU_Lib_X11 *lib) {
 #define MARU_LIB_FN(name)                                  \
   lib->name = dlsym(lib->base.handle, #name);              \
   if (!lib->name) {                                        \
-    _set_diagnostic(ctx, "dlsym(" #name ") failed");       \
+    _set_x11_loader_diagnostic(ctx, "dlsym(" #name ") failed");       \
     functions_ok = false;                                  \
   }
   MARU_X11_FUNCTIONS_TABLE
@@ -101,7 +101,7 @@ bool maru_load_xcursor_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xcursor *
 #define MARU_LIB_FN(name)                                  \
   lib->name = dlsym(lib->base.handle, #name);              \
   if (!lib->name) {                                        \
-    _set_diagnostic(ctx, "dlsym(" #name ") failed");       \
+    _set_x11_loader_diagnostic(ctx, "dlsym(" #name ") failed");       \
     functions_ok = false;                                  \
   }
   MARU_XCURSOR_FUNCTIONS_TABLE
@@ -131,7 +131,7 @@ bool maru_load_xi2_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xi2 *lib) {
 #define MARU_LIB_FN(name)                                  \
   lib->name = dlsym(lib->base.handle, #name);              \
   if (!lib->name) {                                        \
-    _set_diagnostic(ctx, "dlsym(" #name ") failed");       \
+    _set_x11_loader_diagnostic(ctx, "dlsym(" #name ") failed");       \
     functions_ok = false;                                  \
   }
   MARU_XI2_FUNCTIONS_TABLE
@@ -161,7 +161,7 @@ bool maru_load_xshape_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xshape *li
 #define MARU_LIB_FN(name)                                  \
   lib->name = dlsym(lib->base.handle, #name);              \
   if (!lib->name) {                                        \
-    _set_diagnostic(ctx, "dlsym(" #name ") failed");       \
+    _set_x11_loader_diagnostic(ctx, "dlsym(" #name ") failed");       \
     functions_ok = false;                                  \
   }
   MARU_XSHAPE_FUNCTIONS_TABLE
@@ -191,7 +191,7 @@ bool maru_load_xrandr_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xrandr *li
 #define MARU_LIB_FN(name)                                  \
   lib->name = dlsym(lib->base.handle, #name);              \
   if (!lib->name) {                                        \
-    _set_diagnostic(ctx, "dlsym(" #name ") failed");       \
+    _set_x11_loader_diagnostic(ctx, "dlsym(" #name ") failed");       \
     functions_ok = false;                                  \
   }
   MARU_XRANDR_FUNCTIONS_TABLE
@@ -221,7 +221,7 @@ bool maru_load_xfixes_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xfixes *li
 #define MARU_LIB_FN(name)                                  \
   lib->name = dlsym(lib->base.handle, #name);              \
   if (!lib->name) {                                        \
-    _set_diagnostic(ctx, "dlsym(" #name ") failed");       \
+    _set_x11_loader_diagnostic(ctx, "dlsym(" #name ") failed");       \
     functions_ok = false;                                  \
   }
   MARU_XFIXES_FUNCTIONS_TABLE
@@ -251,7 +251,7 @@ bool maru_load_xss_symbols(struct MARU_Context_Base *ctx, MARU_Lib_Xss *lib) {
 #define MARU_LIB_FN(name)                                  \
   lib->name = dlsym(lib->base.handle, #name);              \
   if (!lib->name) {                                        \
-    _set_diagnostic(ctx, "dlsym(" #name ") failed");       \
+    _set_x11_loader_diagnostic(ctx, "dlsym(" #name ") failed");       \
     functions_ok = false;                                  \
   }
   MARU_XSS_FUNCTIONS_TABLE

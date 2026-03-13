@@ -235,7 +235,7 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
   }
 }
 
-MARU_Status maru_getMonitors_X11(MARU_Context *context, MARU_MonitorList *out_list) {
+MARU_Status maru_getMonitors_X11(const MARU_Context *context, MARU_MonitorList *out_list) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   _maru_x11_refresh_monitors(ctx);
   out_list->monitors = ctx->base.monitor_cache;

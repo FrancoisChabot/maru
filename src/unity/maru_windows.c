@@ -17,5 +17,6 @@
 #include "../core/windows/windows_events.c"
 #include "../core/windows/windows_controllers.c"
 #include "../core/windows/windows_data_exchange.c"
+#include "../core/windows/windows_cursors.c"
 #include "../core/windows/windows_monitors.c"
 #include "../core/windows/windows_vulkan.c"

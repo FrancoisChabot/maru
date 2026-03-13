@@ -1312,7 +1312,7 @@ void _maru_windows_resync_controllers(MARU_Context_Windows *ctx) {
   }
 }
 
-MARU_Status maru_getControllers_Windows(MARU_Context *context,
+MARU_Status maru_getControllers_Windows(const MARU_Context *context,
                                         MARU_ControllerList *out_list) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
   uint32_t i = 0u;

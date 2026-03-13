@@ -39,7 +39,7 @@ MARU_Status maru_getVkExtensions_Windows(const MARU_Context *context, MARU_Strin
   return MARU_SUCCESS;
 }
 
-MARU_Status maru_createVkSurface_Windows(MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
+MARU_Status maru_createVkSurface_Windows(const MARU_Window *window, VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader, VkSurfaceKHR *out_surface) {
   MARU_Window_Windows *win = (MARU_Window_Windows *)window;
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)win->base.ctx_base;
 

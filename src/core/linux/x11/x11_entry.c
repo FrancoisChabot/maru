@@ -14,7 +14,7 @@
 #include <string.h>
 #include <unistd.h>
 
-static MARU_Status maru_getControllers_X11(MARU_Context *context,
+static MARU_Status maru_getControllers_X11(const MARU_Context *context,
                                            MARU_ControllerList *out_list) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   MARU_Context_Linux_Common *common = &ctx->linux_common;
@@ -71,7 +71,7 @@ maru_setControllerHapticLevels_X11(MARU_Controller *controller,
   return _maru_linux_common_set_haptic_levels(&ctx->linux_common, ctrl, first_haptic, count, intensities);
 }
 
-static MARU_Window_X11 *maru_getClipboardWindow_X11(MARU_Context *context) {
+static MARU_Window_X11 *maru_getClipboardWindow_X11(const MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
   for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
     MARU_Window_X11 *win = (MARU_Window_X11 *)it;
@@ -104,7 +104,7 @@ static MARU_Status maru_requestClipboardData_X11_ctx(MARU_Context *context,
 }
 
 static MARU_Status
-maru_getAvailableClipboardMIMETypes_X11_ctx(MARU_Context *context,
+maru_getAvailableClipboardMIMETypes_X11_ctx(const MARU_Context *context,
                                             MARU_StringList *out_list) {
   MARU_Window_X11 *win = maru_getClipboardWindow_X11(context);
   if (!win) {
@@ -132,7 +132,7 @@ static MARU_Status maru_requestDropData_X11_win(MARU_Window *window,
 }
 
 static MARU_Status
-maru_getAvailableDropMIMETypes_X11_win(MARU_Window *window,
+maru_getAvailableDropMIMETypes_X11_win(const MARU_Window *window,
                                        MARU_StringList *out_list) {
   return maru_getAvailableMIMETypes_X11(window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP,
                                         out_list);
@@ -257,7 +257,7 @@ MARU_API MARU_Status maru_destroyImage(MARU_Image *image) {
   return maru_destroyImage_X11(image);
 }
 
-MARU_API MARU_Status maru_getControllers(MARU_Context *context,
+MARU_API MARU_Status maru_getControllers(const MARU_Context *context,
                                          MARU_ControllerList *out_list) {
   MARU_API_VALIDATE(getControllers, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
@@ -341,7 +341,7 @@ MARU_API MARU_Status maru_requestDropData(MARU_Window *window,
 }
 
 MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(
-    MARU_Context *context, MARU_StringList *out_list) {
+    const MARU_Context *context, MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableClipboardMIMETypes, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   MARU_API_VALIDATE_LIVE(getAvailableClipboardMIMETypes, context, out_list);
@@ -349,7 +349,7 @@ MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(
 }
 
 MARU_API MARU_Status
-maru_getAvailableDropMIMETypes(MARU_Window *window, MARU_StringList *out_list) {
+maru_getAvailableDropMIMETypes(const MARU_Window *window, MARU_StringList *out_list) {
   MARU_API_VALIDATE(getAvailableDropMIMETypes, window, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(getAvailableDropMIMETypes, window, out_list);
@@ -382,7 +382,7 @@ MARU_API bool maru_wakeContext(MARU_Context *context) {
   return maru_wakeContext_X11(context);
 }
 
-MARU_API MARU_Status maru_getMonitors(MARU_Context *context, MARU_MonitorList *out_list) {
+MARU_API MARU_Status maru_getMonitors(const MARU_Context *context, MARU_MonitorList *out_list) {
   MARU_API_VALIDATE(getMonitors, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   return maru_getMonitors_X11(context, out_list);

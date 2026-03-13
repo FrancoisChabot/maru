@@ -686,7 +686,7 @@ static inline void _maru_validate_destroyImage(MARU_Image *image) {
 }
 
 static inline void
-_maru_validate_getControllers(MARU_Context *context,
+_maru_validate_getControllers(const MARU_Context *context,
                               MARU_ControllerList *out_list) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(out_list != NULL);
@@ -831,7 +831,7 @@ static inline void _maru_validate_requestDropData(MARU_Window *window,
 }
 
 static inline void
-_maru_validate_getAvailableMIMETypes(MARU_Window *window,
+_maru_validate_getAvailableMIMETypes(const MARU_Window *window,
                                      MARU_DataExchangeTarget target,
                                      MARU_StringList *out_list) {
   MARU_CONSTRAINT_CHECK(window != NULL);
@@ -841,7 +841,7 @@ _maru_validate_getAvailableMIMETypes(MARU_Window *window,
 }
 
 static inline void
-_maru_validate_getAvailableClipboardMIMETypes(MARU_Context *context,
+_maru_validate_getAvailableClipboardMIMETypes(const MARU_Context *context,
                                               MARU_StringList *out_list) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   _maru_validate_thread((const MARU_Context_Base *)context);
@@ -849,7 +849,7 @@ _maru_validate_getAvailableClipboardMIMETypes(MARU_Context *context,
 }
 
 static inline void
-_maru_validate_getAvailableDropMIMETypes(MARU_Window *window,
+_maru_validate_getAvailableDropMIMETypes(const MARU_Window *window,
                                          MARU_StringList *out_list) {
   _maru_validate_getAvailableMIMETypes(
       window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP, out_list);
@@ -868,7 +868,7 @@ static inline void _maru_validate_postEvent(MARU_Context *context,
   (void)evt;
 }
 
-static inline void _maru_validate_getMonitors(MARU_Context *context,
+static inline void _maru_validate_getMonitors(const MARU_Context *context,
                                               MARU_MonitorList *out_list) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(out_list != NULL);
@@ -976,7 +976,7 @@ static inline void _maru_validate_getVkExtensions(const MARU_Context *context,
 }
 
 static inline void
-_maru_validate_createVkSurface(MARU_Window *window, VkInstance instance,
+_maru_validate_createVkSurface(const MARU_Window *window, VkInstance instance,
                                MARU_VkGetInstanceProcAddrFunc vk_loader,
                                VkSurfaceKHR *out_surface) {
   MARU_CONSTRAINT_CHECK(window != NULL);
@@ -1068,7 +1068,7 @@ static inline void _maru_validate_live_requestDropData(MARU_Window *window,
 }
 
 static inline void _maru_validate_live_getAvailableMIMETypes(
-    MARU_Window *window, MARU_DataExchangeTarget target,
+    const MARU_Window *window, MARU_DataExchangeTarget target,
     MARU_StringList *out_list) {
   (void)target;
   (void)out_list;
@@ -1076,14 +1076,14 @@ static inline void _maru_validate_live_getAvailableMIMETypes(
 }
 
 static inline void
-_maru_validate_live_getAvailableClipboardMIMETypes(MARU_Context *context,
+_maru_validate_live_getAvailableClipboardMIMETypes(const MARU_Context *context,
                                                    MARU_StringList *out_list) {
   (void)context;
   (void)out_list;
 }
 
 static inline void
-_maru_validate_live_getAvailableDropMIMETypes(MARU_Window *window,
+_maru_validate_live_getAvailableDropMIMETypes(const MARU_Window *window,
                                               MARU_StringList *out_list) {
   _maru_validate_live_getAvailableMIMETypes(
       window, MARU_DATA_EXCHANGE_TARGET_DRAG_DROP, out_list);
@@ -1102,7 +1102,7 @@ _maru_validate_live_setMonitorMode(MARU_Monitor *monitor,
   (void)mode;
 }
 static inline void
-_maru_validate_live_createVkSurface(MARU_Window *window, VkInstance instance,
+_maru_validate_live_createVkSurface(const MARU_Window *window, VkInstance instance,
                                     MARU_VkGetInstanceProcAddrFunc vk_loader,
                                     VkSurfaceKHR *out_surface) {
   (void)instance;
