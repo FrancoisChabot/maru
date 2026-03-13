@@ -38,7 +38,7 @@ TEST_CASE("Queue C++ API - C++20 Visitor Scan") {
 
     queue.scan(maru::overloads{
         [&](maru::QueuedWindowFrameEvent evt) {
-            CHECK(evt.event.timestamp_ms == 123);
+            CHECK(evt->timestamp_ms == 123);
             frame_count++;
         },
         [&](maru::QueuedCloseRequestedEvent) { close_count++; }

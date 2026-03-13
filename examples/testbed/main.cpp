@@ -13,7 +13,7 @@
 #include "imgui_impl_maru.h"
 #include "imgui_impl_vulkan.h"
 #include "maru/maru.h"
-
+#include "maru/vulkan.h"
 // Volk headers
 #ifdef IMGUI_IMPL_VULKAN_USE_VOLK
 #define VOLK_IMPLEMENTATION

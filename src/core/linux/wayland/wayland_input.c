@@ -787,7 +787,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
 
     if (!is_repeat) {
         MARU_Event evt = {0};
-        evt.key_changed.raw_key = maru_key;
+        evt.key_changed.key = maru_key;
         evt.key_changed.state = maru_state;
         evt.key_changed.modifiers = _maru_wayland_get_modifiers(ctx);
 

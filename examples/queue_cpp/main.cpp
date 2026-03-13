@@ -1,6 +1,7 @@
 #include "../shared_renderer/vulkan_renderer.h"
 #include "maru/cpp/events.hpp"
 #include "maru/maru.hpp"
+#include "maru/vulkan.hpp"
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -58,7 +59,7 @@ int main() {
   maru::Context& context = *context_result;
 
   // Initialize the vulkan renderer (we'll need a vkInstance at least)
-  Renderer renderer(context.getVkExtensions());
+  Renderer renderer(maru::getVkExtensions(context));
   
   // Create a window.
   MARU_WindowCreateInfo window_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
@@ -120,12 +121,12 @@ int main() {
         std::cout << "mouse movement: (" << e->dip_position.x << ", (" << e->dip_position.y << ")\n";
       },
       [&](maru::QueuedKeyChangedEvent e) {
-        std::cout << "key: (" << e->raw_key << ", " << e->state << ")\n";
+        std::cout << "key: (" << e->key << ", " << e->state << ")\n";
       },
       [&](maru::QueuedWindowReadyEvent e) {
         if (e.window_id == window.getId()) {
           auto surface_result =
-              window.createVkSurface(renderer.instance(), vkGetInstanceProcAddr);
+              maru::createVkSurface(window, renderer.instance(), vkGetInstanceProcAddr);
           if (surface_result) {
             renderer.setup_surface(*surface_result, e->geometry);
           }

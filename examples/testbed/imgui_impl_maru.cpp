@@ -300,7 +300,7 @@ void ImGui_ImplMaru_HandleEvent(MARU_EventId type, const MARU_Event* event) {
     } else if (type == MARU_EVENT_MOUSE_SCROLLED) {
         io.AddMouseWheelEvent((float)event->mouse_scrolled.dip_delta.x, (float)event->mouse_scrolled.dip_delta.y);
     } else if (type == MARU_EVENT_KEY_CHANGED) {
-        ImGuiKey key = ImGui_ImplMaru_KeyToImGuiKey(event->key_changed.raw_key);
+        ImGuiKey key = ImGui_ImplMaru_KeyToImGuiKey(event->key_changed.key);
         if (key != ImGuiKey_None) {
             io.AddKeyEvent(key, event->key_changed.state == MARU_BUTTON_STATE_PRESSED);
             io.AddKeyEvent(ImGuiMod_Ctrl, (event->key_changed.modifiers & MARU_MODIFIER_CONTROL) != 0);

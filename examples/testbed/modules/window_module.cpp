@@ -4,6 +4,7 @@
 #include "window_module.h"
 #include "imgui.h"
 #include "maru/maru.h"
+#include "maru/vulkan.h"
 #include <algorithm>
 #include <cstdlib>
 #include <cstdio>

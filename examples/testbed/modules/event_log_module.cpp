@@ -37,7 +37,7 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
         ss << "Size: " << e.window_resized.geometry.dip_size.x << "x" << e.window_resized.geometry.dip_size.y 
            << " (Pix: " << e.window_resized.geometry.px_size.x << "x" << e.window_resized.geometry.px_size.y << ")";
     } else if (type == MARU_EVENT_KEY_CHANGED) {
-        ss << "Key: " << (int)e.key_changed.raw_key << " State: " << (e.key_changed.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
+        ss << "Key: " << (int)e.key_changed.key << " State: " << (e.key_changed.state == MARU_BUTTON_STATE_PRESSED ? "PR" : "RE")
            << " Mods: " << formatModifiers(e.key_changed.modifiers);
     } else if (type == MARU_EVENT_MOUSE_MOVED) {
         ss << "Pos: (" << e.mouse_moved.dip_position.x << "," << e.mouse_moved.dip_position.y << ")"

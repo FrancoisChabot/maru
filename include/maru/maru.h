@@ -325,6 +325,7 @@ typedef union MARU_DiagnosticSubject {
 
 typedef struct MARU_DiagnosticInfo {
   MARU_Diagnostic diagnostic;
+  /* Borrowed diagnostic string valid only for the duration of the callback. */
   const char* message;
   const MARU_Context* context;
   MARU_DiagnosticSubjectKind subject_kind;
@@ -675,7 +676,8 @@ typedef struct MARU_WindowStateChangedEvent {
 } MARU_WindowStateChangedEvent;
 
 typedef struct MARU_KeyChangedEvent {
-  MARU_Key raw_key;
+  /* Maru-normalized logical key, not a backend-native raw key/scancode. */
+  MARU_Key key;
   MARU_ButtonState state;
   MARU_ModifierFlags modifiers;
 } MARU_KeyChangedEvent;
@@ -1001,6 +1003,9 @@ MARU_API MARU_Status maru_pumpEvents(MARU_Context* context,
  *
  * This will also implicitly wake the context.
  *
+ * `type` must be one of the user-defined event ids
+ * (`MARU_EVENT_USER_0` .. `MARU_EVENT_USER_15`).
+ *
  * Posted user events are always dispatched as context-scoped events, so the
  * callback receives `window == NULL`.
  *
@@ -1063,6 +1068,18 @@ typedef struct MARU_ContextAttributes {
   uint32_t idle_timeout_ms;
 } MARU_ContextAttributes;
 
+/*
+ * Context creation contract:
+ *
+ * - `allocator` uses the default allocator when all callbacks are NULL.
+ * - Custom allocators are all-or-none: if any callback is provided, `alloc_cb`,
+ *   `realloc_cb`, and `free_cb` must all be non-null.
+ * - `backend = MARU_BACKEND_UNKNOWN` lets Maru choose the native backend using
+ *   the documented platform-default selection rules.
+ * - `attributes` and `tuning` are copied by maru_createContext().
+ * - `userdata` is stored directly on the created context and can later be
+ *   accessed via maru_getContextUserdata() / maru_setContextUserdata().
+ */
 typedef struct MARU_ContextCreateInfo {
   MARU_Allocator allocator;
   MARU_BackendType backend;
@@ -1348,6 +1365,13 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
  * `dip_position` updates may act as a silent no-op or return MARU_FAILURE on 
  * certain backends (like Wayland) where positioning is compositor-controlled.
  *
+ * Constraint sentinels:
+ * - `dip_max_size.x == 0` and/or `dip_max_size.y == 0` mean that axis is
+ *   unbounded.
+ * - `aspect_ratio = {0, 0}` disables the aspect-ratio constraint.
+ * - Otherwise, `aspect_ratio.num` and `aspect_ratio.denom` must both be
+ *   strictly positive.
+ *
  * Window presentation state contract:
  * - `fullscreen`, `maximized`, and `minimized` are mutually exclusive.
  * - `fullscreen` and `maximized` require `visible == true`.
@@ -1455,9 +1479,9 @@ typedef struct MARU_WindowCreateInfo {
  * Wait for MARU_EVENT_WINDOW_READY or maru_isWindowReady(window) before using
  * APIs that require a realized native window, such as maru_updateWindow(),
  * maru_requestWindowFocus(), maru_requestWindowFrame(),
- * maru_requestWindowAttention(), drag/drop window data-exchange APIs, native
- * window getters, and Vulkan surface creation APIs declared in
- * `maru/vulkan.h`.
+ * maru_requestWindowAttention(), maru_announceDragData(),
+ * maru_requestDropData(), maru_getAvailableDropMIMETypes(), native window
+ * getters, and Vulkan surface creation APIs declared in `maru/vulkan.h`.
  *
  * If the owning context is already lost, status-returning APIs on that window
  * short-circuit with MARU_CONTEXT_LOST before runtime ready-window
@@ -1474,12 +1498,16 @@ MARU_API MARU_Status maru_createWindow(MARU_Context* context,
  * MARU_CONTEXT_LOST; destroy the context itself for terminal cleanup.
  */
 MARU_API MARU_Status maru_destroyWindow(MARU_Window* window);
+/* Requires a ready window. */
 MARU_API MARU_Status maru_updateWindow(MARU_Window* window,
                                        uint64_t field_mask,
                                        const MARU_WindowAttributes* attributes);
+/* Requires a ready window. */
 MARU_API MARU_Status maru_requestWindowFocus(MARU_Window* window);
 /* Backends may coalesce redundant requests; treat this as an edge-triggered hint. */
+/* Requires a ready window. */
 MARU_API MARU_Status maru_requestWindowFrame(MARU_Window* window);
+/* Requires a ready window. */
 MARU_API MARU_Status maru_requestWindowAttention(MARU_Window* window);
 
 /* ----- Controllers ----- */
@@ -1600,6 +1628,7 @@ MARU_API MARU_Status maru_setControllerHapticLevels(MARU_Controller* controller,
 MARU_API MARU_Status maru_announceClipboardData(MARU_Context* context,
                                                 MARU_StringList mime_types);
 /* `mime_types` strings are copied before a successful return. */
+/* Requires a ready window. */
 MARU_API MARU_Status maru_announceDragData(MARU_Window* window,
                                            MARU_StringList mime_types,
                                            MARU_DropActionMask allowed_actions);
@@ -1652,6 +1681,7 @@ MARU_API MARU_Status maru_requestClipboardData(MARU_Context* context,
  * MARU_EVENT_DATA_RECEIVED callback reports the same pointer in
  * event->data_received.userdata.
  */
+/* Requires a ready window. */
 MARU_API MARU_Status maru_requestDropData(MARU_Window* window,
                                           const char* mime_type,
                                           void* userdata);
@@ -1665,10 +1695,11 @@ MARU_API MARU_Status maru_getAvailableClipboardMIMETypes(MARU_Context* context,
                                                          MARU_StringList* out_list);
 /*
  * Returns a borrowed snapshot of the currently available drop-offer MIME
- * types. The snapshot is invalidated by the next
- * maru_getAvailableDropMIMETypes() call on the same context, and may also be
- * replaced by a later pump cycle that changes the active drop offer.
+ * types for `window`. The snapshot is invalidated by the next
+ * maru_getAvailableDropMIMETypes() call on the same window, and may also be
+ * replaced by a later pump cycle that changes that window's active drop offer.
  */
+/* Requires a ready window. */
 MARU_API MARU_Status maru_getAvailableDropMIMETypes(MARU_Window* window,
                                                     MARU_StringList* out_list);
 

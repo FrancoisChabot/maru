@@ -13,7 +13,7 @@ The `MARU_EVENT_KEY_CHANGED` event is fired when a physical key is pressed or re
 ```c
 void handle_event(MARU_EventId type, MARU_Window *window, const MARU_Event *event, void *userdata) {
     if (type == MARU_EVENT_KEY_CHANGED) {
-        if (event->key_changed.raw_key == MARU_KEY_ESCAPE &&
+        if (event->key_changed.key == MARU_KEY_ESCAPE &&
             event->key_changed.state == MARU_BUTTON_STATE_PRESSED) {
             // Quit app
         }

@@ -190,7 +190,7 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
         }
 
         MARU_Event evt = {0};
-        evt.key_changed.raw_key = key;
+        evt.key_changed.key = key;
         evt.key_changed.state = state;
         evt.key_changed.modifiers = _maru_get_modifiers_windows();
         _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_CHANGED, (MARU_Window *)win, &evt);

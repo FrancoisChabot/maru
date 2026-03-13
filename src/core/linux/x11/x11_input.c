@@ -743,7 +743,7 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
 
       if (!is_repeat) {
         MARU_Event mevt = {0};
-        mevt.key_changed.raw_key = key;
+        mevt.key_changed.key = key;
         mevt.key_changed.state = state;
         mevt.key_changed.modifiers = _maru_x11_get_modifiers(ev->xkey.state);
         _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_CHANGED, (MARU_Window *)win, &mevt);

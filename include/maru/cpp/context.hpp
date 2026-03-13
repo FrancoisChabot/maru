@@ -7,7 +7,6 @@
 #include <chrono>
 #include <vector>
 
-#include "maru/vulkan.h"
 #include "maru/cpp/fwd.hpp"
 #include "maru/cpp/expected.hpp"
 #include "maru/cpp/window.hpp"
@@ -42,7 +41,6 @@ public:
 
     MARU_Status update(uint64_t field_mask, const MARU_ContextAttributes& attributes);
     
-    std::vector<const char*> getVkExtensions() const;
     expected<std::vector<Monitor>> getMonitors();
     expected<std::vector<Controller>> getControllers();
 

@@ -4,7 +4,6 @@
 #ifndef MARU_CPP_WINDOW_HPP_INCLUDED
 #define MARU_CPP_WINDOW_HPP_INCLUDED
 
-#include "maru/vulkan.h"
 #include "maru/cpp/fwd.hpp"
 #include "maru/cpp/expected.hpp"
 
@@ -44,8 +43,6 @@ public:
     MARU_Status requestFocus();
     MARU_Status requestFrame();
     MARU_Status requestAttention();
-
-    expected<VkSurfaceKHR> createVkSurface(VkInstance instance, MARU_VkGetInstanceProcAddrFunc vk_loader);
 
     // Convenience setters
     MARU_Status setTitle(const char* title);
