@@ -13,14 +13,18 @@
  *    broadest cross-platform parity, make this your main thread.
  * 2. Unless documented otherwise, functions returning MARU_Status are owner-
  *    thread APIs and must be called from that thread.
- * 3. Direct-return accessors can be called from any thread with external
- *    synchronization to guarantee visibility with the owner thread.
+ * 3. Direct inline state accessors, polling getters, native-handle getters,
+ *    and userdata accessors (`maru_get*Userdata` / `maru_set*Userdata`) can
+ *    be called from any thread with external synchronization to guarantee
+ *    visibility with the owner thread.
  * 4. maru_postEvent(), maru_wakeContext(), maru_retain*(), maru_release*(),
  *    and maru_getVersion() are globally thread-safe and can be called from
  *    any thread without external synchronization.
  * 5. Backends may use internal helper threads for blocking OS work. These
  *    helpers never invoke your MARU_EventCallback directly; event callbacks are
  *    still only dispatched inline from maru_pumpEvents() on the owner thread.
+ * 6. Unless documented otherwise, APIs not covered by the two rules above are
+ *    owner-thread APIs.
  *
  * Ownership and lifetime model
  *
@@ -99,6 +103,14 @@ typedef uint64_t MARU_WindowId;
  * APIs on those child handles will typically short-circuit with
  * MARU_CONTEXT_LOST; destroy the context rather than trying to tear down
  * attached child objects one by one.
+ *
+ * Validation/early-out precedence for status-returning APIs is:
+ * 1. Argument-related API violations are diagnosed first.
+ * 2. If the arguments are valid but the owning context is lost, the API
+ *    returns MARU_CONTEXT_LOST.
+ * 3. Runtime-state preconditions that depend on a live backend (for example,
+ *    requiring a ready window) are only meaningful after the context-loss
+ *    check above.
  */
 typedef enum MARU_Status {
   MARU_SUCCESS = 0,             // The operation succeeded
@@ -913,6 +925,7 @@ MARU_API bool maru_wakeContext(MARU_Context* context);
   (MARU_CONTEXT_ATTR_INHIBIT_IDLE | MARU_CONTEXT_ATTR_DIAGNOSTICS | \
    MARU_CONTEXT_ATTR_IDLE_TIMEOUT)
 
+/* Userdata accessors follow the direct-inline-accessor threading rule. */
 static inline void* maru_getContextUserdata(const MARU_Context* context);
 static inline void maru_setContextUserdata(MARU_Context* context, void* userdata);
 static inline bool maru_isContextLost(const MARU_Context* context);
@@ -998,6 +1011,7 @@ MARU_API MARU_Status maru_createImage(MARU_Context* context,
  * windows will automatically revert to their default icon.
  */
 MARU_API MARU_Status maru_destroyImage(MARU_Image* image);
+/* Userdata accessors follow the direct-inline-accessor threading rule. */
 static inline void* maru_getImageUserdata(const MARU_Image* image);
 static inline void maru_setImageUserdata(MARU_Image* image, void* userdata);
 
@@ -1025,6 +1039,7 @@ typedef enum MARU_CursorShape {
   MARU_CURSOR_SHAPE_NWSE_RESIZE = 11,
 } MARU_CursorShape;
 
+/* Userdata accessors follow the direct-inline-accessor threading rule. */
 static inline void* maru_getCursorUserdata(const MARU_Cursor* cursor);
 static inline void maru_setCursorUserdata(MARU_Cursor* cursor, void* userdata);
 static inline bool maru_isCursorSystem(const MARU_Cursor* cursor);
@@ -1085,6 +1100,7 @@ typedef struct MARU_MonitorList {
   uint32_t count;
 } MARU_MonitorList;
 
+/* Userdata accessors follow the direct-inline-accessor threading rule. */
 static inline void* maru_getMonitorUserdata(const MARU_Monitor* monitor);
 static inline void maru_setMonitorUserdata(MARU_Monitor* monitor, void* userdata);
 static inline const MARU_Context* maru_getMonitorContext(const MARU_Monitor* monitor);
@@ -1131,6 +1147,7 @@ typedef enum MARU_TextInputType {
   MARU_TEXT_INPUT_TYPE_NUMERIC = 4,
 } MARU_TextInputType;
 
+/* Userdata accessors follow the direct-inline-accessor threading rule. */
 static inline void* maru_getWindowUserdata(const MARU_Window* window);
 static inline void maru_setWindowUserdata(MARU_Window* window, void* userdata);
 static inline const MARU_Context* maru_getWindowContext(const MARU_Window* window);
@@ -1296,6 +1313,10 @@ typedef struct MARU_WindowCreateInfo {
  * maru_requestWindowFocus(), maru_requestWindowFrame(),
  * maru_requestWindowAttention(), data exchange APIs, native window getters,
  * and maru_createVkSurface().
+ *
+ * If the owning context is already lost, status-returning APIs on that window
+ * short-circuit with MARU_CONTEXT_LOST before runtime ready-window
+ * preconditions become relevant.
  */
 MARU_API MARU_Status maru_createWindow(MARU_Context* context,
                                        const MARU_WindowCreateInfo* create_info,
@@ -1371,6 +1392,7 @@ typedef struct MARU_ControllerList {
   uint32_t count;
 } MARU_ControllerList;
 
+/* Userdata accessors follow the direct-inline-accessor threading rule. */
 static inline void* maru_getControllerUserdata(const MARU_Controller* controller);
 static inline void maru_setControllerUserdata(MARU_Controller* controller, void* userdata);
 static inline const MARU_Context* maru_getControllerContext(const MARU_Controller* controller);
