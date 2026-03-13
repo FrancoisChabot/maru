@@ -22,7 +22,15 @@ extern "C" {
       abort();                                                                 \
   } while (0)
 #else
+#if defined(__clang__)
+#define MARU_ASSUME(cond) __builtin_assume(cond)
+#elif defined(_MSC_VER)
+#define MARU_ASSUME(cond) __assume(cond)
+#elif defined(__GNUC__)
+#define MARU_ASSUME(cond) ((cond) ? (void)0 : __builtin_unreachable())
+#else
 #define MARU_ASSUME(cond) (void)0
+#endif
 #endif
 
 #define MARU_CONTEXT_STATE_LOST MARU_BIT(0)
