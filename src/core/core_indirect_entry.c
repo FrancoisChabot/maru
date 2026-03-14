@@ -45,13 +45,6 @@ MARU_API MARU_Status maru_createWindow(MARU_Context *context,
   return ctx_base->backend->createWindow(context, create_info, out_window);
 }
 
-MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
-  MARU_API_VALIDATE(wakeContext, context);
-  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
-  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
-  return ctx_base->backend->wakeContext(context);
-}
-
 MARU_API MARU_Status maru_getControllers(const MARU_Context *context,
                                          MARU_ControllerList *out_list) {
   MARU_API_VALIDATE(getControllers, context, out_list);
@@ -331,33 +324,6 @@ MARU_API MARU_Status maru_getMonitors(const MARU_Context *context, MARU_MonitorL
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->getMonitors(context, out_list);
-}
-
-MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(retainMonitor, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  if (mon_base->backend->retainMonitor) {
-    mon_base->backend->retainMonitor(monitor);
-    return;
-  }
-  atomic_fetch_add_explicit(&mon_base->ref_count, 1u, memory_order_relaxed);
-}
-
-MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(releaseMonitor, monitor);
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  if (mon_base->backend->releaseMonitor) {
-    mon_base->backend->releaseMonitor(monitor);
-    return;
-  }
-  uint32_t current = atomic_load_explicit(&mon_base->ref_count, memory_order_acquire);
-  while (current > 0) {
-    if (atomic_compare_exchange_weak_explicit(&mon_base->ref_count, &current,
-                                              current - 1u, memory_order_acq_rel,
-                                              memory_order_acquire)) {
-      break;
-    }
-  }
 }
 
 MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {

@@ -40,8 +40,6 @@ typedef struct MARU_Backend {
   __typeof__(maru_getAvailableDropMIMETypes) *getAvailableDropMIMETypes;
   
   __typeof__(maru_getMonitors) *getMonitors;
-  __typeof__(maru_retainMonitor) *retainMonitor;
-  __typeof__(maru_releaseMonitor) *releaseMonitor;
   __typeof__(maru_getMonitorModes) *getMonitorModes;
   __typeof__(maru_setMonitorMode) *setMonitorMode;
 

@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <stdio.h>
+
 void _maru_wayland_dispatch_state_changed(MARU_Window_WL *window,
                                                uint32_t changed_fields) {
   if (changed_fields == 0u) {
@@ -82,3 +84,12 @@ void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window) {
     window->ext.idle_inhibitor = NULL;
   }
 }
+
+#ifdef MARU_ENABLE_INTERNAL_CHECKS
+void _maru_wayland_symbol_poison_trap(void) {
+  fprintf(stderr, "MARU: Fatal Error: Poisoned Wayland symbol called. "
+                  "This usually means the library was linked against libwayland-client "
+                  "directly instead of using the dynamic loader.\n");
+  abort();
+}
+#endif

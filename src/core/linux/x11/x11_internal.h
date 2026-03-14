@@ -240,7 +240,6 @@ struct MARU_Monitor_X11 {
   RRCrtc crtc;
   RRMode current_mode_id;
   Rotation current_rotation;
-  char *name_storage;
   MARU_VideoMode *modes;
   uint32_t mode_count;
 };
@@ -342,8 +341,6 @@ MARU_Status maru_createImage_X11(MARU_Context *context, const MARU_ImageCreateIn
 MARU_Status maru_destroyImage_X11(MARU_Image *image);
 
 MARU_Status maru_getMonitors_X11(const MARU_Context *context, MARU_MonitorList *out_list);
-void maru_retainMonitor_X11(MARU_Monitor *monitor);
-void maru_releaseMonitor_X11(MARU_Monitor *monitor);
 MARU_Status maru_getMonitorModes_X11(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
 MARU_Status maru_setMonitorMode_X11(MARU_Monitor *monitor, MARU_VideoMode mode);
 

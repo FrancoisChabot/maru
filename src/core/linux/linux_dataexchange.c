@@ -10,8 +10,8 @@
 
 #include "maru_mem_internal.h"
 
-static const char *_maru_linux_dataexchange_copy_string(MARU_Context_Base *ctx_base,
-                                                        const char *text) {
+const char *maru_linux_dataexchange_copyString(MARU_Context_Base *ctx_base,
+                                               const char *text) {
   if (!text) return NULL;
   const size_t len = strlen(text);
   char *copy = (char *)maru_context_alloc(ctx_base, len + 1u);
@@ -40,7 +40,7 @@ MARU_Status maru_linux_dataexchange_queueTransfer(MARU_Context_Base *ctx_base,
   }
   memset(transfer, 0, sizeof(*transfer));
 
-  transfer->mime_type = _maru_linux_dataexchange_copy_string(ctx_base, mime_type);
+  transfer->mime_type = maru_linux_dataexchange_copyString(ctx_base, mime_type);
   if (!transfer->mime_type) {
     maru_context_free(ctx_base, transfer);
     close(fd);
@@ -78,7 +78,7 @@ MARU_Status maru_linux_dataexchange_queueWriteTransfer(MARU_Context_Base *ctx_ba
   }
   memset(transfer, 0, sizeof(*transfer));
 
-  transfer->mime_type = _maru_linux_dataexchange_copy_string(ctx_base, mime_type);
+  transfer->mime_type = maru_linux_dataexchange_copyString(ctx_base, mime_type);
   if (!transfer->mime_type) {
     maru_context_free(ctx_base, transfer);
     close(fd);
@@ -278,4 +278,115 @@ void maru_linux_dataexchange_destroyTransfers(MARU_Context_Base *ctx_base,
     maru_context_free(ctx_base, curr);
     curr = next;
   }
+}
+
+uint32_t maru_linux_dataexchange_parseUriList(MARU_Context_Base *ctx_base,
+                                              const char *data, size_t size,
+                                              const char ***out_paths) {
+  uint32_t count = 0;
+  const char *curr = data;
+  const char *end = data + size;
+
+  while (curr < end) {
+    const char *line_end = (const char *)memchr(curr, '\n', (size_t)(end - curr));
+    if (!line_end) line_end = end;
+
+    const char *line_start = curr;
+    while (line_start < line_end && (*line_start == ' ' || *line_start == '\t')) {
+      line_start++;
+    }
+
+    if (line_start < line_end && *line_start != '#') {
+      count++;
+    }
+    curr = (line_end < end) ? line_end + 1 : end;
+  }
+
+  if (count == 0) {
+    *out_paths = NULL;
+    return 0;
+  }
+
+  const char **paths =
+      (const char **)maru_context_alloc(ctx_base, sizeof(char *) * count);
+  if (!paths) {
+    *out_paths = NULL;
+    return 0;
+  }
+
+  uint32_t idx = 0;
+  curr = data;
+  while (curr < end && idx < count) {
+    const char *line_end = (const char *)memchr(curr, '\n', (size_t)(end - curr));
+    if (!line_end) line_end = end;
+
+    const char *line_start = curr;
+    while (line_start < line_end && (*line_start == ' ' || *line_start == '\t')) {
+      line_start++;
+    }
+
+    const char *content_end = line_end;
+    while (content_end > line_start &&
+           (content_end[-1] == '\r' || content_end[-1] == ' ' ||
+            content_end[-1] == '\t')) {
+      content_end--;
+    }
+
+    if (line_start < content_end && *line_start != '#') {
+      const char *uri = line_start;
+      size_t uri_len = (size_t)(content_end - line_start);
+
+      // Handle file:// prefix
+      if (uri_len > 7 && strncmp(uri, "file://", 7) == 0) {
+        uri += 7;
+        uri_len -= 7;
+        // Skip host if present (e.g., file://localhost/...)
+        if (uri_len > 0 && *uri != '/') {
+          const char *slash = (const char *)memchr(uri, '/', uri_len);
+          if (slash) {
+            uri_len -= (size_t)(slash - uri);
+            uri = slash;
+          }
+        }
+      }
+
+      char *path = (char *)maru_context_alloc(ctx_base, uri_len + 1);
+      if (path) {
+        memcpy(path, uri, uri_len);
+        path[uri_len] = '\0';
+
+        // URL decoding
+        char *d = path;
+        const char *s = path;
+        while (*s) {
+          if (*s == '%' && s[1] && s[2]) {
+            int hi = s[1];
+            int lo = s[2];
+            if (hi >= '0' && hi <= '9')
+              hi -= '0';
+            else if (hi >= 'A' && hi <= 'F')
+              hi -= 'A' - 10;
+            else if (hi >= 'a' && hi <= 'f')
+              hi -= 'a' - 10;
+            if (lo >= '0' && lo <= '9')
+              lo -= '0';
+            else if (lo >= 'A' && lo <= 'F')
+              lo -= 'A' - 10;
+            else if (lo >= 'a' && lo <= 'f')
+              lo -= 'a' - 10;
+            *d++ = (char)((hi << 4) | lo);
+            s += 3;
+          } else {
+            *d++ = *s++;
+          }
+        }
+        *d = '\0';
+        paths[idx++] = path;
+      }
+    }
+    curr = (line_end < end) ? line_end + 1 : end;
+  }
+
+  *out_paths = paths;
+  return idx;
 }

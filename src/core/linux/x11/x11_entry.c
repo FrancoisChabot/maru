@@ -136,8 +136,6 @@ const MARU_Backend maru_backend_X11 = {
   .getAvailableClipboardMIMETypes = maru_getAvailableClipboardMIMETypes_X11_ctx,
   .getAvailableDropMIMETypes = maru_getAvailableDropMIMETypes_X11_win,
   .getMonitors = maru_getMonitors_X11,
-  .retainMonitor = maru_retainMonitor_X11,
-  .releaseMonitor = maru_releaseMonitor_X11,
   .getMonitorModes = maru_getMonitorModes_X11,
   .setMonitorMode = maru_setMonitorMode_X11,
   .getContextNativeHandle = maru_getContextNativeHandle_X11,
@@ -360,16 +358,6 @@ MARU_API MARU_Status maru_getMonitors(const MARU_Context *context, MARU_MonitorL
   MARU_API_VALIDATE(getMonitors, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   return maru_getMonitors_X11(context, out_list);
-}
-
-MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(retainMonitor, monitor);
-  maru_retainMonitor_X11(monitor);
-}
-
-MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(releaseMonitor, monitor);
-  maru_releaseMonitor_X11(monitor);
 }
 
 MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {

@@ -9,22 +9,7 @@
 
 static void _maru_wayland_set_monitor_name(MARU_Monitor_WL *monitor,
                                            const char *name) {
-  if (!name) {
-    return;
-  }
-
-  MARU_Context_WL *ctx = (MARU_Context_WL *)monitor->base.ctx_base;
-  const size_t len = strlen(name);
-  char *copy = (char *)maru_context_alloc(&ctx->base, len + 1);
-  if (!copy) {
-    return;
-  }
-  memcpy(copy, name, len + 1);
-
-  maru_context_free(&ctx->base, monitor->name_storage);
-
-  monitor->name_storage = copy;
-  monitor->base.pub.name = monitor->name_storage;
+  _maru_monitor_set_name(&monitor->base, name);
 }
 
 static void _maru_wayland_recompute_primary(MARU_Context_WL *ctx) {
@@ -243,9 +228,8 @@ static void _maru_wayland_destroy_monitor(MARU_Monitor_WL *monitor) {
   }
   maru_context_free(&ctx->base, monitor->modes);
   monitor->modes = NULL;
-  maru_context_free(&ctx->base, monitor->name_storage);
-  monitor->name_storage = NULL;
 
+  _maru_monitor_set_name(&monitor->base, NULL);
   maru_context_free(&ctx->base, monitor);
 }
 
@@ -352,24 +336,8 @@ MARU_Status maru_getMonitors_WL(const MARU_Context *context, MARU_MonitorList *o
   return MARU_SUCCESS;
 }
 
-void maru_retainMonitor_WL(MARU_Monitor *monitor) {
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  atomic_fetch_add_explicit(&mon_base->ref_count, 1u, memory_order_relaxed);
-}
-
-void maru_releaseMonitor_WL(MARU_Monitor *monitor) {
-  MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)monitor;
-  uint32_t current = atomic_load_explicit(&mon_base->ref_count, memory_order_acquire);
-  while (current > 0) {
-    if (atomic_compare_exchange_weak_explicit(&mon_base->ref_count, &current,
-                                              current - 1u, memory_order_acq_rel,
-                                              memory_order_acquire)) {
-      if (current == 1u && !mon_base->is_active) {
-        maru_destroyMonitor_WL(monitor);
-      }
-      return;
-    }
-  }
+void _maru_monitor_free(MARU_Monitor_Base *monitor) {
+  _maru_wayland_destroy_monitor((MARU_Monitor_WL *)monitor);
 }
 
 MARU_Status maru_updateMonitors_WL(const MARU_Context *context) {

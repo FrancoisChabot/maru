@@ -89,7 +89,6 @@ static void _wl_seat_handle_capabilities(void *data, struct wl_seat *wl_seat, ui
     _wl_update_cursor_shape_device(ctx);
     maru_wl_pointer_destroy(ctx, ctx->wl.pointer);
     ctx->wl.pointer = NULL;
-    ctx->cursor_animation.active = false;
     _wl_update_cursor_shape_device(ctx);
   }
 
@@ -243,7 +242,6 @@ static void _wl_teardown_seat_state(MARU_Context_WL *ctx) {
   ctx->repeat.repeat_key = 0;
   ctx->repeat.next_repeat_ns = 0;
   ctx->repeat.interval_ns = 0;
-  ctx->cursor_animation.active = false;
   _maru_wayland_dataexchange_onSeatRemoved(ctx);
 
   _wl_clear_idle_notification_only(ctx);
@@ -864,9 +862,11 @@ static int _maru_wayland_pump_compute_timeout_ms(MARU_Context_WL *ctx,
                                                  uint32_t timeout_ms) {
   // Poll timeout is clamped by synthetic deadlines (key-repeat and cursor animation).
   int timeout = (timeout_ms == MARU_NEVER) ? -1 : (int)timeout_ms;
+  const uint64_t now_ms = _maru_linux_get_monotonic_time_ns() / 1000000ull;
+
   if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 &&
       ctx->repeat.next_repeat_ns != 0) {
-    const uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
+    const uint64_t now_ns = now_ms * 1000000ull;
     if (now_ns != 0) {
       if (ctx->repeat.next_repeat_ns <= now_ns) {
         timeout = 0;
@@ -879,24 +879,9 @@ static int _maru_wayland_pump_compute_timeout_ms(MARU_Context_WL *ctx,
       }
     }
   }
-  {
-    const uint64_t cursor_next_ns = _maru_wayland_cursor_next_frame_ns(ctx);
-    if (cursor_next_ns != 0) {
-      const uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
-      if (now_ns != 0) {
-        if (cursor_next_ns <= now_ns) {
-          timeout = 0;
-        } else {
-          const uint64_t wait_ns = cursor_next_ns - now_ns;
-          const int cursor_timeout_ms = (int)((wait_ns + 999999ull) / 1000000ull);
-          if (timeout < 0 || cursor_timeout_ms < timeout) {
-            timeout = cursor_timeout_ms;
-          }
-        }
-      }
-    }
-  }
-  return timeout;
+  
+  uint32_t adjusted_timeout = _maru_adjust_timeout_for_cursor_animation(&ctx->base, (timeout < 0) ? MARU_NEVER : (uint32_t)timeout, now_ms);
+  return (adjusted_timeout == MARU_NEVER) ? -1 : (int)adjusted_timeout;
 }
 
 static bool _maru_wayland_pump_poll_and_consume(MARU_Context_WL *ctx,
@@ -1051,7 +1036,7 @@ static void _maru_wayland_pump_dispatch_deferred_resizes(MARU_Context_WL *ctx) {
 static void _maru_wayland_pump_post_tick(MARU_Context_WL *ctx) {
   _maru_wayland_check_activation(ctx);
   _maru_wayland_pump_dispatch_repeats(ctx);
-  _maru_wayland_advance_cursor_animation(ctx);
+  _maru_advance_animated_cursors(&ctx->base, _maru_linux_get_monotonic_time_ns() / 1000000ull);
   _maru_wayland_pump_dispatch_deferred_resizes(ctx);
 }
 

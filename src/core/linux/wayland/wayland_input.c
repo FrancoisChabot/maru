@@ -162,182 +162,62 @@ void _maru_wayland_update_cursor(MARU_Context_WL *ctx, MARU_Window_WL *window, u
     MARU_ASSUME(ctx->wl.pointer != NULL);
     MARU_ASSUME(window != NULL);
 
-    MARU_Cursor *cursor_handle = (MARU_Cursor *)window->base.pub.current_cursor;
     MARU_CursorMode mode = window->base.pub.cursor_mode;
 
     if (mode == MARU_CURSOR_HIDDEN || mode == MARU_CURSOR_LOCKED) {
         maru_wl_pointer_set_cursor(ctx, ctx->wl.pointer, serial, NULL, 0, 0);
-        _maru_wayland_clear_cursor_animation(ctx);
         return;
     }
 
-    MARU_Cursor_WL *cursor = NULL;
-    struct wl_cursor *wl_cursor = NULL;
-    MARU_CursorShape system_shape = MARU_CURSOR_SHAPE_DEFAULT;
-    bool system_cursor = (cursor_handle == NULL);
+    MARU_Cursor_WL *cursor = (MARU_Cursor_WL *)window->base.pub.current_cursor;
 
-    if (cursor_handle) {
-        cursor = (MARU_Cursor_WL *)cursor_handle;
-        wl_cursor = cursor->wl_cursor;
-        system_cursor = (cursor->base.pub.flags & MARU_CURSOR_FLAG_SYSTEM) != 0;
-        system_shape = cursor->cursor_shape;
-    }
+    if (cursor && (cursor->base.pub.flags & MARU_CURSOR_FLAG_SYSTEM)) {
+        if (ctx->protocols.opt.wp_cursor_shape_manager_v1) {
+            uint32_t shape = 0;
+            if (_maru_cursor_shape_to_protocol_shape(cursor->cursor_shape, &shape)) {
+                maru_wp_cursor_shape_device_v1_set_shape(ctx, ctx->wl.cursor_shape_device, serial, shape);
+                return;
+            }
+        }
 
-    if (cursor && cursor->frame_count > 0) {
-        const MARU_WaylandCursorFrame *frame = &cursor->frames[0];
-        if (_maru_wayland_commit_cursor_buffer(ctx, serial, frame->buffer, frame->hotspot_x,
-                                               frame->hotspot_y, (int32_t)frame->width,
-                                               (int32_t)frame->height)) {
-            _maru_wayland_clear_cursor_animation(ctx);
-            if (cursor->frame_count > 1) {
-                uint32_t delay_ms = frame->delay_ms == 0 ? 1u : frame->delay_ms;
-                uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
-                if (now_ns != 0) {
-                    ctx->cursor_animation.window = window;
-                    ctx->cursor_animation.cursor = cursor;
-                    ctx->cursor_animation.theme_cursor = NULL;
-                    ctx->cursor_animation.frame_index = 0;
-                    ctx->cursor_animation.serial = serial;
-                    ctx->cursor_animation.next_frame_ns = now_ns + ((uint64_t)delay_ms * 1000000ull);
-                    ctx->cursor_animation.active = true;
+        if (cursor->wl_cursor) {
+            uint32_t frame_index = 0;
+            if (cursor->base.anim_enabled) {
+              frame_index = cursor->base.anim_current_frame;
+            }
+            struct wl_cursor_image *image = cursor->wl_cursor->images[frame_index % cursor->wl_cursor->image_count];
+            struct wl_buffer *buffer = maru_wl_cursor_image_get_buffer(ctx, image);
+            if (buffer) {
+                if (_maru_wayland_commit_cursor_buffer(ctx, serial, buffer, (int32_t)image->hotspot_x, (int32_t)image->hotspot_y, (int32_t)image->width, (int32_t)image->height)) {
+                    return;
                 }
             }
         }
-        return;
     }
 
-    if (ctx->wl.cursor_shape_device && system_cursor) {
-        uint32_t shape = 0;
-        if (_maru_cursor_shape_to_protocol_shape(system_shape, &shape)) {
-            maru_wp_cursor_shape_device_v1_set_shape(ctx, ctx->wl.cursor_shape_device, serial, shape);
-            _maru_wayland_clear_cursor_animation(ctx);
+    if (cursor && cursor->frame_count > 0) {
+        uint32_t frame_index = 0;
+        if (cursor->base.anim_enabled) {
+          frame_index = cursor->base.anim_current_frame;
+        }
+        const MARU_WaylandCursorFrame *frame = &cursor->frames[frame_index % cursor->frame_count];
+        if (_maru_wayland_commit_cursor_buffer(ctx, serial, frame->buffer, frame->hotspot_x,
+                                               frame->hotspot_y, (int32_t)frame->width,
+                                               (int32_t)frame->height)) {
             return;
         }
     }
 
-    if (!wl_cursor && _maru_wayland_ensure_cursor_theme(ctx)) {
-        const char *shape_name = _maru_cursor_shape_to_name(system_shape);
-        wl_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, shape_name);
-    }
-    if (!wl_cursor || wl_cursor->image_count == 0) {
-        return;
-    }
-
-    struct wl_cursor_image *image = wl_cursor->images[0];
-    struct wl_buffer *buffer = maru_wl_cursor_image_get_buffer(ctx, image);
-    if (!buffer) {
-        return;
-    }
-    if (!_maru_wayland_commit_cursor_buffer(ctx, serial, buffer, (int32_t)image->hotspot_x,
-                                            (int32_t)image->hotspot_y, (int32_t)image->width,
-                                            (int32_t)image->height)) {
-        return;
-    }
-
-    _maru_wayland_clear_cursor_animation(ctx);
-    if (wl_cursor->image_count > 1) {
-        uint32_t delay_ms = image->delay == 0 ? 1u : image->delay;
-        uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
-        if (now_ns != 0) {
-            ctx->cursor_animation.window = window;
-            ctx->cursor_animation.cursor = NULL;
-            ctx->cursor_animation.theme_cursor = wl_cursor;
-            ctx->cursor_animation.frame_index = 0;
-            ctx->cursor_animation.serial = serial;
-            ctx->cursor_animation.next_frame_ns = now_ns + ((uint64_t)delay_ms * 1000000ull);
-            ctx->cursor_animation.active = true;
-        }
-    }
-}
-
-uint64_t _maru_wayland_cursor_next_frame_ns(const MARU_Context_WL *ctx) {
-    if (!ctx->cursor_animation.active) {
-        return 0;
-    }
-    return ctx->cursor_animation.next_frame_ns;
-}
-
-void _maru_wayland_advance_cursor_animation(MARU_Context_WL *ctx) {
-    if (!ctx->cursor_animation.active || !ctx->wl.pointer) {
-        return;
-    }
-    if (!ctx->linux_common.pointer.focused_window ||
-        ctx->linux_common.pointer.focused_window != (MARU_Window *)ctx->cursor_animation.window) {
-        _maru_wayland_clear_cursor_animation(ctx);
-        return;
-    }
-
-    MARU_Window_WL *window = ctx->cursor_animation.window;
-    if (!window || window->base.pub.cursor_mode != MARU_CURSOR_NORMAL) {
-        _maru_wayland_clear_cursor_animation(ctx);
-        return;
-    }
-
-    uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
-    if (now_ns == 0 || now_ns < ctx->cursor_animation.next_frame_ns) {
-        return;
-    }
-
-    const uint32_t max_advance_per_pump = 16;
-    uint32_t advanced = 0;
-    while (ctx->cursor_animation.active &&
-           now_ns >= ctx->cursor_animation.next_frame_ns &&
-           advanced < max_advance_per_pump) {
-        uint32_t delay_ms = 0;
-        bool committed = false;
-
-        if (ctx->cursor_animation.cursor) {
-            MARU_Cursor_WL *cursor = ctx->cursor_animation.cursor;
-            if (!cursor->frames || cursor->frame_count <= 1) {
-                _maru_wayland_clear_cursor_animation(ctx);
-                break;
-            }
-            ctx->cursor_animation.frame_index =
-                (ctx->cursor_animation.frame_index + 1u) % cursor->frame_count;
-            const MARU_WaylandCursorFrame *frame =
-                &cursor->frames[ctx->cursor_animation.frame_index];
-            committed = _maru_wayland_commit_cursor_buffer(
-                ctx, ctx->linux_common.pointer.enter_serial, frame->buffer, frame->hotspot_x,
-                frame->hotspot_y, (int32_t)frame->width, (int32_t)frame->height);
-            delay_ms = frame->delay_ms;
-        } else if (ctx->cursor_animation.theme_cursor) {
-            struct wl_cursor *wl_cursor = ctx->cursor_animation.theme_cursor;
-            if (wl_cursor->image_count <= 1) {
-                _maru_wayland_clear_cursor_animation(ctx);
-                break;
-            }
-            ctx->cursor_animation.frame_index =
-                (ctx->cursor_animation.frame_index + 1u) % wl_cursor->image_count;
-            struct wl_cursor_image *image = wl_cursor->images[ctx->cursor_animation.frame_index];
+    // Default to left_ptr if nothing else worked
+    if (_maru_wayland_ensure_cursor_theme(ctx)) {
+        struct wl_cursor *default_cursor = maru_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, "left_ptr");
+        if (default_cursor) {
+            struct wl_cursor_image *image = default_cursor->images[0];
             struct wl_buffer *buffer = maru_wl_cursor_image_get_buffer(ctx, image);
             if (buffer) {
-                committed = _maru_wayland_commit_cursor_buffer(
-                    ctx, ctx->linux_common.pointer.enter_serial, buffer,
-                    (int32_t)image->hotspot_x, (int32_t)image->hotspot_y,
-                    (int32_t)image->width, (int32_t)image->height);
+                _maru_wayland_commit_cursor_buffer(ctx, serial, buffer, (int32_t)image->hotspot_x, (int32_t)image->hotspot_y, (int32_t)image->width, (int32_t)image->height);
             }
-            delay_ms = image->delay;
-        } else {
-            _maru_wayland_clear_cursor_animation(ctx);
-            break;
         }
-
-        if (!committed) {
-            _maru_wayland_clear_cursor_animation(ctx);
-            break;
-        }
-
-        if (delay_ms == 0) {
-            delay_ms = 1;
-        }
-        ctx->cursor_animation.next_frame_ns += ((uint64_t)delay_ms * 1000000ull);
-        advanced++;
-    }
-
-    if (ctx->cursor_animation.active &&
-        advanced == max_advance_per_pump &&
-        now_ns >= ctx->cursor_animation.next_frame_ns) {
-        ctx->cursor_animation.next_frame_ns = now_ns + 1000000ull;
     }
 }
 
@@ -347,7 +227,7 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer,
     MARU_Context_WL *ctx = (MARU_Context_WL *)data;
     if (!surface) return;
 
-    MARU_Window_WL *window =
+    MARU_Window_WL *window = 
         (MARU_Window_WL *)ctx->dlib.wl.proxy_get_user_data((struct wl_proxy *)surface);
     window = _maru_wayland_resolve_registered_window(ctx, (MARU_Window *)window);
 
@@ -366,7 +246,6 @@ static void _pointer_handle_leave(void *data, struct wl_pointer *pointer,
                                   uint32_t serial, struct wl_surface *surface) {
     MARU_Context_WL *ctx = (MARU_Context_WL *)data;
     ctx->linux_common.pointer.focused_window = NULL;
-    _maru_wayland_clear_cursor_animation(ctx);
 }
 
 static void _pointer_handle_motion(void *data, struct wl_pointer *pointer,

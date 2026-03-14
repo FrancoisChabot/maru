@@ -146,16 +146,6 @@ typedef struct MARU_Context_WL {
   } activation;
 
   struct {
-    MARU_Window_WL *window;
-    MARU_Cursor_WL *cursor;
-    struct wl_cursor *theme_cursor;
-    uint32_t frame_index;
-    uint32_t serial;
-    uint64_t next_frame_ns;
-    bool active;
-  } cursor_animation;
-
-  struct {
     struct pollfd *fds;
     uint32_t capacity;
   } pump_pollfds;
@@ -222,7 +212,6 @@ typedef struct MARU_Monitor_WL {
   struct wl_output *output;
   struct zxdg_output_v1 *xdg_output;
   uint32_t name;
-  char *name_storage;
   MARU_VideoMode current_mode;
   MARU_VideoMode *modes;
   uint32_t mode_count;
@@ -413,8 +402,6 @@ MARU_Status maru_requestWindowAttention_WL(MARU_Window *window);
 void maru_getWindowGeometry_WL(MARU_Window *window_handle, MARU_WindowGeometry *out_geometry);
 
 MARU_Status maru_getMonitors_WL(const MARU_Context *context, MARU_MonitorList *out_list);
-void maru_retainMonitor_WL(MARU_Monitor *monitor);
-void maru_releaseMonitor_WL(MARU_Monitor *monitor);
 void maru_destroyMonitor_WL(MARU_Monitor *monitor);
 MARU_Status maru_updateMonitors_WL(const MARU_Context *context);
 MARU_Status maru_getMonitorModes_WL(const MARU_Monitor *monitor, MARU_VideoModeList *out_list);
@@ -473,7 +460,6 @@ void _maru_wayland_dispatch_window_resized(MARU_Window_WL *window);
 
 bool _maru_wayland_ensure_cursor_theme(MARU_Context_WL *ctx);
 const char *_maru_cursor_shape_to_name(MARU_CursorShape shape);
-void _maru_wayland_clear_cursor_animation(MARU_Context_WL *ctx);
 void _maru_wayland_dispatch_state_changed(MARU_Window_WL *window,
                                                uint32_t changed_fields);void _maru_wayland_update_text_input(MARU_Window_WL *window);
 void _maru_wayland_clear_text_input_pending(MARU_Window_WL *window);
@@ -491,8 +477,6 @@ void _maru_wayland_cancel_activation(MARU_Context_WL *ctx);
 void _maru_wayland_cancel_activation_for_window(MARU_Context_WL *ctx, MARU_Window_WL *window);
 void _maru_wayland_update_idle_inhibitor(MARU_Window_WL *window);
 void _maru_wayland_request_frame(MARU_Window_WL *window);
-uint64_t _maru_wayland_cursor_next_frame_ns(const MARU_Context_WL *ctx);
-void _maru_wayland_advance_cursor_animation(MARU_Context_WL *ctx);
 MARU_ModifierFlags _maru_wayland_get_modifiers(MARU_Context_WL *ctx);
 
 bool _maru_wayland_init_libdecor(MARU_Context_WL *ctx);

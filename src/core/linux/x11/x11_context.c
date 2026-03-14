@@ -349,7 +349,7 @@ void maru_destroyContext_X11(MARU_Context *context) {
     monitor->is_active = false;
     monitor->pub.flags |= MARU_MONITOR_STATE_LOST;
     ctx->base.monitor_cache_count--;
-    maru_releaseMonitor_X11((MARU_Monitor *)monitor);
+    maru_releaseMonitor((MARU_Monitor *)monitor);
   }
 
   maru_unload_xfixes_symbols(&ctx->xfixes_lib);

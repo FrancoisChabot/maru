@@ -668,33 +668,7 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->base.backend = &maru_backend_WL;
   #endif
 
-  if (create_info->attributes.title) {
-    size_t len = strlen(create_info->attributes.title);
-    window->base.title_storage = maru_context_alloc(&ctx->base, len + 1);
-    if (window->base.title_storage) {
-      memcpy(window->base.title_storage, create_info->attributes.title, len + 1);
-      window->base.attrs_requested.title = window->base.title_storage;
-      window->base.attrs_effective.title = window->base.title_storage;
-      window->base.pub.title = window->base.title_storage;
-    } else {
-      window->base.attrs_requested.title = NULL;
-      window->base.attrs_effective.title = NULL;
-      window->base.pub.title = NULL;
-    }
-  }
-
-  if (create_info->attributes.surrounding_text) {
-    size_t len = strlen(create_info->attributes.surrounding_text);
-    window->base.surrounding_text_storage = maru_context_alloc(&ctx->base, len + 1);
-    if (window->base.surrounding_text_storage) {
-      memcpy(window->base.surrounding_text_storage, create_info->attributes.surrounding_text, len + 1);
-      window->base.attrs_requested.surrounding_text = window->base.surrounding_text_storage;
-      window->base.attrs_effective.surrounding_text = window->base.surrounding_text_storage;
-    } else {
-      window->base.attrs_requested.surrounding_text = NULL;
-      window->base.attrs_effective.surrounding_text = NULL;
-    }
-  }
+  _maru_update_window_base(&window->base, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_SURROUNDING_TEXT, &create_info->attributes);
 
   window->wl.surface = maru_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
   if (!window->wl.surface) {
@@ -873,42 +847,23 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   MARU_Status status = MARU_SUCCESS;
   uint32_t state_changed_mask = 0u;
 
-  window->base.attrs_dirty_mask |= field_mask;
+  _maru_update_window_base(&window->base, field_mask, attributes);
 
   if (field_mask & MARU_WINDOW_ATTR_TITLE) {
-      maru_context_free(&ctx->base, window->base.title_storage);
-      window->base.title_storage = NULL;
-      requested->title = NULL;
-      effective->title = NULL;
-      window->base.pub.title = NULL;
-
-      if (attributes->title) {
-          size_t len = strlen(attributes->title);
-          window->base.title_storage = maru_context_alloc(&ctx->base, len + 1);
-          if (window->base.title_storage) {
-              memcpy(window->base.title_storage, attributes->title, len + 1);
-              requested->title = window->base.title_storage;
-              effective->title = window->base.title_storage;
-              window->base.pub.title = window->base.title_storage;
-          }
-      }
-
       if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD) {
-          _maru_wayland_libdecor_set_title(window, requested->title ? requested->title : "");
+          _maru_wayland_libdecor_set_title(window, effective->title ? effective->title : "");
       } else if (window->xdg.toplevel) {
           maru_xdg_toplevel_set_title(ctx, window->xdg.toplevel,
-                                      requested->title ? requested->title : "");
+                                      effective->title ? effective->title : "");
       }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
-    const MARU_WindowPresentationState requested_state =
-        attributes->presentation_state;
-    const MARU_WindowPresentationState old_state =
-        requested->presentation_state;
+    const MARU_WindowPresentationState requested_state = attributes->presentation_state;
+    const MARU_WindowPresentationState old_state = requested->presentation_state;
 
-    requested->presentation_state = requested_state;
-    effective->presentation_state = requested_state;
+    // _maru_update_window_base already updated effective->presentation_state
+    // but we need to apply it to Wayland objects.
 
     if (requested_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
       window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
@@ -999,34 +954,15 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
-      requested->dip_size = attributes->dip_size;
-      effective->dip_size = attributes->dip_size;
       if (window->xdg.surface) {
           maru_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
                                                (int32_t)effective->dip_size.x, (int32_t)effective->dip_size.y);
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_DIP_MIN_SIZE) {
-      requested->dip_min_size = attributes->dip_min_size;
-      effective->dip_min_size = attributes->dip_min_size;
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_DIP_MAX_SIZE) {
-      requested->dip_max_size = attributes->dip_max_size;
-      effective->dip_max_size = attributes->dip_max_size;
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
-      requested->aspect_ratio = attributes->aspect_ratio;
-      effective->aspect_ratio = attributes->aspect_ratio;
-  }
-
   if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
-      requested->resizable = attributes->resizable;
       const bool was_resizable = (window->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
-      effective->resizable = attributes->resizable;
-      if (requested->resizable) {
+      if (effective->resizable) {
           window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
@@ -1043,12 +979,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
-      requested->monitor = attributes->monitor;
-      effective->monitor = attributes->monitor;
-      if (requested->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN || (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0) {
+      if (effective->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN || (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0) {
           struct wl_output *output = NULL;
-          if (requested->monitor && maru_getMonitorContext(requested->monitor) == window->base.pub.context) {
-              MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)requested->monitor;
+          if (effective->monitor && maru_getMonitorContext(effective->monitor) == window->base.pub.context) {
+              MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)effective->monitor;
               output = monitor->output;
           }
 
@@ -1064,57 +998,20 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
-      requested->text_input_type = attributes->text_input_type;
-      effective->text_input_type = attributes->text_input_type;
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT) {
-      requested->dip_text_input_rect = attributes->dip_text_input_rect;
-      effective->dip_text_input_rect = attributes->dip_text_input_rect;
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
-      maru_context_free(&ctx->base, window->base.surrounding_text_storage);
-      window->base.surrounding_text_storage = NULL;
-      requested->surrounding_text = NULL;
-      effective->surrounding_text = NULL;
-      if (attributes->surrounding_text) {
-          size_t len = strlen(attributes->surrounding_text);
-          window->base.surrounding_text_storage = maru_context_alloc(&ctx->base, len + 1);
-          if (window->base.surrounding_text_storage) {
-              memcpy(window->base.surrounding_text_storage, attributes->surrounding_text, len + 1);
-              requested->surrounding_text = window->base.surrounding_text_storage;
-              effective->surrounding_text = window->base.surrounding_text_storage;
-          }
-      }
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE) {
-      requested->surrounding_cursor_byte = attributes->surrounding_cursor_byte;
-      requested->surrounding_anchor_byte = attributes->surrounding_anchor_byte;
-      effective->surrounding_cursor_byte = attributes->surrounding_cursor_byte;
-      effective->surrounding_anchor_byte = attributes->surrounding_anchor_byte;
-  }
-
   if (field_mask & (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT |
                     MARU_WINDOW_ATTR_SURROUNDING_TEXT | MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE)) {
       _maru_wayland_update_text_input(window);
   }
 
   if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
-      requested->cursor = attributes->cursor;
-      effective->cursor = attributes->cursor;
-      window->base.pub.current_cursor = attributes->cursor;
+      window->base.pub.current_cursor = effective->cursor;
   }
+
   if (field_mask & MARU_WINDOW_ATTR_CURSOR_MODE) {
-      requested->cursor_mode = attributes->cursor_mode;
-      if (window->base.pub.cursor_mode != attributes->cursor_mode) {
+      if (window->base.pub.cursor_mode != effective->cursor_mode) {
           MARU_CursorMode previous_mode = window->base.pub.cursor_mode;
-          window->base.pub.cursor_mode = attributes->cursor_mode;
-          if (_maru_wayland_update_cursor_mode(window)) {
-              effective->cursor_mode = attributes->cursor_mode;
-          } else {
+          window->base.pub.cursor_mode = effective->cursor_mode;
+          if (!_maru_wayland_update_cursor_mode(window)) {
               window->base.pub.cursor_mode = previous_mode;
               effective->cursor_mode = previous_mode;
               (void)_maru_wayland_update_cursor_mode(window);
@@ -1130,14 +1027,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE) {
-      requested->dip_viewport_size = attributes->dip_viewport_size;
-      effective->dip_viewport_size = attributes->dip_viewport_size;
       _maru_wayland_apply_viewport_size(window);
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
-      requested->accept_drop = attributes->accept_drop;
-      effective->accept_drop = attributes->accept_drop;
   }
 
   if (field_mask & (MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_DIP_MIN_SIZE |
@@ -1147,14 +1037,12 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
-      requested->visible = attributes->visible;
       const bool was_visible = (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
       const bool was_minimized = (window->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
 
-      if (attributes->visible) {
+      if (effective->visible) {
           window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-          effective->visible = true;
           effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
           if (!was_visible) {
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
@@ -1166,7 +1054,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
           window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-          effective->visible = false;
           effective->presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
           if (was_visible) {
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
@@ -1189,8 +1076,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_ICON) {
-      requested->icon = attributes->icon;
-      effective->icon = attributes->icon;
       state_changed_mask |= MARU_WINDOW_STATE_CHANGED_ICON;
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "Wayland taskbar/dock icon is compositor-shell managed; window icon request stored as intent only");

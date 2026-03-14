@@ -39,10 +39,7 @@ static void _maru_x11_destroy_monitor(MARU_Monitor_X11 *monitor) {
     monitor->modes = NULL;
     monitor->mode_count = 0;
   }
-  if (monitor->name_storage) {
-    maru_context_free(monitor->base.ctx_base, monitor->name_storage);
-    monitor->name_storage = NULL;
-  }
+  _maru_monitor_set_name(&monitor->base, NULL);
   maru_context_free(monitor->base.ctx_base, monitor);
 }
 
@@ -151,11 +148,8 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
         if (name_copy) {
           memcpy(name_copy, output_info->name, name_len);
           name_copy[name_len] = '\0';
-          if (monitor->name_storage) {
-            maru_context_free(&ctx->base, monitor->name_storage);
-          }
-          monitor->name_storage = name_copy;
-          monitor->base.pub.name = monitor->name_storage;
+          _maru_monitor_set_name(&monitor->base, name_copy);
+          maru_context_free(&ctx->base, name_copy);
         }
       }
 
@@ -231,7 +225,7 @@ void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx) {
       ctx->base.monitor_cache[j] = ctx->base.monitor_cache[j + 1u];
     }
     ctx->base.monitor_cache_count--;
-    maru_releaseMonitor_X11((MARU_Monitor *)monitor);
+    maru_releaseMonitor((MARU_Monitor *)monitor);
   }
 }
 
@@ -241,27 +235,6 @@ MARU_Status maru_getMonitors_X11(const MARU_Context *context, MARU_MonitorList *
   out_list->monitors = ctx->base.monitor_cache;
   out_list->count = ctx->base.monitor_cache_count;
   return MARU_SUCCESS;
-}
-
-void maru_retainMonitor_X11(MARU_Monitor *monitor) {
-  MARU_Monitor_Base *base = (MARU_Monitor_Base *)monitor;
-  atomic_fetch_add_explicit(&base->ref_count, 1u, memory_order_relaxed);
-}
-
-void maru_releaseMonitor_X11(MARU_Monitor *monitor) {
-  MARU_Monitor_Base *base = (MARU_Monitor_Base *)monitor;
-  uint32_t current =
-      atomic_load_explicit(&base->ref_count, memory_order_acquire);
-  while (current > 0) {
-    if (atomic_compare_exchange_weak_explicit(&base->ref_count, &current,
-                                              current - 1u, memory_order_acq_rel,
-                                              memory_order_acquire)) {
-      if (current == 1u && !base->is_active) {
-        _maru_x11_destroy_monitor((MARU_Monitor_X11 *)monitor);
-      }
-      return;
-    }
-  }
 }
 
 MARU_Status maru_getMonitorModes_X11(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {

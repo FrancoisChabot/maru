@@ -45,11 +45,18 @@ MARU_Status maru_linux_dataexchange_queueWriteTransfer(MARU_Context_Base *ctx_ba
                                                        bool zero_copy);
 int maru_linux_dataexchange_fillPollFds(const MARU_LinuxDataTransfer *head,
                                         struct pollfd *pfds, int max_count);
-void maru_linux_dataexchange_processTransfers(MARU_Context_Base *ctx_base,
-                                              MARU_LinuxDataTransfer **head,
-                                              const struct pollfd *pfds,
-                                              int pfds_offset, int pfds_count);
+void maru_linux_dataexchange_processTransfers(
+    MARU_Context_Base *ctx_base, MARU_LinuxDataTransfer **head,
+    const struct pollfd *pfds, int pfds_offset, int pfds_count);
 void maru_linux_dataexchange_destroyTransfers(MARU_Context_Base *ctx_base,
                                               MARU_LinuxDataTransfer **head);
 
+uint32_t maru_linux_dataexchange_parseUriList(MARU_Context_Base *ctx_base,
+                                              const char *data, size_t size,
+                                              const char ***out_paths);
+
+const char *maru_linux_dataexchange_copyString(MARU_Context_Base *ctx_base,
+                                               const char *text);
+
 #endif  // MARU_LINUX_DATAEXCHANGE_H_INCLUDED
+

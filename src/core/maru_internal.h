@@ -159,6 +159,7 @@ typedef struct MARU_Monitor_Base {
 
   MARU_Context_Base *ctx_base;
 
+  char *name_storage;
   _Atomic uint32_t ref_count;
   bool is_active; // If false, the monitor was disconnected but is still retained.
 } MARU_Monitor_Base;
@@ -194,6 +195,7 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type, MARU_Window
 void _maru_init_context_base(MARU_Context_Base *ctx_base);
 void _maru_drain_queued_events(MARU_Context_Base *ctx_base);
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);
+void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask, const MARU_WindowAttributes *attributes);
 void _maru_cleanup_context_base(MARU_Context_Base *ctx_base);
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window);
 void _maru_unregister_window(MARU_Context_Base *ctx_base, MARU_Window *window);
@@ -219,6 +221,7 @@ MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId 
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor);
 void _maru_controller_free(MARU_Controller_Base *controller);
+void _maru_monitor_set_name(MARU_Monitor_Base *mon_base, const char *name);
 
 #ifdef __cplusplus
 }

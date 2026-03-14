@@ -61,89 +61,6 @@ static uint32_t _maru_wl_from_drop_action(MARU_DropAction action) {
   }
 }
 
-static uint32_t _maru_wl_parse_uri_list(MARU_Context_WL *ctx, const char *data,
-                                        size_t size, const char ***out_paths) {
-  uint32_t count = 0;
-  const char *curr = data;
-  const char *end = data + size;
-
-  while (curr < end) {
-    const char *line_end = (const char *)memchr(curr, '\n', (size_t)(end - curr));
-    if (!line_end) line_end = end;
-
-    const char *line_start = curr;
-    while (line_start < line_end && (*line_start == ' ' || *line_start == '\t')) {
-      line_start++;
-    }
-
-    if (line_start < line_end && *line_start != '#') {
-      count++;
-    }
-    curr = (line_end < end) ? line_end + 1 : end;
-  }
-
-  if (count == 0) {
-    *out_paths = NULL;
-    return 0;
-  }
-
-  const char **paths =
-      (const char **)maru_context_alloc(&ctx->base, sizeof(char *) * count);
-  if (!paths) {
-    *out_paths = NULL;
-    return 0;
-  }
-
-  uint32_t idx = 0;
-  curr = data;
-  while (curr < end && idx < count) {
-    const char *line_end = (const char *)memchr(curr, '\n', (size_t)(end - curr));
-    if (!line_end) line_end = end;
-
-    const char *line_start = curr;
-    while (line_start < line_end && (*line_start == ' ' || *line_start == '\t')) {
-      line_start++;
-    }
-
-    const char *content_end = line_end;
-    while (content_end > line_start &&
-           (content_end[-1] == '\r' || content_end[-1] == ' ' ||
-            content_end[-1] == '\t')) {
-      content_end--;
-    }
-
-    if (line_start < content_end && *line_start != '#') {
-      const char *path_start = line_start;
-      if (content_end - line_start >= 7 &&
-          memcmp(line_start, "file://", 7) == 0) {
-        path_start += 7;
-      }
-
-      const size_t path_len = (size_t)(content_end - path_start);
-      char *copy = (char *)maru_context_alloc(&ctx->base, path_len + 1);
-      if (copy) {
-        memcpy(copy, path_start, path_len);
-        copy[path_len] = '\0';
-        paths[idx++] = copy;
-      }
-    }
-    curr = (line_end < end) ? line_end + 1 : end;
-  }
-
-  *out_paths = paths;
-  return idx;
-}
-
-static const char *_maru_wl_copy_string(MARU_Context_Base *ctx_base,
-                                        const char *text) {
-  if (!text) return NULL;
-  const size_t len = strlen(text);
-  char *copy = (char *)maru_context_alloc(ctx_base, len + 1u);
-  if (!copy) return NULL;
-  memcpy(copy, text, len + 1u);
-  return copy;
-}
-
 static void _maru_wl_clear_mime_query(MARU_Context_WL *ctx) {
   maru_context_free(&ctx->base, (void *)ctx->clipboard.mime_query_ptr);
   ctx->clipboard.mime_query_ptr = NULL;
@@ -187,7 +104,7 @@ static bool _maru_wl_set_announced_mimes(MARU_Context_WL *ctx,
   memset((void *)list, 0, sizeof(char *) * count);
 
   for (uint32_t i = 0; i < count; ++i) {
-    list[i] = _maru_wl_copy_string(&ctx->base, mime_types[i]);
+    list[i] = maru_linux_dataexchange_copyString(&ctx->base, mime_types[i]);
     if (!list[i]) {
       for (uint32_t j = 0; j < i; ++j) {
         maru_context_free(&ctx->base, (void *)list[j]);
@@ -215,7 +132,7 @@ static bool _maru_wl_set_dnd_announced_mimes(MARU_Context_WL *ctx,
   memset((void *)list, 0, sizeof(char *) * count);
 
   for (uint32_t i = 0; i < count; ++i) {
-    list[i] = _maru_wl_copy_string(&ctx->base, mime_types[i]);
+    list[i] = maru_linux_dataexchange_copyString(&ctx->base, mime_types[i]);
     if (!list[i]) {
       for (uint32_t j = 0; j < i; ++j) {
         maru_context_free(&ctx->base, (void *)list[j]);
@@ -295,7 +212,7 @@ static bool _maru_wl_offer_meta_append_mime(MARU_Context_WL *ctx,
     meta->mime_types = next;
     meta->mime_capacity = next_capacity;
   }
-  const char *copy = _maru_wl_copy_string(&ctx->base, mime_type);
+  const char *copy = maru_linux_dataexchange_copyString(&ctx->base, mime_type);
   if (!copy) return false;
   meta->mime_types[meta->mime_count++] = copy;
   return true;
@@ -435,7 +352,7 @@ static void _clipboard_source_send(void *data, struct wl_data_source *source,
   handle->fd = fd;
   handle->target = target;
   handle->window = event_window;
-  handle->mime_type = _maru_wl_copy_string(&ctx->base, mime_type);
+  handle->mime_type = maru_linux_dataexchange_copyString(&ctx->base, mime_type);
   if (!handle->mime_type) {
     _maru_wl_destroy_request_handle(ctx, handle);
     return;
@@ -1109,7 +1026,7 @@ void _maru_wayland_dataexchange_handle_internal_transfer_complete(
     uint32_t path_count = 0;
 
     if (status == MARU_SUCCESS && data) {
-      path_count = _maru_wl_parse_uri_list(ctx, (const char *)data, size, &paths);
+      path_count = maru_linux_dataexchange_parseUriList(&ctx->base, (const char *)data, size, &paths);
     }
 
     MARU_WaylandDataOfferMeta *meta = _maru_wl_find_offer_meta(ctx, ctx->clipboard.dnd_drop.offer);

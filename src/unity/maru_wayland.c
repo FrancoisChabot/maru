@@ -34,7 +34,6 @@
 #include "../core/linux/wayland/wayland_csd.c"
 #include "../core/linux/wayland/wayland_misc.c"
 #include "../core/linux/wayland/wayland_dataexchange.c"
-#include "../core/linux/wayland/wayland_utils.c"
 #include "../core/linux/wayland/dlib/loader.c"
 #include "../core/linux/wayland/protocols/maru_protocols.c"
 #include "../core/linux/wayland/wayland_vulkan.c"

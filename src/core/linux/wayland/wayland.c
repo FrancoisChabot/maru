@@ -118,8 +118,6 @@ const MARU_Backend maru_backend_WL = {
   .getAvailableDropMIMETypes = maru_getAvailableDropMIMETypes_WL_win,
   .wakeContext = maru_wakeContext_WL,
   .getMonitors = maru_getMonitors_WL,
-  .retainMonitor = maru_retainMonitor_WL,
-  .releaseMonitor = maru_releaseMonitor_WL,
   .getMonitorModes = maru_getMonitorModes_WL,
   .setMonitorMode = maru_setMonitorMode_WL,
   .getContextNativeHandle = maru_getContextNativeHandle_WL,
@@ -348,16 +346,6 @@ MARU_API MARU_Status maru_getMonitors(const MARU_Context *context, MARU_MonitorL
     return res;
   }
   return maru_getMonitors_WL(context, out_list);
-}
-
-MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(retainMonitor, monitor);
-  maru_retainMonitor_WL(monitor);
-}
-
-MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(releaseMonitor, monitor);
-  maru_releaseMonitor_WL(monitor);
 }
 
 MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {
