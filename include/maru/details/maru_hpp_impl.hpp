@@ -354,11 +354,11 @@ inline MARU_Status Context::pumpEvents(uint32_t timeout_ms, MARU_EventMask mask,
     return maru_pumpEvents(m_handle, timeout_ms, mask, callback, userdata);
 }
 
-inline bool Context::postEvent(MARU_EventId type, MARU_UserDefinedEvent evt) {
+inline MARU_Status Context::postEvent(MARU_EventId type, MARU_UserDefinedEvent evt) {
     return maru_postEvent(m_handle, type, evt);
 }
 
-inline bool Context::wake() {
+inline MARU_Status Context::wake() {
     return maru_wakeContext(m_handle);
 }
 

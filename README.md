@@ -226,7 +226,7 @@ zero-copy retention semantics.
 *   Context-lifecycle functions returning `void` (e.g., `maru_destroyContext`) MUST be called from the owner thread.
 *   Standalone utility objects like `MARU_Queue` are owned by the thread that created them. Except for `maru_scanQueue()`, all `maru_*Queue` APIs must be called from that creator thread.
     `maru_scanQueue()` is globally thread-safe, but you must synchronize it against `maru_commitQueue()` on the same queue.
-*   `maru_postEvent()` and `maru_wakeContext()` are globally thread-safe and return a `bool` to signal success/failure.
+*   `maru_postEvent()` and `maru_wakeContext()` are globally threading-safe and return a `MARU_Status` to signal success/failure or context loss.
     Setting `MARU_ContextTuning.user_event_queue_size` to `0` disables only
     application-posted user events for that context. It does not disable
     backend/internal deferred event processing.

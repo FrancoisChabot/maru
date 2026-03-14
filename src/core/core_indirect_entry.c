@@ -45,11 +45,9 @@ MARU_API MARU_Status maru_createWindow(MARU_Context *context,
   return ctx_base->backend->createWindow(context, create_info, out_window);
 }
 
-MARU_API bool maru_wakeContext(MARU_Context *context) {
+MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
-  if (maru_isContextLost(context)) {
-    return false;
-  }
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
   return ctx_base->backend->wakeContext(context);
 }

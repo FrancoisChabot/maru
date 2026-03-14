@@ -30,8 +30,8 @@ context is destroyed.
   userdata accessors may be called from other threads, but only with external
   synchronization against owner-thread operations on the same handle or
   context.
-- `maru_postEvent()` and `maru_wakeContext()` are globally thread-safe and
-  return `bool`.
+- `maru_postEvent()` and `maru_wakeContext()` are globally threading-safe and
+  return a `MARU_Status`.
 - `maru_retainMonitor()`, `maru_releaseMonitor()`, `maru_retainController()`,
   and `maru_releaseController()` are globally thread-safe.
 - A `MARU_Queue` has its own creator thread. Except for `maru_scanQueue()`,

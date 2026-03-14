@@ -349,8 +349,10 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
     return MARU_SUCCESS;
 }
 
-bool maru_wakeContext_Cocoa(MARU_Context *context) {
-    (void)context;
+MARU_Status maru_wakeContext_Cocoa(MARU_Context *context) {
+    if (maru_isContextLost(context)) {
+        return MARU_CONTEXT_LOST;
+    }
     NSEvent* event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
                                         location:NSMakePoint(0, 0)
                                    modifierFlags:0
@@ -361,7 +363,7 @@ bool maru_wakeContext_Cocoa(MARU_Context *context) {
                                            data1:0
                                            data2:0];
     [NSApp postEvent:event atStart:YES];
-    return true;
+    return MARU_SUCCESS;
 }
 
 void *_maru_getContextNativeHandle_Cocoa(MARU_Context *context) {

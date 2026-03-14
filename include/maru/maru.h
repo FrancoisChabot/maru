@@ -1034,7 +1034,7 @@ MARU_API MARU_Status maru_pumpEvents(MARU_Context* context,
                                      void* userdata);
 
 /*
- * Thread-safe user-event injection for a later pump cycle.
+ * Threading-safe user-event injection for a later pump cycle.
  *
  * This will also implicitly wake the context.
  *
@@ -1044,21 +1044,25 @@ MARU_API MARU_Status maru_pumpEvents(MARU_Context* context,
  * Posted user events are always dispatched as context-scoped events, so the
  * callback receives `window == NULL`.
  *
- * Returns true if the event was successfully queued, false otherwise. This
- * returns false when application-posted user events are disabled for the
- * context (`user_event_queue_size == 0`). Backend/internal deferred events are
- * unaffected by this setting.
+ * Returns:
+ * - MARU_SUCCESS: if the event was successfully queued.
+ * - MARU_FAILURE: if application-posted user events are disabled for the
+ *   context (`user_event_queue_size == 0`) or if the queue is full.
+ * - MARU_CONTEXT_LOST: if the context is lost.
  */
-MARU_API bool maru_postEvent(MARU_Context* context,
-                             MARU_EventId type,
-                             MARU_UserDefinedEvent evt);
+MARU_API MARU_Status maru_postEvent(MARU_Context* context,
+                                   MARU_EventId type,
+                                   MARU_UserDefinedEvent evt);
 
 /*
- * Thread-safe wakeup of a sleeping pump without having to post an event.
+ * Threading-safe wakeup of a sleeping pump without having to post an event.
  *
- * Returns true if the context was successfully woken, false otherwise.
+ * Returns:
+ * - MARU_SUCCESS: if the context was successfully woken.
+ * - MARU_FAILURE: if the wake operation failed.
+ * - MARU_CONTEXT_LOST: if the context is lost.
  */
-MARU_API bool maru_wakeContext(MARU_Context* context);
+MARU_API MARU_Status maru_wakeContext(MARU_Context* context);
 
 /* ----- Contexts ----- */
 

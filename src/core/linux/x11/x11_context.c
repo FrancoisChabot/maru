@@ -364,10 +364,16 @@ void maru_destroyContext_X11(MARU_Context *context) {
   maru_context_free(&ctx->base, context);
 }
 
-bool maru_wakeContext_X11(MARU_Context *context) {
+MARU_Status maru_wakeContext_X11(MARU_Context *context) {
   MARU_Context_X11 *ctx = (MARU_Context_X11 *)context;
+  if (maru_isContextLost(context)) {
+    return MARU_CONTEXT_LOST;
+  }
   uint64_t val = 1;
-  return write(ctx->linux_common.worker.event_fd, &val, sizeof(val)) >= 0;
+  if (write(ctx->linux_common.worker.event_fd, &val, sizeof(val)) >= 0) {
+    return MARU_SUCCESS;
+  }
+  return MARU_FAILURE;
 }
 
 bool _maru_x11_copy_string(MARU_Context_X11 *ctx, const char *src,

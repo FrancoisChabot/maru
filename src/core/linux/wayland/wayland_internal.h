@@ -430,7 +430,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 void maru_destroyContext_WL(MARU_Context *context);
 MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
                                   const MARU_ContextAttributes *attributes);
-bool maru_wakeContext_WL(MARU_Context *context);
+MARU_Status maru_wakeContext_WL(MARU_Context *context);
 MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
                                MARU_EventMask mask,
                                MARU_EventCallback callback, void *userdata);

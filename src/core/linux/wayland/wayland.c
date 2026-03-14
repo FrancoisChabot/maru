@@ -333,7 +333,7 @@ MARU_API MARU_Status maru_requestWindowAttention(MARU_Window *window) {
   return maru_requestWindowAttention_WL(window);
 }
 
-MARU_API bool maru_wakeContext(MARU_Context *context) {
+MARU_API MARU_Status maru_wakeContext(MARU_Context *context) {
   MARU_API_VALIDATE(wakeContext, context);
   return maru_wakeContext_WL(context);
 }

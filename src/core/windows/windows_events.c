@@ -279,10 +279,13 @@ MARU_Status maru_pumpEvents_Windows(MARU_Context *context, uint32_t timeout_ms,
   return MARU_SUCCESS;
 }
 
-bool maru_wakeContext_Windows(MARU_Context *context) {
+MARU_Status maru_wakeContext_Windows(MARU_Context *context) {
   MARU_Context_Windows *ctx = (MARU_Context_Windows *)context;
+  if (maru_isContextLost(context)) {
+    return MARU_CONTEXT_LOST;
+  }
   if (ctx->wake_event) {
     SetEvent(ctx->wake_event);
   }
-  return true;
+  return MARU_SUCCESS;
 }

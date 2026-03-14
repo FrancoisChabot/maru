@@ -403,30 +403,33 @@ void _maru_default_free(void *ptr, void *userdata) {
   free(ptr);
 }
 
-bool _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
-                               MARU_Window *window, const MARU_Event *evt) {
+MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
+                                       MARU_Window *window, const MARU_Event *evt) {
+  if (maru_isContextLost((MARU_Context *)ctx_base)) {
+    return MARU_CONTEXT_LOST;
+  }
   if (_maru_event_queue_push(&ctx_base->internal_events, type, window, *evt)) {
     return maru_wakeContext((MARU_Context *)ctx_base);
   }
-  return false;
+  return MARU_FAILURE;
 }
 
-MARU_API bool maru_postEvent(MARU_Context *context, MARU_EventId type,
-                             MARU_UserDefinedEvent user_evt) {
+MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
+                                   MARU_UserDefinedEvent user_evt) {
   MARU_API_VALIDATE(postEvent, context, type, user_evt);
   MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
   if (maru_isContextLost(context)) {
-    return false;
+    return MARU_CONTEXT_LOST;
   }
   if (ctx_base->user_events.capacity == 0u) {
-    return false;
+    return MARU_FAILURE;
   }
   MARU_Event evt;
   evt.user = user_evt;
   if (_maru_event_queue_push(&ctx_base->user_events, type, NULL, evt)) {
     return maru_wakeContext(context);
   }
-  return false;
+  return MARU_FAILURE;
 }
 
 MARU_API const char *maru_getDiagnosticString(MARU_Diagnostic diagnostic) {

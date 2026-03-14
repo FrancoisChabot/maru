@@ -69,8 +69,8 @@ public:
         return pumpEvents((uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count(), mask, callback, userdata);
     }
 
-    bool postEvent(MARU_EventId type, MARU_UserDefinedEvent evt);
-    bool wake();
+    MARU_Status postEvent(MARU_EventId type, MARU_UserDefinedEvent evt);
+    MARU_Status wake();
 
 private:
     explicit Context(MARU_Context* handle) : m_handle(handle) {}
