@@ -1050,7 +1050,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           if (was_minimized) {
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
           }
-          (void)maru_requestWindowFocus_WL(window_handle);
+          const MARU_Status focus_status = maru_requestWindowFocus_WL(window_handle);
+          if (focus_status != MARU_SUCCESS) {
+              status = focus_status;
+          }
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
           window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
@@ -1087,6 +1090,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 
   maru_getWindowGeometry_WL(window_handle, NULL);
   window->base.attrs_dirty_mask &= ~field_mask;
+
+  if (!_maru_wayland_flush_or_mark_lost(ctx, "wl_display_flush() failed during window update")) {
+    status = MARU_CONTEXT_LOST;
+  }
 
   return status;
 }

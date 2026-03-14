@@ -229,25 +229,8 @@ static bool _maru_wl_offer_has_mime(MARU_Context_WL *ctx,
   return false;
 }
 
-static bool _maru_wl_flush_or_mark_lost(MARU_Context_WL *ctx, const char *error_msg) {
-  if (maru_wl_display_flush(ctx, ctx->wl.display) < 0 && errno != EAGAIN) {
-    ctx->base.pub.flags |= MARU_CONTEXT_STATE_LOST;
-    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE,
-                           error_msg);
-    return false;
-  }
-  if (maru_wl_display_get_error(ctx, ctx->wl.display) != 0) {
-    ctx->base.pub.flags |= MARU_CONTEXT_STATE_LOST;
-    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE,
-                           "Wayland display reported a fatal protocol/connection error");
-    return false;
-  }
-  return true;
-}
-
 static bool _maru_wl_dataexchange_target_supported(MARU_Context_WL *ctx,
-                                                   MARU_DataExchangeTarget target) {
-  if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD ||
+                                                    MARU_DataExchangeTarget target) {  if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD ||
       target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
     if (!ctx->protocols.opt.wl_data_device_manager) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
@@ -795,7 +778,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
     ctx->clipboard.dnd_source = source;
     ctx->clipboard.dnd_action = MARU_DROP_ACTION_NONE;
 
-    return _maru_wl_flush_or_mark_lost(
+    return _maru_wayland_flush_or_mark_lost(
                ctx, "wl_display_flush() failed while starting drag and drop")
                ? MARU_SUCCESS
                : MARU_CONTEXT_LOST;
@@ -820,7 +803,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
         maru_wl_data_source_destroy(ctx, source);
       }
       _maru_wl_clear_announced_mimes(ctx);
-      return _maru_wl_flush_or_mark_lost(
+      return _maru_wayland_flush_or_mark_lost(
                  ctx, "wl_display_flush() failed while clearing clipboard")
                  ? MARU_SUCCESS
                  : MARU_CONTEXT_LOST;
@@ -851,7 +834,7 @@ MARU_Status maru_announceData_WL(MARU_Window *window, MARU_DataExchangeTarget ta
     }
     ctx->clipboard.source = source;
 
-    return _maru_wl_flush_or_mark_lost(
+    return _maru_wayland_flush_or_mark_lost(
                ctx, "wl_display_flush() failed while setting clipboard")
                ? MARU_SUCCESS
                : MARU_CONTEXT_LOST;
@@ -901,7 +884,7 @@ MARU_Status maru_requestData_WL(MARU_Window *window, MARU_DataExchangeTarget tar
     (void)fcntl(pipefd[0], F_SETFL, flags | O_NONBLOCK);
   }
 
-  if (!_maru_wl_flush_or_mark_lost(ctx, "wl_display_flush() failed while requesting data")) {
+  if (!_maru_wayland_flush_or_mark_lost(ctx, "wl_display_flush() failed while requesting data")) {
     close(pipefd[0]);
     return MARU_CONTEXT_LOST;
   }

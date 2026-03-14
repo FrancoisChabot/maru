@@ -54,6 +54,12 @@ This page defines the user-facing behavior contract for Maru on Wayland.
 - Restore transitions may also rely on focus activation support (`xdg_activation_v1`)
   and can degrade when unavailable.
 
+### Clipboard Requirements
+
+- Wayland's `wl_data_device` protocol requires a valid surface for data exchange.
+- Maru requires at least one active window in the context to perform clipboard operations.
+- If no window exists, clipboard requests return `MARU_FAILURE` + diagnostic (`MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED`).
+
 ## Optional Protocol Features
 
 If the compositor does not expose these globals, related requests may fail or

@@ -467,6 +467,22 @@ void _maru_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
                                         const MARU_Window_WL *window);
 extern const struct zwp_relative_pointer_v1_listener _maru_wayland_relative_pointer_listener;
 extern const struct zwp_locked_pointer_v1_listener _maru_wayland_locked_pointer_listener;
+void _maru_wayland_mark_lost(MARU_Context_WL *ctx, const char *message);
+
+static inline bool _maru_wayland_flush_or_mark_lost(MARU_Context_WL *ctx,
+                                                   const char *error_msg) {
+  if (maru_wl_display_flush(ctx, ctx->wl.display) < 0 && errno != EAGAIN) {
+    _maru_wayland_mark_lost(ctx, error_msg);
+    return false;
+  }
+  if (maru_wl_display_get_error(ctx, ctx->wl.display) != 0) {
+    _maru_wayland_mark_lost(
+        ctx, "Wayland display reported a fatal protocol/connection error");
+    return false;
+  }
+  return true;
+}
+
 MARU_WaylandDecorationStrategy _maru_wayland_get_decoration_strategy(MARU_Context_WL *ctx);
 
 bool _maru_wayland_create_ssd_decoration(MARU_Window_WL *window);

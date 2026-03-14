@@ -137,7 +137,7 @@ static void _maru_wayland_disconnect_display(MARU_Context_WL *ctx) {
   }
 }
 
-static void _maru_wayland_mark_lost(MARU_Context_WL *ctx, const char *message) {
+void _maru_wayland_mark_lost(MARU_Context_WL *ctx, const char *message) {
   ctx->base.pub.flags |= MARU_CONTEXT_STATE_LOST;
   if (message) {
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_BACKEND_FAILURE, message);
@@ -725,6 +725,11 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
   }
 
   _maru_wayland_update_idle_notification(ctx);
+
+  if (!_maru_wayland_flush_or_mark_lost(
+          ctx, "wl_display_flush() failed during context update")) {
+    return MARU_CONTEXT_LOST;
+  }
 
   return MARU_SUCCESS;
 }

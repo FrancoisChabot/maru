@@ -37,6 +37,8 @@ static MARU_Status maru_announceClipboardData_WL_ctx(MARU_Context *context,
                                                      MARU_StringList mime_types) {
   MARU_Window_WL *win = maru_getClipboardWindow_WL(context);
   if (!win) {
+    MARU_REPORT_DIAGNOSTIC(context, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                           "Wayland requires at least one active window/surface to access the clipboard");
     return MARU_FAILURE;
   }
   return maru_announceData_WL((MARU_Window *)win, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
@@ -48,6 +50,8 @@ static MARU_Status maru_requestClipboardData_WL_ctx(MARU_Context *context,
                                                     void *userdata) {
   MARU_Window_WL *win = maru_getClipboardWindow_WL(context);
   if (!win) {
+    MARU_REPORT_DIAGNOSTIC(context, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                           "Wayland requires at least one active window/surface to access the clipboard");
     return MARU_FAILURE;
   }
   return maru_requestData_WL((MARU_Window *)win, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
@@ -59,6 +63,8 @@ maru_getAvailableClipboardMIMETypes_WL_ctx(const MARU_Context *context,
                                            MARU_StringList *out_list) {
   MARU_Window_WL *win = maru_getClipboardWindow_WL(context);
   if (!win) {
+    MARU_REPORT_DIAGNOSTIC(context, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                           "Wayland requires at least one active window/surface to access the clipboard");
     out_list->strings = NULL;
     out_list->count = 0;
     return MARU_FAILURE;
