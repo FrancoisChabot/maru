@@ -222,6 +222,13 @@ bool _maru_linux_common_init(MARU_Context_Linux_Common* common, MARU_Context_Bas
   atomic_init(&common->worker.has_message, false);
   common->worker.thread_started = false;
 
+  common->controllers = NULL;
+  common->controller_count = 0;
+  common->controller_list_storage = NULL;
+  common->controller_list_capacity = 0;
+  common->controller_snapshot_count = 0;
+  common->controller_snapshot_dirty = true;
+
   if (maru_linux_udev_load(ctx_base, &common->worker.udev_lib)) {
     common->worker.udev = common->worker.udev_lib.udev_new();
     if (common->worker.udev) {

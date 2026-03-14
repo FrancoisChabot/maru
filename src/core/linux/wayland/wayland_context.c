@@ -131,14 +131,6 @@ static void _maru_wayland_drain_wake_fd(MARU_Context_WL *ctx) {
   }
 }
 
-uint64_t _maru_wayland_get_monotonic_time_ns(void) {
-  struct timespec ts;
-  if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
-    return 0;
-  }
-  return ((uint64_t)ts.tv_sec * 1000000000ull) + (uint64_t)ts.tv_nsec;
-}
-
 static void _maru_wayland_disconnect_display(MARU_Context_WL *ctx) {
   if (ctx->wl.display) {
     maru_wl_display_disconnect(ctx, ctx->wl.display);
@@ -487,7 +479,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
 
   _maru_init_context_base(&ctx->base);
   ctx->base.pub.userdata = create_info->userdata;
-  ctx->controller_snapshot_dirty = true;
+  ctx->linux_common.controller_snapshot_dirty = true;
 
 #ifdef MARU_INDIRECT_BACKEND
   extern const MARU_Backend maru_backend_WL;
@@ -874,7 +866,7 @@ static int _maru_wayland_pump_compute_timeout_ms(MARU_Context_WL *ctx,
   int timeout = (timeout_ms == MARU_NEVER) ? -1 : (int)timeout_ms;
   if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 &&
       ctx->repeat.next_repeat_ns != 0) {
-    const uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
+    const uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
     if (now_ns != 0) {
       if (ctx->repeat.next_repeat_ns <= now_ns) {
         timeout = 0;
@@ -890,7 +882,7 @@ static int _maru_wayland_pump_compute_timeout_ms(MARU_Context_WL *ctx,
   {
     const uint64_t cursor_next_ns = _maru_wayland_cursor_next_frame_ns(ctx);
     if (cursor_next_ns != 0) {
-      const uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
+      const uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
       if (now_ns != 0) {
         if (cursor_next_ns <= now_ns) {
           timeout = 0;
@@ -1000,7 +992,7 @@ static void _maru_wayland_pump_dispatch_repeats(MARU_Context_WL *ctx) {
   if (ctx->repeat.repeat_key != 0 && ctx->repeat.rate > 0 &&
       ctx->repeat.next_repeat_ns != 0 && ctx->linux_common.xkb.state &&
       ctx->linux_common.xkb.focused_window) {
-    uint64_t now_ns = _maru_wayland_get_monotonic_time_ns();
+    uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
     if (now_ns != 0 && now_ns >= ctx->repeat.next_repeat_ns) {
       uint32_t dispatch_count = 0;
       const uint32_t max_dispatch_per_pump = 16;
@@ -1067,12 +1059,12 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
                                MARU_EventMask mask,
                                MARU_EventCallback callback, void *userdata) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  const uint64_t pump_start_ns = _maru_wayland_get_monotonic_time_ns();
+  const uint64_t pump_start_ns = _maru_linux_get_monotonic_time_ns();
   MARU_Status status = MARU_SUCCESS;
 
   MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
   ctx->base.pump_ctx = &pump_ctx;
-  ctx->controller_snapshot_dirty = true;
+  ctx->linux_common.controller_snapshot_dirty = true;
 
   _maru_linux_common_drain_internal_events(&ctx->linux_common);
   _maru_drain_queued_events(&ctx->base);

@@ -27,6 +27,7 @@
 #include "../core/linux/linux_entry.c"
 #include "../core/linux/linux_context.c"
 #include "../core/linux/linux_common.c"
+#include "../core/linux/linux_input.c"
 #include "../core/linux/linux_dataexchange.c"
 #include "../core/linux/dlib/linux_loader.c"
 

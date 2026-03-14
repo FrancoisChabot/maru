@@ -127,12 +127,25 @@ typedef struct MARU_Context_Linux_Common {
   MARU_LinuxController *controllers;
   uint32_t controller_count;
 
+  MARU_Controller **controller_list_storage;
+  uint32_t controller_list_capacity;
+  uint32_t controller_snapshot_count;
+  bool controller_snapshot_dirty;
+
   MARU_Lib_Xkb xkb_lib;
 } MARU_Context_Linux_Common;
 
 bool _maru_linux_common_init(MARU_Context_Linux_Common* common, MARU_Context_Base* ctx_base);
 bool _maru_linux_common_run(MARU_Context_Linux_Common* common);
 void _maru_linux_common_cleanup(MARU_Context_Linux_Common* common);
+
+uint64_t _maru_linux_get_monotonic_time_ns(void);
+bool _maru_linux_map_native_mouse_button(uint32_t native_code, uint32_t *out_channel);
+MARU_Key _maru_linux_scancode_to_maru_key(uint32_t scancode);
+
+MARU_Status _maru_linux_common_get_controllers(MARU_Context_Linux_Common *common, MARU_ControllerList *out_list);
+void _maru_linux_common_retain_controller(MARU_Controller *controller);
+void _maru_linux_common_release_controller(MARU_Controller *controller);
 
 bool _maru_linux_common_init_mouse_channels(MARU_Context_Base *ctx_base);
 void _maru_linux_common_handle_internal_event(MARU_Context_Linux_Common *common, MARU_InternalEventId type, MARU_Window *window, const MARU_Event *event);

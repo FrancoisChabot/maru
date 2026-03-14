@@ -2,6 +2,7 @@ set(MARU_LINUX_COMMON_SOURCES
     linux_entry.c
     linux_context.c
     linux_common.c
+    linux_input.c
     linux_dataexchange.c
     dlib/linux_loader.c
 )

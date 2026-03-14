@@ -191,11 +191,6 @@ typedef struct MARU_Context_X11 {
   void *dnd_mime_query_storage;
   const char **dnd_mime_query_ptr;
   uint32_t dnd_mime_query_count;
-
-  MARU_Controller **controller_list_storage;
-  uint32_t controller_list_capacity;
-  uint32_t controller_snapshot_count;
-  bool controller_snapshot_dirty;
 } MARU_Context_X11;
 
 struct MARU_Window_X11 {
@@ -255,7 +250,6 @@ bool _maru_x11_copy_string(MARU_Context_X11 *ctx, const char *src, char **out_st
 MARU_Window_X11 *_maru_x11_find_window(MARU_Context_X11 *ctx, Window handle);
 void _maru_x11_refresh_monitors(MARU_Context_X11 *ctx);
 uint64_t _maru_x11_get_monotonic_time_ms(void);
-uint64_t _maru_x11_get_monotonic_time_ns(void);
 void _maru_x11_record_pump_duration_ns(MARU_Context_X11 *ctx, uint64_t duration_ns);
 MARU_Scalar _maru_x11_get_global_scale(MARU_Context_X11 *ctx);
 MARU_Scalar _maru_x11_scale_from_metrics(MARU_Scalar pixel_width,
