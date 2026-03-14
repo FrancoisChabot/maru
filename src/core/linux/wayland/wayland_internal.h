@@ -10,6 +10,7 @@
 #include "dlib/wayland-cursor.h"
 #include "dlib/libdecor.h"
 #include "protocols/maru_protocols.h"
+#include <errno.h>
 
 #define MARU_WL_SEAT_CAPABILITY_POINTER 1u
 #define MARU_WL_SEAT_CAPABILITY_KEYBOARD 2u
