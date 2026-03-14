@@ -548,20 +548,52 @@ static inline MARU_Status maru_setWindowDipPosition(MARU_Window* window, MARU_Ve
   return maru_updateWindow(window, MARU_WINDOW_ATTR_DIP_POSITION, &attrs);
 }
 
+static inline bool
+_maru_window_attrs_is_fullscreen(const MARU_WindowAttributes* attrs) {
+  MARU_ASSUME(attrs != NULL);
+  return attrs->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN;
+}
+
+static inline bool
+_maru_window_attrs_is_maximized(const MARU_WindowAttributes* attrs) {
+  MARU_ASSUME(attrs != NULL);
+  return attrs->presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED;
+}
+
+static inline bool
+_maru_window_attrs_is_minimized(const MARU_WindowAttributes* attrs) {
+  MARU_ASSUME(attrs != NULL);
+  return attrs->presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED;
+}
+
+static inline void _maru_window_attributes_set_presentation_state(
+    MARU_WindowAttributes* attrs, MARU_WindowPresentationState state) {
+  MARU_ASSUME(attrs != NULL);
+  attrs->presentation_state = state;
+}
+
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool enabled) {
   MARU_ASSUME(window != NULL);
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
-  attrs.fullscreen = enabled;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
+  _maru_window_attributes_set_presentation_state(
+      &attrs,
+      enabled ? MARU_WINDOW_PRESENTATION_FULLSCREEN : MARU_WINDOW_PRESENTATION_NORMAL);
+  attrs.visible = true;
+  const uint64_t mask = MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE;
+  return maru_updateWindow(window, mask, &attrs);
 }
 
 static inline MARU_Status maru_setWindowMaximized(MARU_Window* window, bool enabled) {
   MARU_ASSUME(window != NULL);
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
-  attrs.maximized = enabled;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_MAXIMIZED, &attrs);
+  _maru_window_attributes_set_presentation_state(
+      &attrs,
+      enabled ? MARU_WINDOW_PRESENTATION_MAXIMIZED : MARU_WINDOW_PRESENTATION_NORMAL);
+  attrs.visible = true;
+  const uint64_t mask = MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE;
+  return maru_updateWindow(window, mask, &attrs);
 }
 
 static inline MARU_Status maru_setWindowCursorMode(MARU_Window* window, MARU_CursorMode mode) {
@@ -658,8 +690,12 @@ static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool mini
   MARU_ASSUME(window != NULL);
   MARU_WindowAttributes attrs;
   memset(&attrs, 0, sizeof(attrs));
-  attrs.minimized = minimized;
-  return maru_updateWindow(window, MARU_WINDOW_ATTR_MINIMIZED, &attrs);
+  _maru_window_attributes_set_presentation_state(
+      &attrs,
+      minimized ? MARU_WINDOW_PRESENTATION_MINIMIZED : MARU_WINDOW_PRESENTATION_NORMAL);
+  attrs.visible = !minimized;
+  const uint64_t mask = MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE;
+  return maru_updateWindow(window, mask, &attrs);
 }
 
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, const MARU_Image* icon) {

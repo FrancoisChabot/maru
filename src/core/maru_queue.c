@@ -463,7 +463,7 @@ bool maru_commitQueue(MARU_Queue *queue) {
     return true;
 }
 
-void maru_scanQueue(MARU_Queue *queue,
+void maru_scanQueue(const MARU_Queue *queue,
                     MARU_EventMask mask,
                     MARU_QueueEventCallback callback,
                     void *userdata) {

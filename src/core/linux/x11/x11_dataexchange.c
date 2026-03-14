@@ -1426,9 +1426,6 @@ MARU_Status _maru_x11_announceData(MARU_Window *window,
     if (count == 0u) {
       return MARU_SUCCESS;
     }
-    if (allowed_actions == 0u) {
-      allowed_actions = MARU_DROP_ACTION_COPY;
-    }
     ctx->dnd_source.active = true;
     ctx->dnd_source.awaiting_finish = false;
     ctx->dnd_source.source_window = win->handle;

@@ -88,7 +88,9 @@ When `MARU_EVENT_DROP_DROPPED` occurs, you can then call `maru_requestDropData()
 
 ### Initiating Drags
 
-To start a drag, call `maru_announceDragData()`. The OS will then take over the cursor until the drag is finished or cancelled.
+To start a drag, call `maru_announceDragData()` with at least one allowed
+action bit (`COPY`, `MOVE`, or `LINK`). The OS will then take over the cursor
+until the drag is finished or cancelled.
 
 If you provide payload bytes with `MARU_DATA_PROVIDE_FLAG_ZERO_COPY`, Maru will
 later fire `MARU_EVENT_DATA_RELEASED` when it no longer needs that storage.

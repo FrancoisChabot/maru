@@ -67,10 +67,10 @@ To change window properties after creation (like title, size, or fullscreen stat
 ```c
 MARU_WindowAttributes attrs = {0};
 attrs.title = "New Title";
-attrs.fullscreen = true;
+attrs.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
 
 // Update both title and fullscreen state
-maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
+maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_PRESENTATION_STATE, &attrs);
 ```
 
 ### Window Geometry

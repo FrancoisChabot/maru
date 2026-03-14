@@ -32,8 +32,13 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
             bool is_fullscreen = maru_isWindowFullscreen(window);
             
             MARU_WindowAttributes attrs = {0};
-            attrs.fullscreen = !is_fullscreen;
-            maru_updateWindow(window, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
+            attrs.presentation_state = is_fullscreen
+                                           ? MARU_WINDOW_PRESENTATION_NORMAL
+                                           : MARU_WINDOW_PRESENTATION_FULLSCREEN;
+            attrs.visible = true;
+            maru_updateWindow(window,
+                              MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE,
+                              &attrs);
         }
     }
 }

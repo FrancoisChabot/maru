@@ -221,14 +221,18 @@ inline MARU_Status Window::setDipSize(MARU_Vec2Dip size) {
 
 inline MARU_Status Window::setFullscreen(bool enabled) {
     MARU_WindowAttributes attrs = {};
-    attrs.fullscreen = enabled;
-    return update(MARU_WINDOW_ATTR_FULLSCREEN, attrs);
+    attrs.presentation_state =
+        enabled ? MARU_WINDOW_PRESENTATION_FULLSCREEN : MARU_WINDOW_PRESENTATION_NORMAL;
+    attrs.visible = true;
+    return update(MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE, attrs);
 }
 
 inline MARU_Status Window::setMaximized(bool enabled) {
     MARU_WindowAttributes attrs = {};
-    attrs.maximized = enabled;
-    return update(MARU_WINDOW_ATTR_MAXIMIZED, attrs);
+    attrs.presentation_state =
+        enabled ? MARU_WINDOW_PRESENTATION_MAXIMIZED : MARU_WINDOW_PRESENTATION_NORMAL;
+    attrs.visible = true;
+    return update(MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE, attrs);
 }
 
 inline MARU_Status Window::setVisible(bool enabled) {
@@ -239,8 +243,10 @@ inline MARU_Status Window::setVisible(bool enabled) {
 
 inline MARU_Status Window::setMinimized(bool enabled) {
     MARU_WindowAttributes attrs = {};
-    attrs.minimized = enabled;
-    return update(MARU_WINDOW_ATTR_MINIMIZED, attrs);
+    attrs.presentation_state =
+        enabled ? MARU_WINDOW_PRESENTATION_MINIMIZED : MARU_WINDOW_PRESENTATION_NORMAL;
+    attrs.visible = !enabled;
+    return update(MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE, attrs);
 }
 
 inline MARU_Status Window::setCursorMode(MARU_CursorMode mode) {

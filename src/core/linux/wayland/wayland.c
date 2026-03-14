@@ -174,7 +174,15 @@ MARU_API MARU_Status maru_updateWindow(MARU_Window *window, uint64_t field_mask,
   MARU_API_VALIDATE(updateWindow, window, field_mask, attributes);
   MARU_RETURN_ON_ERROR(_maru_status_if_window_context_lost(window));
   MARU_API_VALIDATE_LIVE(updateWindow, window, field_mask, attributes);
-  return maru_updateWindow_WL(window, field_mask, attributes);
+  const MARU_WindowAttributes *attrs_arg = attributes;
+  MARU_WindowAttributes attrs_copy;
+  if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
+    attrs_copy = *attributes;
+    _maru_window_attributes_apply_presentation_state(
+        &attrs_copy, attrs_copy.presentation_state);
+    attrs_arg = &attrs_copy;
+  }
+  return maru_updateWindow_WL(window, field_mask, attrs_arg);
 }
 
 MARU_API MARU_Status maru_createCursor(MARU_Context *context,

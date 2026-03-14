@@ -674,20 +674,26 @@ typedef struct MARU_WindowResizedEvent {
 
 typedef uint32_t MARU_WindowStateChangedFlags;
 #define MARU_WINDOW_STATE_CHANGED_VISIBLE MARU_BIT32(0)
-#define MARU_WINDOW_STATE_CHANGED_MINIMIZED MARU_BIT32(1)
-#define MARU_WINDOW_STATE_CHANGED_MAXIMIZED MARU_BIT32(2)
+#define MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE MARU_BIT32(1)
+#define MARU_WINDOW_STATE_CHANGED_MINIMIZED MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE
+#define MARU_WINDOW_STATE_CHANGED_MAXIMIZED MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE
+#define MARU_WINDOW_STATE_CHANGED_FULLSCREEN MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE
 #define MARU_WINDOW_STATE_CHANGED_FOCUSED MARU_BIT32(3)
 #define MARU_WINDOW_STATE_CHANGED_ICON MARU_BIT32(4)
-#define MARU_WINDOW_STATE_CHANGED_FULLSCREEN MARU_BIT32(5)
 #define MARU_WINDOW_STATE_CHANGED_RESIZABLE MARU_BIT32(6)
+
+typedef enum MARU_WindowPresentationState {
+  MARU_WINDOW_PRESENTATION_NORMAL = 0,
+  MARU_WINDOW_PRESENTATION_FULLSCREEN = 1,
+  MARU_WINDOW_PRESENTATION_MAXIMIZED = 2,
+  MARU_WINDOW_PRESENTATION_MINIMIZED = 3,
+} MARU_WindowPresentationState;
 
 typedef struct MARU_WindowStateChangedEvent {
   MARU_WindowStateChangedFlags changed_fields;
+  MARU_WindowPresentationState presentation_state;
   bool visible;
-  bool minimized;
-  bool maximized;
   bool focused;
-  bool fullscreen;
   bool resizable;
   /* Borrowed same-context handle to the window's current icon, if any. */
   const MARU_Image* icon;
@@ -1386,11 +1392,12 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 
 #define MARU_WINDOW_ATTR_TITLE MARU_BIT(0)
 #define MARU_WINDOW_ATTR_DIP_SIZE MARU_BIT(1)
-#define MARU_WINDOW_ATTR_FULLSCREEN MARU_BIT(2)
+#define MARU_WINDOW_ATTR_PRESENTATION_STATE MARU_BIT(2)
+#define MARU_WINDOW_ATTR_FULLSCREEN MARU_WINDOW_ATTR_PRESENTATION_STATE
 #define MARU_WINDOW_ATTR_CURSOR_MODE MARU_BIT(3)
 #define MARU_WINDOW_ATTR_CURSOR MARU_BIT(4)
 #define MARU_WINDOW_ATTR_MONITOR MARU_BIT(5)
-#define MARU_WINDOW_ATTR_MAXIMIZED MARU_BIT(6)
+#define MARU_WINDOW_ATTR_MAXIMIZED MARU_WINDOW_ATTR_PRESENTATION_STATE
 #define MARU_WINDOW_ATTR_DIP_MIN_SIZE MARU_BIT(7)
 #define MARU_WINDOW_ATTR_DIP_MAX_SIZE MARU_BIT(8)
 #define MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE MARU_BIT(9)
@@ -1404,19 +1411,18 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(17)
 #define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(18)
 #define MARU_WINDOW_ATTR_VISIBLE MARU_BIT(19)
-#define MARU_WINDOW_ATTR_MINIMIZED MARU_BIT(20)
+#define MARU_WINDOW_ATTR_MINIMIZED MARU_WINDOW_ATTR_PRESENTATION_STATE
 #define MARU_WINDOW_ATTR_ICON MARU_BIT(21)
 
 #define MARU_WINDOW_ATTR_ALL                                                                    \
-  (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_FULLSCREEN |           \
-   MARU_WINDOW_ATTR_CURSOR_MODE | MARU_WINDOW_ATTR_CURSOR | MARU_WINDOW_ATTR_MONITOR |          \
-   MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_DIP_MIN_SIZE | MARU_WINDOW_ATTR_DIP_MAX_SIZE | \
-   MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE | MARU_WINDOW_ATTR_DIP_POSITION |                         \
-   MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE | MARU_WINDOW_ATTR_ACCEPT_DROP |  \
-   MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT |                    \
-   MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE | MARU_WINDOW_ATTR_SURROUNDING_TEXT |               \
-   MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE |                                                    \
-   MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED | MARU_WINDOW_ATTR_ICON)
+  (MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_DIP_SIZE | MARU_WINDOW_ATTR_PRESENTATION_STATE |     \
+   MARU_WINDOW_ATTR_CURSOR_MODE | MARU_WINDOW_ATTR_CURSOR | MARU_WINDOW_ATTR_MONITOR |           \
+   MARU_WINDOW_ATTR_DIP_MIN_SIZE | MARU_WINDOW_ATTR_DIP_MAX_SIZE | MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE | \
+   MARU_WINDOW_ATTR_DIP_POSITION | MARU_WINDOW_ATTR_ASPECT_RATIO | MARU_WINDOW_ATTR_RESIZABLE |    \
+   MARU_WINDOW_ATTR_ACCEPT_DROP | MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT | \
+   MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE | MARU_WINDOW_ATTR_SURROUNDING_TEXT |                  \
+   MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE |                                                     \
+   MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_ICON)
 
 /*
  * `title` and `surrounding_text` are copied by maru_createWindow() and
@@ -1436,11 +1442,14 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
  *   strictly positive.
  *
  * Window presentation state contract:
- * - `fullscreen`, `maximized`, and `minimized` are mutually exclusive.
- * - `fullscreen` and `maximized` require `visible == true`.
- * - `minimized` requires `visible == false`.
- * - A hidden, non-minimized window is expressed as `visible == false` with
- *   `fullscreen == maximized == minimized == false`.
+ * - `presentation_state` encodes the mutually exclusive modes
+ *   `NORMAL`, `FULLSCREEN`, `MAXIMIZED`, and `MINIMIZED`.
+ * - When the presentation state is set explicitly, Maru ensures that
+ *   `fullscreen`/`maximized`/`minimized` mirror the selected mode.
+ * - `FULLSCREEN` and `MAXIMIZED` require `visible == true`, `MINIMIZED`
+ *   requires `visible == false`.
+ * - `NORMAL` with `visible == false` represents a hidden but non-minimized
+ *   window.
  *
  * `maru_updateWindow()` validates partial state updates against the window's
  * current requested state. When switching between these exclusive modes in one
@@ -1470,6 +1479,7 @@ typedef struct MARU_WindowAttributes {
   bool maximized;
   bool resizable;
   bool accept_drop;
+  MARU_WindowPresentationState presentation_state;
 
   MARU_CursorMode cursor_mode;
   const MARU_Cursor* cursor;
@@ -1518,11 +1528,11 @@ typedef struct MARU_WindowCreateInfo {
                   .aspect_ratio = {0, 0},                       \
                                                                 \
                   .visible = true,                              \
-                  .minimized = false,                           \
-                  .maximized = false,                           \
+                  .minimized = false,                            \
+                  .maximized = false,                            \
                   .resizable = true,                            \
                   .accept_drop = false,                         \
-                                                                \
+                  .presentation_state = MARU_WINDOW_PRESENTATION_NORMAL, \
                   .cursor_mode = MARU_CURSOR_NORMAL,            \
                   .cursor = NULL,                               \
                                                                 \

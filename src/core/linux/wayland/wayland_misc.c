@@ -1,6 +1,7 @@
 #include "maru_api_constraints.h"
 #include "maru_mem_internal.h"
 #include "wayland_internal.h"
+#include "window_state.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -18,11 +19,12 @@ void _maru_wayland_dispatch_state_changed(MARU_Window_WL *window,
 
   MARU_Event evt = {0};
   evt.window_state_changed.changed_fields = changed_fields;
+  evt.window_state_changed.presentation_state =
+      _maru_window_presentation_state_from_flags(flags);
+  window->base.attrs_effective.presentation_state =
+      evt.window_state_changed.presentation_state;
   evt.window_state_changed.visible = (flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-  evt.window_state_changed.minimized = (flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-  evt.window_state_changed.maximized = (flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
   evt.window_state_changed.focused = (flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-  evt.window_state_changed.fullscreen = (flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
   evt.window_state_changed.resizable = (flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
   evt.window_state_changed.icon = window->base.pub.icon;
   _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_STATE_CHANGED,

@@ -134,7 +134,7 @@ MARU_API bool maru_pushQueue(MARU_Queue* queue,
                              MARU_WindowId window_id,
                              const MARU_Event* event);
 MARU_API bool maru_commitQueue(MARU_Queue* queue);
-MARU_API void maru_scanQueue(MARU_Queue* queue,
+MARU_API void maru_scanQueue(const MARU_Queue* queue,
                              MARU_EventMask mask,
                              MARU_QueueEventCallback callback,
                              void* userdata);

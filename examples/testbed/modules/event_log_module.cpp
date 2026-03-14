@@ -28,6 +28,21 @@ static std::string formatModifiers(MARU_ModifierFlags mods) {
     return s;
 }
 
+static const char* formatPresentationState(MARU_WindowPresentationState state) {
+    switch (state) {
+    case MARU_WINDOW_PRESENTATION_NORMAL:
+        return "NORMAL";
+    case MARU_WINDOW_PRESENTATION_FULLSCREEN:
+        return "FULLSCREEN";
+    case MARU_WINDOW_PRESENTATION_MAXIMIZED:
+        return "MAXIMIZED";
+    case MARU_WINDOW_PRESENTATION_MINIMIZED:
+        return "MINIMIZED";
+    default:
+        return "UNKNOWN";
+    }
+}
+
 void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Event& e) {
     if (!enabled_) return;
     if (hide_mouse_moved_ && type == MARU_EVENT_MOUSE_MOVED) return;
@@ -78,17 +93,13 @@ void EventLogModule::onEvent(MARU_EventId type, MARU_Window* win, const MARU_Eve
     } else if (type == MARU_EVENT_WINDOW_STATE_CHANGED) {
         ss << "ChangedMask=0x" << std::hex << e.window_state_changed.changed_fields << std::dec
            << " Visible: " << (e.window_state_changed.visible ? "YES" : "NO")
-           << " Minimized: " << (e.window_state_changed.minimized ? "YES" : "NO")
-           << " Maximized: " << (e.window_state_changed.maximized ? "YES" : "NO")
+           << " Presentation: " << formatPresentationState(e.window_state_changed.presentation_state)
            << " Focused: " << (e.window_state_changed.focused ? "YES" : "NO")
-           << " Fullscreen: " << (e.window_state_changed.fullscreen ? "YES" : "NO")
            << " Resizable: " << (e.window_state_changed.resizable ? "YES" : "NO")
            << " Icon: " << (e.window_state_changed.icon ? "SET" : "NONE")
            << " (Changed: V:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_VISIBLE) ? "Y" : "N")
-           << " Mi:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_MINIMIZED) ? "Y" : "N")
-           << " Ma:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_MAXIMIZED) ? "Y" : "N")
+           << " PS:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE) ? "Y" : "N")
            << " F:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_FOCUSED) ? "Y" : "N")
-           << " FS:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_FULLSCREEN) ? "Y" : "N")
            << " R:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_RESIZABLE) ? "Y" : "N")
            << " I:" << ((e.window_state_changed.changed_fields & MARU_WINDOW_STATE_CHANGED_ICON) ? "Y" : "N") << ")";
     } else if (type == MARU_EVENT_MONITOR_CHANGED) {

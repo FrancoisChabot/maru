@@ -280,27 +280,33 @@ _maru_validate_surrounding_text_tuple(const char *text,
 }
 
 static inline bool
-_maru_validate_window_state_tuple(bool visible,
-                                  bool minimized,
-                                  bool maximized,
-                                  bool fullscreen) {
-  if (fullscreen) {
-    return visible && !minimized && !maximized;
-  }
+_maru_validate_presentation_state(MARU_WindowPresentationState state) {
+  return state >= MARU_WINDOW_PRESENTATION_NORMAL &&
+         state <= MARU_WINDOW_PRESENTATION_MINIMIZED;
+}
 
-  if (maximized) {
-    return visible && !minimized;
+static inline bool
+_maru_validate_presentation_visibility(MARU_WindowPresentationState state,
+                                        bool visible) {
+  if ((state == MARU_WINDOW_PRESENTATION_FULLSCREEN ||
+       state == MARU_WINDOW_PRESENTATION_MAXIMIZED) &&
+      !visible) {
+    return false;
   }
-
-  if (minimized) {
-    return !visible && !maximized;
+  if (state == MARU_WINDOW_PRESENTATION_MINIMIZED && visible) {
+    return false;
   }
-
-  if (!visible) {
-    return !maximized && !fullscreen;
-  }
-
   return true;
+}
+
+static inline void
+_maru_window_attributes_apply_presentation_state(
+    MARU_WindowAttributes* attrs, MARU_WindowPresentationState state) {
+  MARU_ASSUME(attrs != NULL);
+  attrs->presentation_state = state;
+  attrs->fullscreen = state == MARU_WINDOW_PRESENTATION_FULLSCREEN;
+  attrs->maximized = state == MARU_WINDOW_PRESENTATION_MAXIMIZED;
+  attrs->minimized = state == MARU_WINDOW_PRESENTATION_MINIMIZED;
 }
 
 static inline void
@@ -330,6 +336,11 @@ _maru_validate_attributes(const MARU_Context_Base *ctx_base,
   if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
     MARU_CONSTRAINT_CHECK(
         _maru_validate_non_negative_vec2(attributes->dip_size));
+  }
+
+  if (field_mask & MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE) {
+    MARU_CONSTRAINT_CHECK(
+        _maru_validate_non_negative_vec2(attributes->dip_viewport_size));
   }
 
   if (field_mask & MARU_WINDOW_ATTR_DIP_MIN_SIZE) {
@@ -399,15 +410,9 @@ _maru_validate_attributes(const MARU_Context_Base *ctx_base,
     }
   }
 
-  if ((field_mask & (MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED |
-                     MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_FULLSCREEN)) ==
-      (MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED |
-       MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_FULLSCREEN)) {
-    MARU_CONSTRAINT_CHECK(_maru_validate_window_state_tuple(
-        attributes->visible,
-        attributes->minimized,
-        attributes->maximized,
-        attributes->fullscreen));
+  if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
+    MARU_CONSTRAINT_CHECK(
+        _maru_validate_presentation_state(attributes->presentation_state));
   }
 }
 
@@ -470,11 +475,13 @@ _maru_validate_createWindow(MARU_Context *context,
   _maru_validate_thread(ctx_base);
   _maru_validate_attributes(ctx_base, MARU_WINDOW_ATTR_ALL,
                             &create_info->attributes);
-  MARU_CONSTRAINT_CHECK(_maru_validate_window_state_tuple(
-      create_info->attributes.visible,
-      create_info->attributes.minimized,
-      create_info->attributes.maximized,
-      create_info->attributes.fullscreen));
+  MARU_CONSTRAINT_CHECK(
+      _maru_validate_presentation_state(
+          create_info->attributes.presentation_state));
+  MARU_CONSTRAINT_CHECK(
+      _maru_validate_presentation_visibility(
+          create_info->attributes.presentation_state,
+          create_info->attributes.visible));
   MARU_CONSTRAINT_CHECK(_maru_validate_surrounding_text_tuple(
       create_info->attributes.surrounding_text,
       create_info->attributes.surrounding_cursor_byte,
@@ -500,24 +507,19 @@ _maru_validate_updateWindow(MARU_Window *window, uint64_t field_mask,
   MARU_CONSTRAINT_CHECK((field_mask & ~known_fields) == 0);
   _maru_validate_attributes(win_base->ctx_base, field_mask, attributes);
 
-  if ((field_mask & (MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_MINIMIZED |
-                     MARU_WINDOW_ATTR_MAXIMIZED | MARU_WINDOW_ATTR_FULLSCREEN)) != 0) {
+  if (field_mask & (MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_PRESENTATION_STATE)) {
     const MARU_WindowAttributes *requested = &win_base->attrs_requested;
     const bool new_visible = (field_mask & MARU_WINDOW_ATTR_VISIBLE)
                                  ? attributes->visible
                                  : requested->visible;
-    const bool new_minimized = (field_mask & MARU_WINDOW_ATTR_MINIMIZED)
-                                   ? attributes->minimized
-                                   : requested->minimized;
-    const bool new_maximized = (field_mask & MARU_WINDOW_ATTR_MAXIMIZED)
-                                   ? attributes->maximized
-                                   : requested->maximized;
-    const bool new_fullscreen = (field_mask & MARU_WINDOW_ATTR_FULLSCREEN)
-                                    ? attributes->fullscreen
-                                    : requested->fullscreen;
+    const MARU_WindowPresentationState new_state =
+        (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE)
+            ? attributes->presentation_state
+            : requested->presentation_state;
 
-    MARU_CONSTRAINT_CHECK(_maru_validate_window_state_tuple(
-        new_visible, new_minimized, new_maximized, new_fullscreen));
+    MARU_CONSTRAINT_CHECK(_maru_validate_presentation_state(new_state));
+    MARU_CONSTRAINT_CHECK(
+        _maru_validate_presentation_visibility(new_state, new_visible));
   }
 
   if ((field_mask & (MARU_WINDOW_ATTR_DIP_MIN_SIZE | MARU_WINDOW_ATTR_DIP_MAX_SIZE)) != 0) {
@@ -603,7 +605,7 @@ static inline void _maru_validate_commitQueue(MARU_Queue *queue) {
   _maru_validate_queue_creator_thread(queue);
 }
 
-static inline void _maru_validate_scanQueue(MARU_Queue *queue,
+static inline void _maru_validate_scanQueue(const MARU_Queue *queue,
                                             MARU_EventMask mask,
                                             MARU_QueueEventCallback callback,
                                             void *userdata) {
