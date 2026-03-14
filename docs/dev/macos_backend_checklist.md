@@ -41,11 +41,11 @@ This document tracks the detailed implementation status of the Maru macOS backen
 - [x] **Mouse Motion Events** (`MARU_EVENT_MOUSE_MOVED`)
 - [x] **Scroll Wheel Events** (`MARU_EVENT_MOUSE_SCROLLED`)
 - [x] **Window State Events** (`RESIZED`, `CLOSE_REQUESTED`, `READY`, `FOCUSED`)
-- [ ] **IME / Text Input Support** (HIGH PRIORITY)
-  - [ ] Implement `NSTextInputClient` protocol in `MARU_ContentView`.
-  - [ ] Emit `MARU_EVENT_TEXT_EDIT_STARTED`, `UPDATED`, `COMMITTED`, `ENDED`.
-  - [ ] Support `MARU_WINDOW_ATTR_TEXT_INPUT_TYPE` and `MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT`.
-  - [ ] Support surrounding text attributes.
+- [x] **IME / Text Input Support**
+  - [x] Implement `NSTextInputClient` protocol in `MARU_ContentView`.
+  - [x] Emit `MARU_EVENT_TEXT_EDIT_STARTED`, `UPDATED`, `COMMITTED`, `ENDED`.
+  - [x] Support `MARU_WINDOW_ATTR_TEXT_INPUT_TYPE` and `MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT`.
+  - [x] Support surrounding text attributes.
 
 ## 4. Vulkan Integration
 - [x] **Extension Reporting** (`VK_KHR_surface`, `VK_EXT_metal_surface`)

@@ -86,7 +86,12 @@ void _maru_reportDiagnostic(const MARU_Context *ctx, MARU_Diagnostic diag,
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
                           MARU_Window *window, const MARU_Event *event) {
-  if (!ctx->pump_ctx) return;
+  if (!ctx->pump_ctx) {
+    if (type == MARU_EVENT_DATA_REQUESTED && ctx->urgent_data_requested_callback) {
+        ctx->urgent_data_requested_callback(type, window, event, ctx->urgent_data_requested_userdata);
+    }
+    return;
+  }
   MARU_ASSUME(ctx->pump_ctx != NULL);
 
   const MARU_EventMask event_bit = MARU_EVENT_MASK(type);
@@ -174,6 +179,16 @@ void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {
   }
   while (_maru_event_queue_pop(qu, &type, &window, &evt)) {
     _maru_dispatch_event(ctx_base, type, NULL, &evt);
+  }
+
+  for (MARU_Window_Base *it = ctx_base->window_list_head; it; it = it->ctx_next) {
+    if (it->pending_ready_event) {
+      it->pending_ready_event = false;
+      it->pub.flags |= MARU_WINDOW_STATE_READY;
+      MARU_Event ready_evt = {0};
+      _maru_dispatch_event(ctx_base, MARU_EVENT_WINDOW_READY, (MARU_Window *)it,
+                           &ready_evt);
+    }
   }
 }
 

@@ -73,6 +73,8 @@ typedef struct MARU_Context_Base {
   uint64_t attrs_dirty_mask;
 
   MARU_PumpContext *pump_ctx;
+  MARU_EventCallback urgent_data_requested_callback;
+  void *urgent_data_requested_userdata;
   bool inhibit_idle;
 
   MARU_Monitor **monitor_cache;

@@ -5,37 +5,6 @@
 #import "maru_mem_internal.h"
 #import <Cocoa/Cocoa.h>
 
-@interface MARU_ClipboardDelegate : NSObject <NSPasteboardItemDataProvider>
-@property (nonatomic, assign) MARU_Context_Cocoa *context;
-@end
-
-@implementation MARU_ClipboardDelegate
-
-- (void)pasteboard:(NSPasteboard *)sender item:(NSPasteboardItem *)item provideDataForType:(NSPasteboardType)type {
-    (void)sender;
-    (void)item;
-    
-    MARU_DataRequest_Cocoa req = {0};
-    req.base.ctx_base = &self.context->base;
-    req.base.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
-    req.ns_pasteboard = sender;
-    req.ns_type = type;
-
-    MARU_Event event = {0};
-    event.data_requested.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
-    event.data_requested.mime_type = [type UTF8String]; // Simplified, should map back
-    event.data_requested.request = (MARU_DataRequest *)&req;
-
-    _maru_dispatch_event(&self.context->base, MARU_EVENT_DATA_REQUESTED, NULL, &event);
-}
-
-- (void)pasteboardFinishedWithDataProvider:(NSPasteboard *)sender {
-    (void)sender;
-    // Ownership lost
-}
-
-@end
-
 static NSPasteboardType _maru_mime_to_ns_type(const char *mime_type) {
     if (strcmp(mime_type, "text/plain") == 0) return NSPasteboardTypeString;
     if (strcmp(mime_type, "text/html") == 0) return NSPasteboardTypeHTML;
@@ -52,6 +21,39 @@ static const char *_maru_ns_type_to_mime(NSPasteboardType type) {
     return [type UTF8String];
 }
 
+@interface MARU_ClipboardDelegate : NSObject <NSPasteboardItemDataProvider, NSPasteboardTypeOwner>
+@property (nonatomic, assign) MARU_Context_Cocoa *context;
+@end
+
+@implementation MARU_ClipboardDelegate
+
+- (void)pasteboard:(NSPasteboard *)sender item:(NSPasteboardItem *)item provideDataForType:(NSPasteboardType)type {
+    (void)item;
+    [self pasteboard:sender provideDataForType:type];
+}
+
+- (void)pasteboard:(NSPasteboard *)sender provideDataForType:(NSPasteboardType)type {
+    MARU_DataRequest_Cocoa req = {0};
+    req.base.ctx_base = &self.context->base;
+    req.base.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+    req.ns_pasteboard = sender;
+    req.ns_type = type;
+
+    MARU_Event event = {0};
+    event.data_requested.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+    event.data_requested.mime_type = _maru_ns_type_to_mime(type);
+    event.data_requested.request = (MARU_DataRequest *)&req;
+
+    _maru_dispatch_event(&self.context->base, MARU_EVENT_DATA_REQUESTED, NULL, &event);
+}
+
+- (void)pasteboardFinishedWithDataProvider:(NSPasteboard *)sender {
+    (void)sender;
+    // Ownership lost
+}
+
+@end
+
 MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions) {
     if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
         MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)maru_getWindowContext(window);
@@ -65,10 +67,15 @@ MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget
 
         NSMutableArray *types = [NSMutableArray arrayWithCapacity:mime_types.count];
         for (uint32_t i = 0; i < mime_types.count; ++i) {
-            [types addObject:_maru_mime_to_ns_type(mime_types.strings[i])];
+            NSPasteboardType type = _maru_mime_to_ns_type(mime_types.strings[i]);
+            [types addObject:type];
         }
 
-        [pb declareTypes:types owner:ctx->clipboard_delegate];
+        NSPasteboardItem *item = [[NSPasteboardItem alloc] init];
+        [item setDataProvider:ctx->clipboard_delegate forTypes:types];
+        [pb writeObjects:@[item]];
+        [item release];
+
         return MARU_SUCCESS;
     }
     // DnD not implemented yet
@@ -76,6 +83,7 @@ MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget
 }
 
 MARU_Status maru_provideData_Cocoa(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags) {
+    (void)flags;
     MARU_DataRequest_Cocoa *req = (MARU_DataRequest_Cocoa *)request;
     if (req->base.target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
         NSData *nsData = [NSData dataWithBytes:data length:size];

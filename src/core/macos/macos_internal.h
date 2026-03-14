@@ -53,6 +53,9 @@ typedef struct MARU_Window_Cocoa {
   id ns_view;
   id ns_layer;
   MARU_Vec2Dip dip_size;
+
+  uint64_t text_input_session_id;
+  bool ime_preedit_active;
 } MARU_Window_Cocoa;
 
 typedef struct MARU_Image_Cocoa {

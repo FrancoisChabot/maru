@@ -313,6 +313,8 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
 
     MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
     ctx->base.pump_ctx = &pump_ctx;
+    ctx->base.urgent_data_requested_callback = callback;
+    ctx->base.urgent_data_requested_userdata = userdata;
     ctx->controller_snapshot_dirty = true;
 
     if (atomic_load(&ctx->controllers_dirty)) {
@@ -365,6 +367,8 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
     }
 
     ctx->base.pump_ctx = NULL;
+    ctx->base.urgent_data_requested_callback = NULL;
+    ctx->base.urgent_data_requested_userdata = NULL;
     return MARU_SUCCESS;
 }
 

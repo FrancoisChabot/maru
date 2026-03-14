@@ -10,7 +10,7 @@
 @property (nonatomic, assign) MARU_Window_Cocoa *window;
 @end
 
-@interface MARU_ContentView : NSView {
+@interface MARU_ContentView : NSView <NSTextInputClient> {
     NSTrackingArea *trackingArea;
 }
 @property (nonatomic, assign) MARU_Window_Cocoa *maruWindow;
@@ -21,6 +21,98 @@
 + (Class)layerClass { return [CAMetalLayer class]; }
 - (CALayer *)makeBackingLayer { return [CAMetalLayer layer]; }
 - (BOOL)acceptsFirstResponder { return YES; }
+
+// --- NSTextInputClient implementation ---
+
+- (void)insertText:(id)string replacementRange:(NSRange)replacementRange {
+    (void)replacementRange;
+    NSString *text = [string isKindOfClass:[NSAttributedString class]] ? [string string] : string;
+    
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win) return;
+    
+    if (win->ime_preedit_active) {
+        win->ime_preedit_active = false;
+        MARU_Event end_evt = {0};
+        end_evt.text_edit_ended.session_id = win->text_input_session_id;
+        end_evt.text_edit_ended.canceled = false;
+        _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win, &end_evt);
+    }
+    
+    MARU_Event evt = {0};
+    evt.text_edit_committed.session_id = win->text_input_session_id;
+    evt.text_edit_committed.committed_utf8 = [text UTF8String];
+    evt.text_edit_committed.committed_length_bytes = (uint32_t)strlen(evt.text_edit_committed.committed_utf8);
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win, &evt);
+}
+
+- (void)doCommandBySelector:(SEL)selector {
+    (void)selector;
+    // We let normal keyDown handle non-text commands for now.
+}
+
+- (void)setMarkedText:(id)string selectedRange:(NSRange)selectedRange replacementRange:(NSRange)replacementRange {
+    (void)replacementRange;
+    NSString *text = [string isKindOfClass:[NSAttributedString class]] ? [string string] : string;
+    
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win) return;
+    
+    if (!win->ime_preedit_active) {
+        win->ime_preedit_active = true;
+        MARU_Event start_evt = {0};
+        start_evt.text_edit_started.session_id = win->text_input_session_id;
+        _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_STARTED, (MARU_Window *)win, &start_evt);
+    }
+    
+    MARU_Event evt = {0};
+    evt.text_edit_updated.session_id = win->text_input_session_id;
+    evt.text_edit_updated.preedit_utf8 = [text UTF8String];
+    evt.text_edit_updated.preedit_length_bytes = (uint32_t)strlen(evt.text_edit_updated.preedit_utf8);
+    evt.text_edit_updated.caret.start_byte = (uint32_t)selectedRange.location;
+    evt.text_edit_updated.caret.length_bytes = 0;
+    evt.text_edit_updated.selection.start_byte = (uint32_t)selectedRange.location;
+    evt.text_edit_updated.selection.length_bytes = (uint32_t)selectedRange.length;
+    
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_UPDATED, (MARU_Window *)win, &evt);
+}
+
+- (void)unmarkText {
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win || !win->ime_preedit_active) return;
+    
+    win->ime_preedit_active = false;
+    MARU_Event evt = {0};
+    evt.text_edit_ended.session_id = win->text_input_session_id;
+    evt.text_edit_ended.canceled = false;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win, &evt);
+}
+
+- (NSRange)selectedRange { return NSMakeRange(NSNotFound, 0); }
+- (NSRange)markedRange { return NSMakeRange(NSNotFound, 0); }
+- (BOOL)hasMarkedText { return self.maruWindow ? self.maruWindow->ime_preedit_active : NO; }
+- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range actualRange:(NSRangePointer)actualRange {
+    (void)range; (void)actualRange;
+    return nil;
+}
+- (NSArray<NSAttributedStringKey> *)validAttributesForMarkedText { return @[]; }
+
+- (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(NSRangePointer)actualRange {
+    (void)actualRange;
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win) return NSZeroRect;
+    
+    MARU_RectDip rect = win->base.attrs_effective.dip_text_input_rect;
+    NSRect contentRect = [win->ns_window contentRectForFrameRect:[win->ns_window frame]];
+    
+    // Convert DIP to Cocoa coordinates (flip Y)
+    NSRect r = NSMakeRect(rect.position.x, contentRect.size.height - rect.position.y - rect.size.y, rect.size.x, rect.size.y);
+    return [win->ns_window convertRectToScreen:[self convertRect:r toView:nil]];
+}
+
+- (NSUInteger)characterIndexForPoint:(NSPoint)point { (void)point; return 0; }
+
+// --- End of NSTextInputClient ---
 
 - (void)updateTrackingAreas {
     if (trackingArea) {
@@ -43,7 +135,11 @@
 
 // We let the context handle the events by overriding these and doing nothing, 
 // which prevents the "bleep" sound from the OS.
-- (void)keyDown:(NSEvent *)event { (void)event; }
+- (void)keyDown:(NSEvent *)event {
+    if (self.maruWindow && self.maruWindow->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
+        [self interpretKeyEvents:@[event]];
+    }
+}
 - (void)keyUp:(NSEvent *)event { (void)event; }
 - (void)flagsChanged:(NSEvent *)event { (void)event; }
 - (void)mouseDown:(NSEvent *)event { (void)event; }
@@ -97,6 +193,7 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     NSRect frame = [nsWindow contentRectForFrameRect:nsWindow.frame];
     MARU_WindowGeometry geometry = NSRectToMARUGeometry(nsWindow, frame);
     win->base.pub.geometry = geometry;
+    [win->ns_layer setContentsScale:geometry.scale];
     if (out_geometry) {
         *out_geometry = geometry;
     }
@@ -105,8 +202,9 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
 @implementation MARU_WindowDelegate
 
 - (BOOL)windowShouldClose:(NSWindow *)sender {
+    (void)sender;
     MARU_Event event = {0};
-    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_CLOSE_REQUESTED, (MARU_Window *)self.window, &event);
+    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_CLOSE_REQUESTED, (MARU_Window *)self.window, &event);
     return NO;
 }
 
@@ -114,12 +212,11 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     (void)notification;
     MARU_WindowGeometry geo = {0};
     _maru_cocoa_refresh_window_geometry(self.window, &geo);
-    [self.window->ns_layer setContentsScale:geo.scale];
 
     MARU_Event event = {0};
     event.window_resized.geometry = geo;
 
-    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
+    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
 }
 
 - (void)windowDidMove:(NSNotification *)notification {
@@ -131,29 +228,73 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     (void)notification;
     MARU_WindowGeometry geo = {0};
     _maru_cocoa_refresh_window_geometry(self.window, &geo);
-    [self.window->ns_layer setContentsScale:geo.scale];
 
     MARU_Event event = {0};
     event.window_resized.geometry = geo;
-    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
+    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
+}
+
+- (void)windowWillEnterFullScreen:(NSNotification *)notification {
+    (void)notification;
+    self.window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+    self.window->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+}
+
+- (void)windowWillExitFullScreen:(NSNotification *)notification {
+    (void)notification;
+    self.window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+    self.window->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
+}
+
+- (void)windowDidFailToEnterFullScreen:(NSWindow *)window {
+    (void)window;
+    self.window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+    self.window->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
+}
+
+- (void)windowDidFailToExitFullScreen:(NSWindow *)window {
+    (void)window;
+    self.window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+    self.window->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+}
+
+- (void)windowDidEnterFullScreen:(NSNotification *)notification {
+    (void)notification;
+    MARU_WindowGeometry geo = {0};
+    _maru_cocoa_refresh_window_geometry(self.window, &geo);
+
+    MARU_Event event = {0};
+    event.window_resized.geometry = geo;
+    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
+}
+
+- (void)windowDidExitFullScreen:(NSNotification *)notification {
+    (void)notification;
+    MARU_WindowGeometry geo = {0};
+    _maru_cocoa_refresh_window_geometry(self.window, &geo);
+
+    MARU_Event event = {0};
+    event.window_resized.geometry = geo;
+    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
 }
 
 - (void)windowDidBecomeKey:(NSNotification *)notification {
+    (void)notification;
     self.window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
     MARU_Event event = {0};
     event.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_FOCUSED;
     event.window_state_changed.focused = true;
-    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)self.window, &event);
+    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)self.window, &event);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification {
+    (void)notification;
     self.window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
     MARU_Event event = {0};
     event.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_FOCUSED;
     event.window_state_changed.focused = false;
-    _maru_dispatch_event(self.window->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)self.window, &event);
+    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)self.window, &event);
 }
-
 @end
 
 MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
@@ -227,6 +368,8 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
                                                      styleMask:styleMask
                                                        backing:NSBackingStoreBuffered
                                                          defer:NO];
+    [nsWindow setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
+    [nsWindow setBackgroundColor:[NSColor blackColor]];
     [nsWindow setTitle:[NSString stringWithUTF8String:create_info->attributes.title]];
     [nsWindow setReleasedWhenClosed:NO];
     MARU_WindowDelegate *delegate = [[MARU_WindowDelegate alloc] init];
@@ -235,12 +378,16 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
 
     MARU_ContentView *view = [[MARU_ContentView alloc] initWithFrame:contentRect];
     [view setWantsLayer:YES];
+    CALayer *layer = [view layer];
+    [layer setOpaque:YES];
     view.maruWindow = win;
     
     win->ns_window = nsWindow;
     win->ns_view = view;
-    win->ns_layer = [view layer];
+    win->ns_layer = layer;
     win->dip_size = create_info->attributes.dip_size;
+    win->text_input_session_id = 0;
+    win->ime_preedit_active = false;
     _maru_cocoa_associate_window(nsWindow, win);
 
     [nsWindow setContentView:view];
@@ -248,6 +395,10 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     [nsWindow makeKeyAndOrderFront:nil];
     [nsWindow center];
     _maru_cocoa_refresh_window_geometry(win, NULL);
+
+    if (create_info->attributes.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
+        maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &create_info->attributes);
+    }
 
     win->base.pending_ready_event = true;
 
@@ -417,6 +568,66 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         }
     }
 
+    if (field_mask & MARU_WINDOW_ATTR_TEXT_INPUT_TYPE) {
+        MARU_TextInputType old_type = effective->text_input_type;
+        requested->text_input_type = attributes->text_input_type;
+        effective->text_input_type = attributes->text_input_type;
+        
+        if (old_type == MARU_TEXT_INPUT_TYPE_NONE && effective->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
+            win->text_input_session_id++;
+            win->ime_preedit_active = false;
+            MARU_Event evt = {0};
+            evt.text_edit_started.session_id = win->text_input_session_id;
+            _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_STARTED, (MARU_Window *)win, &evt);
+        } else if (old_type != MARU_TEXT_INPUT_TYPE_NONE && effective->text_input_type == MARU_TEXT_INPUT_TYPE_NONE) {
+            if (win->ime_preedit_active) {
+                win->ime_preedit_active = false;
+                MARU_Event evt = {0};
+                evt.text_edit_ended.session_id = win->text_input_session_id;
+                evt.text_edit_ended.canceled = true;
+                _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win, &evt);
+            }
+            MARU_Event evt = {0};
+            evt.text_edit_ended.session_id = win->text_input_session_id;
+            evt.text_edit_ended.canceled = false;
+            _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win, &evt);
+        }
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT) {
+        requested->dip_text_input_rect = attributes->dip_text_input_rect;
+        effective->dip_text_input_rect = attributes->dip_text_input_rect;
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_TEXT) {
+        if (win->base.surrounding_text_storage) {
+            maru_context_free(win->base.ctx_base, win->base.surrounding_text_storage);
+            win->base.surrounding_text_storage = NULL;
+        }
+        requested->surrounding_text = NULL;
+        effective->surrounding_text = NULL;
+
+        if (attributes->surrounding_text) {
+            size_t len = strlen(attributes->surrounding_text);
+            win->base.surrounding_text_storage = maru_context_alloc(win->base.ctx_base, len + 1);
+            if (win->base.surrounding_text_storage) {
+                memcpy(win->base.surrounding_text_storage, attributes->surrounding_text, len + 1);
+                requested->surrounding_text = win->base.surrounding_text_storage;
+                effective->surrounding_text = win->base.surrounding_text_storage;
+            }
+        }
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE) {
+        requested->surrounding_cursor_byte = attributes->surrounding_cursor_byte;
+        effective->surrounding_cursor_byte = attributes->surrounding_cursor_byte;
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_SURROUNDING_ANCHOR_BYTE) {
+        requested->surrounding_anchor_byte = attributes->surrounding_anchor_byte;
+        effective->surrounding_anchor_byte = attributes->surrounding_anchor_byte;
+    }
+
     _maru_cocoa_refresh_window_geometry(win, NULL);
     win->base.attrs_dirty_mask &= ~field_mask;
     return MARU_SUCCESS;
@@ -438,11 +649,6 @@ MARU_Status maru_requestWindowFrame_Cocoa(MARU_Window *window) {
     const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
     if (uptime > 0.0) {
         event.window_frame.timestamp_ms = (uint32_t)(uptime * 1000.0);
-    }
-
-    if (win->base.ctx_base->pump_ctx) {
-        _maru_dispatch_event(win->base.ctx_base, MARU_EVENT_WINDOW_FRAME, window, &event);
-        return MARU_SUCCESS;
     }
 
     return _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_FRAME, window, &event);

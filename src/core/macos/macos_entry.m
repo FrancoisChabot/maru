@@ -16,6 +16,7 @@ static MARU_Status maru_announceClipboardData_Cocoa_ctx(MARU_Context *context,
                                                         MARU_StringList mime_types) {
   MARU_Window_Cocoa dummy_window = {0};
   dummy_window.base.ctx_base = (MARU_Context_Base *)context;
+  dummy_window.base.pub.context = context;
   return maru_announceData_Cocoa((MARU_Window *)&dummy_window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
                                  mime_types, 0);
 }
@@ -25,6 +26,7 @@ static MARU_Status maru_requestClipboardData_Cocoa_ctx(MARU_Context *context,
                                                        void *userdata) {
   MARU_Window_Cocoa dummy_window = {0};
   dummy_window.base.ctx_base = (MARU_Context_Base *)context;
+  dummy_window.base.pub.context = context;
   return maru_requestData_Cocoa((MARU_Window *)&dummy_window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
                                 mime_type, userdata);
 }
@@ -34,6 +36,7 @@ maru_getAvailableClipboardMIMETypes_Cocoa_ctx(const MARU_Context *context,
                                               MARU_StringList *out_list) {
   MARU_Window_Cocoa dummy_window = {0};
   dummy_window.base.ctx_base = (MARU_Context_Base *)context;
+  dummy_window.base.pub.context = (MARU_Context *)context;
   return maru_getAvailableMIMETypes_Cocoa((const MARU_Window *)&dummy_window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
                                           out_list);
 }
