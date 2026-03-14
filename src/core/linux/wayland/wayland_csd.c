@@ -82,20 +82,44 @@ _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 #endif
   }
 
-  if (effective->minimized != is_minimized) {
-    uint32_t changed = MARU_WINDOW_STATE_CHANGED_MINIMIZED;
+  if (effective->presentation_state !=
+      (is_minimized ? MARU_WINDOW_PRESENTATION_MINIMIZED
+                    : (is_fullscreen ? MARU_WINDOW_PRESENTATION_FULLSCREEN
+                                     : (is_maximized
+                                            ? MARU_WINDOW_PRESENTATION_MAXIMIZED
+                                            : MARU_WINDOW_PRESENTATION_NORMAL)))) {
+    uint32_t changed = 0;
     const bool was_visible =
         (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-    effective->minimized = is_minimized;
+
     if (is_minimized) {
+      effective->presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
       window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
       effective->visible = false;
       if (was_visible) {
         changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
+      changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+      if (is_fullscreen) {
+        effective->presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+        window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+        changed |= MARU_WINDOW_STATE_CHANGED_FULLSCREEN;
+      } else if (is_maximized) {
+        effective->presentation_state = MARU_WINDOW_PRESENTATION_MAXIMIZED;
+        window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+        changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
+      } else {
+        effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+        changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
+      }
+
       window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
       effective->visible = true;
       if (!was_visible) {
@@ -103,24 +127,6 @@ _libdecor_frame_handle_configure(struct libdecor_frame *frame,
       }
     }
     _maru_wayland_dispatch_state_changed(window, changed);
-  }
-
-  if (effective->maximized != is_maximized) {
-    effective->maximized = is_maximized;
-    if (is_maximized) {
-      window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-    } else {
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
-    }
-    _maru_wayland_dispatch_state_changed(
-        window, MARU_WINDOW_STATE_CHANGED_MAXIMIZED);
-  }
-
-  effective->fullscreen = is_fullscreen;
-  if (is_fullscreen) {
-    window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-  } else {
-    window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
   }
 
   if (!maru_libdecor_configuration_get_content_size(ctx, configuration, frame,
@@ -219,7 +225,7 @@ bool _maru_wayland_create_libdecor_frame(
                                    create_info->app_id);
   }
 
-  if (attrs->fullscreen) {
+  if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
     struct wl_output *output = NULL;
     if (attrs->monitor &&
         maru_getMonitorContext(attrs->monitor) == window->base.pub.context) {
@@ -227,12 +233,10 @@ bool _maru_wayland_create_libdecor_frame(
       output = monitor->output;
     }
     maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, output);
-  }
-
-  if (attrs->maximized) {
+  } else if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
     maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
-  }
-  if (attrs->minimized || !attrs->visible) {
+  } else if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED ||
+             !attrs->visible) {
     struct xdg_toplevel *toplevel =
         maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
     if (toplevel) {

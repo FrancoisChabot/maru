@@ -156,8 +156,10 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
         (MARU_Scalar)secondary_create_.size[0],
         (MARU_Scalar)secondary_create_.size[1]
     };
-    win_info.attributes.fullscreen = secondary_create_.fullscreen;
-    win_info.attributes.maximized = secondary_create_.maximized;
+    win_info.attributes.presentation_state = secondary_create_.fullscreen
+        ? MARU_WINDOW_PRESENTATION_FULLSCREEN
+        : (secondary_create_.maximized ? MARU_WINDOW_PRESENTATION_MAXIMIZED
+                                       : MARU_WINDOW_PRESENTATION_NORMAL);
     win_info.attributes.resizable = secondary_create_.resizable;
     win_info.app_id = secondary_create_.app_id[0] != '\0' ? secondary_create_.app_id : nullptr;
     win_info.content_type = (MARU_ContentType)secondary_create_.content_type;
@@ -373,14 +375,14 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             bool is_fs = maru_isWindowFullscreen(target);
             if (ImGui::Checkbox("Maximized", &is_max)) {
                 MARU_WindowAttributes attrs = {};
-                attrs.maximized = is_max;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_MAXIMIZED, &attrs);
+                attrs.presentation_state = is_max ? MARU_WINDOW_PRESENTATION_MAXIMIZED : MARU_WINDOW_PRESENTATION_NORMAL;
+                maru_updateWindow(target, MARU_WINDOW_ATTR_PRESENTATION_STATE, &attrs);
             }
             ImGui::SameLine();
             if (ImGui::Checkbox("Fullscreen", &is_fs)) {
                 MARU_WindowAttributes attrs = {};
-                attrs.fullscreen = is_fs;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
+                attrs.presentation_state = is_fs ? MARU_WINDOW_PRESENTATION_FULLSCREEN : MARU_WINDOW_PRESENTATION_NORMAL;
+                maru_updateWindow(target, MARU_WINDOW_ATTR_PRESENTATION_STATE, &attrs);
             }
 
             bool is_resizable = maru_isWindowResizable(target);
@@ -475,14 +477,14 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             bool is_fs = sw.window ? maru_isWindowFullscreen(sw.window) : false;
             if (ImGui::Checkbox("Maximized", &is_max) && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
-                attrs.maximized = is_max;
-                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_MAXIMIZED, &attrs);
+                attrs.presentation_state = is_max ? MARU_WINDOW_PRESENTATION_MAXIMIZED : MARU_WINDOW_PRESENTATION_NORMAL;
+                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_PRESENTATION_STATE, &attrs);
             }
             ImGui::SameLine();
             if (ImGui::Checkbox("Fullscreen", &is_fs) && sw.window && window_ready) {
                 MARU_WindowAttributes attrs = {};
-                attrs.fullscreen = is_fs;
-                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_FULLSCREEN, &attrs);
+                attrs.presentation_state = is_fs ? MARU_WINDOW_PRESENTATION_FULLSCREEN : MARU_WINDOW_PRESENTATION_NORMAL;
+                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_PRESENTATION_STATE, &attrs);
             }
 
             if (sw.window) {

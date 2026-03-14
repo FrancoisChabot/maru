@@ -1393,11 +1393,9 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_TITLE MARU_BIT(0)
 #define MARU_WINDOW_ATTR_DIP_SIZE MARU_BIT(1)
 #define MARU_WINDOW_ATTR_PRESENTATION_STATE MARU_BIT(2)
-#define MARU_WINDOW_ATTR_FULLSCREEN MARU_WINDOW_ATTR_PRESENTATION_STATE
 #define MARU_WINDOW_ATTR_CURSOR_MODE MARU_BIT(3)
 #define MARU_WINDOW_ATTR_CURSOR MARU_BIT(4)
 #define MARU_WINDOW_ATTR_MONITOR MARU_BIT(5)
-#define MARU_WINDOW_ATTR_MAXIMIZED MARU_WINDOW_ATTR_PRESENTATION_STATE
 #define MARU_WINDOW_ATTR_DIP_MIN_SIZE MARU_BIT(7)
 #define MARU_WINDOW_ATTR_DIP_MAX_SIZE MARU_BIT(8)
 #define MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE MARU_BIT(9)
@@ -1411,7 +1409,6 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
 #define MARU_WINDOW_ATTR_SURROUNDING_TEXT MARU_BIT(17)
 #define MARU_WINDOW_ATTR_SURROUNDING_CURSOR_BYTE MARU_BIT(18)
 #define MARU_WINDOW_ATTR_VISIBLE MARU_BIT(19)
-#define MARU_WINDOW_ATTR_MINIMIZED MARU_WINDOW_ATTR_PRESENTATION_STATE
 #define MARU_WINDOW_ATTR_ICON MARU_BIT(21)
 
 #define MARU_WINDOW_ATTR_ALL                                                                    \
@@ -1468,15 +1465,12 @@ typedef struct MARU_WindowAttributes {
   MARU_Vec2Dip dip_size;
   MARU_Vec2Dip dip_position;
   MARU_Vec2Dip dip_viewport_size;
-  bool fullscreen;
   const MARU_Monitor* monitor;
   MARU_Vec2Dip dip_min_size;
   MARU_Vec2Dip dip_max_size;
   MARU_Fraction aspect_ratio;
 
   bool visible;
-  bool minimized;
-  bool maximized;
   bool resizable;
   bool accept_drop;
   MARU_WindowPresentationState presentation_state;
@@ -1521,15 +1515,12 @@ typedef struct MARU_WindowCreateInfo {
                   .dip_size = {800, 600},                       \
                   .dip_position = {0, 0},                       \
                   .dip_viewport_size = {0, 0},                  \
-                  .fullscreen = false,                          \
                   .monitor = NULL,                              \
                   .dip_min_size = {0, 0},                       \
                   .dip_max_size = {0, 0},                       \
                   .aspect_ratio = {0, 0},                       \
                                                                 \
                   .visible = true,                              \
-                  .minimized = false,                            \
-                  .maximized = false,                            \
                   .resizable = true,                            \
                   .accept_drop = false,                         \
                   .presentation_state = MARU_WINDOW_PRESENTATION_NORMAL, \

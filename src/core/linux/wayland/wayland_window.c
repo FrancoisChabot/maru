@@ -431,51 +431,52 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
   const bool inferred_minimized =
       (width == 0 && height == 0 && !is_activated && !is_maximized &&
        !is_fullscreen);
-  if (effective->minimized != inferred_minimized) {
-    uint32_t changed = MARU_WINDOW_STATE_CHANGED_MINIMIZED;
+
+  if (effective->presentation_state !=
+      (inferred_minimized ? MARU_WINDOW_PRESENTATION_MINIMIZED
+                          : (is_fullscreen ? MARU_WINDOW_PRESENTATION_FULLSCREEN
+                                           : (is_maximized
+                                                  ? MARU_WINDOW_PRESENTATION_MAXIMIZED
+                                                  : MARU_WINDOW_PRESENTATION_NORMAL)))) {
+    uint32_t changed = 0;
     const bool was_visible =
         (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
 
-    effective->minimized = inferred_minimized;
     if (inferred_minimized) {
+      effective->presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
       window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
       effective->visible = false;
       if (was_visible) {
         changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
+      changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+      if (is_fullscreen) {
+        effective->presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+        window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+        changed |= MARU_WINDOW_STATE_CHANGED_FULLSCREEN;
+      } else if (is_maximized) {
+        effective->presentation_state = MARU_WINDOW_PRESENTATION_MAXIMIZED;
+        window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+        changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
+      } else {
+        effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+        changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
+      }
+
       window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
       effective->visible = true;
       if (!was_visible) {
         changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
     }
-
     _maru_wayland_dispatch_state_changed(window, changed);
-  }
-
-  if (effective->maximized != is_maximized) {
-    effective->maximized = is_maximized;
-    if (is_maximized) {
-      window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-    } else {
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
-    }
-    _maru_wayland_dispatch_state_changed(
-        window, MARU_WINDOW_STATE_CHANGED_MAXIMIZED);
-  }
-
-  if (effective->fullscreen != is_fullscreen) {
-    effective->fullscreen = is_fullscreen;
-    if (is_fullscreen) {
-      window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-    } else {
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-    }
-    _maru_wayland_dispatch_state_changed(
-        window, MARU_WINDOW_STATE_CHANGED_FULLSCREEN);
   }
 }
 
@@ -576,7 +577,7 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
     maru_xdg_toplevel_set_app_id(ctx, window->xdg.toplevel, create_info->app_id);
   }
 
-  if (attrs->fullscreen) {
+  if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
     struct wl_output *output = NULL;
     if (attrs->monitor &&
         maru_getMonitorContext(attrs->monitor) == window->base.pub.context) {
@@ -584,12 +585,10 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
       output = monitor->output;
     }
     maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
-  }
-
-  if (attrs->maximized) {
+  } else if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
     maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
-  }
-  if (attrs->minimized || !attrs->visible) {
+  } else if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED ||
+             !attrs->visible) {
     maru_xdg_toplevel_set_minimized(ctx, window->xdg.toplevel);
   }
 
@@ -631,18 +630,31 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->preferred_buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
   maru_getWindowGeometry_WL((MARU_Window *)window, NULL);
 
-  if (window->base.attrs_effective.maximized) {
-    window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-  }
-  if (window->base.attrs_effective.visible) {
+  switch (window->base.attrs_effective.presentation_state) {
+  case MARU_WINDOW_PRESENTATION_FULLSCREEN:
+    window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
     window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-  }
-  if (window->base.attrs_effective.minimized || !window->base.attrs_effective.visible) {
+    break;
+  case MARU_WINDOW_PRESENTATION_MAXIMIZED:
+    window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+    window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+    break;
+  case MARU_WINDOW_PRESENTATION_MINIMIZED:
     window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
     window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+    break;
+  case MARU_WINDOW_PRESENTATION_NORMAL:
+    if (window->base.attrs_effective.visible) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+    }
+    break;
   }
-  if (window->base.attrs_effective.fullscreen) {
-    window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+  if (!window->base.attrs_effective.visible) {
+    window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+    if (window->base.attrs_effective.presentation_state ==
+        MARU_WINDOW_PRESENTATION_NORMAL) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+    }
   }
   if (window->base.attrs_effective.resizable) {
     window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
@@ -889,28 +901,101 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
-      requested->fullscreen = attributes->fullscreen;
-      const bool was_fullscreen = (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
-      effective->fullscreen = attributes->fullscreen;
-      if (requested->fullscreen) {
-          window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
-              maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, NULL);
-          } else if (window->xdg.toplevel) {
-              maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, NULL);
-          }
+  if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
+    const MARU_WindowPresentationState requested_state =
+        attributes->presentation_state;
+    const MARU_WindowPresentationState old_state =
+        requested->presentation_state;
+
+    requested->presentation_state = requested_state;
+    effective->presentation_state = requested_state;
+
+    if (requested_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
+      window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      effective->visible = true;
+
+      struct wl_output *output = NULL;
+      if (requested->monitor &&
+          maru_getMonitorContext(requested->monitor) ==
+              window->base.pub.context) {
+        MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)requested->monitor;
+        output = monitor->output;
+      }
+
+      if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
+          window->libdecor.frame) {
+        maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, output);
+      } else if (window->xdg.toplevel) {
+        maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
+      }
+    } else if (requested_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+      window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+      effective->visible = true;
+
+      if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
+          window->libdecor.frame) {
+        if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
+          maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
+        }
+        maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
+      } else if (window->xdg.toplevel) {
+        if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
+          maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
+        }
+        maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
+      }
+    } else if (requested_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+      window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+      effective->visible = false;
+
+      struct xdg_toplevel *toplevel = window->xdg.toplevel;
+      if (!toplevel &&
+          window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
+          window->libdecor.frame) {
+        toplevel =
+            maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
+      }
+      if (toplevel) {
+        maru_xdg_toplevel_set_minimized(ctx, toplevel);
       } else {
-          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
-              maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
-          } else if (window->xdg.toplevel) {
-              maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
-          }
+        MARU_REPORT_DIAGNOSTIC(
+            (MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+            "Window minimization is unavailable on this compositor setup");
+        status = MARU_FAILURE;
       }
-      if (was_fullscreen != effective->fullscreen) {
-          state_changed_mask |= MARU_WINDOW_STATE_CHANGED_FULLSCREEN;
+    } else {
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+
+      if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
+          window->libdecor.frame) {
+        if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
+          maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
+        } else if (old_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
+          maru_libdecor_frame_unset_maximized(ctx, window->libdecor.frame);
+        }
+      } else if (window->xdg.toplevel) {
+        if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
+          maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
+        } else if (old_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
+          maru_xdg_toplevel_unset_maximized(ctx, window->xdg.toplevel);
+        }
       }
+    }
+
+    if (old_state != requested_state) {
+      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
+    }
   }
 
   if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
@@ -937,33 +1022,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       effective->aspect_ratio = attributes->aspect_ratio;
   }
 
-  if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
-      requested->maximized = attributes->maximized;
-      const bool was_maximized = (window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-      if (requested->maximized) {
-          if (!was_maximized) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
-          }
-          window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
-              maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
-          } else if (window->xdg.toplevel) {
-              maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
-          }
-      } else {
-          if (was_maximized) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
-          }
-          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
-              maru_libdecor_frame_unset_maximized(ctx, window->libdecor.frame);
-          } else if (window->xdg.toplevel) {
-              maru_xdg_toplevel_unset_maximized(ctx, window->xdg.toplevel);
-          }
-      }
-      effective->maximized = ((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0);
-  }
-
   if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
       requested->resizable = attributes->resizable;
       const bool was_resizable = (window->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
@@ -987,7 +1045,7 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
       requested->monitor = attributes->monitor;
       effective->monitor = attributes->monitor;
-      if (requested->fullscreen || (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0) {
+      if (requested->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN || (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0) {
           struct wl_output *output = NULL;
           if (requested->monitor && maru_getMonitorContext(requested->monitor) == window->base.pub.context) {
               MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)requested->monitor;
@@ -1097,24 +1155,24 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
           effective->visible = true;
-          effective->minimized = false;
+          effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
           if (!was_visible) {
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
           }
           if (was_minimized) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
+              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
           }
           (void)maru_requestWindowFocus_WL(window_handle);
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
           window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
           effective->visible = false;
-          effective->minimized = true;
+          effective->presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
           if (was_visible) {
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
           }
           if (!was_minimized) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
+              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
           }
           struct xdg_toplevel *toplevel = window->xdg.toplevel;
           if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
@@ -1127,48 +1185,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
                                      "Window minimization is unavailable on this compositor setup");
               status = MARU_FAILURE;
           }
-      }
-  }
-
-  if (field_mask & MARU_WINDOW_ATTR_MINIMIZED) {
-      requested->minimized = attributes->minimized;
-      const bool was_visible = (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-      const bool was_minimized = (window->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-
-      if (attributes->minimized) {
-          window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-          effective->minimized = true;
-          effective->visible = false;
-          if (!was_minimized) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
-          }
-          if (was_visible) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
-          }
-          struct xdg_toplevel *toplevel = window->xdg.toplevel;
-          if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
-              toplevel = maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
-          }
-          if (toplevel) {
-              maru_xdg_toplevel_set_minimized(ctx, toplevel);
-          } else {
-              MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                     "Window minimization is unavailable on this compositor setup");
-              status = MARU_FAILURE;
-          }
-      } else {
-          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-          window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-          effective->minimized = false;
-          effective->visible = true;
-          if (was_minimized) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
-          }
-          if (!was_visible) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
-          }
-          (void)maru_requestWindowFocus_WL(window_handle);
       }
   }
 

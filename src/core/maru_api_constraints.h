@@ -304,9 +304,6 @@ _maru_window_attributes_apply_presentation_state(
     MARU_WindowAttributes* attrs, MARU_WindowPresentationState state) {
   MARU_ASSUME(attrs != NULL);
   attrs->presentation_state = state;
-  attrs->fullscreen = state == MARU_WINDOW_PRESENTATION_FULLSCREEN;
-  attrs->maximized = state == MARU_WINDOW_PRESENTATION_MAXIMIZED;
-  attrs->minimized = state == MARU_WINDOW_PRESENTATION_MINIMIZED;
 }
 
 static inline void

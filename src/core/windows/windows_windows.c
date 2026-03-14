@@ -608,9 +608,7 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
   uint64_t initial_mask = MARU_WINDOW_ATTR_CURSOR_MODE | 
                           MARU_WINDOW_ATTR_CURSOR | 
                           MARU_WINDOW_ATTR_RESIZABLE | 
-                          MARU_WINDOW_ATTR_MAXIMIZED | 
-                          MARU_WINDOW_ATTR_MINIMIZED | 
-                          MARU_WINDOW_ATTR_FULLSCREEN;
+                          MARU_WINDOW_ATTR_PRESENTATION_STATE;
   maru_updateWindow_Windows((MARU_Window *)win, initial_mask, &create_info->attributes);
 
   _maru_register_window(&ctx->base, (MARU_Window *)win);
