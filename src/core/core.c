@@ -432,6 +432,24 @@ MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
   return MARU_FAILURE;
 }
 
+MARU_API MARU_Status maru_getWindow(MARU_Context *context,
+                                    MARU_WindowId window_id,
+                                    MARU_Window **out_window) {
+  MARU_API_VALIDATE(getWindow, context, window_id, out_window);
+
+  MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
+
+  const MARU_Context_Base *ctx_base = (const MARU_Context_Base *)context;
+  for (MARU_Window_Base *it = ctx_base->window_list_head; it; it = it->ctx_next) {
+    if (it->pub.window_id == window_id) {
+      *out_window = (MARU_Window *)it;
+      return MARU_SUCCESS;
+    }
+  }
+
+  return MARU_FAILURE;
+}
+
 MARU_API const char *maru_getDiagnosticString(MARU_Diagnostic diagnostic) {
 #ifdef MARU_ENABLE_DIAGNOSTICS
   switch (diagnostic) {

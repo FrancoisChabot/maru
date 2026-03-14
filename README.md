@@ -2,13 +2,12 @@
 
 [![License](https://img.shields.io/badge/license-zlib-blue.svg)](LICENSE.txt)
 
-Maru aims to be the high-speed rail line of cross-platform windowing: restrictive by design, so engines can move faster on top of it.
+Maru is a low-level cross platform windowing library that prioritizes predictability, stability, and performance over convenience. It may ask a bit more of you on day one, but in exchange it gives you a reliable foundation to build on.
 
-Maru is less flexible than other similar libraries. It is highly opinionated, has a strict (but clear!) threading model, and favors explicitness over convenience. It asks a bit more of you on day one, but in exchange it gives you a strong foundation to build on.
-
+- It has no dynamic global state unless the OS mandates it.
+- It has a clear and simple, albeit strict, threading model.
 - It goes out of its way to provide steady and predictable timing, even during unusual events like controller hot-plugs.
 - It has ruthless API validation that can be completely stripped out. It will abort() on any invalid API usage in validation builds.
-- It has no dynamic global state unless the OS mandates it.
 - It stays in its lane. It provides windowing (including OS features you'd expect like cursors and DnD), surface creation, and user inputs . That's it.
 
 Why is it called Maru? This library was built to support a bird-themed game, so it's named after my pet parrot: Marula.
@@ -170,8 +169,6 @@ Maru provides a few different options to control the validation behavior. These 
 #### Deterministic Event Dispatch
 **"Why do I need to pass callback and mask to maru_pumpEvents() every time?"**
 
-One of the things that's always bugged me about GLFW is that I am never fully confident *when* my callback is getting invoked. The only way I can be truly 100% sure my callback won't ever be called when I don't want it is simply to not let the library have it at all.
-
 Maru performs direct, synchronous event dispatch. It pulls events from the OS and fires them inline, strictly during the pump. That is the only time your callback comes into play. Forcing you to provide the callback and mask to `maru_pumpEvents()` every pump enshrines this on both sides of the fence.
 
 #### Principled Asynchronicity
@@ -224,14 +221,7 @@ zero-copy retention semantics.
 *   The thread that creates a `MARU_Context` is its owner thread. 
 *   Functions that return `MARU_Status` (e.g., `maru_createWindow`, `maru_pumpEvents`) MUST be called from the owner thread of the context they operate on.
 *   Context-lifecycle functions returning `void` (e.g., `maru_destroyContext`) MUST be called from the owner thread.
-*   Standalone utility objects like `MARU_Queue` are owned by the thread that created them. Except for `maru_scanQueue()`, all `maru_*Queue` APIs must be called from that creator thread.
-    `maru_scanQueue()` is globally thread-safe, but you must synchronize it against `maru_commitQueue()` on the same queue.
-*   `maru_postEvent()` and `maru_wakeContext()` are globally threading-safe and return a `MARU_Status` to signal success/failure or context loss.
-    Setting `MARU_ContextTuning.user_event_queue_size` to `0` disables only
-    application-posted user events for that context. It does not disable
-    backend/internal deferred event processing.
-*   `maru_*retain()` and `maru_*release()` can be safely called from anywhere at any time. (The safety is provided via atomic operations, not locks).
-*   `maru_getVersion()` is globally thread-safe.
+*   `maru_postEvent()`, `maru_wakeContext()`, `maru_*retain()` and `maru_*release()` are globally threading-safe.
 
 #### Volatile Hardware, Stable Threads
 **"Why do Controllers and Monitors use a retain/release system?"**
@@ -269,7 +259,7 @@ All coordinate variables in Maru explicitly include `dip` or `px` in their name.
 #### Analog Inputs: Polling vs. Events
 **"Why is there a mouse motion event but no controller analog event?"**
 
-Unlike a mouse that rests completely still, analog joysticks constantly jitter at a microscopic level due to electrical noise. Emitting an event every time a joystick's value changes by 0.001 would flood the event queue and burn CPU cycles. Therefore, Maru provides events for discrete digital buttons, but forces you to poll continuous analog states (`maru_getControllerAnalogStates`) when you actually need them (typically once per frame).
+Unlike a mouse that rests completely still, analog joysticks constantly jitter. Emitting an event every time a joystick's value changes by 0.001 would flood the event queue and burn CPU cycles. Therefore, Maru provides events for discrete digital buttons, but forces you to poll continuous analog states (`maru_getControllerAnalogStates`) when you actually need them (typically once per frame).
 
 #### Zero-Latency Mouse Input & Coalescence
 **"How does Maru handle high-frequency mouse input?"**

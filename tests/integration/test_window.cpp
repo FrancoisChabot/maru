@@ -99,3 +99,45 @@ TEST_CASE("DesktopIntegration.CrossThreadWakeContextWithoutWindow") {
   maru_destroyContext(ctx);
   CHECK(tracking.is_clean());
 }
+
+TEST_CASE("DesktopIntegration.GetWindowById") {
+  MARU_IntegrationTrackingAllocator tracking;
+  MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+  tracking.apply(&create_info);
+  create_info.backend = MARU_BACKEND_UNKNOWN;
+
+  MARU_Context *ctx = nullptr;
+  MARU_Status status = maru_createContext(&create_info, &ctx);
+  if (status != MARU_SUCCESS || !ctx) {
+    MESSAGE("Context creation unavailable; skipping window ID test.");
+    return;
+  }
+
+  MARU_WindowCreateInfo win_info = MARU_WINDOW_CREATE_INFO_DEFAULT;
+  win_info.attributes.title = "Test Window";
+  win_info.attributes.visible = false;
+
+  MARU_Window *win = nullptr;
+  status = maru_createWindow(ctx, &win_info, &win);
+  if (status != MARU_SUCCESS || !win) {
+    MESSAGE("Window creation unavailable; skipping window ID test.");
+    maru_destroyContext(ctx);
+    return;
+  }
+
+  MARU_WindowId id = maru_getWindowId(win);
+  CHECK(id != MARU_WINDOW_ID_NONE);
+
+  MARU_Window *found_win = nullptr;
+  status = maru_getWindow(ctx, id, &found_win);
+  CHECK(status == MARU_SUCCESS);
+  CHECK(found_win == win);
+
+  MARU_Window *not_found_win = nullptr;
+  status = maru_getWindow(ctx, id + 100, &not_found_win);
+  CHECK(status == MARU_FAILURE);
+  CHECK(not_found_win == nullptr);
+
+  maru_destroyContext(ctx);
+  CHECK(tracking.is_clean());
+}

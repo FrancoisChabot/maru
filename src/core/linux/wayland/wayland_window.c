@@ -450,19 +450,19 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       if (was_visible) {
         changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
       }
-      changed |= MARU_WINDOW_STATE_CHANGED_MINIMIZED;
+      changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
       if (is_fullscreen) {
         effective->presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
         window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
         window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
-        changed |= MARU_WINDOW_STATE_CHANGED_FULLSCREEN;
+        changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
       } else if (is_maximized) {
         effective->presentation_state = MARU_WINDOW_PRESENTATION_MAXIMIZED;
         window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
         window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-        changed |= MARU_WINDOW_STATE_CHANGED_MAXIMIZED;
+        changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
       } else {
         effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
         window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);

@@ -485,6 +485,15 @@ _maru_validate_createWindow(MARU_Context *context,
       create_info->attributes.surrounding_anchor_byte));
 }
 
+static inline void _maru_validate_getWindow(MARU_Context *context,
+                                            MARU_WindowId window_id,
+                                            MARU_Window **out_window) {
+  MARU_CONSTRAINT_CHECK(context != NULL);
+  MARU_CONSTRAINT_CHECK(out_window != NULL);
+  (void)window_id;
+  _maru_validate_thread((const MARU_Context_Base *)context);
+}
+
 static inline void _maru_validate_destroyWindow(MARU_Window *window) {
   MARU_CONSTRAINT_CHECK(window != NULL);
   _maru_validate_thread(((const MARU_Window_Base *)window)->ctx_base);
