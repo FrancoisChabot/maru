@@ -17,10 +17,6 @@
 #define MFD_CLOEXEC 1
 #endif
 
-#define WL_SEAT_CAPABILITY_POINTER 1
-#define WL_SEAT_CAPABILITY_KEYBOARD 2
-#define WL_SEAT_CAPABILITY_TOUCH 4
-
 #define WL_KEYBOARD_KEY_STATE_PRESSED 1
 #define WL_KEYBOARD_KEY_STATE_RELEASED 0
 #define WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1 1
@@ -434,7 +430,7 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer,
                                  MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
     if (btn_state == MARU_BUTTON_STATE_PRESSED) {
         ctx->clipboard.serial = serial;
-        ctx->primary_selection.serial = serial;
+        ctx->last_interaction_serial = serial;
     }
 
     if (ctx->base.mouse_button_states && channel < ctx->base.pub.mouse_button_count) {
@@ -770,7 +766,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     MARU_ButtonState maru_state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
     if (maru_state == MARU_BUTTON_STATE_PRESSED) {
         ctx->clipboard.serial = serial;
-        ctx->primary_selection.serial = serial;
+        ctx->last_interaction_serial = serial;
     }
     const bool text_input_active =
         (window->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&

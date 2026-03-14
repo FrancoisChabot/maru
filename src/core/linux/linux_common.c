@@ -323,6 +323,54 @@ void _maru_linux_common_cleanup(MARU_Context_Linux_Common* common) {
   }
 }
 
+bool _maru_linux_common_init_mouse_channels(MARU_Context_Base *ctx_base) {
+  static const struct {
+    const char *name;
+    uint32_t native_code;
+  } channel_defs[] = {
+      {"left", BTN_LEFT},       {"right", BTN_RIGHT},   {"middle", BTN_MIDDLE},
+      {"back", BTN_BACK},       {"forward", BTN_FORWARD}, {"side", BTN_SIDE},
+      {"extra", BTN_EXTRA},     {"task", BTN_TASK},
+  };
+  const uint32_t channel_count = (uint32_t)(sizeof(channel_defs) / sizeof(channel_defs[0]));
+
+  ctx_base->mouse_button_channels =
+      (MARU_ChannelInfo *)maru_context_alloc(ctx_base,
+                                                        sizeof(MARU_ChannelInfo) * channel_count);
+  if (!ctx_base->mouse_button_channels) {
+    return false;
+  }
+
+  ctx_base->mouse_button_states =
+      (MARU_ButtonState8 *)maru_context_alloc(ctx_base, sizeof(MARU_ButtonState8) * channel_count);
+  if (!ctx_base->mouse_button_states) {
+    maru_context_free(ctx_base, ctx_base->mouse_button_channels);
+    ctx_base->mouse_button_channels = NULL;
+    return false;
+  }
+
+  memset(ctx_base->mouse_button_states, 0, sizeof(MARU_ButtonState8) * channel_count);
+  for (uint32_t i = 0; i < channel_count; ++i) {
+    ctx_base->mouse_button_channels[i].name = channel_defs[i].name;
+    ctx_base->mouse_button_channels[i].native_code = channel_defs[i].native_code;
+    ctx_base->mouse_button_channels[i].flags = 0;
+    ctx_base->mouse_button_channels[i].min_value = 0.0f;
+    ctx_base->mouse_button_channels[i].max_value = 1.0f;
+  }
+
+  ctx_base->pub.mouse_button_count = channel_count;
+  ctx_base->pub.mouse_button_channels = ctx_base->mouse_button_channels;
+  ctx_base->pub.mouse_button_state = ctx_base->mouse_button_states;
+
+  ctx_base->mouse_button_channels[0].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx_base->mouse_button_channels[1].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx_base->mouse_button_channels[2].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx_base->mouse_button_channels[3].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+  ctx_base->mouse_button_channels[4].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+
+  return true;
+}
+
 void _maru_linux_controller_destroy(MARU_Context_Base* ctx_base, MARU_LinuxController* ctrl) {
   if (!ctx_base || !ctrl) return;
 

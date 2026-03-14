@@ -27,52 +27,8 @@ static void _xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base, uint3
   maru_xdg_wm_base_pong(ctx, xdg_wm_base, serial);
 }
 
-static bool _maru_wayland_init_context_mouse_channels(MARU_Context_WL *ctx) {
-  static const struct {
-    const char *name;
-    uint32_t native_code;
-  } channel_defs[] = {
-      {"left", BTN_LEFT},       {"right", BTN_RIGHT},   {"middle", BTN_MIDDLE},
-      {"back", BTN_BACK},       {"forward", BTN_FORWARD}, {"side", BTN_SIDE},
-      {"extra", BTN_EXTRA},     {"task", BTN_TASK},
-  };
-  const uint32_t channel_count = (uint32_t)(sizeof(channel_defs) / sizeof(channel_defs[0]));
-
-  ctx->base.mouse_button_channels =
-      (MARU_ChannelInfo *)maru_context_alloc(&ctx->base,
-                                                        sizeof(MARU_ChannelInfo) * channel_count);
-  if (!ctx->base.mouse_button_channels) {
-    return false;
-  }
-
-  ctx->base.mouse_button_states =
-      (MARU_ButtonState8 *)maru_context_alloc(&ctx->base, sizeof(MARU_ButtonState8) * channel_count);
-  if (!ctx->base.mouse_button_states) {
-    maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
-    ctx->base.mouse_button_channels = NULL;
-    return false;
-  }
-
-  memset(ctx->base.mouse_button_states, 0, sizeof(MARU_ButtonState8) * channel_count);
-  for (uint32_t i = 0; i < channel_count; ++i) {
-    ctx->base.mouse_button_channels[i].name = channel_defs[i].name;
-    ctx->base.mouse_button_channels[i].native_code = channel_defs[i].native_code;
-    ctx->base.mouse_button_channels[i].flags = 0;
-    ctx->base.mouse_button_channels[i].min_value = 0.0f;
-    ctx->base.mouse_button_channels[i].max_value = 1.0f;
-  }
-
-  ctx->base.pub.mouse_button_count = channel_count;
-  ctx->base.pub.mouse_button_channels = ctx->base.mouse_button_channels;
-  ctx->base.pub.mouse_button_state = ctx->base.mouse_button_states;
-
-  ctx->base.mouse_button_channels[0].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  ctx->base.mouse_button_channels[1].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  ctx->base.mouse_button_channels[2].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  ctx->base.mouse_button_channels[3].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-  ctx->base.mouse_button_channels[4].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
-
-  return true;
+static void _maru_wayland_init_context_mouse_channels(MARU_Context_WL *ctx) {
+  (void)_maru_linux_common_init_mouse_channels(&ctx->base);
 }
 
 const struct xdg_wm_base_listener _maru_xdg_wm_base_listener = {
@@ -537,11 +493,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
   extern const MARU_Backend maru_backend_WL;
   ctx->base.backend = &maru_backend_WL;
 #endif
-  if (!_maru_wayland_init_context_mouse_channels(ctx)) {
-    _maru_cleanup_context_base(&ctx->base);
-    maru_context_free(&ctx->base, ctx);
-    return MARU_FAILURE;
-  }
+  _maru_wayland_init_context_mouse_channels(ctx);
 
   ctx->base.attrs_requested = create_info->attributes;
   ctx->base.attrs_effective = create_info->attributes;
@@ -772,9 +724,6 @@ void maru_destroyContext_WL(MARU_Context *context) {
 MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
                                   const MARU_ContextAttributes *attributes) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  if (maru_isContextLost(context)) {
-    return MARU_CONTEXT_LOST;
-  }
 
   _maru_update_context_base(&ctx->base, field_mask, attributes);
 
@@ -789,12 +738,10 @@ MARU_Status maru_updateContext_WL(MARU_Context *context, uint64_t field_mask,
 
   return MARU_SUCCESS;
 }
-
 MARU_Status maru_wakeContext_WL(MARU_Context *context) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  if (maru_isContextLost(context)) {
-    return MARU_CONTEXT_LOST;
-  }
+  uint64_t val = 1;
+
   if (ctx->wake_fd < 0) {
     return MARU_FAILURE;
   }
@@ -1120,9 +1067,6 @@ MARU_Status maru_pumpEvents_WL(MARU_Context *context, uint32_t timeout_ms,
                                MARU_EventMask mask,
                                MARU_EventCallback callback, void *userdata) {
   MARU_Context_WL *ctx = (MARU_Context_WL *)context;
-  if (maru_isContextLost(context)) {
-    return MARU_CONTEXT_LOST;
-  }
   const uint64_t pump_start_ns = _maru_wayland_get_monotonic_time_ns();
   MARU_Status status = MARU_SUCCESS;
 

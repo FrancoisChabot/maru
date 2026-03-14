@@ -315,9 +315,9 @@ static inline MARU_Status _mock_pumpEvents(MARU_Context* context,
     return MARU_SUCCESS;
 }
 
-static inline bool _mock_wakeContext(MARU_Context* context) {
+static inline MARU_Status _mock_wakeContext(MARU_Context* context) {
     (void)context;
-    return true;
+    return MARU_SUCCESS;
 }
 
 #ifdef MARU_INDIRECT_BACKEND

@@ -14,6 +14,5 @@
 #include "generated/idle-inhibit-unstable-v1-client-protocol.inc.h"
 #include "generated/ext-idle-notify-v1-client-protocol.inc.h"
 #include "generated/xdg-activation-v1-client-protocol.inc.h"
-#include "generated/primary-selection-unstable-v1-client-protocol.inc.h"
 #include "generated/content-type-v1-client-protocol.inc.h"
 #include "generated/tablet-v2-client-protocol.inc.h"

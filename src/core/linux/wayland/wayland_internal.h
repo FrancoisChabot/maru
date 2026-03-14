@@ -11,6 +11,10 @@
 #include "dlib/libdecor.h"
 #include "protocols/maru_protocols.h"
 
+#define MARU_WL_SEAT_CAPABILITY_POINTER 1u
+#define MARU_WL_SEAT_CAPABILITY_KEYBOARD 2u
+#define MARU_WL_SEAT_CAPABILITY_TOUCH 4u
+
 typedef struct MARU_Window_WL MARU_Window_WL;
 typedef struct MARU_Cursor_WL MARU_Cursor_WL;
 typedef struct MARU_Context_WL MARU_Context_WL;
@@ -38,15 +42,6 @@ typedef struct MARU_WaylandDataOfferMeta {
   MARU_DropAction current_action;
   struct MARU_WaylandDataOfferMeta *next;
 } MARU_WaylandDataOfferMeta;
-
-typedef struct MARU_WaylandPrimaryOfferMeta {
-  struct zwp_primary_selection_offer_v1 *offer;
-  struct MARU_Context_WL *ctx;
-  const char **mime_types;
-  uint32_t mime_count;
-  uint32_t mime_capacity;
-  struct MARU_WaylandPrimaryOfferMeta *next;
-} MARU_WaylandPrimaryOfferMeta;
 
 typedef struct MARU_WaylandClipboardState {
   struct wl_data_device *device;
@@ -77,10 +72,6 @@ typedef struct MARU_WaylandClipboardState {
   uint32_t dnd_announced_mime_count;
   uint32_t dnd_announced_mime_capacity;
 
-  uint8_t *read_cache;
-  size_t read_cache_size;
-  size_t read_cache_capacity;
-
   const char **mime_query_ptr;
   uint32_t mime_query_count;
 
@@ -89,26 +80,6 @@ typedef struct MARU_WaylandClipboardState {
 
   MARU_WaylandDataOfferMeta *offer_metas;
 } MARU_WaylandClipboardState;
-
-typedef struct MARU_WaylandPrimarySelectionState {
-  struct zwp_primary_selection_device_v1 *device;
-  struct zwp_primary_selection_offer_v1 *offer;
-  struct zwp_primary_selection_source_v1 *source;
-  uint32_t serial;
-
-  const char **announced_mime_types;
-  uint32_t announced_mime_count;
-  uint32_t announced_mime_capacity;
-
-  uint8_t *read_cache;
-  size_t read_cache_size;
-  size_t read_cache_capacity;
-
-  const char **mime_query_ptr;
-  uint32_t mime_query_count;
-
-  MARU_WaylandPrimaryOfferMeta *offer_metas;
-} MARU_WaylandPrimarySelectionState;
 
 typedef struct MARU_Context_WL {
   MARU_Context_Base base;
@@ -137,6 +108,8 @@ typedef struct MARU_Context_WL {
   } repeat;
 
   MARU_Wayland_Protocols_WL protocols;
+
+  uint32_t last_interaction_serial;
 
   struct {
     MARU_Vec2Dip delta;
@@ -188,7 +161,6 @@ typedef struct MARU_Context_WL {
   } pump_pollfds;
 
   MARU_WaylandClipboardState clipboard;
-  MARU_WaylandPrimarySelectionState primary_selection;
   MARU_LinuxDataTransfer *data_transfers;
 
   MARU_Controller **controller_list_storage;
@@ -718,7 +690,6 @@ static inline void *maru_libdecor_get_userdata(MARU_Context_WL *ctx, struct libd
 #include "protocols/generated/maru-idle-inhibit-unstable-v1-helpers.h"
 #include "protocols/generated/maru-ext-idle-notify-v1-helpers.h"
 #include "protocols/generated/maru-xdg-activation-v1-helpers.h"
-#include "protocols/generated/maru-primary-selection-unstable-v1-helpers.h"
 #include "protocols/generated/maru-content-type-v1-helpers.h"
 
 #endif

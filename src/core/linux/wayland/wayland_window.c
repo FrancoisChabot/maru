@@ -1483,11 +1483,10 @@ MARU_Status maru_requestWindowFocus_WL(MARU_Window *window_handle) {
   maru_xdg_activation_token_v1_add_listener(ctx, token_obj,
                                             &_maru_wayland_activation_token_listener, ctx);
   maru_xdg_activation_token_v1_set_surface(ctx, token_obj, window->wl.surface);
-  if (ctx->protocols.opt.wl_seat && ctx->linux_common.pointer.enter_serial != 0) {
+  if (ctx->protocols.opt.wl_seat && ctx->last_interaction_serial != 0) {
     maru_xdg_activation_token_v1_set_serial(
-        ctx, token_obj, ctx->linux_common.pointer.enter_serial, ctx->protocols.opt.wl_seat);
+        ctx, token_obj, ctx->last_interaction_serial, ctx->protocols.opt.wl_seat);
   }
-  maru_xdg_activation_token_v1_set_surface(ctx, token_obj, window->wl.surface);
   maru_xdg_activation_token_v1_commit(ctx, token_obj);
 
   if (maru_wl_display_flush(ctx, ctx->wl.display) < 0 && errno != EAGAIN) {

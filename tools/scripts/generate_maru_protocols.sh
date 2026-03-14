@@ -40,7 +40,6 @@ gen_proto "$XML_DIR/pointer-constraints-unstable-v1.xml"
 gen_proto "$XML_DIR/idle-inhibit-unstable-v1.xml"
 gen_proto "$XML_DIR/ext-idle-notify-v1.xml"
 gen_proto "$XML_DIR/xdg-activation-v1.xml"
-gen_proto "$XML_DIR/primary-selection-unstable-v1.xml"
 gen_proto "$XML_DIR/content-type-v1.xml"
 gen_proto "$XML_DIR/tablet-v2.xml"
 
