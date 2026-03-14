@@ -75,13 +75,7 @@ _maru_status_if_request_context_lost(MARU_DataRequest *request) {
 
 #ifdef MARU_VALIDATE_API_CALLS
 
-#define MARU_CONSTRAINT_CHECK(cond)                                            \
-  do {                                                                         \
-    if (!(cond)) {                                                             \
-      fprintf(stderr, "Maru API contract violation in %s\n", __func__);        \
-      abort();                                                                 \
-    }                                                                          \
-  } while (0)
+#define MARU_CONSTRAINT_CHECK(cond) MARU_VALIDATE_API(cond)
 
 #include "maru/maru.h"
 #include "maru/queue.h"
@@ -302,7 +296,7 @@ _maru_validate_presentation_visibility(MARU_WindowPresentationState state,
 static inline void
 _maru_window_attributes_apply_presentation_state(
     MARU_WindowAttributes* attrs, MARU_WindowPresentationState state) {
-  MARU_ASSUME(attrs != NULL);
+  MARU_VALIDATE_API(attrs != NULL);
   attrs->presentation_state = state;
 }
 

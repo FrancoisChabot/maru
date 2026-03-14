@@ -30,7 +30,9 @@
 static MARU_Window_WL *_maru_wayland_resolve_registered_window(
     MARU_Context_WL *ctx, const MARU_Window *candidate) {
     MARU_ASSUME(ctx != NULL);
-    MARU_ASSUME(candidate != NULL);
+
+    // This can happen with decorations/etc...
+    if (!candidate) return NULL;
 
     for (MARU_Window_Base *it = ctx->base.window_list_head; it; it = it->ctx_next) {
         if ((const MARU_Window *)it == candidate) {
