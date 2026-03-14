@@ -2,6 +2,11 @@
 // Copyright (c) 2026 François Chabot
 
 #include "macos_internal.h"
+#ifdef MARU_ENABLE_BACKEND_COCOA
+#pragma message "MARU_ENABLE_BACKEND_COCOA is defined"
+#else
+#pragma message "MARU_ENABLE_BACKEND_COCOA is NOT defined"
+#endif
 #include "maru_api_constraints.h"
 #include "maru/native/cocoa.h"
 #include <stdatomic.h>
@@ -9,29 +14,28 @@
 
 static MARU_Status maru_announceClipboardData_Cocoa_ctx(MARU_Context *context,
                                                         MARU_StringList mime_types) {
-  (void)context;
-  (void)mime_types;
-  return MARU_FAILURE;
+  MARU_Window_Cocoa dummy_window = {0};
+  dummy_window.base.ctx_base = (MARU_Context_Base *)context;
+  return maru_announceData_Cocoa((MARU_Window *)&dummy_window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                 mime_types, 0);
 }
 
 static MARU_Status maru_requestClipboardData_Cocoa_ctx(MARU_Context *context,
                                                        const char *mime_type,
                                                        void *userdata) {
-  (void)context;
-  (void)mime_type;
-  (void)userdata;
-  return MARU_FAILURE;
+  MARU_Window_Cocoa dummy_window = {0};
+  dummy_window.base.ctx_base = (MARU_Context_Base *)context;
+  return maru_requestData_Cocoa((MARU_Window *)&dummy_window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                mime_type, userdata);
 }
 
 static MARU_Status
 maru_getAvailableClipboardMIMETypes_Cocoa_ctx(const MARU_Context *context,
                                               MARU_StringList *out_list) {
-  (void)context;
-  if (out_list) {
-    out_list->strings = NULL;
-    out_list->count = 0;
-  }
-  return MARU_FAILURE;
+  MARU_Window_Cocoa dummy_window = {0};
+  dummy_window.base.ctx_base = (MARU_Context_Base *)context;
+  return maru_getAvailableMIMETypes_Cocoa((const MARU_Window *)&dummy_window, MARU_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                          out_list);
 }
 
 static MARU_Status maru_announceDragData_Cocoa_win(MARU_Window *window,
@@ -217,6 +221,11 @@ MARU_API MARU_Status maru_getControllers(const MARU_Context *context,
   return maru_getControllers_Cocoa(context, out_list);
 }
 
+MARU_API void maru_retainController(MARU_Controller *controller) {
+  MARU_API_VALIDATE(retainController, controller);
+  maru_retainController_Cocoa(controller);
+}
+
 MARU_API void maru_releaseController(MARU_Controller *controller) {
   MARU_API_VALIDATE(releaseController, controller);
   maru_releaseController_Cocoa(controller);
@@ -304,16 +313,6 @@ MARU_API MARU_Status maru_getMonitors(const MARU_Context *context, MARU_MonitorL
   MARU_API_VALIDATE(getMonitors, context, out_list);
   MARU_RETURN_ON_ERROR(_maru_status_if_context_lost(context));
   return maru_getMonitors_Cocoa(context, out_list);
-}
-
-MARU_API void maru_retainMonitor(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(retainMonitor, monitor);
-  maru_retainMonitor_Cocoa(monitor);
-}
-
-MARU_API void maru_releaseMonitor(MARU_Monitor *monitor) {
-  MARU_API_VALIDATE(releaseMonitor, monitor);
-  maru_releaseMonitor_Cocoa(monitor);
 }
 
 MARU_API MARU_Status maru_getMonitorModes(const MARU_Monitor *monitor, MARU_VideoModeList *out_list) {

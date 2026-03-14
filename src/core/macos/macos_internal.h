@@ -4,6 +4,10 @@
 #ifndef MARU_COCOA_INTERNAL_H_INCLUDED
 #define MARU_COCOA_INTERNAL_H_INCLUDED
 
+#ifndef MARU_ENABLE_BACKEND_COCOA
+#define MARU_ENABLE_BACKEND_COCOA
+#endif
+
 #include "maru_internal.h"
 #include "maru/maru.h"
 
@@ -27,7 +31,20 @@ typedef struct MARU_Context_Cocoa {
   uint32_t controller_snapshot_count;
   _Atomic bool controllers_dirty;
   bool controller_snapshot_dirty;
+
+  id clipboard_delegate;
+  char **clipboard_announced_mime_types;
+  uint32_t clipboard_announced_mime_type_count;
+  
+  char **clipboard_available_mime_types;
+  uint32_t clipboard_available_mime_type_count;
 } MARU_Context_Cocoa;
+
+typedef struct MARU_DataRequest_Cocoa {
+  MARU_DataRequestHandleBase base;
+  id ns_pasteboard;
+  id ns_type;
+} MARU_DataRequest_Cocoa;
 
 typedef struct MARU_Window_Cocoa {
   MARU_Window_Base base;
@@ -35,7 +52,7 @@ typedef struct MARU_Window_Cocoa {
   id ns_window;
   id ns_view;
   id ns_layer;
-  MARU_Vec2Dip size;
+  MARU_Vec2Dip dip_size;
 } MARU_Window_Cocoa;
 
 typedef struct MARU_Image_Cocoa {

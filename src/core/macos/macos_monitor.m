@@ -86,11 +86,11 @@ MARU_Status maru_getMonitors_Cocoa(const MARU_Context *context, MARU_MonitorList
         }
 
         NSRect frame = [screen frame];
-        mon->base.pub.dip_position.x = (MARU_Scalar)frame.dip_position.x;
-        mon->base.pub.dip_position.y = (MARU_Scalar)frame.dip_position.y; 
-        mon->base.pub.dip_size.x = (MARU_Scalar)frame.dip_size.width;
-        mon->base.pub.dip_size.y = (MARU_Scalar)frame.dip_size.height;
-        mon->base.pub.scale = [screen backingScaleFactor];
+        mon->base.pub.dip_position.x = (MARU_Scalar)frame.origin.x;
+        mon->base.pub.dip_position.y = (MARU_Scalar)frame.origin.y; 
+        mon->base.pub.dip_size.x = (MARU_Scalar)frame.size.width;
+        mon->base.pub.dip_size.y = (MARU_Scalar)frame.size.height;
+        mon->base.pub.scale = (MARU_Scalar)[screen backingScaleFactor];
 
         NSSize displaySize = [[deviceDescription objectForKey:NSDeviceSize] sizeValue];
         mon->base.pub.physical_size.x = (MARU_Scalar)displaySize.width;
@@ -109,8 +109,17 @@ void maru_retainMonitor_Cocoa(MARU_Monitor *monitor) {
     atomic_fetch_add_explicit(&base->ref_count, 1u, memory_order_relaxed);
 }
 
-void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor) {
+void _maru_monitor_free(MARU_Monitor_Base *monitor) {
     MARU_Monitor_Cocoa *mon = (MARU_Monitor_Cocoa *)monitor;
+    if (mon->modes) {
+        maru_context_free(mon->base.ctx_base, mon->modes);
+        mon->modes = NULL;
+        mon->mode_count = 0;
+    }
+    maru_context_free(mon->base.ctx_base, mon);
+}
+
+void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor) {
     MARU_Monitor_Base *base = (MARU_Monitor_Base *)monitor;
     uint32_t current = atomic_load_explicit(&base->ref_count, memory_order_acquire);
     while (current > 0u) {
@@ -120,12 +129,7 @@ void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor) {
                                                   memory_order_acq_rel,
                                                   memory_order_acquire)) {
             if (current == 1u && !base->is_active) {
-                if (mon->modes) {
-                    maru_context_free(mon->base.ctx_base, mon->modes);
-                    mon->modes = NULL;
-                    mon->mode_count = 0;
-                }
-                maru_context_free(mon->base.ctx_base, mon);
+                _maru_monitor_free(base);
             }
             return;
         }

@@ -47,6 +47,7 @@ void _maru_controller_free(MARU_Controller_Base *controller) {
     MARU_Context_Base *ctx = controller->ctx_base;
     
     c->gc_controller.extendedGamepad.valueChangedHandler = nil;
+    [c->gc_controller release];
     
     maru_context_free(ctx, c->analog_channel_infos);
     maru_context_free(ctx, c->analog_states);
@@ -78,7 +79,7 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     c->base.pub.context = (MARU_Context *)ctx;
     c->base.is_active = true;
     atomic_init(&c->base.ref_count, 1u);
-    c->gc_controller = gc;
+    c->gc_controller = [gc retain];
     
     c->base.pub.analog_count = MARU_CONTROLLER_ANALOG_STANDARD_COUNT;
     c->base.pub.button_count = MARU_CONTROLLER_BUTTON_STANDARD_COUNT;

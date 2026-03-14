@@ -81,13 +81,13 @@
 static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame) {
     NSRect backing = [nsWindow convertRectToBacking:frame];
     MARU_WindowGeometry geo = {0};
-    geo.px_size.x = (int32_t)backing.dip_size.width;
-    geo.px_size.y = (int32_t)backing.dip_size.height;
-    geo.dip_position.x = (MARU_Scalar)frame.dip_position.x;
-    geo.dip_position.y = (MARU_Scalar)frame.dip_position.y;
-    geo.dip_size.x = (MARU_Scalar)frame.dip_size.width;
-    geo.dip_size.y = (MARU_Scalar)frame.dip_size.height;
-    geo.scale = (MARU_Scalar)(backing.dip_size.width / frame.dip_size.width); 
+    geo.px_size.x = (int32_t)backing.size.width;
+    geo.px_size.y = (int32_t)backing.size.height;
+    geo.dip_position.x = (MARU_Scalar)frame.origin.x;
+    geo.dip_position.y = (MARU_Scalar)frame.origin.y;
+    geo.dip_size.x = (MARU_Scalar)frame.size.width;
+    geo.dip_size.y = (MARU_Scalar)frame.size.height;
+    geo.scale = (MARU_Scalar)(backing.size.width / frame.size.width); 
     return geo;
 }
 
@@ -175,18 +175,18 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
 
     win->base.pub.flags = 0;
 
-    if (win->base.attrs_effective.maximized) {
+    if (win->base.attrs_effective.presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
       win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+    }
+    if (win->base.attrs_effective.presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
+      win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
     }
     if (win->base.attrs_effective.visible) {
       win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
     }
-    if (win->base.attrs_effective.minimized || !win->base.attrs_effective.visible) {
+    if (win->base.attrs_effective.presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
       win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
       win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-    }
-    if (win->base.attrs_effective.fullscreen) {
-      win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
     }
     if (win->base.attrs_effective.resizable) {
       win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
@@ -321,8 +321,8 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         requested->dip_size = attributes->dip_size;
         effective->dip_size = attributes->dip_size;
         NSRect frame = [nsWindow contentRectForFrameRect:[nsWindow frame]];
-        frame.dip_size.width = effective->dip_size.x;
-        frame.dip_size.height = effective->dip_size.y;
+        frame.size.width = effective->dip_size.x;
+        frame.size.height = effective->dip_size.y;
         [nsWindow setFrame:[nsWindow frameRectForContentRect:frame] display:YES];
     }
 
@@ -330,15 +330,17 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         requested->dip_position = attributes->dip_position;
         effective->dip_position = attributes->dip_position;
         NSRect frame = [nsWindow frame];
-        frame.dip_position.x = effective->dip_position.x;
-        frame.dip_position.y = effective->dip_position.y;
+        frame.origin.x = effective->dip_position.x;
+        frame.origin.y = effective->dip_position.y;
         [nsWindow setFrame:frame display:YES];
     }
 
-    if (field_mask & MARU_WINDOW_ATTR_FULLSCREEN) {
-        requested->fullscreen = attributes->fullscreen;
-        effective->fullscreen = attributes->fullscreen;
-        if (effective->fullscreen) {
+    if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
+        requested->presentation_state = attributes->presentation_state;
+        effective->presentation_state = attributes->presentation_state;
+
+        // Fullscreen
+        if (effective->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
             win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
             if (!([nsWindow styleMask] & NSWindowStyleMaskFullScreen)) {
                 [nsWindow toggleFullScreen:nil];
@@ -349,47 +351,43 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
                 [nsWindow toggleFullScreen:nil];
             }
         }
-    }
 
-    if (field_mask & MARU_WINDOW_ATTR_MAXIMIZED) {
-        requested->maximized = attributes->maximized;
-        if (requested->maximized) {
+        // Maximized
+        if (effective->presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
             if (![nsWindow isZoomed]) [nsWindow zoom:nil];
             win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
         } else {
             if ([nsWindow isZoomed]) [nsWindow zoom:nil];
             win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
         }
-        effective->maximized = (win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) != 0;
-    }
 
-    if (field_mask & MARU_WINDOW_ATTR_MINIMIZED) {
-        requested->minimized = attributes->minimized;
-        if (requested->minimized) {
+        // Minimized
+        if (effective->presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
             [nsWindow miniaturize:nil];
             win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
             win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
         } else {
             [nsWindow deminiaturize:nil];
             win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-            win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+            // If it was minimized, deminiaturizing makes it visible.
+            if (requested->visible) {
+                win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+            }
         }
-        effective->minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-        effective->visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
     }
 
     if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
         requested->visible = attributes->visible;
         if (requested->visible) {
-            [nsWindow makeKeyAndOrderFront:nil];
-            win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-            win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+            if (effective->presentation_state != MARU_WINDOW_PRESENTATION_MINIMIZED) {
+                [nsWindow makeKeyAndOrderFront:nil];
+                win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+            }
         } else {
             [nsWindow orderOut:nil];
             win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
         }
         effective->visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-        effective->minimized = (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
     }
 
     if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
@@ -439,7 +437,7 @@ MARU_Status maru_requestWindowFrame_Cocoa(MARU_Window *window) {
     MARU_Event event = {0};
     const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
     if (uptime > 0.0) {
-        event.frame.timestamp_ms = (uint32_t)(uptime * 1000.0);
+        event.window_frame.timestamp_ms = (uint32_t)(uptime * 1000.0);
     }
 
     if (win->base.ctx_base->pump_ctx) {

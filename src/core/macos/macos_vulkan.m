@@ -8,10 +8,6 @@
 // Vulkan types and function pointers needed for the implementation.
 // We define them locally to avoid a hard dependency on Vulkan headers.
 
-typedef enum VkResult {
-    VK_SUCCESS = 0,
-} VkResult;
-
 #define VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT 1000217000
 
 typedef struct VkMetalSurfaceCreateInfoEXT {
@@ -31,7 +27,7 @@ MARU_Status maru_getVkExtensions_Cocoa(const MARU_Context *context, MARU_StringL
         "VK_EXT_metal_surface"
     };
     out_list->count = 2;
-    out_list->names = (const char *const *)extensions;
+    out_list->strings = (const char *const *)extensions;
     return MARU_SUCCESS;
 }
 

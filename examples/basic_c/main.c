@@ -40,7 +40,7 @@ static void handle_diagnostic(const struct MARU_DiagnosticInfo *info, void *user
   fprintf(stderr, "[MARU %s] %d: %s\n", severity, (int)info->diagnostic, info->message);
 }
 
-int main() {
+int main(void) {
   MARU_Version version = maru_getVersion();
   printf("Maru version: %u.%u.%u\n", version.major, version.minor,
          version.patch);

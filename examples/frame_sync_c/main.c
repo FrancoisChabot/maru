@@ -14,7 +14,7 @@ static double last_stat_time = 0.0;
 
 #ifdef _WIN32
 #include <windows.h>
-static double get_time_sec() {
+static double get_time_sec(void) {
   static LARGE_INTEGER frequency;
   static BOOL frequency_initialized = FALSE;
   if (!frequency_initialized) {
@@ -26,7 +26,7 @@ static double get_time_sec() {
   return (double)counter.QuadPart / (double)frequency.QuadPart;
 }
 #else
-static double get_time_sec() {
+static double get_time_sec(void) {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
@@ -62,7 +62,7 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
   }
 }
 
-int main() {
+int main(void) {
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
 
   MARU_Context *context = NULL;

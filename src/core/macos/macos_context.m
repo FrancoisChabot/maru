@@ -156,8 +156,8 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             MARU_ButtonState state = (type == NSEventTypeLeftMouseDown || type == NSEventTypeRightMouseDown || type == NSEventTypeOtherMouseDown) 
                                      ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
 
-            if (window->base.mouse_button_states && channel < window->base.pub.mouse_button_count) {
-                window->base.mouse_button_states[channel] = (MARU_ButtonState8)state;
+            if (window->base.ctx_base->mouse_button_states && channel < window->base.ctx_base->pub.mouse_button_count) {
+                window->base.ctx_base->mouse_button_states[channel] = (MARU_ButtonState8)state;
             }
 
             MARU_Event event = {0};
@@ -270,6 +270,16 @@ void maru_destroyContext_Cocoa(MARU_Context *context) {
         maru_destroyWindow_Cocoa(window);
     }
 
+    if (ctx->clipboard_delegate) {
+        [ctx->clipboard_delegate release];
+        ctx->clipboard_delegate = nil;
+    }
+
+    for (uint32_t i = 0; i < ctx->clipboard_available_mime_type_count; ++i) {
+        maru_context_free(&ctx->base, ctx->clipboard_available_mime_types[i]);
+    }
+    maru_context_free(&ctx->base, ctx->clipboard_available_mime_types);
+
     _maru_cocoa_cleanup_controller_observer(ctx);
     
     for (uint32_t i = 0; i < ctx->controller_cache_count; ++i) {
@@ -293,6 +303,14 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
     const uint64_t pump_start_ns = _maru_cocoa_now_ns();
     
+    // Invalidate borrowed clipboard MIME types
+    for (uint32_t i = 0; i < ctx->clipboard_available_mime_type_count; ++i) {
+        maru_context_free(&ctx->base, ctx->clipboard_available_mime_types[i]);
+    }
+    maru_context_free(&ctx->base, ctx->clipboard_available_mime_types);
+    ctx->clipboard_available_mime_types = NULL;
+    ctx->clipboard_available_mime_type_count = 0;
+
     MARU_PumpContext pump_ctx = {.mask = mask, .callback = callback, .userdata = userdata};
     ctx->base.pump_ctx = &pump_ctx;
     ctx->controller_snapshot_dirty = true;
