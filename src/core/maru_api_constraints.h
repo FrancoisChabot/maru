@@ -128,7 +128,7 @@ static inline bool _maru_validate_non_negative_vec2px(MARU_Vec2Px v) {
 }
 
 static inline bool _maru_validate_non_negative_rect(MARU_RectDip r) {
-  return r.dip_size.x >= 0 && r.dip_size.y >= 0;
+  return r.size.x >= 0 && r.size.y >= 0;
 }
 
 static inline bool _maru_validate_allocator_complete(MARU_Allocator allocator) {

@@ -795,8 +795,8 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     const bool ime_requested =
         (attrs->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) ||
         (attrs->surrounding_text != NULL) ||
-        (attrs->dip_text_input_rect.dip_size.x > (MARU_Scalar)0.0) ||
-        (attrs->dip_text_input_rect.dip_size.y > (MARU_Scalar)0.0);
+        (attrs->dip_text_input_rect.size.x > (MARU_Scalar)0.0) ||
+        (attrs->dip_text_input_rect.size.y > (MARU_Scalar)0.0);
     if (ime_requested && !window->missing_text_input_v3_reported) {
       MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                              "zwp_text_input_manager_v3 unavailable; IME features running in fallback mode");
@@ -845,10 +845,10 @@ void _maru_wayland_update_text_input(MARU_Window_WL *window) {
     maru_zwp_text_input_v3_enable(ctx, window->ext.text_input);
     maru_zwp_text_input_v3_set_content_type(ctx, window->ext.text_input, hint, purpose);
     maru_zwp_text_input_v3_set_cursor_rectangle(
-        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.dip_text_input_rect.dip_position.x,
-        (int32_t)window->base.attrs_effective.dip_text_input_rect.dip_position.y,
-        (int32_t)window->base.attrs_effective.dip_text_input_rect.dip_size.x,
-        (int32_t)window->base.attrs_effective.dip_text_input_rect.dip_size.y);
+        ctx, window->ext.text_input, (int32_t)window->base.attrs_effective.dip_text_input_rect.position.x,
+        (int32_t)window->base.attrs_effective.dip_text_input_rect.position.y,
+        (int32_t)window->base.attrs_effective.dip_text_input_rect.size.x,
+        (int32_t)window->base.attrs_effective.dip_text_input_rect.size.y);
     
     if (window->base.attrs_effective.surrounding_text) {
         maru_zwp_text_input_v3_set_surrounding_text(ctx, window->ext.text_input, 

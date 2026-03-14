@@ -210,8 +210,8 @@ typedef struct MARU_Vec2Dip {
 } MARU_Vec2Dip;
 
 typedef struct MARU_RectDip {
-  MARU_Vec2Dip dip_position;
-  MARU_Vec2Dip dip_size;
+  MARU_Vec2Dip position;
+  MARU_Vec2Dip size;
 } MARU_RectDip;
 
 typedef enum MARU_BufferTransform {
@@ -950,13 +950,14 @@ typedef struct MARU_UserDefinedEvent {
     /*
      * Raw byte payload with the same starting address as `userdata`.
      *
-     * Because this storage shares a union with `void*`, the union's alignment
-     * is at least the platform's default pointer alignment. Code that
-     * interprets `raw_payload` as some other type must still ensure that the
-     * target type fits in 64 bytes and does not require stricter alignment than
-     * `void*`.
+     * This union includes `long double` to guarantee at least 16-byte alignment
+     * on most modern platforms. This allows users to safely cast the start of
+     * the payload to any standard scalar or SIMD type that fits in the buffer
+     * and requires 16-byte alignment or less.
      */
     char raw_payload[64];
+    long double _align_ld;
+    long long _align_ll;
   };
 } MARU_UserDefinedEvent;
 

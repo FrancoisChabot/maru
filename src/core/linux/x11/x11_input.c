@@ -336,9 +336,9 @@ static bool _maru_x11_update_ic_spot(MARU_Context_X11 *ctx, MARU_Window_X11 *win
     return true;
   }
   XPoint spot;
-  spot.x = (short)win->base.attrs_effective.dip_text_input_rect.dip_position.x;
-  spot.y = (short)(win->base.attrs_effective.dip_text_input_rect.dip_position.y +
-                   win->base.attrs_effective.dip_text_input_rect.dip_size.y);
+  spot.x = (short)win->base.attrs_effective.dip_text_input_rect.position.x;
+  spot.y = (short)(win->base.attrs_effective.dip_text_input_rect.position.y +
+                   win->base.attrs_effective.dip_text_input_rect.size.y);
 
   XVaNestedList preedit_attrs =
       ctx->x11_lib.XVaCreateNestedList(0, XNSpotLocation, &spot, NULL);
@@ -517,9 +517,9 @@ void _maru_x11_refresh_text_input_state(MARU_Context_X11 *ctx, MARU_Window_X11 *
     done_cb.callback = (XIMProc)_maru_x11_xim_preedit_done;
 
     XPoint spot;
-    spot.x = (short)win->base.attrs_effective.dip_text_input_rect.dip_position.x;
-    spot.y = (short)(win->base.attrs_effective.dip_text_input_rect.dip_position.y +
-                     win->base.attrs_effective.dip_text_input_rect.dip_size.y);
+    spot.x = (short)win->base.attrs_effective.dip_text_input_rect.position.x;
+    spot.y = (short)(win->base.attrs_effective.dip_text_input_rect.position.y +
+                     win->base.attrs_effective.dip_text_input_rect.size.y);
     XVaNestedList preedit_attrs = ctx->x11_lib.XVaCreateNestedList(
         0, XNSpotLocation, &spot, XNPreeditDrawCallback, &draw_cb,
         XNPreeditDoneCallback, &done_cb, NULL);
