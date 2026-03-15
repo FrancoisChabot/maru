@@ -58,10 +58,19 @@
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #define MARU_STATIC_ASSERT _Static_assert
+#define MARU_ALIGNAS(n) _Alignas(n)
 #elif defined(__cplusplus) && __cplusplus >= 201103L
 #define MARU_STATIC_ASSERT static_assert
+#define MARU_ALIGNAS(n) alignas(n)
 #else
 #define MARU_STATIC_ASSERT(cond, msg)
+#if defined(__GNUC__) || defined(__clang__)
+#define MARU_ALIGNAS(n) __attribute__((aligned(n)))
+#elif defined(_MSC_VER)
+#define MARU_ALIGNAS(n) __declspec(align(n))
+#else
+#define MARU_ALIGNAS(n)
+#endif
 #endif
 
 #ifndef MARU_API
@@ -947,14 +956,12 @@ typedef struct MARU_UserDefinedEvent {
     /*
      * Raw byte payload with the same starting address as `userdata`.
      *
-     * This union includes `long double` to guarantee at least 16-byte alignment
-     * on most modern platforms. This allows users to safely cast the start of
-     * the payload to any standard scalar or SIMD type that fits in the buffer
-     * and requires 16-byte alignment or less.
+     * The payload is guaranteed to have at least 16-byte alignment.
+     * This allows users to safely cast the start of the payload to any standard
+     * scalar or SIMD type that fits in the buffer and requires 16-byte
+     * alignment or less.
      */
-    char raw_payload[64];
-    long double _align_ld;
-    long long _align_ll;
+    MARU_ALIGNAS(16) char raw_payload[64];
   };
 } MARU_UserDefinedEvent;
 
