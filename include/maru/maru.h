@@ -243,6 +243,12 @@ typedef enum MARU_WaylandDecorationStrategy {
   MARU_WAYLAND_DECORATION_STRATEGY_NONE = 3,
 } MARU_WaylandDecorationStrategy;
 
+typedef enum MARU_CocoaActivationPolicy {
+  MARU_COCOA_ACTIVATION_POLICY_REGULAR = 0,
+  MARU_COCOA_ACTIVATION_POLICY_ACCESSORY = 1,
+  MARU_COCOA_ACTIVATION_POLICY_PROHIBITED = 2,
+} MARU_CocoaActivationPolicy;
+
 typedef struct MARU_ContextTuning {
   /*
    * Capacity of the application-posted user-event queue used by
@@ -261,6 +267,16 @@ typedef struct MARU_ContextTuning {
      */
     MARU_WaylandDecorationStrategy decoration_strategy;
   } wayland;
+
+  struct {
+    /*
+     * Selects the application activation policy for the NSApp singleton.
+     *
+     * On macOS, all contexts share the same NSApp, so this value will
+     * affect the entire application.
+     */
+    MARU_CocoaActivationPolicy activation_policy;
+  } cocoa;
 
   struct {
     /*
@@ -283,6 +299,7 @@ typedef struct MARU_ContextTuning {
   {                                                                            \
       .user_event_queue_size = 256,                                            \
       .wayland = {.decoration_strategy = MARU_WAYLAND_DECORATION_STRATEGY_AUTO}, \
+      .cocoa = {.activation_policy = MARU_COCOA_ACTIVATION_POLICY_REGULAR},     \
       .x11 = {.selection_query_timeout_ms = 50},                                \
   }
 

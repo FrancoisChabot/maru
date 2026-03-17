@@ -523,6 +523,14 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
                                                      styleMask:styleMask
                                                        backing:NSBackingStoreBuffered
                                                          defer:NO];
+    if (!nsWindow) {
+        _maru_reportDiagnostic(context, MARU_DIAGNOSTIC_BACKEND_FAILURE, "Failed to create NSWindow");
+        _maru_unregister_window(&ctx_cocoa->base, (MARU_Window *)win);
+        maru_context_free(&ctx_cocoa->base, win->base.title_storage);
+        maru_context_free(&ctx_cocoa->base, win);
+        return MARU_FAILURE;
+    }
+
     [nsWindow setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
     [nsWindow setBackgroundColor:[NSColor blackColor]];
     [nsWindow setTitle:[NSString stringWithUTF8String:create_info->attributes.title]];
@@ -547,9 +555,13 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     atomic_init(&win->pending_frame_vblank, false);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    CVDisplayLinkCreateWithActiveCGDisplays(&win->display_link);
-    CVDisplayLinkSetOutputCallback(win->display_link, _maru_cocoa_display_link_callback, win);
-    CVDisplayLinkStart(win->display_link);
+    CVReturn cv_ret = CVDisplayLinkCreateWithActiveCGDisplays(&win->display_link);
+    if (cv_ret != kCVReturnSuccess) {
+        _maru_reportDiagnostic(context, MARU_DIAGNOSTIC_BACKEND_FAILURE, "Failed to create CVDisplayLink");
+    } else {
+        CVDisplayLinkSetOutputCallback(win->display_link, _maru_cocoa_display_link_callback, win);
+        CVDisplayLinkStart(win->display_link);
+    }
 #pragma clang diagnostic pop
     _maru_cocoa_associate_window(nsWindow, win);
 

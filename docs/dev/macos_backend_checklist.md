@@ -10,12 +10,12 @@ This document tracks the detailed implementation status of the Maru macOS backen
 - [x] **Native Handle Access** (`_maru_getContextNativeHandle_Cocoa`)
 - [x] **System Idle Inhibition** (`MARU_CONTEXT_ATTR_INHIBIT_IDLE`)
   - [x] Implement using `IOPMAssertionCreateWithDescription`.
-- [ ] **Diagnostics Output** (`MARU_CONTEXT_ATTR_DIAGNOSTICS`)
-  - [ ] Support diagnostic logging hooks.
-- [ ] **Idle Timeout Configuration** (`MARU_CONTEXT_ATTR_IDLE_TIMEOUT`)
-  - [ ] Track idle state and emit `MARU_EVENT_IDLE_CHANGED`.
-- [ ] **Activation Policy Support**
-  - [ ] Support `NSApplicationActivationPolicyProhibited` or `Accessory` via `create_info`. Currently hardcoded to `Regular`.
+- [x] **Diagnostics Output** (`MARU_CONTEXT_ATTR_DIAGNOSTICS`)
+  - [x] Support diagnostic logging hooks.
+- [x] **Idle Timeout Configuration** (`MARU_CONTEXT_ATTR_IDLE_TIMEOUT`)
+  - [x] Track idle state and emit `MARU_EVENT_IDLE_CHANGED`.
+- [x] **Activation Policy Support**
+  - [x] Support `NSApplicationActivationPolicyProhibited` or `Accessory` via `create_info`.
 - [x] **Main Thread Enforcement**
   - [x] Verify context creation and pump happen on the main thread.
 

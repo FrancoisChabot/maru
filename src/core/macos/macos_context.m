@@ -95,6 +95,9 @@ static void _maru_cocoa_apply_idle_inhibit(MARU_Context_Cocoa *ctx) {
                 &ctx->idle_assertion_id);
             if (result != kIOReturnSuccess) {
                 ctx->idle_assertion_id = kIOPMNullAssertionID;
+                _maru_reportDiagnostic((MARU_Context *)ctx,
+                                       MARU_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                                       "Failed to create IOPM idle inhibition assertion.");
             }
         }
     } else {
@@ -308,7 +311,24 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     _maru_cocoa_apply_idle_inhibit(ctx);
 
     [NSApplication sharedApplication];
-    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    
+    NSApplicationActivationPolicy policy = NSApplicationActivationPolicyRegular;
+    switch (ctx->base.tuning.cocoa.activation_policy) {
+        case MARU_COCOA_ACTIVATION_POLICY_REGULAR:
+            policy = NSApplicationActivationPolicyRegular;
+            break;
+        case MARU_COCOA_ACTIVATION_POLICY_ACCESSORY:
+            policy = NSApplicationActivationPolicyAccessory;
+            break;
+        case MARU_COCOA_ACTIVATION_POLICY_PROHIBITED:
+            policy = NSApplicationActivationPolicyProhibited;
+            break;
+    }
+    if (![NSApp setActivationPolicy:policy]) {
+        _maru_reportDiagnostic((MARU_Context *)ctx,
+                               MARU_DIAGNOSTIC_BACKEND_FAILURE,
+                               "Failed to set NSApplication activation policy.");
+    }
     [NSApp finishLaunching];
 
     ctx->ns_app = NSApp;
@@ -359,9 +379,35 @@ void maru_destroyContext_Cocoa(MARU_Context *context) {
 MARU_Status maru_updateContext_Cocoa(MARU_Context *context, uint64_t field_mask,
                                        const MARU_ContextAttributes *attributes) {
     _maru_update_context_base((MARU_Context_Base *)context, field_mask, attributes);
+    MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
+
     if (field_mask & MARU_CONTEXT_ATTR_INHIBIT_IDLE) {
-        _maru_cocoa_apply_idle_inhibit((MARU_Context_Cocoa *)context);
+        _maru_cocoa_apply_idle_inhibit(ctx);
     }
+
+    if (field_mask & MARU_CONTEXT_ATTR_IDLE_TIMEOUT) {
+        if (ctx->base.attrs_effective.idle_timeout_ms == 0) {
+            ctx->is_idle = false;
+        } else {
+            const uint64_t now_ms = _maru_cocoa_now_ms();
+            const uint64_t elapsed_ms = now_ms - ctx->last_input_time_ms;
+            bool should_be_idle = elapsed_ms >= ctx->base.attrs_effective.idle_timeout_ms;
+
+            if (should_be_idle != ctx->is_idle) {
+                ctx->is_idle = should_be_idle;
+                MARU_Event event = {0};
+                event.idle_changed.is_idle = ctx->is_idle;
+                event.idle_changed.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
+                
+                if (ctx->base.pump_ctx) {
+                    _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &event);
+                } else {
+                    _maru_post_event_internal(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &event);
+                }
+            }
+        }
+    }
+
     return MARU_SUCCESS;
 }
 
