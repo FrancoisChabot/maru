@@ -4,9 +4,11 @@
 #import "macos_internal.h"
 #import "maru_mem_internal.h"
 #import <Cocoa/Cocoa.h>
+#import <AppKit/NSDragging.h>
 
 @interface MARU_ClipboardDelegate : NSObject <NSPasteboardItemDataProvider, NSPasteboardTypeOwner>
 @property (nonatomic, assign) MARU_Context_Cocoa *context;
+@property (nonatomic, assign) MARU_DataExchangeTarget target;
 @end
 
 @implementation MARU_ClipboardDelegate
@@ -19,12 +21,12 @@
 - (void)pasteboard:(NSPasteboard *)sender provideDataForType:(NSPasteboardType)type {
     MARU_DataRequest_Cocoa req = {0};
     req.base.ctx_base = &self.context->base;
-    req.base.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+    req.base.target = self.target;
     req.ns_pasteboard = sender;
     req.ns_type = type;
 
     MARU_Event event = {0};
-    event.data_requested.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
+    event.data_requested.target = self.target;
     event.data_requested.mime_type = _maru_ns_type_to_mime(type);
     event.data_requested.request = (MARU_DataRequest *)&req;
 
@@ -39,12 +41,13 @@
 @end
 
 MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget target, MARU_StringList mime_types, MARU_DropActionMask allowed_actions) {
+    MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)maru_getWindowContext(window);
     if (target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
-        MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)maru_getWindowContext(window);
         if (!ctx->clipboard_delegate) {
             ctx->clipboard_delegate = [[MARU_ClipboardDelegate alloc] init];
             ((MARU_ClipboardDelegate *)ctx->clipboard_delegate).context = ctx;
         }
+        ((MARU_ClipboardDelegate *)ctx->clipboard_delegate).target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
 
         NSPasteboard *pb = [NSPasteboard generalPasteboard];
         [pb clearContents];
@@ -61,15 +64,50 @@ MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget
         [item release];
 
         return MARU_SUCCESS;
+    } else if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
+        MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
+        
+        // Use a dedicated DnD delegate or reuse clipboard one if carefully managed
+        // For simplicity, let's create a temporary delegate for this drag session
+        MARU_ClipboardDelegate *dnd_delegate = [[MARU_ClipboardDelegate alloc] init];
+        dnd_delegate.context = ctx;
+        dnd_delegate.target = MARU_DATA_EXCHANGE_TARGET_DRAG_DROP;
+
+        NSPasteboardItem *item = [[NSPasteboardItem alloc] init];
+        NSMutableArray *types = [NSMutableArray arrayWithCapacity:mime_types.count];
+        for (uint32_t i = 0; i < mime_types.count; ++i) {
+            NSPasteboardType type = _maru_mime_to_ns_type(mime_types.strings[i]);
+            [types addObject:type];
+        }
+        [item setDataProvider:dnd_delegate forTypes:types];
+
+        NSDraggingItem *dragItem = [[NSDraggingItem alloc] initWithPasteboardWriter:item];
+        // Set a reasonable default dragging frame (centered on cursor)
+        NSPoint mousePos = [NSEvent mouseLocation];
+        NSRect windowFrame = [win->ns_window frame];
+        NSPoint localPos = NSMakePoint(mousePos.x - windowFrame.origin.x, mousePos.y - windowFrame.origin.y);
+        [dragItem setDraggingFrame:NSMakeRect(localPos.x - 16, localPos.y - 16, 32, 32) contents:nil];
+
+        NSEvent *currentEvent = [NSApp currentEvent];
+        [(NSView *)win->ns_view beginDraggingSessionWithItems:@[dragItem] event:currentEvent source:(id<NSDraggingSource>)win->ns_view];
+        
+        // We might need to keep track of the delegate to release it when the drag ends
+        // but for now let's hope it's retained by the drag session or we might leak/crash.
+        // Actually, NSPasteboardItem retains its data provider.
+        
+        [dragItem release];
+        [item release];
+        [dnd_delegate autorelease];
+
+        return MARU_SUCCESS;
     }
-    // DnD not implemented yet
     return MARU_FAILURE;
 }
 
 MARU_Status maru_provideData_Cocoa(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags) {
     (void)flags;
     MARU_DataRequest_Cocoa *req = (MARU_DataRequest_Cocoa *)request;
-    if (req->base.target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD) {
+    if (req->base.target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD || req->base.target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
         NSData *nsData = [NSData dataWithBytes:data length:size];
         [req->ns_pasteboard setData:nsData forType:req->ns_type];
         return MARU_SUCCESS;

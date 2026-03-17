@@ -24,13 +24,18 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
 @property (nonatomic, assign) MARU_Window_Cocoa *window;
 @end
 
-@interface MARU_ContentView : NSView <NSTextInputClient, NSDraggingDestination> {
+@interface MARU_ContentView : NSView <NSTextInputClient, NSDraggingDestination, NSDraggingSource> {
     NSTrackingArea *trackingArea;
 }
 @property (nonatomic, assign) MARU_Window_Cocoa *maruWindow;
 @end
 
 @implementation MARU_ContentView
+- (NSDragOperation)draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context {
+    (void)session;
+    (void)context;
+    return NSDragOperationCopy | NSDragOperationMove | NSDragOperationGeneric | NSDragOperationLink;
+}
 - (BOOL)wantsUpdateLayer { return YES; }
 + (Class)layerClass { return [CAMetalLayer class]; }
 - (CALayer *)makeBackingLayer { return [CAMetalLayer layer]; }
@@ -314,16 +319,19 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
 }
 @end
 
-static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame) {
-    NSRect backing = [nsWindow convertRectToBacking:frame];
+static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect contentRect) {
+    NSRect frame = [nsWindow frame];
+    NSRect backing = [nsWindow convertRectToBacking:contentRect];
     MARU_WindowGeometry geo = {0};
     geo.px_size.x = (int32_t)backing.size.width;
     geo.px_size.y = (int32_t)backing.size.height;
     geo.dip_position.x = (MARU_Scalar)frame.origin.x;
     geo.dip_position.y = (MARU_Scalar)frame.origin.y;
-    geo.dip_size.x = (MARU_Scalar)frame.size.width;
-    geo.dip_size.y = (MARU_Scalar)frame.size.height;
-    geo.scale = (MARU_Scalar)(backing.size.width / frame.size.width); 
+    geo.dip_size.x = (MARU_Scalar)contentRect.size.width;
+    geo.dip_size.y = (MARU_Scalar)contentRect.size.height;
+    geo.dip_viewport_size.x = (MARU_Scalar)contentRect.size.width;
+    geo.dip_viewport_size.y = (MARU_Scalar)contentRect.size.height;
+    geo.scale = (MARU_Scalar)(backing.size.width / contentRect.size.width); 
     return geo;
 }
 
@@ -345,8 +353,8 @@ static void _maru_cocoa_update_drop_registration(MARU_Window_Cocoa *win) {
 static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
                                                 MARU_WindowGeometry *out_geometry) {
     NSWindow *nsWindow = win->ns_window;
-    NSRect frame = [nsWindow contentRectForFrameRect:nsWindow.frame];
-    MARU_WindowGeometry geometry = NSRectToMARUGeometry(nsWindow, frame);
+    NSRect contentRect = [nsWindow contentRectForFrameRect:nsWindow.frame];
+    MARU_WindowGeometry geometry = NSRectToMARUGeometry(nsWindow, contentRect);
     win->base.pub.geometry = geometry;
     [win->ns_layer setContentsScale:geometry.scale];
     if (out_geometry) {
@@ -501,6 +509,15 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
       }
     }
 
+    if (create_info->app_id) {
+        size_t len = strlen(create_info->app_id);
+        win->app_id = maru_context_alloc(&ctx_cocoa->base, len + 1);
+        if (win->app_id) {
+            memcpy(win->app_id, create_info->app_id, len + 1);
+        }
+    }
+    win->content_type = create_info->content_type;
+
     if (create_info->attributes.icon) {
         MARU_Image_Cocoa *img_cocoa = (MARU_Image_Cocoa *)create_info->attributes.icon;
         if (img_cocoa->ns_image) {
@@ -517,7 +534,15 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     _maru_register_window(&ctx_cocoa->base, (MARU_Window *)win);
 
     NSRect contentRect = NSMakeRect(0, 0, create_info->attributes.dip_size.x, create_info->attributes.dip_size.y);
-    NSUInteger styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable;
+    NSUInteger styleMask = 0;
+    if (create_info->has_decorations) {
+        styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable;
+        if (create_info->attributes.resizable) {
+            styleMask |= NSWindowStyleMaskResizable;
+        }
+    } else {
+        styleMask = NSWindowStyleMaskBorderless;
+    }
 
     NSWindow *nsWindow = [[NSWindow alloc] initWithContentRect:contentRect
                                                      styleMask:styleMask
@@ -534,6 +559,11 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     [nsWindow setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
     [nsWindow setBackgroundColor:[NSColor blackColor]];
     [nsWindow setTitle:[NSString stringWithUTF8String:create_info->attributes.title]];
+    if (win->app_id) {
+        if (@available(macOS 10.12, *)) {
+            [nsWindow setIdentifier:[NSString stringWithUTF8String:win->app_id]];
+        }
+    }
     [nsWindow setReleasedWhenClosed:NO];
     MARU_WindowDelegate *delegate = [[MARU_WindowDelegate alloc] init];
     delegate.window = win;
@@ -567,14 +597,21 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
 
     [nsWindow setContentView:view];
     [view release];
-    [nsWindow makeKeyAndOrderFront:nil];
-    [nsWindow center];
+    
     _maru_cocoa_refresh_window_geometry(win, NULL);
     _maru_cocoa_update_drop_registration(win);
 
-    if (create_info->attributes.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
-        maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &create_info->attributes);
+    maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_ALL & ~(MARU_WINDOW_ATTR_VISIBLE | MARU_WINDOW_ATTR_PRESENTATION_STATE), &create_info->attributes);
+    
+    if (create_info->attributes.visible) {
+        maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_VISIBLE, &create_info->attributes);
     }
+    
+    if (create_info->attributes.presentation_state != MARU_WINDOW_PRESENTATION_NORMAL) {
+        maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_PRESENTATION_STATE, &create_info->attributes);
+    }
+
+    [nsWindow center];
 
     win->base.pending_ready_event = true;
 
@@ -592,6 +629,10 @@ MARU_Status maru_destroyWindow_Cocoa(MARU_Window *window) {
         win->base.attrs_requested.title = NULL;
         win->base.attrs_effective.title = NULL;
         win->base.pub.title = NULL;
+    }
+
+    if (win->app_id) {
+        maru_context_free(win->base.ctx_base, win->app_id);
     }
 
     for (uint32_t i = 0; i < win->drop_available_mime_type_count; ++i) {
@@ -675,6 +716,55 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         frame.origin.x = effective->dip_position.x;
         frame.origin.y = effective->dip_position.y;
         [nsWindow setFrame:frame display:YES];
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_DIP_MIN_SIZE) {
+        requested->dip_min_size = attributes->dip_min_size;
+        effective->dip_min_size = attributes->dip_min_size;
+        [nsWindow setMinSize:NSMakeSize(effective->dip_min_size.x, effective->dip_min_size.y)];
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_DIP_MAX_SIZE) {
+        requested->dip_max_size = attributes->dip_max_size;
+        effective->dip_max_size = attributes->dip_max_size;
+        NSSize max_size = NSMakeSize(
+            effective->dip_max_size.x > 0 ? effective->dip_max_size.x : FLT_MAX,
+            effective->dip_max_size.y > 0 ? effective->dip_max_size.y : FLT_MAX
+        );
+        [nsWindow setMaxSize:max_size];
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE) {
+        requested->dip_viewport_size = attributes->dip_viewport_size;
+        effective->dip_viewport_size = attributes->dip_viewport_size;
+        NSRect contentRect = [nsWindow contentRectForFrameRect:[nsWindow frame]];
+        contentRect.size.width = effective->dip_viewport_size.x;
+        contentRect.size.height = effective->dip_viewport_size.y;
+        [nsWindow setFrame:[nsWindow frameRectForContentRect:contentRect] display:YES];
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
+        requested->aspect_ratio = attributes->aspect_ratio;
+        effective->aspect_ratio = attributes->aspect_ratio;
+        if (effective->aspect_ratio.num > 0 && effective->aspect_ratio.denom > 0) {
+            [nsWindow setContentAspectRatio:NSMakeSize(effective->aspect_ratio.num, effective->aspect_ratio.denom)];
+        } else {
+            [nsWindow setContentAspectRatio:NSMakeSize(0, 0)];
+        }
+    }
+
+    if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
+        requested->resizable = attributes->resizable;
+        effective->resizable = attributes->resizable;
+        NSWindowStyleMask styleMask = [nsWindow styleMask];
+        if (effective->resizable) {
+            styleMask |= NSWindowStyleMaskResizable;
+            win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
+        } else {
+            styleMask &= ~NSWindowStyleMaskResizable;
+            win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
+        }
+        [nsWindow setStyleMask:styleMask];
     }
 
     if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {

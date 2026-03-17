@@ -30,7 +30,9 @@ static MARU_Key _maru_cocoa_translate_key(unsigned short scancode) {
         [0x55] = MARU_KEY_KP_3, [0x56] = MARU_KEY_KP_4, [0x57] = MARU_KEY_KP_5, [0x58] = MARU_KEY_KP_6,
         [0x59] = MARU_KEY_KP_7, [0x5B] = MARU_KEY_KP_8, [0x5C] = MARU_KEY_KP_9, [0x60] = MARU_KEY_F5,
         [0x61] = MARU_KEY_F6, [0x62] = MARU_KEY_F7, [0x63] = MARU_KEY_F3, [0x64] = MARU_KEY_F8,
-        [0x65] = MARU_KEY_F9, [0x67] = MARU_KEY_F11, [0x6D] = MARU_KEY_F10, [0x6F] = MARU_KEY_F12,
+        [0x65] = MARU_KEY_F9, [0x67] = MARU_KEY_F11, [0x69] = MARU_KEY_F13, [0x6A] = MARU_KEY_F16,
+        [0x6B] = MARU_KEY_F14, [0x6D] = MARU_KEY_F10, [0x6F] = MARU_KEY_F12, [0x71] = MARU_KEY_F15,
+        [0x40] = MARU_KEY_F17, [0x4F] = MARU_KEY_F18, [0x50] = MARU_KEY_F19, [0x5A] = MARU_KEY_F20,
         [0x72] = MARU_KEY_INSERT,
         [0x73] = MARU_KEY_HOME, [0x74] = MARU_KEY_PAGE_UP, [0x75] = MARU_KEY_DELETE, [0x76] = MARU_KEY_F4,
         [0x77] = MARU_KEY_END, [0x78] = MARU_KEY_F2, [0x79] = MARU_KEY_PAGE_DOWN, [0x7A] = MARU_KEY_F1,
@@ -273,6 +275,16 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
     }
 }
 
+static void _maru_cocoa_display_reconfiguration_callback(CGDirectDisplayID display,
+                                                         CGDisplayChangeSummaryFlags flags,
+                                                         void *userInfo) {
+    (void)display;
+    if (flags & kCGDisplayBeginConfigurationFlag) return;
+
+    MARU_Context_Base *ctx_base = (MARU_Context_Base *)userInfo;
+    _maru_cocoa_refresh_monitors(ctx_base);
+}
+
 MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
                                       MARU_Context **out_context) {
     // Note: See docs/user/macos_backend.md for more details on threading and context limitations on macOS.
@@ -340,12 +352,16 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     atomic_store(&ctx->controllers_dirty, true);
     _maru_cocoa_sync_controllers(&ctx->base);
     
+    CGDisplayRegisterReconfigurationCallback(_maru_cocoa_display_reconfiguration_callback, &ctx->base);
+
     *out_context = (MARU_Context *)ctx;
     return MARU_SUCCESS;
 }
 
 void maru_destroyContext_Cocoa(MARU_Context *context) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
+
+    CGDisplayRemoveReconfigurationCallback(_maru_cocoa_display_reconfiguration_callback, &ctx->base);
 
     while (ctx->base.window_list_head) {
         MARU_Window *window = (MARU_Window *)ctx->base.window_list_head;

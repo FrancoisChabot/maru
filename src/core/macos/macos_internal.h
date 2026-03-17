@@ -20,6 +20,7 @@
 #import <Cocoa/Cocoa.h>
 #import <IOKit/pwr_mgt/IOPMLib.h>
 #import <CoreVideo/CoreVideo.h>
+#import <CoreHaptics/CoreHaptics.h>
 
 static inline NSPasteboardType _maru_mime_to_ns_type(const char *mime_type) {
     if (strcmp(mime_type, "text/plain") == 0) return NSPasteboardTypeString;
@@ -90,6 +91,9 @@ typedef struct MARU_Window_Cocoa {
   bool pending_frame_request;
   CVDisplayLinkRef display_link;
   _Atomic bool pending_frame_vblank;
+  
+  char *app_id;
+  MARU_ContentType content_type;
   } MARU_Window_Cocoa;
 
 
@@ -160,6 +164,7 @@ MARU_Status maru_getAvailableMIMETypes_Cocoa(const MARU_Window *window, MARU_Dat
 
 MARU_Status maru_getMonitors_Cocoa(const MARU_Context *context,
                                    MARU_MonitorList *out_list);
+void _maru_cocoa_refresh_monitors(MARU_Context_Base *ctx_base);
 void maru_retainMonitor_Cocoa(MARU_Monitor *monitor);
 void maru_releaseMonitor_Cocoa(MARU_Monitor *monitor);
 MARU_Status maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor,

@@ -14,6 +14,11 @@ typedef struct MARU_Controller_Cocoa {
   MARU_AnalogInputState *analog_states;
   MARU_ChannelInfo *button_channel_infos;
   MARU_ButtonState8 *button_states;
+  MARU_ChannelInfo *haptic_channel_infos;
+
+  CHHapticEngine *haptic_engine;
+  id<CHHapticAdvancedPatternPlayer> low_freq_player;
+  id<CHHapticAdvancedPatternPlayer> high_freq_player;
 } MARU_Controller_Cocoa;
 
 @interface MARU_ControllerObserver : NSObject
@@ -53,7 +58,15 @@ void _maru_controller_free(MARU_Controller_Base *controller) {
     maru_context_free(ctx, c->analog_states);
     maru_context_free(ctx, c->button_channel_infos);
     maru_context_free(ctx, c->button_states);
+    maru_context_free(ctx, c->haptic_channel_infos);
     
+    if (c->haptic_engine) {
+        [c->low_freq_player release];
+        [c->high_freq_player release];
+        [c->haptic_engine stopWithCompletionHandler:nil];
+        [c->haptic_engine release];
+    }
+
     maru_context_free(ctx, c);
 }
 
@@ -148,46 +161,78 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
         c->button_channel_infos[i].max_value = 1.0f;
     }
 
+    if (@available(macOS 11.0, *)) {
+        if (gc.haptics) {
+            c->base.pub.haptic_count = MARU_CONTROLLER_HAPTIC_STANDARD_COUNT;
+            c->haptic_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) * c->base.pub.haptic_count);
+            if (c->haptic_channel_infos) {
+                c->haptic_channel_infos[MARU_CONTROLLER_HAPTIC_LOW_FREQ].name = "Low Frequency";
+                c->haptic_channel_infos[MARU_CONTROLLER_HAPTIC_LOW_FREQ].min_value = 0.0f;
+                c->haptic_channel_infos[MARU_CONTROLLER_HAPTIC_LOW_FREQ].max_value = 1.0f;
+                c->haptic_channel_infos[MARU_CONTROLLER_HAPTIC_HIGH_FREQ].name = "High Frequency";
+                c->haptic_channel_infos[MARU_CONTROLLER_HAPTIC_HIGH_FREQ].min_value = 0.0f;
+                c->haptic_channel_infos[MARU_CONTROLLER_HAPTIC_HIGH_FREQ].max_value = 1.0f;
+                c->base.pub.haptic_channels = c->haptic_channel_infos;
+            }
+        }
+    }
+
     __block MARU_Controller_Cocoa *block_c = c;
-    gc.extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad * _Nonnull gamepad, GCControllerElement * _Nonnull element) {
-        if ([element isKindOfClass:[GCControllerButtonInput class]]) {
-            GCControllerButtonInput *btn = (GCControllerButtonInput *)element;
-            if (element == gamepad.buttonA) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_SOUTH, btn.isPressed);
-            else if (element == gamepad.buttonB) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_EAST, btn.isPressed);
-            else if (element == gamepad.buttonX) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_WEST, btn.isPressed);
-            else if (element == gamepad.buttonY) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_NORTH, btn.isPressed);
-            else if (element == gamepad.leftShoulder) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_LB, btn.isPressed);
-            else if (element == gamepad.rightShoulder) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_RB, btn.isPressed);
-            
-            if (@available(macOS 10.14.1, *)) {
-                if (element == gamepad.leftThumbstickButton) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_L_THUMB, btn.isPressed);
-                else if (element == gamepad.rightThumbstickButton) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_R_THUMB, btn.isPressed);
+    if (gc.extendedGamepad) {
+        gc.extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad * _Nonnull gamepad, GCControllerElement * _Nonnull element) {
+            if ([element isKindOfClass:[GCControllerButtonInput class]]) {
+                GCControllerButtonInput *btn = (GCControllerButtonInput *)element;
+                if (element == gamepad.buttonA) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_SOUTH, btn.isPressed);
+                else if (element == gamepad.buttonB) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_EAST, btn.isPressed);
+                else if (element == gamepad.buttonX) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_WEST, btn.isPressed);
+                else if (element == gamepad.buttonY) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_NORTH, btn.isPressed);
+                else if (element == gamepad.leftShoulder) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_LB, btn.isPressed);
+                else if (element == gamepad.rightShoulder) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_RB, btn.isPressed);
+                
+                if (@available(macOS 10.14.1, *)) {
+                    if (element == gamepad.leftThumbstickButton) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_L_THUMB, btn.isPressed);
+                    else if (element == gamepad.rightThumbstickButton) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_R_THUMB, btn.isPressed);
+                }
+                
+                if (@available(macOS 10.15, *)) {
+                    if (element == gamepad.buttonMenu) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_START, btn.isPressed);
+                }
+                
+                if (@available(macOS 11.0, *)) {
+                    if (element == gamepad.buttonOptions) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_BACK, btn.isPressed);
+                    else if (element == gamepad.buttonHome) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_GUIDE, btn.isPressed);
+                }
             }
             
-            if (@available(macOS 10.15, *)) {
-                if (element == gamepad.buttonMenu) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_START, btn.isPressed);
+            if (element == gamepad.dpad) {
+                _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_UP, gamepad.dpad.up.isPressed);
+                _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_DOWN, gamepad.dpad.down.isPressed);
+                _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_LEFT, gamepad.dpad.left.isPressed);
+                _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_RIGHT, gamepad.dpad.right.isPressed);
             }
             
-            if (@available(macOS 11.0, *)) {
-                if (element == gamepad.buttonOptions) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_BACK, btn.isPressed);
-                else if (element == gamepad.buttonHome) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_GUIDE, btn.isPressed);
+            block_c->analog_states[MARU_CONTROLLER_ANALOG_LEFT_X].value = (MARU_Scalar)gamepad.leftThumbstick.xAxis.value;
+            block_c->analog_states[MARU_CONTROLLER_ANALOG_LEFT_Y].value = (MARU_Scalar)gamepad.leftThumbstick.yAxis.value;
+            block_c->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_X].value = (MARU_Scalar)gamepad.rightThumbstick.xAxis.value;
+            block_c->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_Y].value = (MARU_Scalar)gamepad.rightThumbstick.yAxis.value;
+            block_c->analog_states[MARU_CONTROLLER_ANALOG_LEFT_TRIGGER].value = (MARU_Scalar)gamepad.leftTrigger.value;
+            block_c->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_TRIGGER].value = (MARU_Scalar)gamepad.rightTrigger.value;
+        };
+    } else if (gc.microGamepad) {
+        gc.microGamepad.valueChangedHandler = ^(GCMicroGamepad * _Nonnull gamepad, GCControllerElement * _Nonnull element) {
+            if ([element isKindOfClass:[GCControllerButtonInput class]]) {
+                GCControllerButtonInput *btn = (GCControllerButtonInput *)element;
+                if (element == gamepad.buttonA) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_SOUTH, btn.isPressed);
+                else if (element == gamepad.buttonX) _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_WEST, btn.isPressed);
             }
-        }
-        
-        if (element == gamepad.dpad) {
-            _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_UP, gamepad.dpad.up.isPressed);
-            _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_DOWN, gamepad.dpad.down.isPressed);
-            _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_LEFT, gamepad.dpad.left.isPressed);
-            _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_RIGHT, gamepad.dpad.right.isPressed);
-        }
-        
-        block_c->analog_states[MARU_CONTROLLER_ANALOG_LEFT_X].value = (MARU_Scalar)gamepad.leftThumbstick.xAxis.value;
-        block_c->analog_states[MARU_CONTROLLER_ANALOG_LEFT_Y].value = (MARU_Scalar)gamepad.leftThumbstick.yAxis.value;
-        block_c->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_X].value = (MARU_Scalar)gamepad.rightThumbstick.xAxis.value;
-        block_c->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_Y].value = (MARU_Scalar)gamepad.rightThumbstick.yAxis.value;
-        block_c->analog_states[MARU_CONTROLLER_ANALOG_LEFT_TRIGGER].value = (MARU_Scalar)gamepad.leftTrigger.value;
-        block_c->analog_states[MARU_CONTROLLER_ANALOG_RIGHT_TRIGGER].value = (MARU_Scalar)gamepad.rightTrigger.value;
-    };
+            if (element == gamepad.dpad) {
+                _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_UP, gamepad.dpad.up.isPressed);
+                _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_DOWN, gamepad.dpad.down.isPressed);
+                _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_LEFT, gamepad.dpad.left.isPressed);
+                _maru_cocoa_dispatch_button_event(block_c, MARU_CONTROLLER_BUTTON_DPAD_RIGHT, gamepad.dpad.right.isPressed);
+            }
+        };
+    }
 
     return c;
 }
@@ -232,8 +277,6 @@ void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base) {
     }
     
     for (GCController *gc in controllers) {
-        if (!gc.extendedGamepad) continue;
-        
         MARU_Controller_Cocoa *found = NULL;
         for (uint32_t i = 0; i < ctx->controller_cache_count; ++i) {
             MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)ctx->controller_cache[i];
@@ -322,6 +365,79 @@ void maru_releaseController_Cocoa(MARU_Controller *controller) {
     }
 }
 
+static id<CHHapticAdvancedPatternPlayer> _maru_cocoa_create_haptic_player(CHHapticEngine *engine) {
+    if (!engine) return nil;
+    
+    NSDictionary *hapticDict = @{
+        CHHapticPatternKeyVersion: @1.0,
+        CHHapticPatternKeyPattern: @[
+            @{
+                CHHapticPatternKeyEvent: @{
+                    CHHapticPatternKeyEventType: CHHapticEventTypeHapticContinuous,
+                    CHHapticPatternKeyTime: @0.0,
+                    CHHapticPatternKeyEventDuration: @(GCHapticDurationInfinite),
+                    CHHapticPatternKeyEventParameters: @[
+                        @{ CHHapticPatternKeyParameterID: CHHapticEventParameterIDHapticIntensity, CHHapticPatternKeyParameterValue: @1.0 },
+                        @{ CHHapticPatternKeyParameterID: CHHapticEventParameterIDHapticSharpness, CHHapticPatternKeyParameterValue: @0.5 }
+                    ]
+                }
+            }
+        ]
+    };
+    
+    NSError *error = nil;
+    CHHapticPattern *pattern = [[CHHapticPattern alloc] initWithDictionary:hapticDict error:&error];
+    if (!pattern) return nil;
+    
+    id<CHHapticAdvancedPatternPlayer> player = [engine createAdvancedPlayerWithPattern:pattern error:&error];
+    [pattern release];
+    
+    if (player) {
+        [player startAtTime:0 error:nil];
+    }
+    return [player retain];
+}
+
 MARU_Status maru_setControllerHapticLevels_Cocoa(MARU_Controller *controller, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities) {
+    MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)controller;
+    
+    if (@available(macOS 11.0, *)) {
+        if (!c->gc_controller.haptics) return MARU_FAILURE;
+        
+        if (!c->haptic_engine) {
+            c->haptic_engine = [[c->gc_controller.haptics createEngineWithLocality:GCHapticsLocalityDefault] retain];
+            if (!c->haptic_engine) return MARU_FAILURE;
+            
+            NSError *error = nil;
+            [c->haptic_engine startAndReturnError:&error];
+            if (error) {
+                [c->haptic_engine release];
+                c->haptic_engine = nil;
+                return MARU_FAILURE;
+            }
+            
+            c->low_freq_player = _maru_cocoa_create_haptic_player(c->haptic_engine);
+            c->high_freq_player = _maru_cocoa_create_haptic_player(c->haptic_engine);
+        }
+        
+        for (uint32_t i = 0; i < count; ++i) {
+            uint32_t haptic_id = first_haptic + i;
+            MARU_Scalar intensity = intensities[i];
+            
+            id<CHHapticAdvancedPatternPlayer> player = nil;
+            if (haptic_id == MARU_CONTROLLER_HAPTIC_LOW_FREQ) player = c->low_freq_player;
+            else if (haptic_id == MARU_CONTROLLER_HAPTIC_HIGH_FREQ) player = c->high_freq_player;
+            
+            if (player) {
+                CHHapticDynamicParameter *param = [[CHHapticDynamicParameter alloc] initWithParameterID:CHHapticDynamicParameterIDHapticIntensityControl 
+                                                                                                 value:(float)intensity 
+                                                                                          relativeTime:0];
+                [player sendParameters:@[param] atTime:0 error:nil];
+                [param release];
+            }
+        }
+        return MARU_SUCCESS;
+    }
+    
     return MARU_FAILURE;
 }

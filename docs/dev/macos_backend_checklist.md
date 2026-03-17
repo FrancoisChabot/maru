@@ -30,18 +30,18 @@ This document tracks the detailed implementation status of the Maru macOS backen
 - [x] **Attention Requests** (`maru_requestWindowAttention_Cocoa`)
 - [x] **Frame Request Synchronization** (`maru_requestWindowFrame_Cocoa`)
   - [x] Synchronized with `CVDisplayLink`.
-- [ ] **Window Attribute Constraints & Sizing Options**
-  - [ ] Implement Aspect Ratio constraints (`MARU_WINDOW_ATTR_ASPECT_RATIO`).
-  - [ ] Implement Min/Max size constraints (`MARU_WINDOW_ATTR_DIP_MIN_SIZE`, `MARU_WINDOW_ATTR_DIP_MAX_SIZE`).
-  - [ ] Implement Resizable toggle (`MARU_WINDOW_ATTR_RESIZABLE`).
-  - [ ] Implement Viewport Sizing (`MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE`).
-- [ ] **Content Metadata**
-  - [ ] Support `app_id` and `content_type` during creation.
+- [x] **Window Attribute Constraints & Sizing Options**
+  - [x] Implement Aspect Ratio constraints (`MARU_WINDOW_ATTR_ASPECT_RATIO`).
+  - [x] Implement Min/Max size constraints (`MARU_WINDOW_ATTR_DIP_MIN_SIZE`, `MARU_WINDOW_ATTR_DIP_MAX_SIZE`).
+  - [x] Implement Resizable toggle (`MARU_WINDOW_ATTR_RESIZABLE`).
+  - [x] Implement Viewport Sizing (`MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE`).
+- [x] **Content Metadata**
+  - [x] Support `app_id` and `content_type` during creation.
 
 ## 3. Input & Events
 - [x] **Keyboard Events** (`MARU_EVENT_KEY_CHANGED`)
-- [ ] **Key Translation Table**
-  - [ ] Validate and complete mapping for all `MARU_Key` values (currently covers basic US layout).
+- [x] **Key Translation Table**
+  - [x] Validate and complete mapping for all `MARU_Key` values (covers basic US layout and F1-F20).
 - [x] **Modifier Mapping** (`Shift`, `Control`, `Option`, `Command`, `CapsLock`, `NumLock`)
 - [x] **Mouse Button Events** (`MARU_EVENT_MOUSE_BUTTON_CHANGED`)
 - [x] **Mouse Motion Events** (`MARU_EVENT_MOUSE_MOVED`)
@@ -56,18 +56,18 @@ This document tracks the detailed implementation status of the Maru macOS backen
 ## 4. Vulkan Integration
 - [x] **Extension Reporting** (`VK_KHR_surface`, `VK_EXT_metal_surface`)
 - [x] **Surface Creation** (`maru_createVkSurface_Cocoa` via `CAMetalLayer`)
-- [ ] **Surface Loss/Maintenance**
-  - [ ] Ensure surface handles window resizing and display changes correctly.
+- [x] **Surface Loss/Maintenance**
+  - [x] Ensure surface handles window resizing and display changes correctly.
 
 ## 5. Monitors
 - [x] **Monitor Enumeration** (`maru_getMonitors_Cocoa`)
 - [x] **Video Mode Enumeration** (`maru_getMonitorModes_Cocoa`)
-- [ ] **Monitor Change Notifications** (`MARU_EVENT_MONITOR_CHANGED`)
-  - [ ] Use `CGDisplayRegisterReconfigurationCallback`.
-- [ ] **Monitor Cache Invalidation**
-  - [ ] Refresh monitor list when hardware changes occur.
-- [ ] **Video Mode Switching** (`maru_setMonitorMode_Cocoa`)
-  - [ ] Currently stubbed (Returns `MARU_FAILURE`). Decide if this should remain stubbed or use `CGDisplaySetDisplayMode`.
+- [x] **Monitor Change Notifications** (`MARU_EVENT_MONITOR_CHANGED`)
+  - [x] Use `CGDisplayRegisterReconfigurationCallback`.
+- [x] **Monitor Cache Invalidation**
+  - [x] Refresh monitor list when hardware changes occur.
+- [x] **Video Mode Switching** (`maru_setMonitorMode_Cocoa`)
+  - [x] Use `CGDisplaySetDisplayMode`.
 
 ## 6. Cursors & Images
 - [x] **Standard Cursor Shapes** (`maru_getStandardCursor_Cocoa`)
@@ -78,11 +78,11 @@ This document tracks the detailed implementation status of the Maru macOS backen
 ## 7. Controllers / Gamepads
 - [x] **Controller Enumeration** (`GCController` integration)
 - [x] **Standard Axis/Button Mapping** (Basic support for Extended Gamepads)
-- [ ] **Enhanced Mapping**
-  - [ ] Support for non-extended gamepads.
-  - [ ] Support for more than standard buttons/analogs if available.
-- [ ] **Haptic Feedback Support** (`maru_setControllerHapticLevels_Cocoa`)
-  - [ ] Implement using `CHHapticEngine` or `GCDeviceHaptics`. Currently returns `MARU_FAILURE`.
+- [x] **Enhanced Mapping**
+  - [x] Support for non-extended gamepads.
+  - [x] Support for more than standard buttons/analogs if available.
+- [x] **Haptic Feedback Support** (`maru_setControllerHapticLevels_Cocoa`)
+  - [x] Implement using `CHHapticEngine` or `GCDeviceHaptics`.
 
 ## 8. Data Exchange (Clipboard & DnD)
 - [x] **Clipboard Access** (`NSPasteboard`)
@@ -92,7 +92,7 @@ This document tracks the detailed implementation status of the Maru macOS backen
 - [x] **Drag and Drop Events**
   - [x] Implement `NSDraggingDestination` protocol in `MARU_ContentView`.
   - [x] Emit `MARU_EVENT_DROP_ENTERED`, `HOVERED`, `EXITED`, `DROPPED`.
-- [ ] **Drag and Drop Data Management**
-  - [ ] Support `maru_announceDragData` (Currently returns `MARU_FAILURE`).
+- [x] **Drag and Drop Data Management**
+  - [x] Support `maru_announceDragData`.
   - [x] Support `maru_requestDropData`.
   - [x] Support `maru_getAvailableDropMIMETypes`.

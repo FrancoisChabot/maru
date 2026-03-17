@@ -38,69 +38,126 @@ static void _maru_cocoa_populate_video_modes(MARU_Monitor_Cocoa *mon) {
     CFRelease(displayModes);
 }
 
-MARU_Status maru_getMonitors_Cocoa(const MARU_Context *context, MARU_MonitorList *out_list) {
-    MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+static void _maru_cocoa_update_monitor_from_screen(MARU_Monitor_Cocoa *mon, NSScreen *screen, bool is_primary) {
+    NSDictionary *deviceDescription = [screen deviceDescription];
+    NSNumber *screenNumber = [deviceDescription objectForKey:@"NSScreenNumber"];
+    CGDirectDisplayID displayID = (CGDirectDisplayID)[screenNumber unsignedIntValue];
+    mon->display_id = displayID;
 
-    if (ctx_base->monitor_cache) {
-        out_list->monitors = ctx_base->monitor_cache;
-        out_list->count = ctx_base->monitor_cache_count;
-        return MARU_SUCCESS;
+    CGDisplayModeRef mode = CGDisplayCopyDisplayMode(displayID);
+    if (mode) {
+        mon->base.pub.current_mode.px_size.x = (int32_t)CGDisplayModeGetPixelWidth(mode);
+        mon->base.pub.current_mode.px_size.y = (int32_t)CGDisplayModeGetPixelHeight(mode);
+        mon->base.pub.current_mode.refresh_rate_millihz = (uint32_t)(CGDisplayModeGetRefreshRate(mode) * 1000.0);
+        CGDisplayModeRelease(mode);
+    } else {
+        mon->base.pub.current_mode.px_size.x = (int32_t)CGDisplayPixelsWide(displayID);
+        mon->base.pub.current_mode.px_size.y = (int32_t)CGDisplayPixelsHigh(displayID);
+        mon->base.pub.current_mode.refresh_rate_millihz = 60000;
     }
 
-    NSArray<NSScreen *> *screens = [NSScreen screens];
-    uint32_t count = (uint32_t)[screens count];
-    
-    ctx_base->monitor_cache = maru_context_alloc(ctx_base, sizeof(MARU_Monitor *) * count);
-    ctx_base->monitor_cache_count = count;
+    NSRect frame = [screen frame];
+    mon->base.pub.dip_position.x = (MARU_Scalar)frame.origin.x;
+    mon->base.pub.dip_position.y = (MARU_Scalar)frame.origin.y; 
+    mon->base.pub.dip_size.x = (MARU_Scalar)frame.size.width;
+    mon->base.pub.dip_size.y = (MARU_Scalar)frame.size.height;
+    mon->base.pub.scale = (MARU_Scalar)[screen backingScaleFactor];
+    mon->base.pub.is_primary = is_primary;
 
-    for (uint32_t i = 0; i < count; i++) {
+    NSSize displaySize = [[deviceDescription objectForKey:NSDeviceSize] sizeValue];
+    mon->base.pub.physical_size.x = (MARU_Scalar)displaySize.width;
+    mon->base.pub.physical_size.y = (MARU_Scalar)displaySize.height;
+    
+    // Invalidate modes if needed.
+    if (mon->modes) {
+        maru_context_free(mon->base.ctx_base, mon->modes);
+        mon->modes = NULL;
+        mon->mode_count = 0;
+    }
+}
+
+void _maru_cocoa_refresh_monitors(MARU_Context_Base *ctx_base) {
+    NSArray<NSScreen *> *screens = [NSScreen screens];
+    uint32_t new_count = (uint32_t)[screens count];
+    
+    MARU_Monitor **new_cache = maru_context_alloc(ctx_base, sizeof(MARU_Monitor *) * new_count);
+    
+    // 1. Mark all old monitors as potentially removed
+    for (uint32_t i = 0; i < ctx_base->monitor_cache_count; ++i) {
+        MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)ctx_base->monitor_cache[i];
+        mon_base->is_active = false;
+    }
+
+    for (uint32_t i = 0; i < new_count; i++) {
         NSScreen *screen = screens[i];
         NSDictionary *deviceDescription = [screen deviceDescription];
         NSNumber *screenNumber = [deviceDescription objectForKey:@"NSScreenNumber"];
         CGDirectDisplayID displayID = (CGDirectDisplayID)[screenNumber unsignedIntValue];
 
-        MARU_Monitor_Cocoa *mon = maru_context_alloc(ctx_base, sizeof(MARU_Monitor_Cocoa));
-        memset(mon, 0, sizeof(MARU_Monitor_Cocoa));
-        
-        mon->base.ctx_base = ctx_base;
-        mon->base.is_active = true;
-        atomic_init(&mon->base.ref_count, 1u);
-        
-#ifdef MARU_INDIRECT_BACKEND
-        mon->base.backend = &maru_backend_Cocoa;
-#endif
-
-        mon->display_id = displayID;
-        mon->base.pub.is_primary = (i == 0);
-
-        CGDisplayModeRef mode = CGDisplayCopyDisplayMode(displayID);
-        if (mode) {
-            mon->base.pub.current_mode.px_size.x = (int32_t)CGDisplayModeGetPixelWidth(mode);
-            mon->base.pub.current_mode.px_size.y = (int32_t)CGDisplayModeGetPixelHeight(mode);
-            mon->base.pub.current_mode.refresh_rate_millihz = (uint32_t)(CGDisplayModeGetRefreshRate(mode) * 1000.0);
-            CGDisplayModeRelease(mode);
-        } else {
-            mon->base.pub.current_mode.px_size.x = (int32_t)CGDisplayPixelsWide(displayID);
-            mon->base.pub.current_mode.px_size.y = (int32_t)CGDisplayPixelsHigh(displayID);
-            mon->base.pub.current_mode.refresh_rate_millihz = 60000;
+        // 2. See if we already have this monitor
+        MARU_Monitor_Cocoa *mon = NULL;
+        for (uint32_t j = 0; j < ctx_base->monitor_cache_count; j++) {
+            MARU_Monitor_Cocoa *old_mon = (MARU_Monitor_Cocoa *)ctx_base->monitor_cache[j];
+            if (old_mon->display_id == displayID) {
+                mon = old_mon;
+                break;
+            }
         }
 
-        NSRect frame = [screen frame];
-        mon->base.pub.dip_position.x = (MARU_Scalar)frame.origin.x;
-        mon->base.pub.dip_position.y = (MARU_Scalar)frame.origin.y; 
-        mon->base.pub.dip_size.x = (MARU_Scalar)frame.size.width;
-        mon->base.pub.dip_size.y = (MARU_Scalar)frame.size.height;
-        mon->base.pub.scale = (MARU_Scalar)[screen backingScaleFactor];
+        bool is_new = false;
+        if (!mon) {
+            mon = maru_context_alloc(ctx_base, sizeof(MARU_Monitor_Cocoa));
+            memset(mon, 0, sizeof(MARU_Monitor_Cocoa));
+            mon->base.ctx_base = ctx_base;
+            atomic_init(&mon->base.ref_count, 1u);
+#ifdef MARU_INDIRECT_BACKEND
+            mon->base.backend = &maru_backend_Cocoa;
+#endif
+            is_new = true;
+        }
 
-        NSSize displaySize = [[deviceDescription objectForKey:NSDeviceSize] sizeValue];
-        mon->base.pub.physical_size.x = (MARU_Scalar)displaySize.width;
-        mon->base.pub.physical_size.y = (MARU_Scalar)displaySize.height;
+        mon->base.is_active = true;
+        _maru_cocoa_update_monitor_from_screen(mon, screen, (i == 0));
+        new_cache[i] = (MARU_Monitor *)mon;
 
-        ctx_base->monitor_cache[i] = (MARU_Monitor *)mon;
+        if (is_new) {
+            MARU_Event evt = {0};
+            evt.monitor_changed.monitor = (MARU_Monitor *)mon;
+            evt.monitor_changed.connected = true;
+            _maru_post_event_internal(ctx_base, MARU_EVENT_MONITOR_CHANGED, NULL, &evt);
+        }
+    }
+
+    // 3. Emit disconnected events for monitors that are no longer active
+    for (uint32_t i = 0; i < ctx_base->monitor_cache_count; i++) {
+        MARU_Monitor_Base *mon_base = (MARU_Monitor_Base *)ctx_base->monitor_cache[i];
+        if (!mon_base->is_active) {
+            MARU_Event evt = {0};
+            evt.monitor_changed.monitor = (MARU_Monitor *)mon_base;
+            evt.monitor_changed.connected = false;
+            _maru_post_event_internal(ctx_base, MARU_EVENT_MONITOR_CHANGED, NULL, &evt);
+            
+            // If ref_count is 1 (only our cache has it), it will be freed when cache is cleared.
+            // Wait, ref_count in cache is what we maintain.
+            // Actually, we should release it if it's no longer in cache.
+            maru_releaseMonitor_Cocoa((MARU_Monitor *)mon_base);
+        }
+    }
+
+    maru_context_free(ctx_base, ctx_base->monitor_cache);
+    ctx_base->monitor_cache = new_cache;
+    ctx_base->monitor_cache_count = new_count;
+}
+
+MARU_Status maru_getMonitors_Cocoa(const MARU_Context *context, MARU_MonitorList *out_list) {
+    MARU_Context_Base *ctx_base = (MARU_Context_Base *)context;
+
+    if (!ctx_base->monitor_cache) {
+        _maru_cocoa_refresh_monitors(ctx_base);
     }
 
     out_list->monitors = ctx_base->monitor_cache;
-    out_list->count = count;
+    out_list->count = ctx_base->monitor_cache_count;
     return MARU_SUCCESS;
 }
 
@@ -145,8 +202,33 @@ MARU_Status maru_getMonitorModes_Cocoa(const MARU_Monitor *monitor, MARU_VideoMo
 }
 
 MARU_Status maru_setMonitorMode_Cocoa(MARU_Monitor *monitor, MARU_VideoMode mode) {
-    // Deprecated in modern macOS. Changing display resolution globally is frowned upon.
-    // Applications should use Borderless Fullscreen Windows instead.
-    // Implementing this would require CGDisplaySetDisplayMode, which causes flickering and re-layout.
-    return MARU_FAILURE; 
+    MARU_Monitor_Cocoa *mon = (MARU_Monitor_Cocoa *)monitor;
+    
+    CFArrayRef displayModes = CGDisplayCopyAllDisplayModes(mon->display_id, NULL);
+    if (!displayModes) return MARU_FAILURE;
+
+    CGDisplayModeRef bestMode = NULL;
+    CFIndex count = CFArrayGetCount(displayModes);
+    for (CFIndex i = 0; i < count; i++) {
+        CGDisplayModeRef m = (CGDisplayModeRef)CFArrayGetValueAtIndex(displayModes, i);
+        int32_t width = (int32_t)CGDisplayModeGetPixelWidth(m);
+        int32_t height = (int32_t)CGDisplayModeGetPixelHeight(m);
+        uint32_t refresh = (uint32_t)(CGDisplayModeGetRefreshRate(m) * 1000.0);
+        if (refresh == 0) refresh = 60000;
+
+        if (width == mode.px_size.x && height == mode.px_size.y && refresh == mode.refresh_rate_millihz) {
+            bestMode = m;
+            break;
+        }
+    }
+
+    MARU_Status status = MARU_FAILURE;
+    if (bestMode) {
+        if (CGDisplaySetDisplayMode(mon->display_id, bestMode, NULL) == kCGErrorSuccess) {
+            status = MARU_SUCCESS;
+        }
+    }
+
+    CFRelease(displayModes) ;
+    return status;
 }
