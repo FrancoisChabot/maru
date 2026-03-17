@@ -362,6 +362,14 @@ static inline MARU_Context* maru_test_createContext(const MARU_ContextCreateInfo
 
     return (MARU_Context*)ctx;
 }
+
+/** @brief Manually cleans up a MARU_Context_Base created with maru_test_createContext. */
+static inline void maru_test_destroyContext(MARU_Context* context) {
+    if (!context) return;
+    MARU_Context_Base* ctx_base = (MARU_Context_Base*)context;
+    _maru_cleanup_context_base(ctx_base);
+    maru_context_free(ctx_base, context);
+}
 #endif  // !__cplusplus
 
 #ifdef __cplusplus

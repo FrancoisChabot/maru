@@ -43,3 +43,26 @@ TEST_CASE("DesktopIntegration.ContextCreateOOMReplayPerAllocationEvent") {
     CHECK(tracking.is_clean());
   }
 }
+
+TEST_CASE("DesktopIntegration.ContextUpdateAttributes") {
+  MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+  create_info.backend = MARU_BACKEND_UNKNOWN;
+
+  MARU_Context *ctx = nullptr;
+  if (maru_createContext(&create_info, &ctx) != MARU_SUCCESS) {
+    return;
+  }
+
+  SUBCASE("Inhibit Idle Toggle") {
+    CHECK(maru_setContextInhibitsSystemIdle(ctx, true) == MARU_SUCCESS);
+    // There is no easy way to verify OS side effect here, but we check for crashes/errors.
+    CHECK(maru_setContextInhibitsSystemIdle(ctx, false) == MARU_SUCCESS);
+  }
+
+  SUBCASE("Idle Timeout") {
+    CHECK(maru_setContextIdleTimeout(ctx, 1000) == MARU_SUCCESS);
+    CHECK(maru_setContextIdleTimeout(ctx, 0) == MARU_SUCCESS);
+  }
+
+  maru_destroyContext(ctx);
+}

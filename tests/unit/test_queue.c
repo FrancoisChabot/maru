@@ -439,7 +439,7 @@ UTEST(QueueTest, SurvivesUnrelatedContextDestruction) {
     MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
     MARU_Context *context = maru_test_createContext(&create_info);
     ASSERT_TRUE(context != NULL);
-    maru_destroyContext(context);
+    maru_test_destroyContext(context);
 
     EXPECT_TRUE(push_user_event(queue, MARU_EVENT_USER_0));
     EXPECT_TRUE(maru_commitQueue(queue));

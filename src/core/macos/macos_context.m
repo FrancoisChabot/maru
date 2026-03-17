@@ -81,6 +81,41 @@ MARU_Window_Cocoa *_maru_cocoa_window_from_ns_window(id ns_window) {
         ns_window, g_maru_cocoa_window_assoc_key);
 }
 
+static void _maru_cocoa_apply_idle_inhibit(MARU_Context_Cocoa *ctx) {
+    if (ctx->base.inhibit_idle) {
+        if (ctx->idle_assertion_id == kIOPMNullAssertionID) {
+            IOReturn result = IOPMAssertionCreateWithDescription(
+                kIOPMAssertionTypePreventUserIdleDisplaySleep,
+                CFSTR("Maru context idle inhibition"),
+                NULL,
+                CFSTR("The application requested idle inhibition"),
+                NULL,
+                0,
+                NULL,
+                &ctx->idle_assertion_id);
+            if (result != kIOReturnSuccess) {
+                ctx->idle_assertion_id = kIOPMNullAssertionID;
+            }
+        }
+    } else {
+        if (ctx->idle_assertion_id != kIOPMNullAssertionID) {
+            IOPMAssertionRelease(ctx->idle_assertion_id);
+            ctx->idle_assertion_id = kIOPMNullAssertionID;
+        }
+    }
+}
+
+static void _maru_cocoa_record_activity(MARU_Context_Cocoa *ctx, uint64_t now_ms) {
+    ctx->last_input_time_ms = now_ms;
+    if (ctx->is_idle) {
+        ctx->is_idle = false;
+        MARU_Event event = {0};
+        event.idle_changed.is_idle = false;
+        event.idle_changed.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
+        _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &event);
+    }
+}
+
 static void _maru_cocoa_dispatch_window_event(MARU_Context_Cocoa *active_ctx,
                                               MARU_Window_Cocoa *window,
                                               MARU_EventId type,
@@ -101,6 +136,29 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
 
     NSEventType type = [nsEvent type];
     MARU_Window_Cocoa *window = _maru_cocoa_window_from_ns_window([nsEvent window]);
+
+    if (active_ctx->base.attrs_effective.idle_timeout_ms > 0) {
+        switch (type) {
+            case NSEventTypeKeyDown:
+            case NSEventTypeKeyUp:
+            case NSEventTypeFlagsChanged:
+            case NSEventTypeLeftMouseDown:
+            case NSEventTypeLeftMouseUp:
+            case NSEventTypeRightMouseDown:
+            case NSEventTypeRightMouseUp:
+            case NSEventTypeOtherMouseDown:
+            case NSEventTypeOtherMouseUp:
+            case NSEventTypeMouseMoved:
+            case NSEventTypeLeftMouseDragged:
+            case NSEventTypeRightMouseDragged:
+            case NSEventTypeOtherMouseDragged:
+            case NSEventTypeScrollWheel:
+                _maru_cocoa_record_activity(active_ctx, _maru_cocoa_now_ms());
+                break;
+            default:
+                break;
+        }
+    }
 
     switch (type) {
         case NSEventTypeKeyDown:
@@ -223,6 +281,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     MARU_Context_Cocoa *ctx = maru_context_alloc_bootstrap(create_info, sizeof(MARU_Context_Cocoa));
     if (!ctx) return MARU_FAILURE;
 
+    ctx->clipboard_delegate = nil;
     if (create_info->allocator.alloc_cb) {
         ctx->base.allocator = create_info->allocator;
     } else {
@@ -246,6 +305,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 #endif
 
     _maru_update_context_base(&ctx->base, MARU_CONTEXT_ATTR_ALL, &create_info->attributes);
+    _maru_cocoa_apply_idle_inhibit(ctx);
 
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -253,6 +313,8 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
     ctx->ns_app = NSApp;
     ctx->last_modifiers = [NSEvent modifierFlags];
+    ctx->last_input_time_ms = _maru_cocoa_now_ms();
+    ctx->is_idle = false;
     ctx->base.pub.flags = 0;
     ctx->controller_snapshot_dirty = true;
     atomic_store(&ctx->controllers_dirty, true);
@@ -287,6 +349,9 @@ void maru_destroyContext_Cocoa(MARU_Context *context) {
     }
     maru_context_free(&ctx->base, ctx->controller_cache);
 
+    ctx->base.inhibit_idle = false;
+    _maru_cocoa_apply_idle_inhibit(ctx);
+
     _maru_cleanup_context_base(&ctx->base);
     maru_context_free(&ctx->base, ctx);
 }
@@ -294,7 +359,29 @@ void maru_destroyContext_Cocoa(MARU_Context *context) {
 MARU_Status maru_updateContext_Cocoa(MARU_Context *context, uint64_t field_mask,
                                        const MARU_ContextAttributes *attributes) {
     _maru_update_context_base((MARU_Context_Base *)context, field_mask, attributes);
+    if (field_mask & MARU_CONTEXT_ATTR_INHIBIT_IDLE) {
+        _maru_cocoa_apply_idle_inhibit((MARU_Context_Cocoa *)context);
+    }
     return MARU_SUCCESS;
+}
+
+static void _maru_cocoa_dispatch_pending_frames(MARU_Context_Cocoa *ctx) {
+    MARU_Window_Base *base = ctx->base.window_list_head;
+    const uint64_t now_ms = _maru_cocoa_now_ms();
+
+    while (base) {
+        MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)base;
+        bool vblank = atomic_exchange(&win->pending_frame_vblank, false);
+        if (win->pending_frame_request && vblank) {
+            win->pending_frame_request = false;
+
+            MARU_Event evt = {0};
+            evt.window_frame.timestamp_ms = (uint32_t)now_ms;
+            _maru_dispatch_event(&ctx->base, MARU_EVENT_WINDOW_FRAME,
+                                 (MARU_Window *)win, &evt);
+        }
+        base = base->ctx_next;
+    }
 }
 
 MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
@@ -323,6 +410,7 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
 
     @autoreleasepool {
         _maru_drain_queued_events(&ctx->base);
+        _maru_cocoa_dispatch_pending_frames(ctx);
 
         if ([NSThread isMainThread]) {
             const uint64_t pre_wait_ms = _maru_cocoa_now_ms();
@@ -330,6 +418,22 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
                 _maru_advance_animated_cursors(&ctx->base, pre_wait_ms);
                 timeout_ms =
                     _maru_adjust_timeout_for_cursor_animation(&ctx->base, timeout_ms, pre_wait_ms);
+
+                if (ctx->base.attrs_effective.idle_timeout_ms > 0 && !ctx->is_idle) {
+                    const uint64_t elapsed = pre_wait_ms - ctx->last_input_time_ms;
+                    if (elapsed >= ctx->base.attrs_effective.idle_timeout_ms) {
+                        ctx->is_idle = true;
+                        MARU_Event idle_evt = {0};
+                        idle_evt.idle_changed.is_idle = true;
+                        idle_evt.idle_changed.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
+                        _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &idle_evt);
+                    } else {
+                        const uint32_t remaining = (uint32_t)(ctx->base.attrs_effective.idle_timeout_ms - elapsed);
+                        if (timeout_ms == MARU_NEVER || remaining < timeout_ms) {
+                            timeout_ms = remaining;
+                        }
+                    }
+                }
             }
 
             NSDate *until = nil;
@@ -361,6 +465,17 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
             const uint64_t post_wait_ms = _maru_cocoa_now_ms();
             if (post_wait_ms != 0u) {
                 _maru_advance_animated_cursors(&ctx->base, post_wait_ms);
+
+                if (ctx->base.attrs_effective.idle_timeout_ms > 0 && !ctx->is_idle) {
+                    const uint64_t elapsed = post_wait_ms - ctx->last_input_time_ms;
+                    if (elapsed >= ctx->base.attrs_effective.idle_timeout_ms) {
+                        ctx->is_idle = true;
+                        MARU_Event idle_evt = {0};
+                        idle_evt.idle_changed.is_idle = true;
+                        idle_evt.idle_changed.timeout_ms = ctx->base.attrs_effective.idle_timeout_ms;
+                        _maru_dispatch_event(&ctx->base, MARU_EVENT_IDLE_CHANGED, NULL, &idle_evt);
+                    }
+                }
             }
         }
         _maru_drain_queued_events(&ctx->base);

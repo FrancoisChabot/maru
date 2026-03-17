@@ -29,7 +29,7 @@ public:
   void setup_surface(VkSurfaceKHR surface, const MARU_WindowGeometry& geometry) {
     vulkan_renderer_setup_surface(&renderer, surface,
                                       (uint32_t)geometry.px_size.x,
-                                      (uint32_t)geometry.px_size.y);
+                                      (uint32_t)geometry.px_size.y, true);
   }
 
   VkInstance instance() {

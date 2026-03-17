@@ -17,6 +17,25 @@
 
 #include "core_event_queue.h"
 #include <pthread.h>
+#import <Cocoa/Cocoa.h>
+#import <IOKit/pwr_mgt/IOPMLib.h>
+#import <CoreVideo/CoreVideo.h>
+
+static inline NSPasteboardType _maru_mime_to_ns_type(const char *mime_type) {
+    if (strcmp(mime_type, "text/plain") == 0) return NSPasteboardTypeString;
+    if (strcmp(mime_type, "text/html") == 0) return NSPasteboardTypeHTML;
+    if (strcmp(mime_type, "image/png") == 0) return NSPasteboardTypePNG;
+    if (strcmp(mime_type, "image/tiff") == 0) return NSPasteboardTypeTIFF;
+    return [NSString stringWithUTF8String:mime_type];
+}
+
+static inline const char *_maru_ns_type_to_mime(NSPasteboardType type) {
+    if ([type isEqualToString:NSPasteboardTypeString]) return "text/plain";
+    if ([type isEqualToString:NSPasteboardTypeHTML]) return "text/html";
+    if ([type isEqualToString:NSPasteboardTypePNG]) return "image/png";
+    if ([type isEqualToString:NSPasteboardTypeTIFF]) return "image/tiff";
+    return [type UTF8String];
+}
 
 typedef struct MARU_Context_Cocoa {
   MARU_Context_Base base;
@@ -38,6 +57,11 @@ typedef struct MARU_Context_Cocoa {
   
   char **clipboard_available_mime_types;
   uint32_t clipboard_available_mime_type_count;
+
+  IOPMAssertionID idle_assertion_id;
+
+  uint64_t last_input_time_ms;
+  bool is_idle;
 } MARU_Context_Cocoa;
 
 typedef struct MARU_DataRequest_Cocoa {
@@ -56,7 +80,18 @@ typedef struct MARU_Window_Cocoa {
 
   uint64_t text_input_session_id;
   bool ime_preedit_active;
-} MARU_Window_Cocoa;
+  bool accept_drop;
+  MARU_DropAction current_drop_action;
+  void *drop_session_userdata;
+  char **drop_available_mime_types;
+  uint32_t drop_available_mime_type_count;
+  id current_dragging_info;
+
+  bool pending_frame_request;
+  CVDisplayLinkRef display_link;
+  _Atomic bool pending_frame_vblank;
+  } MARU_Window_Cocoa;
+
 
 typedef struct MARU_Image_Cocoa {
     MARU_Image_Base base;

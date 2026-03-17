@@ -3,11 +3,33 @@
 #include "maru/vulkan.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <vulkan/vulkan.h>
 
 static bool keep_running = true;
 static bool window_ready = false;
 static VulkanRenderer renderer;
+
+#ifdef _WIN32
+#include <windows.h>
+static double get_time_sec(void) {
+  static LARGE_INTEGER frequency;
+  static BOOL frequency_initialized = FALSE;
+  if (!frequency_initialized) {
+    QueryPerformanceFrequency(&frequency);
+    frequency_initialized = TRUE;
+  }
+  LARGE_INTEGER counter;
+  QueryPerformanceCounter(&counter);
+  return (double)counter.QuadPart / (double)frequency.QuadPart;
+}
+#else
+static double get_time_sec(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (double)ts.tv_sec + (double)ts.tv_nsec / 1000000000.0;
+}
+#endif
 
 static void handle_event(MARU_EventId type, MARU_Window *window,
                          const MARU_Event *event, void *userdata) {
@@ -106,13 +128,24 @@ int main(void) {
   MARU_WindowGeometry geometry = maru_getWindowGeometry(window);
   vulkan_renderer_setup_surface(&renderer, surface,
                                 (uint32_t)geometry.px_size.x,
-                                (uint32_t)geometry.px_size.y);
+                                (uint32_t)geometry.px_size.y, false);
 
   printf("Entering main loop...\n");
+  int frame_count = 0;
+  double last_stat_time = get_time_sec();
+
   while (keep_running) {
     maru_pumpEvents(context, 0, MARU_ALL_EVENTS, handle_event, NULL);
 
     vulkan_renderer_draw_frame(&renderer);
+
+    frame_count++;
+    double now = get_time_sec();
+    if (now - last_stat_time >= 1.0) {
+      printf("FPS: %d\n", frame_count);
+      frame_count = 0;
+      last_stat_time = now;
+    }
   }
 
   vkDeviceWaitIdle(renderer.device);

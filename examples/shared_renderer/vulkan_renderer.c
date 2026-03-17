@@ -57,7 +57,7 @@ choose_swap_surface_format(const VkSurfaceFormatKHR *available_formats,
                            uint32_t count);
 static VkPresentModeKHR
 choose_swap_present_mode(const VkPresentModeKHR *available_present_modes,
-                         uint32_t count);
+                         uint32_t count, bool vsync);
 static VkExtent2D
 choose_swap_extent(const VkSurfaceCapabilitiesKHR *capabilities,
                    VkExtent2D actual_extent);
@@ -83,10 +83,11 @@ void vulkan_renderer_init(VulkanRenderer *renderer, uint32_t extension_count,
 
 void vulkan_renderer_setup_surface(VulkanRenderer *renderer,
                                    VkSurfaceKHR surface, uint32_t width,
-                                   uint32_t height) {
+                                   uint32_t height, bool vsync) {
   renderer->surface = surface;
   renderer->swapChainExtent.width = width;
   renderer->swapChainExtent.height = height;
+  renderer->vsync = vsync;
 
   pick_physical_device(renderer);
   create_logical_device(renderer);
@@ -353,7 +354,7 @@ static void create_swap_chain(VulkanRenderer *renderer) {
   VkSurfaceFormatKHR surfaceFormat = choose_swap_surface_format(
       swapChainSupport.formats, swapChainSupport.formatCount);
   VkPresentModeKHR presentMode = choose_swap_present_mode(
-      swapChainSupport.presentModes, swapChainSupport.presentModeCount);
+      swapChainSupport.presentModes, swapChainSupport.presentModeCount, renderer->vsync);
   VkExtent2D extent = choose_swap_extent(&swapChainSupport.capabilities,
                                          renderer->swapChainExtent);
 
@@ -703,10 +704,23 @@ choose_swap_surface_format(const VkSurfaceFormatKHR *available_formats,
 
 static VkPresentModeKHR
 choose_swap_present_mode(const VkPresentModeKHR *available_present_modes,
-                         uint32_t count) {
-  for (uint32_t i = 0; i < count; i++) {
-    if (available_present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-      return available_present_modes[i];
+                         uint32_t count, bool vsync) {
+  if (!vsync) {
+    for (uint32_t i = 0; i < count; i++) {
+      if (available_present_modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+        return available_present_modes[i];
+      }
+    }
+    for (uint32_t i = 0; i < count; i++) {
+      if (available_present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+        return available_present_modes[i];
+      }
+    }
+  } else {
+    for (uint32_t i = 0; i < count; i++) {
+      if (available_present_modes[i] == VK_PRESENT_MODE_FIFO_RELAXED_KHR) {
+        return available_present_modes[i];
+      }
     }
   }
   return VK_PRESENT_MODE_FIFO_KHR;

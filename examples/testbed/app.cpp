@@ -12,12 +12,15 @@
 #include "modules/instrumentation_module.h"
 #include "modules/composition_module.h"
 #include "modules/dataexchange_module.h"
+#include "modules/context_module.h"
 #include "imgui.h"
 
 App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, VkQueue queue, VkDescriptorPool descriptor_pool) {
     (void)descriptor_pool;
     primary_window_handle_ = window;
 
+    modules_.push_back(std::make_unique<ContextModule>());
+    
     auto inst = std::make_unique<InstrumentationModule>();
     inst_module_ = inst.get();
     modules_.push_back(std::move(inst));

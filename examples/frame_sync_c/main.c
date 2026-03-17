@@ -106,7 +106,7 @@ int main(void) {
   MARU_WindowGeometry geometry = maru_getWindowGeometry(window);
   vulkan_renderer_setup_surface(&renderer, surface,
                                 (uint32_t)geometry.px_size.x,
-                                (uint32_t)geometry.px_size.y);
+                                (uint32_t)geometry.px_size.y, true);
 
   last_stat_time = get_time_sec();
 

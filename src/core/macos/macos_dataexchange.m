@@ -5,22 +5,6 @@
 #import "maru_mem_internal.h"
 #import <Cocoa/Cocoa.h>
 
-static NSPasteboardType _maru_mime_to_ns_type(const char *mime_type) {
-    if (strcmp(mime_type, "text/plain") == 0) return NSPasteboardTypeString;
-    if (strcmp(mime_type, "text/html") == 0) return NSPasteboardTypeHTML;
-    if (strcmp(mime_type, "image/png") == 0) return NSPasteboardTypePNG;
-    if (strcmp(mime_type, "image/tiff") == 0) return NSPasteboardTypeTIFF;
-    return [NSString stringWithUTF8String:mime_type];
-}
-
-static const char *_maru_ns_type_to_mime(NSPasteboardType type) {
-    if ([type isEqualToString:NSPasteboardTypeString]) return "text/plain";
-    if ([type isEqualToString:NSPasteboardTypeHTML]) return "text/html";
-    if ([type isEqualToString:NSPasteboardTypePNG]) return "image/png";
-    if ([type isEqualToString:NSPasteboardTypeTIFF]) return "image/tiff";
-    return [type UTF8String];
-}
-
 @interface MARU_ClipboardDelegate : NSObject <NSPasteboardItemDataProvider, NSPasteboardTypeOwner>
 @property (nonatomic, assign) MARU_Context_Cocoa *context;
 @end
@@ -114,6 +98,29 @@ MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget 
 
         _maru_post_event_internal((MARU_Context_Base *)maru_getWindowContext(window), MARU_EVENT_DATA_RECEIVED, NULL, &event);
         return MARU_SUCCESS;
+    } else if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
+        MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
+        if (!win->current_dragging_info) return MARU_FAILURE;
+
+        NSPasteboard *pb = [win->current_dragging_info draggingPasteboard];
+        NSPasteboardType type = _maru_mime_to_ns_type(mime_type);
+        NSData *nsData = [pb dataForType:type];
+
+        MARU_Event event = {0};
+        event.data_received.userdata = userdata;
+        event.data_received.target = MARU_DATA_EXCHANGE_TARGET_DRAG_DROP;
+        event.data_received.mime_type = mime_type;
+
+        if (nsData) {
+            event.data_received.status = MARU_SUCCESS;
+            event.data_received.data = [nsData bytes];
+            event.data_received.size = [nsData length];
+        } else {
+            event.data_received.status = MARU_FAILURE;
+        }
+
+        _maru_dispatch_event(win->base.ctx_base, MARU_EVENT_DATA_RECEIVED, (MARU_Window *)win, &event);
+        return MARU_SUCCESS;
     }
     return MARU_FAILURE;
 }
@@ -137,6 +144,35 @@ MARU_Status maru_getAvailableMIMETypes_Cocoa(const MARU_Window *window, MARU_Dat
 
         out_list->count = ctx->clipboard_available_mime_type_count;
         out_list->strings = (const char *const *)ctx->clipboard_available_mime_types;
+        return MARU_SUCCESS;
+    } else if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
+        MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
+        if (!win->current_dragging_info) {
+            out_list->count = win->drop_available_mime_type_count;
+            out_list->strings = (const char *const *)win->drop_available_mime_types;
+            return MARU_SUCCESS;
+        }
+
+        NSPasteboard *pb = [win->current_dragging_info draggingPasteboard];
+        NSArray *types = [pb types];
+
+        // For simplicity, we refresh the cached types in the window
+        for (uint32_t i = 0; i < win->drop_available_mime_type_count; ++i) {
+            maru_context_free(win->base.ctx_base, win->drop_available_mime_types[i]);
+        }
+        maru_context_free(win->base.ctx_base, win->drop_available_mime_types);
+
+        win->drop_available_mime_type_count = (uint32_t)[types count];
+        win->drop_available_mime_types = maru_context_alloc(win->base.ctx_base, sizeof(char *) * win->drop_available_mime_type_count);
+        for (uint32_t i = 0; i < win->drop_available_mime_type_count; ++i) {
+            const char *mime = _maru_ns_type_to_mime([types objectAtIndex:i]);
+            size_t len = strlen(mime);
+            win->drop_available_mime_types[i] = maru_context_alloc(win->base.ctx_base, len + 1);
+            memcpy(win->drop_available_mime_types[i], mime, len + 1);
+        }
+
+        out_list->count = win->drop_available_mime_type_count;
+        out_list->strings = (const char *const *)win->drop_available_mime_types;
         return MARU_SUCCESS;
     }
     return MARU_FAILURE;

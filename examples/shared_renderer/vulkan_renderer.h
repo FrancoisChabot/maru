@@ -45,11 +45,12 @@ typedef struct VulkanRenderer {
 
   bool framebufferResized;
   bool ready;
+  bool vsync;
 } VulkanRenderer;
 
 void vulkan_renderer_init(VulkanRenderer* renderer, uint32_t extension_count, const char *const * extensions);
 void vulkan_renderer_setup_surface(VulkanRenderer* renderer, VkSurfaceKHR surface, uint32_t width,
-                                   uint32_t height);
+                                   uint32_t height, bool vsync);
 void vulkan_renderer_cleanup(VulkanRenderer* renderer);
 void vulkan_renderer_draw_frame(VulkanRenderer* renderer);
 void vulkan_renderer_on_resized(VulkanRenderer* renderer, uint32_t width, uint32_t height);

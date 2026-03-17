@@ -49,7 +49,7 @@ UTEST(DiagnosticTest, UpdateContextAndReport) {
     EXPECT_EQ(state.call_count, 0);
 #endif
     
-    maru_destroyContext(context);
+    maru_test_destroyContext(context);
     EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));
     maru_test_tracking_allocator_shutdown(&tracking);
 }
@@ -67,7 +67,7 @@ UTEST(DiagnosticTest, DefaultReportingDoesNotCrash) {
     _maru_reportDiagnostic(context, MARU_DIAGNOSTIC_INFO, "Test message");
 #endif
 
-    maru_destroyContext(context);
+    maru_test_destroyContext(context);
     EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));
     maru_test_tracking_allocator_shutdown(&tracking);
 }

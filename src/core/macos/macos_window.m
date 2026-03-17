@@ -5,12 +5,26 @@
 #import "maru_mem_internal.h"
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/CAMetalLayer.h>
+#import <CoreVideo/CoreVideo.h>
+
+static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
+                                                  const CVTimeStamp *inNow,
+                                                  const CVTimeStamp *inOutputTime,
+                                                  CVOptionFlags flagsIn,
+                                                  CVOptionFlags *flagsOut,
+                                                  void *displayLinkContext) {
+    (void)displayLink; (void)inNow; (void)inOutputTime; (void)flagsIn; (void)flagsOut;
+    MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)displayLinkContext;
+    atomic_store(&win->pending_frame_vblank, true);
+    maru_wakeContext_Cocoa((MARU_Context *)win->base.pub.context);
+    return kCVReturnSuccess;
+}
 
 @interface MARU_WindowDelegate : NSObject <NSWindowDelegate>
 @property (nonatomic, assign) MARU_Window_Cocoa *window;
 @end
 
-@interface MARU_ContentView : NSView <NSTextInputClient> {
+@interface MARU_ContentView : NSView <NSTextInputClient, NSDraggingDestination> {
     NSTrackingArea *trackingArea;
 }
 @property (nonatomic, assign) MARU_Window_Cocoa *maruWindow;
@@ -21,6 +35,132 @@
 + (Class)layerClass { return [CAMetalLayer class]; }
 - (CALayer *)makeBackingLayer { return [CAMetalLayer layer]; }
 - (BOOL)acceptsFirstResponder { return YES; }
+
+// --- NSDraggingDestination implementation ---
+
+- (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender {
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win) return NSDragOperationNone;
+
+    NSPasteboard *pb = [sender draggingPasteboard];
+    NSArray *types = [pb types];
+    
+    for (uint32_t i = 0; i < win->drop_available_mime_type_count; ++i) {
+        maru_context_free(win->base.ctx_base, win->drop_available_mime_types[i]);
+    }
+    maru_context_free(win->base.ctx_base, win->drop_available_mime_types);
+    
+    win->drop_available_mime_type_count = (uint32_t)[types count];
+    win->drop_available_mime_types = maru_context_alloc(win->base.ctx_base, sizeof(char *) * win->drop_available_mime_type_count);
+    for (uint32_t i = 0; i < win->drop_available_mime_type_count; ++i) {
+        const char *mime = _maru_ns_type_to_mime([types objectAtIndex:i]);
+        size_t len = strlen(mime);
+        win->drop_available_mime_types[i] = maru_context_alloc(win->base.ctx_base, len + 1);
+        memcpy(win->drop_available_mime_types[i], mime, len + 1);
+    }
+
+    MARU_DropSessionPrefix session_exposed = {
+        .action = &win->current_drop_action,
+        .session_userdata = &win->drop_session_userdata
+    };
+
+    MARU_Event evt = {0};
+    evt.drop_entered.session = (MARU_DropSession *)&session_exposed;
+    evt.drop_entered.available_actions = MARU_DROP_ACTION_COPY | MARU_DROP_ACTION_MOVE | MARU_DROP_ACTION_LINK;
+    evt.drop_entered.available_types.count = win->drop_available_mime_type_count;
+    evt.drop_entered.available_types.strings = (const char *const *)win->drop_available_mime_types;
+    
+    NSPoint pt = [self convertPoint:[sender draggingLocation] fromView:nil];
+    evt.drop_entered.dip_position.x = (MARU_Scalar)pt.x;
+    evt.drop_entered.dip_position.y = (MARU_Scalar)(self.bounds.size.height - pt.y);
+
+    win->current_dragging_info = sender;
+    win->current_drop_action = MARU_DROP_ACTION_NONE;
+    _maru_dispatch_event(win->base.ctx_base, MARU_EVENT_DROP_ENTERED, (MARU_Window *)win, &evt);
+    win->current_dragging_info = nil;
+    
+    switch (win->current_drop_action) {
+        case MARU_DROP_ACTION_COPY: return NSDragOperationCopy;
+        case MARU_DROP_ACTION_MOVE: return NSDragOperationMove;
+        case MARU_DROP_ACTION_LINK: return NSDragOperationLink;
+        default: return NSDragOperationNone;
+    }
+}
+
+- (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender {
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win) return NSDragOperationNone;
+
+    MARU_DropSessionPrefix session_exposed = {
+        .action = &win->current_drop_action,
+        .session_userdata = &win->drop_session_userdata
+    };
+
+    MARU_Event evt = {0};
+    evt.drop_hovered.session = (MARU_DropSession *)&session_exposed;
+    evt.drop_hovered.available_actions = MARU_DROP_ACTION_COPY | MARU_DROP_ACTION_MOVE | MARU_DROP_ACTION_LINK;
+    evt.drop_hovered.available_types.count = win->drop_available_mime_type_count;
+    evt.drop_hovered.available_types.strings = (const char *const *)win->drop_available_mime_types;
+    NSPoint pt = [self convertPoint:[sender draggingLocation] fromView:nil];
+    evt.drop_hovered.dip_position.x = (MARU_Scalar)pt.x;
+    evt.drop_hovered.dip_position.y = (MARU_Scalar)(self.bounds.size.height - pt.y);
+
+    win->current_dragging_info = sender;
+    _maru_dispatch_event(win->base.ctx_base, MARU_EVENT_DROP_HOVERED, (MARU_Window *)win, &evt);
+    win->current_dragging_info = nil;
+
+    switch (win->current_drop_action) {
+        case MARU_DROP_ACTION_COPY: return NSDragOperationCopy;
+        case MARU_DROP_ACTION_MOVE: return NSDragOperationMove;
+        case MARU_DROP_ACTION_LINK: return NSDragOperationLink;
+        default: return NSDragOperationNone;
+    }
+}
+
+- (void)draggingExited:(id<NSDraggingInfo>)sender {
+    (void)sender;
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win) return;
+
+    MARU_DropSessionPrefix session_exposed = {
+        .action = &win->current_drop_action,
+        .session_userdata = &win->drop_session_userdata
+    };
+
+    MARU_Event evt = {0};
+    evt.drop_exited.session = (MARU_DropSession *)&session_exposed;
+    win->current_dragging_info = sender;
+    _maru_dispatch_event(win->base.ctx_base, MARU_EVENT_DROP_EXITED, (MARU_Window *)win, &evt);
+    win->current_dragging_info = nil;
+}
+
+- (BOOL)performDragOperation:(id<NSDraggingInfo>)sender {
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win) return NO;
+
+    MARU_DropSessionPrefix session_exposed = {
+        .action = &win->current_drop_action,
+        .session_userdata = &win->drop_session_userdata
+    };
+
+    MARU_Event evt = {0};
+    evt.drop_dropped.session = (MARU_DropSession *)&session_exposed;
+    evt.drop_dropped.available_actions = MARU_DROP_ACTION_COPY | MARU_DROP_ACTION_MOVE | MARU_DROP_ACTION_LINK;
+    evt.drop_dropped.available_types.count = win->drop_available_mime_type_count;
+    evt.drop_dropped.available_types.strings = (const char *const *)win->drop_available_mime_types;
+    
+    NSPoint pt = [self convertPoint:[sender draggingLocation] fromView:nil];
+    evt.drop_dropped.dip_position.x = (MARU_Scalar)pt.x;
+    evt.drop_dropped.dip_position.y = (MARU_Scalar)(self.bounds.size.height - pt.y);
+
+    win->current_dragging_info = sender;
+    _maru_dispatch_event(win->base.ctx_base, MARU_EVENT_DROP_DROPPED, (MARU_Window *)win, &evt);
+    win->current_dragging_info = nil;
+    
+    return win->current_drop_action != MARU_DROP_ACTION_NONE;
+}
+
+// --- End of NSDraggingDestination ---
 
 // --- NSTextInputClient implementation ---
 
@@ -185,6 +325,21 @@ static MARU_WindowGeometry NSRectToMARUGeometry(NSWindow *nsWindow, NSRect frame
     geo.dip_size.y = (MARU_Scalar)frame.size.height;
     geo.scale = (MARU_Scalar)(backing.size.width / frame.size.width); 
     return geo;
+}
+
+static void _maru_cocoa_update_drop_registration(MARU_Window_Cocoa *win) {
+    if (win->base.attrs_effective.accept_drop) {
+        [win->ns_window registerForDraggedTypes:@[
+            NSPasteboardTypeString,
+            NSPasteboardTypeFileURL,
+            NSPasteboardTypeHTML,
+            NSPasteboardTypePNG,
+            NSPasteboardTypeTIFF,
+            (NSPasteboardType)@"public.data"
+        ]];
+    } else {
+        [win->ns_window unregisterDraggedTypes];
+    }
 }
 
 static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
@@ -388,6 +543,14 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     win->dip_size = create_info->attributes.dip_size;
     win->text_input_session_id = 0;
     win->ime_preedit_active = false;
+    win->pending_frame_request = false;
+    atomic_init(&win->pending_frame_vblank, false);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    CVDisplayLinkCreateWithActiveCGDisplays(&win->display_link);
+    CVDisplayLinkSetOutputCallback(win->display_link, _maru_cocoa_display_link_callback, win);
+    CVDisplayLinkStart(win->display_link);
+#pragma clang diagnostic pop
     _maru_cocoa_associate_window(nsWindow, win);
 
     [nsWindow setContentView:view];
@@ -395,6 +558,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     [nsWindow makeKeyAndOrderFront:nil];
     [nsWindow center];
     _maru_cocoa_refresh_window_geometry(win, NULL);
+    _maru_cocoa_update_drop_registration(win);
 
     if (create_info->attributes.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
         maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_TEXT_INPUT_TYPE, &create_info->attributes);
@@ -417,9 +581,24 @@ MARU_Status maru_destroyWindow_Cocoa(MARU_Window *window) {
         win->base.attrs_effective.title = NULL;
         win->base.pub.title = NULL;
     }
+
+    for (uint32_t i = 0; i < win->drop_available_mime_type_count; ++i) {
+        maru_context_free(win->base.ctx_base, win->drop_available_mime_types[i]);
+    }
+    maru_context_free(win->base.ctx_base, win->drop_available_mime_types);
     
     NSWindow *nsWindow = win->ns_window;
     _maru_cocoa_associate_window(nsWindow, NULL);
+
+    if (win->display_link) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        CVDisplayLinkStop(win->display_link);
+        CVDisplayLinkRelease(win->display_link);
+#pragma clang diagnostic pop
+        win->display_link = NULL;
+    }
+
     id delegate = [nsWindow delegate];
     [nsWindow setDelegate:nil];
     [delegate release];
@@ -628,6 +807,12 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         effective->surrounding_anchor_byte = attributes->surrounding_anchor_byte;
     }
 
+    if (field_mask & MARU_WINDOW_ATTR_ACCEPT_DROP) {
+        requested->accept_drop = attributes->accept_drop;
+        effective->accept_drop = attributes->accept_drop;
+        _maru_cocoa_update_drop_registration(win);
+    }
+
     _maru_cocoa_refresh_window_geometry(win, NULL);
     win->base.attrs_dirty_mask &= ~field_mask;
     return MARU_SUCCESS;
@@ -645,13 +830,8 @@ MARU_Status maru_requestWindowFrame_Cocoa(MARU_Window *window) {
         return MARU_FAILURE;
     }
 
-    MARU_Event event = {0};
-    const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
-    if (uptime > 0.0) {
-        event.window_frame.timestamp_ms = (uint32_t)(uptime * 1000.0);
-    }
-
-    return _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_FRAME, window, &event);
+    win->pending_frame_request = true;
+    return MARU_SUCCESS;
 }
 
 MARU_Status maru_requestWindowAttention_Cocoa(MARU_Window *window) {

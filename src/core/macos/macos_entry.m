@@ -2,11 +2,6 @@
 // Copyright (c) 2026 François Chabot
 
 #include "macos_internal.h"
-#ifdef MARU_ENABLE_BACKEND_COCOA
-#pragma message "MARU_ENABLE_BACKEND_COCOA is defined"
-#else
-#pragma message "MARU_ENABLE_BACKEND_COCOA is NOT defined"
-#endif
 #include "maru_api_constraints.h"
 #include "maru/native/cocoa.h"
 #include <stdatomic.h>

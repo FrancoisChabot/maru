@@ -45,7 +45,7 @@ UTEST(AllocatorTest, CustomAllocatorIsUsed) {
     ASSERT_TRUE(context != NULL);
     EXPECT_GT(state.alloc_count, 0);
     
-    maru_destroyContext(context);
+    maru_test_destroyContext(context);
     EXPECT_EQ(state.free_count, state.alloc_count);
 }
 
@@ -58,7 +58,7 @@ UTEST(AllocatorTest, DefaultAllocatorWorks) {
     MARU_Context* context = maru_test_createContext(&create_info);
     ASSERT_TRUE(context != NULL);
     
-    maru_destroyContext(context);
+    maru_test_destroyContext(context);
     EXPECT_TRUE(maru_test_tracking_allocator_is_clean(&tracking));
     maru_test_tracking_allocator_shutdown(&tracking);
 }

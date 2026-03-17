@@ -8,8 +8,12 @@ This document tracks the detailed implementation status of the Maru macOS backen
 - [x] **Context Waking** (`maru_wakeContext_Cocoa`)
 - [x] **Context Attribute Updates** (`maru_updateContext_Cocoa`)
 - [x] **Native Handle Access** (`_maru_getContextNativeHandle_Cocoa`)
-- [ ] **System Idle Inhibition** (`MARU_CONTEXT_ATTR_INHIBIT_IDLE`)
-  - [ ] Implement using `IOPMAssertionCreateWithDescription`.
+- [x] **System Idle Inhibition** (`MARU_CONTEXT_ATTR_INHIBIT_IDLE`)
+  - [x] Implement using `IOPMAssertionCreateWithDescription`.
+- [ ] **Diagnostics Output** (`MARU_CONTEXT_ATTR_DIAGNOSTICS`)
+  - [ ] Support diagnostic logging hooks.
+- [ ] **Idle Timeout Configuration** (`MARU_CONTEXT_ATTR_IDLE_TIMEOUT`)
+  - [ ] Track idle state and emit `MARU_EVENT_IDLE_CHANGED`.
 - [ ] **Activation Policy Support**
   - [ ] Support `NSApplicationActivationPolicyProhibited` or `Accessory` via `create_info`. Currently hardcoded to `Regular`.
 - [x] **Main Thread Enforcement**
@@ -24,11 +28,13 @@ This document tracks the detailed implementation status of the Maru macOS backen
 - [x] **Min/Max/Fullscreen States** (`MARU_WINDOW_ATTR_MINIMIZED`, `MARU_WINDOW_ATTR_MAXIMIZED`, `MARU_WINDOW_ATTR_FULLSCREEN`)
 - [x] **Focus Requests** (`maru_requestWindowFocus_Cocoa`)
 - [x] **Attention Requests** (`maru_requestWindowAttention_Cocoa`)
-- [ ] **Frame Request Synchronization** (`maru_requestWindowFrame_Cocoa`)
-  - [ ] Currently posts event immediately. Needs `CVDisplayLink` or `dispatch_source_t` (type `VBL`) synchronization for proper frame timing.
-- [ ] **Window Attribute Constraints**
+- [x] **Frame Request Synchronization** (`maru_requestWindowFrame_Cocoa`)
+  - [x] Synchronized with `CVDisplayLink`.
+- [ ] **Window Attribute Constraints & Sizing Options**
   - [ ] Implement Aspect Ratio constraints (`MARU_WINDOW_ATTR_ASPECT_RATIO`).
   - [ ] Implement Min/Max size constraints (`MARU_WINDOW_ATTR_DIP_MIN_SIZE`, `MARU_WINDOW_ATTR_DIP_MAX_SIZE`).
+  - [ ] Implement Resizable toggle (`MARU_WINDOW_ATTR_RESIZABLE`).
+  - [ ] Implement Viewport Sizing (`MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE`).
 - [ ] **Content Metadata**
   - [ ] Support `app_id` and `content_type` during creation.
 
@@ -76,14 +82,17 @@ This document tracks the detailed implementation status of the Maru macOS backen
   - [ ] Support for non-extended gamepads.
   - [ ] Support for more than standard buttons/analogs if available.
 - [ ] **Haptic Feedback Support** (`maru_setControllerHapticLevels_Cocoa`)
-  - [ ] Implement using `CHHapticEngine` or `GCDeviceHaptics`.
+  - [ ] Implement using `CHHapticEngine` or `GCDeviceHaptics`. Currently returns `MARU_FAILURE`.
 
 ## 8. Data Exchange (Clipboard & DnD)
 - [x] **Clipboard Access** (`NSPasteboard`)
   - [x] Implement `maru_announceClipboardData`.
   - [x] Implement `maru_requestClipboardData`.
   - [x] Implement `maru_getAvailableClipboardMIMETypes`.
-- [ ] **Drag and Drop Implementation** (STUBBED)
-  - [ ] Implement `NSDraggingDestination` and `NSDraggingSource` protocols.
-  - [ ] Emit `MARU_EVENT_DROP_ENTERED`, `HOVERED`, `EXITED`, `DROPPED`.
-  - [ ] Support `maru_announceDragData` and `maru_requestDropData`.
+- [x] **Drag and Drop Events**
+  - [x] Implement `NSDraggingDestination` protocol in `MARU_ContentView`.
+  - [x] Emit `MARU_EVENT_DROP_ENTERED`, `HOVERED`, `EXITED`, `DROPPED`.
+- [ ] **Drag and Drop Data Management**
+  - [ ] Support `maru_announceDragData` (Currently returns `MARU_FAILURE`).
+  - [x] Support `maru_requestDropData`.
+  - [x] Support `maru_getAvailableDropMIMETypes`.
