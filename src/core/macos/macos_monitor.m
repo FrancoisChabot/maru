@@ -117,6 +117,10 @@ void _maru_cocoa_refresh_monitors(MARU_Context_Base *ctx_base) {
         }
 
         mon->base.is_active = true;
+        
+        MARU_VideoMode old_mode = mon->base.pub.current_mode;
+        MARU_Scalar old_scale = mon->base.pub.scale;
+
         _maru_cocoa_update_monitor_from_screen(mon, screen, (i == 0));
         new_cache[i] = (MARU_Monitor *)mon;
 
@@ -125,6 +129,16 @@ void _maru_cocoa_refresh_monitors(MARU_Context_Base *ctx_base) {
             evt.monitor_changed.monitor = (MARU_Monitor *)mon;
             evt.monitor_changed.connected = true;
             _maru_post_event_internal(ctx_base, MARU_EVENT_MONITOR_CHANGED, NULL, &evt);
+        } else {
+            if (old_mode.px_size.x != mon->base.pub.current_mode.px_size.x ||
+                old_mode.px_size.y != mon->base.pub.current_mode.px_size.y ||
+                old_mode.refresh_rate_millihz != mon->base.pub.current_mode.refresh_rate_millihz ||
+                old_scale != mon->base.pub.scale) {
+                
+                MARU_Event evt = {0};
+                evt.monitor_mode_changed.monitor = (MARU_Monitor *)mon;
+                _maru_post_event_internal(ctx_base, MARU_EVENT_MONITOR_MODE_CHANGED, NULL, &evt);
+            }
         }
     }
 

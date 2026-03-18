@@ -80,6 +80,7 @@ typedef struct MARU_DataRequest_Cocoa {
   MARU_DataRequestHandleBase base;
   id ns_pasteboard;
   id ns_type;
+  id ns_delegate;
 } MARU_DataRequest_Cocoa;
 
 typedef struct MARU_Window_Cocoa {

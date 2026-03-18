@@ -37,6 +37,25 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
     (void)context;
     return NSDragOperationCopy | NSDragOperationMove | NSDragOperationGeneric | NSDragOperationLink;
 }
+
+- (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation {
+    (void)session;
+    (void)screenPoint;
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win) return;
+
+    MARU_Event evt = {0};
+    
+    switch (operation) {
+        case NSDragOperationCopy: evt.drag_finished.action = MARU_DROP_ACTION_COPY; break;
+        case NSDragOperationMove: evt.drag_finished.action = MARU_DROP_ACTION_MOVE; break;
+        case NSDragOperationLink: evt.drag_finished.action = MARU_DROP_ACTION_LINK; break;
+        default: evt.drag_finished.action = MARU_DROP_ACTION_NONE; break;
+    }
+
+    _maru_dispatch_event(win->base.ctx_base, MARU_EVENT_DRAG_FINISHED, (MARU_Window *)win, &evt);
+}
+
 - (BOOL)wantsUpdateLayer { return YES; }
 + (Class)layerClass { return [CAMetalLayer class]; }
 - (CALayer *)makeBackingLayer { return [CAMetalLayer layer]; }
@@ -303,12 +322,43 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
     _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win, &evt);
 }
 
-- (NSRange)selectedRange { return NSMakeRange(NSNotFound, 0); }
+static NSUInteger _maru_cocoa_byte_offset_to_utf16_offset(const char *utf8, uint32_t byte_offset) {
+    if (!utf8 || byte_offset == 0) return 0;
+    NSString *s = [[NSString alloc] initWithBytes:utf8 length:byte_offset encoding:NSUTF8StringEncoding];
+    NSUInteger res = [s length];
+    [s release];
+    return res;
+}
+
+- (NSRange)selectedRange {
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win || !win->base.attrs_effective.surrounding_text) return NSMakeRange(NSNotFound, 0);
+
+    NSUInteger cursor = _maru_cocoa_byte_offset_to_utf16_offset(win->base.attrs_effective.surrounding_text, win->base.attrs_effective.surrounding_cursor_byte);
+    NSUInteger anchor = _maru_cocoa_byte_offset_to_utf16_offset(win->base.attrs_effective.surrounding_text, win->base.attrs_effective.surrounding_anchor_byte);
+
+    if (cursor < anchor) return NSMakeRange(cursor, anchor - cursor);
+    return NSMakeRange(anchor, cursor - anchor);
+}
+
 - (NSRange)markedRange { return NSMakeRange(NSNotFound, 0); }
 - (BOOL)hasMarkedText { return self.maruWindow ? self.maruWindow->ime_preedit_active : NO; }
+
 - (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range actualRange:(NSRangePointer)actualRange {
-    (void)range; (void)actualRange;
-    return nil;
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win || !win->base.attrs_effective.surrounding_text) return nil;
+
+    NSString *s = [NSString stringWithUTF8String:win->base.attrs_effective.surrounding_text];
+    if (!s) return nil;
+
+    if (range.location >= [s length]) return nil;
+    if (range.location + range.length > [s length]) {
+        range.length = [s length] - range.location;
+    }
+    
+    if (actualRange) *actualRange = range;
+    
+    return [[[NSAttributedString alloc] initWithString:[s substringWithRange:range]] autorelease];
 }
 - (NSArray<NSAttributedStringKey> *)validAttributesForMarkedText { return @[]; }
 

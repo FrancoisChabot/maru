@@ -6,12 +6,45 @@
 #import <Cocoa/Cocoa.h>
 #import <AppKit/NSDragging.h>
 
-@interface MARU_ClipboardDelegate : NSObject <NSPasteboardItemDataProvider, NSPasteboardTypeOwner>
+@interface MARU_ZeroCopyEntry : NSObject
+@property (nonatomic, assign) const void *data;
+@property (nonatomic, assign) size_t size;
+@end
+
+@implementation MARU_ZeroCopyEntry
+@end
+
+@interface MARU_ClipboardDelegate : NSObject <NSPasteboardItemDataProvider, NSPasteboardTypeOwner> {
+    NSMutableDictionary *_zeroCopyEntries;
+}
 @property (nonatomic, assign) MARU_Context_Cocoa *context;
 @property (nonatomic, assign) MARU_DataExchangeTarget target;
+
+- (void)addZeroCopyEntry:(const void *)data size:(size_t)size forType:(NSPasteboardType)type;
 @end
 
 @implementation MARU_ClipboardDelegate
+
+- (id)init {
+    self = [super init];
+    if (self) {
+        _zeroCopyEntries = [[NSMutableDictionary alloc] init];
+    }
+    return self;
+}
+
+- (void)dealloc {
+    [_zeroCopyEntries release];
+    [super dealloc];
+}
+
+- (void)addZeroCopyEntry:(const void *)data size:(size_t)size forType:(NSPasteboardType)type {
+    MARU_ZeroCopyEntry *entry = [[MARU_ZeroCopyEntry alloc] init];
+    entry.data = data;
+    entry.size = size;
+    [_zeroCopyEntries setObject:entry forKey:type];
+    [entry release];
+}
 
 - (void)pasteboard:(NSPasteboard *)sender item:(NSPasteboardItem *)item provideDataForType:(NSPasteboardType)type {
     (void)item;
@@ -24,6 +57,7 @@
     req.base.target = self.target;
     req.ns_pasteboard = sender;
     req.ns_type = type;
+    req.ns_delegate = self;
 
     MARU_Event event = {0};
     event.data_requested.target = self.target;
@@ -35,12 +69,17 @@
 
 - (void)pasteboardFinishedWithDataProvider:(NSPasteboard *)sender {
     (void)sender;
-    MARU_Event event = {0};
-    event.data_released.target = self.target;
-    // Note: mime_type, data, and size are not easily available here without 
-    // caching them on the delegate, but the event structure asks for them.
-    // For now, we signal that ownership is lost.
-    _maru_post_event_internal(&self.context->base, MARU_EVENT_DATA_RELEASED, NULL, &event);
+    
+    for (NSPasteboardType type in _zeroCopyEntries) {
+        MARU_ZeroCopyEntry *entry = [_zeroCopyEntries objectForKey:type];
+        MARU_Event event = {0};
+        event.data_released.target = self.target;
+        event.data_released.mime_type = _maru_ns_type_to_mime(type);
+        event.data_released.data = entry.data;
+        event.data_released.size = entry.size;
+        _maru_post_event_internal(&self.context->base, MARU_EVENT_DATA_RELEASED, NULL, &event);
+    }
+    [_zeroCopyEntries removeAllObjects];
 }
 
 @end
@@ -72,8 +111,6 @@ MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget
     } else if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
         MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
         
-        // Use a dedicated DnD delegate or reuse clipboard one if carefully managed
-        // For simplicity, let's create a temporary delegate for this drag session
         MARU_ClipboardDelegate *dnd_delegate = [[MARU_ClipboardDelegate alloc] init];
         dnd_delegate.context = ctx;
         dnd_delegate.target = MARU_DATA_EXCHANGE_TARGET_DRAG_DROP;
@@ -87,7 +124,6 @@ MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget
         [item setDataProvider:dnd_delegate forTypes:types];
 
         NSDraggingItem *dragItem = [[NSDraggingItem alloc] initWithPasteboardWriter:item];
-        // Set a reasonable default dragging frame (centered on cursor)
         NSPoint mousePos = [NSEvent mouseLocation];
         NSRect windowFrame = [win->ns_window frame];
         NSPoint localPos = NSMakePoint(mousePos.x - windowFrame.origin.x, mousePos.y - windowFrame.origin.y);
@@ -95,10 +131,6 @@ MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget
 
         NSEvent *currentEvent = [NSApp currentEvent];
         [(NSView *)win->ns_view beginDraggingSessionWithItems:@[dragItem] event:currentEvent source:(id<NSDraggingSource>)win->ns_view];
-        
-        // We might need to keep track of the delegate to release it when the drag ends
-        // but for now let's hope it's retained by the drag session or we might leak/crash.
-        // Actually, NSPasteboardItem retains its data provider.
         
         [dragItem release];
         [item release];
@@ -110,10 +142,15 @@ MARU_Status maru_announceData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget
 }
 
 MARU_Status maru_provideData_Cocoa(MARU_DataRequest *request, const void *data, size_t size, MARU_DataProvideFlags flags) {
-    (void)flags;
     MARU_DataRequest_Cocoa *req = (MARU_DataRequest_Cocoa *)request;
     if (req->base.target == MARU_DATA_EXCHANGE_TARGET_CLIPBOARD || req->base.target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
-        NSData *nsData = [NSData dataWithBytes:data length:size];
+        NSData *nsData;
+        if (flags & MARU_DATA_PROVIDE_FLAG_ZERO_COPY) {
+            nsData = [NSData dataWithBytesNoCopy:(void *)data length:size freeWhenDone:NO];
+            [(MARU_ClipboardDelegate *)req->ns_delegate addZeroCopyEntry:data size:size forType:req->ns_type];
+        } else {
+            nsData = [NSData dataWithBytes:data length:size];
+        }
         [req->ns_pasteboard setData:nsData forType:req->ns_type];
         return MARU_SUCCESS;
     }
