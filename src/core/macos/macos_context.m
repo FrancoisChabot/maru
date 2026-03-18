@@ -42,17 +42,6 @@ static MARU_Key _maru_cocoa_translate_key(unsigned short scancode) {
     return (scancode < 128) ? table[scancode] : MARU_KEY_UNKNOWN;
 }
 
-static MARU_ModifierFlags _maru_cocoa_translate_modifiers(NSEventModifierFlags flags) {
-    MARU_ModifierFlags mods = 0;
-    if (flags & NSEventModifierFlagShift) mods |= MARU_MODIFIER_SHIFT;
-    if (flags & NSEventModifierFlagControl) mods |= MARU_MODIFIER_CONTROL;
-    if (flags & NSEventModifierFlagOption) mods |= MARU_MODIFIER_ALT;
-    if (flags & NSEventModifierFlagCommand) mods |= MARU_MODIFIER_META;
-    if (flags & NSEventModifierFlagCapsLock) mods |= MARU_MODIFIER_CAPS_LOCK;
-    if (flags & NSEventModifierFlagNumericPad) mods |= MARU_MODIFIER_NUM_LOCK;
-    return mods;
-}
-
 static uint64_t _maru_cocoa_now_ms(void) {
     const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
     if (uptime <= 0.0) {

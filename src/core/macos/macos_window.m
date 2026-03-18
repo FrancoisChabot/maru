@@ -193,8 +193,77 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
 }
 
 - (void)doCommandBySelector:(SEL)selector {
-    (void)selector;
-    // We let normal keyDown handle non-text commands for now.
+    MARU_Window_Cocoa *win = self.maruWindow;
+    if (!win || win->base.attrs_effective.text_input_type == MARU_TEXT_INPUT_TYPE_NONE) return;
+
+    MARU_Event evt = {0};
+    evt.text_edit_navigation.session_id = win->text_input_session_id;
+    bool handled = true;
+    bool extend = false;
+
+    if (selector == @selector(moveLeft:) || selector == @selector(moveBackward:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_LEFT;
+    } else if (selector == @selector(moveRight:) || selector == @selector(moveForward:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_RIGHT;
+    } else if (selector == @selector(moveUp:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_UP;
+    } else if (selector == @selector(moveDown:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_DOWN;
+    } else if (selector == @selector(moveLeftAndModifySelection:) || selector == @selector(moveBackwardAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_LEFT;
+        extend = true;
+    } else if (selector == @selector(moveRightAndModifySelection:) || selector == @selector(moveForwardAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_RIGHT;
+        extend = true;
+    } else if (selector == @selector(moveUpAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_UP;
+        extend = true;
+    } else if (selector == @selector(moveDownAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_DOWN;
+        extend = true;
+    } else if (selector == @selector(moveWordLeft:) || selector == @selector(moveWordBackward:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_WORD_LEFT;
+    } else if (selector == @selector(moveWordRight:) || selector == @selector(moveWordForward:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_WORD_RIGHT;
+    } else if (selector == @selector(moveWordLeftAndModifySelection:) || selector == @selector(moveWordBackwardAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_WORD_LEFT;
+        extend = true;
+    } else if (selector == @selector(moveWordRightAndModifySelection:) || selector == @selector(moveWordForwardAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_WORD_RIGHT;
+        extend = true;
+    } else if (selector == @selector(moveToBeginningOfLine:) || selector == @selector(moveToLeftEndOfLine:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_LINE_START;
+    } else if (selector == @selector(moveToEndOfLine:) || selector == @selector(moveToRightEndOfLine:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_LINE_END;
+    } else if (selector == @selector(moveToBeginningOfLineAndModifySelection:) || selector == @selector(moveToLeftEndOfLineAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_LINE_START;
+        extend = true;
+    } else if (selector == @selector(moveToEndOfLineAndModifySelection:) || selector == @selector(moveToRightEndOfLineAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_LINE_END;
+        extend = true;
+    } else if (selector == @selector(moveToBeginningOfDocument:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_START;
+    } else if (selector == @selector(moveToEndOfDocument:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_END;
+    } else if (selector == @selector(moveToBeginningOfDocumentAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_START;
+        extend = true;
+    } else if (selector == @selector(moveToEndOfDocumentAndModifySelection:)) {
+        evt.text_edit_navigation.command = MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_END;
+        extend = true;
+    } else {
+        handled = false;
+    }
+
+    if (handled) {
+        evt.text_edit_navigation.extend_selection = extend;
+        NSEvent *currentEvent = [NSApp currentEvent];
+        if (currentEvent && (currentEvent.type == NSEventTypeKeyDown)) {
+            evt.text_edit_navigation.is_repeat = [currentEvent isARepeat];
+            evt.text_edit_navigation.modifiers = _maru_cocoa_translate_modifiers(currentEvent.modifierFlags);
+        }
+        _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_NAVIGATION, (MARU_Window *)win, &evt);
+    }
 }
 
 - (void)setMarkedText:(id)string selectedRange:(NSRange)selectedRange replacementRange:(NSRange)replacementRange {
@@ -434,66 +503,120 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
 }
 
-- (void)windowWillEnterFullScreen:(NSNotification *)notification {
-    (void)notification;
-    self.window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-    self.window->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
-}
-
-- (void)windowWillExitFullScreen:(NSNotification *)notification {
-    (void)notification;
-    self.window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-    self.window->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
-}
-
-- (void)windowDidFailToEnterFullScreen:(NSWindow *)window {
-    (void)window;
-    self.window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-    self.window->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
-}
-
-- (void)windowDidFailToExitFullScreen:(NSWindow *)window {
-    (void)window;
-    self.window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-    self.window->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
-}
-
 - (void)windowDidEnterFullScreen:(NSNotification *)notification {
     (void)notification;
-    MARU_WindowGeometry geo = {0};
-    _maru_cocoa_refresh_window_geometry(self.window, &geo);
+    MARU_Window_Cocoa *win = self.window;
+    win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+    win->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+    win->base.attrs_effective.visible = true;
 
-    MARU_Event event = {0};
-    event.window_resized.geometry = geo;
-    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
+    MARU_WindowGeometry geo = {0};
+    _maru_cocoa_refresh_window_geometry(win, &geo);
+
+    MARU_Event res_evt = {0};
+    res_evt.window_resized.geometry = geo;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &res_evt);
+
+    MARU_Event state_evt = {0};
+    state_evt.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE | MARU_WINDOW_STATE_CHANGED_VISIBLE;
+    state_evt.window_state_changed.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+    state_evt.window_state_changed.visible = true;
+    state_evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    state_evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &state_evt);
 }
 
 - (void)windowDidExitFullScreen:(NSNotification *)notification {
     (void)notification;
-    MARU_WindowGeometry geo = {0};
-    _maru_cocoa_refresh_window_geometry(self.window, &geo);
+    MARU_Window_Cocoa *win = self.window;
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+    win->base.attrs_effective.presentation_state = [win->ns_window isZoomed] ? MARU_WINDOW_PRESENTATION_MAXIMIZED : MARU_WINDOW_PRESENTATION_NORMAL;
+    if (win->base.attrs_effective.presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
+        win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+    }
 
-    MARU_Event event = {0};
-    event.window_resized.geometry = geo;
-    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)self.window, &event);
+    MARU_WindowGeometry geo = {0};
+    _maru_cocoa_refresh_window_geometry(win, &geo);
+
+    MARU_Event res_evt = {0};
+    res_evt.window_resized.geometry = geo;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_RESIZED, (MARU_Window *)win, &res_evt);
+
+    MARU_Event state_evt = {0};
+    state_evt.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
+    state_evt.window_state_changed.presentation_state = win->base.attrs_effective.presentation_state;
+    state_evt.window_state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+    state_evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    state_evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &state_evt);
+}
+
+- (void)windowDidMiniaturize:(NSNotification *)notification {
+    (void)notification;
+    MARU_Window_Cocoa *win = self.window;
+    win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+    win->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
+    win->base.attrs_effective.visible = false;
+
+    MARU_Event state_evt = {0};
+    state_evt.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE | MARU_WINDOW_STATE_CHANGED_VISIBLE;
+    state_evt.window_state_changed.presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
+    state_evt.window_state_changed.visible = false;
+    state_evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    state_evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &state_evt);
+}
+
+- (void)windowDidDeminiaturize:(NSNotification *)notification {
+    (void)notification;
+    MARU_Window_Cocoa *win = self.window;
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+    win->base.attrs_effective.presentation_state = [win->ns_window isZoomed] ? MARU_WINDOW_PRESENTATION_MAXIMIZED : MARU_WINDOW_PRESENTATION_NORMAL;
+    win->base.attrs_effective.visible = true;
+    if (win->base.attrs_effective.presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
+        win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+    } else {
+        win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+    }
+
+    MARU_Event state_evt = {0};
+    state_evt.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE | MARU_WINDOW_STATE_CHANGED_VISIBLE;
+    state_evt.window_state_changed.presentation_state = win->base.attrs_effective.presentation_state;
+    state_evt.window_state_changed.visible = true;
+    state_evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    state_evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &state_evt);
 }
 
 - (void)windowDidBecomeKey:(NSNotification *)notification {
     (void)notification;
-    self.window->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
+    MARU_Window_Cocoa *win = self.window;
+    win->base.pub.flags |= MARU_WINDOW_STATE_FOCUSED;
     MARU_Event event = {0};
     event.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_FOCUSED;
     event.window_state_changed.focused = true;
-    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)self.window, &event);
+    event.window_state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+    event.window_state_changed.presentation_state = win->base.attrs_effective.presentation_state;
+    event.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &event);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification {
     (void)notification;
-    self.window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
+    MARU_Window_Cocoa *win = self.window;
+    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FOCUSED);
     MARU_Event event = {0};
     event.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_FOCUSED;
     event.window_state_changed.focused = false;
-    _maru_post_event_internal(self.window->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)self.window, &event);
+    event.window_state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+    event.window_state_changed.presentation_state = win->base.attrs_effective.presentation_state;
+    event.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &event);
 }
 @end
 

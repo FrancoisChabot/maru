@@ -35,7 +35,12 @@
 
 - (void)pasteboardFinishedWithDataProvider:(NSPasteboard *)sender {
     (void)sender;
-    // Ownership lost
+    MARU_Event event = {0};
+    event.data_released.target = self.target;
+    // Note: mime_type, data, and size are not easily available here without 
+    // caching them on the delegate, but the event structure asks for them.
+    // For now, we signal that ownership is lost.
+    _maru_post_event_internal(&self.context->base, MARU_EVENT_DATA_RELEASED, NULL, &event);
 }
 
 @end

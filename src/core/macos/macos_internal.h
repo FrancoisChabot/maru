@@ -38,6 +38,17 @@ static inline const char *_maru_ns_type_to_mime(NSPasteboardType type) {
     return [type UTF8String];
 }
 
+static inline MARU_ModifierFlags _maru_cocoa_translate_modifiers(NSEventModifierFlags flags) {
+    MARU_ModifierFlags mods = 0;
+    if (flags & NSEventModifierFlagShift) mods |= MARU_MODIFIER_SHIFT;
+    if (flags & NSEventModifierFlagControl) mods |= MARU_MODIFIER_CONTROL;
+    if (flags & NSEventModifierFlagOption) mods |= MARU_MODIFIER_ALT;
+    if (flags & NSEventModifierFlagCommand) mods |= MARU_MODIFIER_META;
+    if (flags & NSEventModifierFlagCapsLock) mods |= MARU_MODIFIER_CAPS_LOCK;
+    if (flags & NSEventModifierFlagNumericPad) mods |= MARU_MODIFIER_NUM_LOCK;
+    return mods;
+}
+
 typedef struct MARU_Context_Cocoa {
   MARU_Context_Base base;
 

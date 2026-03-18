@@ -11,7 +11,12 @@ When a `MARU_Cursor` is destroyed, any window currently using it as its `current
 3. Update its `attrs_requested.cursor` and `attrs_effective.cursor` to `NULL`.
 4. If the cursor is currently active (e.g., the pointer is over the window in `MARU_CURSOR_NORMAL` mode), the change should be reflected immediately.
 
-## 2. Data Exchange
+## 2. Cursors & Images
+
+### 2.1 Unsupported System Shapes
+Backends MUST NOT synthesize fallbacks for system cursor shapes. If a backend cannot provide the requested native/system cursor shape defined in `MARU_CursorShape`, `maru_createCursor()` MUST return `MARU_FAILURE` and SHOULD report a `MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED` diagnostic.
+
+## 3. Data Exchange
 
 ### 2.1 Additional Data Channels
 The public C API currently exposes only `CLIPBOARD` and `DRAG_DROP` data exchange targets.

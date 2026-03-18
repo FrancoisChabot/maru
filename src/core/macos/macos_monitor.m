@@ -226,6 +226,16 @@ MARU_Status maru_setMonitorMode_Cocoa(MARU_Monitor *monitor, MARU_VideoMode mode
     if (bestMode) {
         if (CGDisplaySetDisplayMode(mon->display_id, bestMode, NULL) == kCGErrorSuccess) {
             status = MARU_SUCCESS;
+            
+            // Update current mode in public struct
+            mon->base.pub.current_mode.px_size.x = (int32_t)CGDisplayModeGetPixelWidth(bestMode);
+            mon->base.pub.current_mode.px_size.y = (int32_t)CGDisplayModeGetPixelHeight(bestMode);
+            mon->base.pub.current_mode.refresh_rate_millihz = (uint32_t)(CGDisplayModeGetRefreshRate(bestMode) * 1000.0);
+            if (mon->base.pub.current_mode.refresh_rate_millihz == 0) mon->base.pub.current_mode.refresh_rate_millihz = 60000;
+
+            MARU_Event evt = {0};
+            evt.monitor_mode_changed.monitor = (MARU_Monitor *)mon;
+            _maru_post_event_internal(mon->base.ctx_base, MARU_EVENT_MONITOR_MODE_CHANGED, NULL, &evt);
         }
     }
 
