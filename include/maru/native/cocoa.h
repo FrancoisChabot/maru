@@ -27,6 +27,8 @@ typedef struct MARU_CocoaContextHandle {
 
 typedef struct MARU_CocoaWindowHandle {
   void *ns_window;
+  void *ns_view;
+  void *ns_layer;
 } MARU_CocoaWindowHandle;
 
 /*

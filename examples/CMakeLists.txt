@@ -27,3 +27,7 @@ add_subdirectory(basic_cpp)
 add_subdirectory(queue_cpp)
 add_subdirectory(testbed)
 add_subdirectory(frame_sync_c)
+
+if(APPLE)
+    add_subdirectory(basic_metal)
+endif()

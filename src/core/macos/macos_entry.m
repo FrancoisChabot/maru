@@ -97,6 +97,8 @@ const MARU_Backend maru_backend_Cocoa = {
 
   .getContextNativeHandle = _maru_getContextNativeHandle_Cocoa,
   .getWindowNativeHandle = _maru_getWindowNativeHandle_Cocoa,
+  .getWindowNativeView = _maru_getWindowNativeView_Cocoa,
+  .getWindowNativeLayer = _maru_getWindowNativeLayer_Cocoa,
 
   .getVkExtensions = maru_getVkExtensions_Cocoa,
   .createVkSurface = maru_createVkSurface_Cocoa,
@@ -358,6 +360,8 @@ maru_getCocoaWindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getCocoaWindowHandle, window);
   MARU_CocoaWindowHandle handle = {0};
   handle.ns_window = _maru_getWindowNativeHandle_Cocoa((MARU_Window *)window);
+  handle.ns_view = _maru_getWindowNativeView_Cocoa((MARU_Window *)window);
+  handle.ns_layer = _maru_getWindowNativeLayer_Cocoa((MARU_Window *)window);
   return handle;
 }
 #endif

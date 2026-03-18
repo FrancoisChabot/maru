@@ -1183,3 +1183,13 @@ void *_maru_getWindowNativeHandle_Cocoa(MARU_Window *window) {
     MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
     return win->ns_window;
 }
+
+void *_maru_getWindowNativeView_Cocoa(MARU_Window *window) {
+    MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
+    return win->ns_view;
+}
+
+void *_maru_getWindowNativeLayer_Cocoa(MARU_Window *window) {
+    MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
+    return win->ns_layer;
+}

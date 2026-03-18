@@ -148,6 +148,8 @@ MARU_Status maru_requestWindowFocus_Cocoa(MARU_Window *window);
 MARU_Status maru_requestWindowFrame_Cocoa(MARU_Window *window);
 MARU_Status maru_requestWindowAttention_Cocoa(MARU_Window *window);
 void *_maru_getWindowNativeHandle_Cocoa(MARU_Window *window);
+void *_maru_getWindowNativeView_Cocoa(MARU_Window *window);
+void *_maru_getWindowNativeLayer_Cocoa(MARU_Window *window);
 
 MARU_Status maru_createCursor_Cocoa(MARU_Context *context,
                                      const MARU_CursorCreateInfo *create_info,

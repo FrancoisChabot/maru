@@ -356,6 +356,16 @@ static void *_maru_getWindowNativeHandleRaw(MARU_Window *window) {
   return win_base->backend->getWindowNativeHandle(window);
 }
 
+static void *_maru_getWindowNativeViewRaw(MARU_Window *window) {
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  return win_base->backend->getWindowNativeView(window);
+}
+
+static void *_maru_getWindowNativeLayerRaw(MARU_Window *window) {
+  MARU_Window_Base *win_base = (MARU_Window_Base *)window;
+  return win_base->backend->getWindowNativeLayer(window);
+}
+
 MARU_API MARU_WaylandContextHandle
 maru_getWaylandContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getWaylandContextHandle, context);
@@ -432,6 +442,8 @@ maru_getCocoaWindowHandle(const MARU_Window *window) {
   MARU_API_VALIDATE(getCocoaWindowHandle, window);
   MARU_CocoaWindowHandle handle = {0};
   handle.ns_window = _maru_getWindowNativeHandleRaw((MARU_Window *)window);
+  handle.ns_view = _maru_getWindowNativeViewRaw((MARU_Window *)window);
+  handle.ns_layer = _maru_getWindowNativeLayerRaw((MARU_Window *)window);
   return handle;
 }
 #endif

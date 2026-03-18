@@ -45,6 +45,8 @@ typedef struct MARU_Backend {
 
   void *(*getContextNativeHandle)(MARU_Context *context);
   void *(*getWindowNativeHandle)(MARU_Window *window);
+  void *(*getWindowNativeView)(MARU_Window *window);
+  void *(*getWindowNativeLayer)(MARU_Window *window);
 
   MARU_Status (*getVkExtensions)(const MARU_Context *context,
                                  MARU_StringList *out_list);
