@@ -6,6 +6,7 @@
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/CAMetalLayer.h>
 #import <CoreVideo/CoreVideo.h>
+#include <math.h>
 
 static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
                                                   const CVTimeStamp *inNow,
@@ -371,6 +372,42 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     return NO;
 }
 
+- (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)frameSize {
+    MARU_Window_Cocoa *win = self.window;
+    if (!win) {
+        return frameSize;
+    }
+
+    const MARU_Fraction aspect = win->base.attrs_effective.aspect_ratio;
+    if (aspect.num <= 0 || aspect.denom <= 0) {
+        return frameSize;
+    }
+
+    const NSRect currentFrame = [sender frame];
+    const NSRect currentContent = [sender contentRectForFrameRect:currentFrame];
+    const CGFloat frameDeltaW = currentFrame.size.width - currentContent.size.width;
+    const CGFloat frameDeltaH = currentFrame.size.height - currentContent.size.height;
+    CGFloat proposedContentW = frameSize.width - frameDeltaW;
+    CGFloat proposedContentH = frameSize.height - frameDeltaH;
+    if (proposedContentW < 0.0) proposedContentW = 0.0;
+    if (proposedContentH < 0.0) proposedContentH = 0.0;
+
+    const CGFloat currentContentW = currentContent.size.width;
+    const CGFloat currentContentH = currentContent.size.height;
+    const CGFloat deltaW = fabs(proposedContentW - currentContentW);
+    const CGFloat deltaH = fabs(proposedContentH - currentContentH);
+    const CGFloat targetRatio = (CGFloat)aspect.num / (CGFloat)aspect.denom;
+
+    if (deltaW >= deltaH) {
+        proposedContentH = proposedContentW / targetRatio;
+    } else {
+        proposedContentW = proposedContentH * targetRatio;
+    }
+
+    return NSMakeSize(proposedContentW + frameDeltaW,
+                      proposedContentH + frameDeltaH);
+}
+
 - (void)windowDidResize:(NSNotification *)notification {
     (void)notification;
     MARU_WindowGeometry geo = {0};
@@ -598,6 +635,9 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     [nsWindow setContentView:view];
     [view release];
     
+    [nsWindow makeKeyAndOrderFront:nil];
+    [nsWindow center];
+
     _maru_cocoa_refresh_window_geometry(win, NULL);
     _maru_cocoa_update_drop_registration(win);
 
@@ -721,7 +761,7 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
     if (field_mask & MARU_WINDOW_ATTR_DIP_MIN_SIZE) {
         requested->dip_min_size = attributes->dip_min_size;
         effective->dip_min_size = attributes->dip_min_size;
-        [nsWindow setMinSize:NSMakeSize(effective->dip_min_size.x, effective->dip_min_size.y)];
+        [nsWindow setContentMinSize:NSMakeSize(effective->dip_min_size.x, effective->dip_min_size.y)];
     }
 
     if (field_mask & MARU_WINDOW_ATTR_DIP_MAX_SIZE) {
@@ -731,26 +771,17 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
             effective->dip_max_size.x > 0 ? effective->dip_max_size.x : FLT_MAX,
             effective->dip_max_size.y > 0 ? effective->dip_max_size.y : FLT_MAX
         );
-        [nsWindow setMaxSize:max_size];
+        [nsWindow setContentMaxSize:max_size];
     }
 
     if (field_mask & MARU_WINDOW_ATTR_DIP_VIEWPORT_SIZE) {
         requested->dip_viewport_size = attributes->dip_viewport_size;
         effective->dip_viewport_size = attributes->dip_viewport_size;
-        NSRect contentRect = [nsWindow contentRectForFrameRect:[nsWindow frame]];
-        contentRect.size.width = effective->dip_viewport_size.x;
-        contentRect.size.height = effective->dip_viewport_size.y;
-        [nsWindow setFrame:[nsWindow frameRectForContentRect:contentRect] display:YES];
     }
 
     if (field_mask & MARU_WINDOW_ATTR_ASPECT_RATIO) {
         requested->aspect_ratio = attributes->aspect_ratio;
         effective->aspect_ratio = attributes->aspect_ratio;
-        if (effective->aspect_ratio.num > 0 && effective->aspect_ratio.denom > 0) {
-            [nsWindow setContentAspectRatio:NSMakeSize(effective->aspect_ratio.num, effective->aspect_ratio.denom)];
-        } else {
-            [nsWindow setContentAspectRatio:NSMakeSize(0, 0)];
-        }
     }
 
     if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
@@ -770,42 +801,75 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
     if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
         requested->presentation_state = attributes->presentation_state;
         effective->presentation_state = attributes->presentation_state;
+        const MARU_WindowPresentationState target_state = effective->presentation_state;
+        const bool is_fullscreen = ([nsWindow styleMask] & NSWindowStyleMaskFullScreen) != 0;
+        const bool is_zoomed = [nsWindow isZoomed];
+        const bool is_minimized = [nsWindow isMiniaturized];
 
-        // Fullscreen
-        if (effective->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
-            win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-            if (!([nsWindow styleMask] & NSWindowStyleMaskFullScreen)) {
-                [nsWindow toggleFullScreen:nil];
-            }
-        } else {
-            win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-            if ([nsWindow styleMask] & NSWindowStyleMaskFullScreen) {
-                [nsWindow toggleFullScreen:nil];
-            }
+        switch (target_state) {
+            case MARU_WINDOW_PRESENTATION_FULLSCREEN:
+                win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+                if (requested->visible) {
+                    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+                }
+                if (!is_fullscreen) {
+                    [nsWindow toggleFullScreen:nil];
+                }
+                break;
+
+            case MARU_WINDOW_PRESENTATION_MAXIMIZED:
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+                win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+                if (requested->visible) {
+                    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+                }
+                if (is_fullscreen) {
+                    [nsWindow toggleFullScreen:nil];
+                }
+                if (is_minimized) {
+                    [nsWindow deminiaturize:nil];
+                }
+                if (!is_zoomed) {
+                    [nsWindow zoom:nil];
+                }
+                break;
+
+            case MARU_WINDOW_PRESENTATION_MINIMIZED:
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+                win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
+                if (is_fullscreen) {
+                    [nsWindow toggleFullScreen:nil];
+                }
+                if (!is_minimized) {
+                    [nsWindow miniaturize:nil];
+                }
+                break;
+
+            case MARU_WINDOW_PRESENTATION_NORMAL:
+            default:
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
+                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
+                if (requested->visible) {
+                    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+                }
+                if (is_fullscreen) {
+                    [nsWindow toggleFullScreen:nil];
+                }
+                if (is_zoomed) {
+                    [nsWindow zoom:nil];
+                }
+                if (is_minimized) {
+                    [nsWindow deminiaturize:nil];
+                }
+                break;
         }
 
-        // Maximized
-        if (effective->presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
-            if (![nsWindow isZoomed]) [nsWindow zoom:nil];
-            win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-        } else {
-            if ([nsWindow isZoomed]) [nsWindow zoom:nil];
-            win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
-        }
-
-        // Minimized
-        if (effective->presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
-            [nsWindow miniaturize:nil];
-            win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-            win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-        } else {
-            [nsWindow deminiaturize:nil];
-            win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-            // If it was minimized, deminiaturizing makes it visible.
-            if (requested->visible) {
-                win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-            }
-        }
     }
 
     if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {

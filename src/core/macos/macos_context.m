@@ -342,6 +342,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
                                "Failed to set NSApplication activation policy.");
     }
     [NSApp finishLaunching];
+    [NSApp activateIgnoringOtherApps:YES];
 
     ctx->ns_app = NSApp;
     ctx->last_modifiers = [NSEvent modifierFlags];
