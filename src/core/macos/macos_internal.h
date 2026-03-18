@@ -9,6 +9,7 @@
 #endif
 
 #include "maru_internal.h"
+#include "maru_mem_internal.h"
 #include "maru/maru.h"
 
 #include <objc/objc.h>
@@ -47,6 +48,13 @@ static inline MARU_ModifierFlags _maru_cocoa_translate_modifiers(NSEventModifier
     if (flags & NSEventModifierFlagCapsLock) mods |= MARU_MODIFIER_CAPS_LOCK;
     if (flags & NSEventModifierFlagNumericPad) mods |= MARU_MODIFIER_NUM_LOCK;
     return mods;
+}
+
+static inline void _maru_cocoa_cleanup_owned_event_payload(MARU_Context_Base *ctx_base,
+                                                           void *payload) {
+    if (payload) {
+        maru_context_free(ctx_base, payload);
+    }
 }
 
 typedef struct MARU_Context_Cocoa {

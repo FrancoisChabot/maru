@@ -366,6 +366,7 @@ static void *_maru_getWindowNativeLayerRaw(MARU_Window *window) {
   return win_base->backend->getWindowNativeLayer(window);
 }
 
+#ifdef MARU_ENABLE_BACKEND_WAYLAND
 MARU_API MARU_WaylandContextHandle
 maru_getWaylandContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getWaylandContextHandle, context);
@@ -385,7 +386,9 @@ maru_getWaylandWindowHandle(const MARU_Window *window) {
       (wl_surface *)_maru_getWindowNativeHandleRaw((MARU_Window *)window);
   return handle;
 }
+#endif
 
+#ifdef MARU_ENABLE_BACKEND_X11
 MARU_API MARU_X11ContextHandle
 maru_getX11ContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getX11ContextHandle, context);
@@ -405,6 +408,7 @@ maru_getX11WindowHandle(const MARU_Window *window) {
       (Window)(uintptr_t)_maru_getWindowNativeHandleRaw((MARU_Window *)window);
   return handle;
 }
+#endif
 
 #ifdef MARU_ENABLE_BACKEND_WINDOWS
 MARU_API MARU_Win32ContextHandle

@@ -27,13 +27,24 @@ bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t
 
 void _maru_event_queue_cleanup(MARU_EventQueue *q, MARU_Context_Base *ctx) {
   if (q->buffer) {
+    for (uint32_t i = 0; i < q->capacity; ++i) {
+      MARU_QueuedEvent *slot = &q->buffer[i];
+      if (atomic_load_explicit(&slot->state, memory_order_acquire) == 2 &&
+          slot->cleanup_cb) {
+        slot->cleanup_cb(ctx, slot->cleanup_userdata);
+      }
+    }
+  }
+  if (q->buffer) {
     maru_context_free_aligned64(ctx, q->buffer);
     q->buffer = NULL;
   }
 }
 
 bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type, 
-                            MARU_Window *window, MARU_Event evt) {
+                            MARU_Window *window, MARU_Event evt,
+                            MARU_QueuedEventCleanupFn cleanup_cb,
+                            void *cleanup_userdata) {
   if (!q || !q->buffer || q->capacity == 0) return false;
 
   size_t head, tail;
@@ -67,6 +78,8 @@ bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type,
   slot->type = type;
   slot->window = window;
   slot->evt = evt;
+  slot->cleanup_cb = cleanup_cb;
+  slot->cleanup_userdata = cleanup_userdata;
   
   // Publish
   atomic_store_explicit(&slot->state, 2, memory_order_release);
@@ -74,7 +87,9 @@ bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type,
 }
 
 bool _maru_event_queue_pop(MARU_EventQueue *q, MARU_EventId *out_type, 
-                           MARU_Window **out_window, MARU_Event *out_evt) {
+                           MARU_Window **out_window, MARU_Event *out_evt,
+                           MARU_QueuedEventCleanupFn *out_cleanup_cb,
+                           void **out_cleanup_userdata) {
   if (!q || !q->buffer || q->capacity == 0) return false;
 
   size_t tail = atomic_load_explicit(&q->tail, memory_order_relaxed);
@@ -88,6 +103,14 @@ bool _maru_event_queue_pop(MARU_EventQueue *q, MARU_EventId *out_type,
   *out_type = slot->type;
   *out_window = slot->window;
   *out_evt = slot->evt;
+  if (out_cleanup_cb) {
+    *out_cleanup_cb = slot->cleanup_cb;
+  }
+  if (out_cleanup_userdata) {
+    *out_cleanup_userdata = slot->cleanup_userdata;
+  }
+  slot->cleanup_cb = NULL;
+  slot->cleanup_userdata = NULL;
 
   atomic_store_explicit(&slot->state, 0, memory_order_release);
   atomic_store_explicit(&q->tail, tail + 1, memory_order_release);

@@ -14,6 +14,45 @@
 @implementation MARU_ZeroCopyEntry
 @end
 
+typedef struct MARU_CocoaQueuedDataPayload {
+    size_t mime_length;
+    size_t data_size;
+    uint8_t bytes[];
+} MARU_CocoaQueuedDataPayload;
+
+static char *_maru_cocoa_copy_mime_string(MARU_Context_Base *ctx_base,
+                                          const char *mime_type) {
+    const char *source = mime_type ? mime_type : "";
+    const size_t mime_length = strlen(source);
+    char *copy = (char *)maru_context_alloc(ctx_base, mime_length + 1u);
+    if (!copy) {
+        return NULL;
+    }
+    memcpy(copy, source, mime_length + 1u);
+    return copy;
+}
+
+static MARU_CocoaQueuedDataPayload *_maru_cocoa_alloc_data_payload(
+    MARU_Context_Base *ctx_base, const char *mime_type, const void *data,
+    size_t size) {
+    const char *source_mime = mime_type ? mime_type : "";
+    const size_t mime_length = strlen(source_mime);
+    MARU_CocoaQueuedDataPayload *payload =
+        (MARU_CocoaQueuedDataPayload *)maru_context_alloc(
+            ctx_base, sizeof(MARU_CocoaQueuedDataPayload) + mime_length + 1u +
+                          size);
+    if (!payload) {
+        return NULL;
+    }
+    payload->mime_length = mime_length;
+    payload->data_size = size;
+    memcpy(payload->bytes, source_mime, mime_length + 1u);
+    if (size > 0u && data) {
+        memcpy(payload->bytes + mime_length + 1u, data, size);
+    }
+    return payload;
+}
+
 @interface MARU_ClipboardDelegate : NSObject <NSPasteboardItemDataProvider, NSPasteboardTypeOwner> {
     NSMutableDictionary *_zeroCopyEntries;
 }
@@ -72,12 +111,22 @@
     
     for (NSPasteboardType type in _zeroCopyEntries) {
         MARU_ZeroCopyEntry *entry = [_zeroCopyEntries objectForKey:type];
+        char *mime_copy = _maru_cocoa_copy_mime_string(
+            &self.context->base, _maru_ns_type_to_mime(type));
+        if (!mime_copy) {
+            MARU_REPORT_DIAGNOSTIC((MARU_Context *)self.context,
+                                   MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+                                   "Failed to copy released clipboard MIME type on macOS.");
+            continue;
+        }
         MARU_Event event = {0};
         event.data_released.target = self.target;
-        event.data_released.mime_type = _maru_ns_type_to_mime(type);
+        event.data_released.mime_type = mime_copy;
         event.data_released.data = entry.data;
         event.data_released.size = entry.size;
-        _maru_post_event_internal(&self.context->base, MARU_EVENT_DATA_RELEASED, NULL, &event);
+        (void)_maru_post_event_internal_owned(
+            &self.context->base, MARU_EVENT_DATA_RELEASED, NULL, &event,
+            _maru_cocoa_cleanup_owned_event_payload, mime_copy);
     }
     [_zeroCopyEntries removeAllObjects];
 }
@@ -162,22 +211,40 @@ MARU_Status maru_requestData_Cocoa(MARU_Window *window, MARU_DataExchangeTarget 
         NSPasteboard *pb = [NSPasteboard generalPasteboard];
         NSPasteboardType type = _maru_mime_to_ns_type(mime_type);
         NSData *nsData = [pb dataForType:type];
+        MARU_Context_Base *ctx_base =
+            (MARU_Context_Base *)maru_getWindowContext(window);
+        const void *data_bytes = nsData ? [nsData bytes] : NULL;
+        const size_t data_size = nsData ? [nsData length] : 0u;
+        MARU_CocoaQueuedDataPayload *payload = _maru_cocoa_alloc_data_payload(
+            ctx_base, mime_type, data_bytes, data_size);
+        if (!payload) {
+            MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx_base,
+                                   MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+                                   "Failed to copy clipboard payload on macOS.");
+            return MARU_FAILURE;
+        }
+        const char *copied_mime = (const char *)payload->bytes;
+        const void *copied_data =
+            payload->data_size > 0u
+                ? (const void *)(payload->bytes + payload->mime_length + 1u)
+                : NULL;
 
         MARU_Event event = {0};
         event.data_received.userdata = userdata;
         event.data_received.target = MARU_DATA_EXCHANGE_TARGET_CLIPBOARD;
-        event.data_received.mime_type = mime_type;
+        event.data_received.mime_type = copied_mime;
 
         if (nsData) {
             event.data_received.status = MARU_SUCCESS;
-            event.data_received.data = [nsData bytes];
-            event.data_received.size = [nsData length];
+            event.data_received.data = copied_data;
+            event.data_received.size = payload->data_size;
         } else {
             event.data_received.status = MARU_FAILURE;
         }
 
-        _maru_post_event_internal((MARU_Context_Base *)maru_getWindowContext(window), MARU_EVENT_DATA_RECEIVED, NULL, &event);
-        return MARU_SUCCESS;
+        return _maru_post_event_internal_owned(
+            ctx_base, MARU_EVENT_DATA_RECEIVED, NULL, &event,
+            _maru_cocoa_cleanup_owned_event_payload, payload);
     } else if (target == MARU_DATA_EXCHANGE_TARGET_DRAG_DROP) {
         MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)window;
         if (!win->current_dragging_info) return MARU_FAILURE;

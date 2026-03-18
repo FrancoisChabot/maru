@@ -21,6 +21,102 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
     return kCVReturnSuccess;
 }
 
+static char *_maru_cocoa_copy_utf8_payload(MARU_Context_Base *ctx_base,
+                                           const char *utf8,
+                                           uint32_t *out_len) {
+    const char *source = utf8 ? utf8 : "";
+    const size_t len = strlen(source);
+    char *copy = (char *)maru_context_alloc(ctx_base, len + 1u);
+    if (!copy) {
+        return NULL;
+    }
+    memcpy(copy, source, len + 1u);
+    if (out_len) {
+        *out_len = (uint32_t)len;
+    }
+    return copy;
+}
+
+static void _maru_cocoa_queue_text_committed(MARU_Window_Cocoa *win,
+                                             NSString *text) {
+    uint32_t committed_length = 0u;
+    char *committed_utf8 = _maru_cocoa_copy_utf8_payload(
+        win->base.ctx_base, [text UTF8String], &committed_length);
+    if (!committed_utf8) {
+        MARU_REPORT_DIAGNOSTIC((MARU_Context *)win->base.pub.context,
+                               MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+                               "Failed to copy committed IME text on macOS.");
+        return;
+    }
+
+    MARU_Event evt = {0};
+    evt.text_edit_committed.session_id = win->text_input_session_id;
+    evt.text_edit_committed.committed_utf8 = committed_utf8;
+    evt.text_edit_committed.committed_length_bytes = committed_length;
+    (void)_maru_post_event_internal_owned(
+        win->base.ctx_base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win,
+        &evt, _maru_cocoa_cleanup_owned_event_payload, committed_utf8);
+}
+
+static void _maru_cocoa_queue_text_updated(MARU_Window_Cocoa *win,
+                                           NSString *text,
+                                           NSRange selected_range) {
+    uint32_t preedit_length = 0u;
+    char *preedit_utf8 = _maru_cocoa_copy_utf8_payload(
+        win->base.ctx_base, [text UTF8String], &preedit_length);
+    if (!preedit_utf8) {
+        MARU_REPORT_DIAGNOSTIC((MARU_Context *)win->base.pub.context,
+                               MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+                               "Failed to copy preedit IME text on macOS.");
+        return;
+    }
+
+    MARU_Event evt = {0};
+    evt.text_edit_updated.session_id = win->text_input_session_id;
+    evt.text_edit_updated.preedit_utf8 = preedit_utf8;
+    evt.text_edit_updated.preedit_length_bytes = preedit_length;
+    evt.text_edit_updated.caret.start_byte = (uint32_t)selected_range.location;
+    evt.text_edit_updated.caret.length_bytes = 0;
+    evt.text_edit_updated.selection.start_byte = (uint32_t)selected_range.location;
+    evt.text_edit_updated.selection.length_bytes = (uint32_t)selected_range.length;
+    (void)_maru_post_event_internal_owned(
+        win->base.ctx_base, MARU_EVENT_TEXT_EDIT_UPDATED, (MARU_Window *)win,
+        &evt, _maru_cocoa_cleanup_owned_event_payload, preedit_utf8);
+}
+
+static NSCursor *_maru_cocoa_invisible_cursor(void) {
+    static NSCursor *invisible_cursor = nil;
+    if (!invisible_cursor) {
+        NSImage *transparent_image =
+            [[NSImage alloc] initWithSize:NSMakeSize(1, 1)];
+        invisible_cursor = [[NSCursor alloc] initWithImage:transparent_image
+                                                   hotSpot:NSMakePoint(0, 0)];
+        [transparent_image release];
+    }
+    return invisible_cursor;
+}
+
+static void _maru_cocoa_post_window_state_changed(
+    MARU_Window_Cocoa *win, MARU_WindowStateChangedFlags changed_fields) {
+    if (!win || changed_fields == 0u) {
+        return;
+    }
+
+    MARU_Event event = {0};
+    event.window_state_changed.changed_fields = changed_fields;
+    event.window_state_changed.presentation_state =
+        win->base.attrs_effective.presentation_state;
+    event.window_state_changed.visible =
+        (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+    event.window_state_changed.focused =
+        (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
+    event.window_state_changed.resizable =
+        (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
+    event.window_state_changed.icon = win->base.attrs_effective.icon;
+    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED,
+                              (MARU_Window *)win, &event);
+}
+
 @interface MARU_WindowDelegate : NSObject <NSWindowDelegate>
 @property (nonatomic, assign) MARU_Window_Cocoa *window;
 @end
@@ -204,11 +300,7 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
         _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win, &end_evt);
     }
     
-    MARU_Event evt = {0};
-    evt.text_edit_committed.session_id = win->text_input_session_id;
-    evt.text_edit_committed.committed_utf8 = [text UTF8String];
-    evt.text_edit_committed.committed_length_bytes = (uint32_t)strlen(evt.text_edit_committed.committed_utf8);
-    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)win, &evt);
+    _maru_cocoa_queue_text_committed(win, text);
 }
 
 - (void)doCommandBySelector:(SEL)selector {
@@ -299,16 +391,7 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
         _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_STARTED, (MARU_Window *)win, &start_evt);
     }
     
-    MARU_Event evt = {0};
-    evt.text_edit_updated.session_id = win->text_input_session_id;
-    evt.text_edit_updated.preedit_utf8 = [text UTF8String];
-    evt.text_edit_updated.preedit_length_bytes = (uint32_t)strlen(evt.text_edit_updated.preedit_utf8);
-    evt.text_edit_updated.caret.start_byte = (uint32_t)selectedRange.location;
-    evt.text_edit_updated.caret.length_bytes = 0;
-    evt.text_edit_updated.selection.start_byte = (uint32_t)selectedRange.location;
-    evt.text_edit_updated.selection.length_bytes = (uint32_t)selectedRange.length;
-    
-    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_UPDATED, (MARU_Window *)win, &evt);
+    _maru_cocoa_queue_text_updated(win, text, selectedRange);
 }
 
 - (void)unmarkText {
@@ -422,11 +505,8 @@ static NSUInteger _maru_cocoa_byte_offset_to_utf16_offset(const char *utf8, uint
     if (self.maruWindow) {
         MARU_CursorMode mode = self.maruWindow->base.pub.cursor_mode;
         if (mode == MARU_CURSOR_HIDDEN || mode == MARU_CURSOR_LOCKED) {
-            NSImage *transparentImage = [[NSImage alloc] initWithSize:NSMakeSize(1, 1)];
-            NSCursor *invisibleCursor = [[NSCursor alloc] initWithImage:transparentImage hotSpot:NSMakePoint(0, 0)];
-            [self addCursorRect:[self bounds] cursor:invisibleCursor];
-            [transparentImage release];
-            [invisibleCursor release];
+            [self addCursorRect:[self bounds]
+                         cursor:_maru_cocoa_invisible_cursor()];
         } else {
             MARU_Cursor_Cocoa *cur = (MARU_Cursor_Cocoa *)self.maruWindow->base.pub.current_cursor;
             if (cur && cur->ns_cursor) {
@@ -820,7 +900,9 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
         maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_VISIBLE, &create_info->attributes);
     }
     
-    if (create_info->attributes.presentation_state != MARU_WINDOW_PRESENTATION_NORMAL) {
+    if (create_info->attributes.presentation_state != MARU_WINDOW_PRESENTATION_NORMAL &&
+        !(create_info->attributes.presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED &&
+          !create_info->attributes.visible)) {
         maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_PRESENTATION_STATE, &create_info->attributes);
     }
 
@@ -888,6 +970,7 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
     NSWindow *nsWindow = win->ns_window;
     MARU_WindowAttributes *requested = &win->base.attrs_requested;
     MARU_WindowAttributes *effective = &win->base.attrs_effective;
+    MARU_WindowStateChangedFlags state_changed_mask = 0u;
 
     win->base.attrs_dirty_mask |= field_mask;
 
@@ -958,6 +1041,8 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
     }
 
     if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
+        const bool was_resizable =
+            (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
         requested->resizable = attributes->resizable;
         effective->resizable = attributes->resizable;
         NSWindowStyleMask styleMask = [nsWindow styleMask];
@@ -969,9 +1054,14 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
             win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_RESIZABLE);
         }
         [nsWindow setStyleMask:styleMask];
+        if (was_resizable != effective->resizable) {
+            state_changed_mask |= MARU_WINDOW_STATE_CHANGED_RESIZABLE;
+        }
     }
 
     if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
+        const MARU_WindowPresentationState old_presentation_state =
+            effective->presentation_state;
         requested->presentation_state = attributes->presentation_state;
         effective->presentation_state = attributes->presentation_state;
         const MARU_WindowPresentationState target_state = effective->presentation_state;
@@ -1043,9 +1133,15 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
                 break;
         }
 
+        if (old_presentation_state != effective->presentation_state) {
+            state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
+        }
+
     }
 
     if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
+        const bool was_visible =
+            (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
         requested->visible = attributes->visible;
         if (requested->visible) {
             if (effective->presentation_state != MARU_WINDOW_PRESENTATION_MINIMIZED) {
@@ -1057,6 +1153,9 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
             win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
         }
         effective->visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
+        if (was_visible != effective->visible) {
+            state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
+        }
     }
 
     if (field_mask & MARU_WINDOW_ATTR_CURSOR) {
@@ -1074,6 +1173,7 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
     }
 
     if (field_mask & MARU_WINDOW_ATTR_ICON) {
+        const MARU_Image *old_icon = effective->icon;
         requested->icon = attributes->icon;
         effective->icon = attributes->icon;
         if (effective->icon) {
@@ -1083,6 +1183,9 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
             }
         } else {
             [NSApp setApplicationIconImage:nil];
+        }
+        if (old_icon != effective->icon) {
+            state_changed_mask |= MARU_WINDOW_STATE_CHANGED_ICON;
         }
     }
 
@@ -1094,9 +1197,6 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
         if (old_type == MARU_TEXT_INPUT_TYPE_NONE && effective->text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
             win->text_input_session_id++;
             win->ime_preedit_active = false;
-            MARU_Event evt = {0};
-            evt.text_edit_started.session_id = win->text_input_session_id;
-            _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_STARTED, (MARU_Window *)win, &evt);
         } else if (old_type != MARU_TEXT_INPUT_TYPE_NONE && effective->text_input_type == MARU_TEXT_INPUT_TYPE_NONE) {
             if (win->ime_preedit_active) {
                 win->ime_preedit_active = false;
@@ -1105,10 +1205,6 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
                 evt.text_edit_ended.canceled = true;
                 _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win, &evt);
             }
-            MARU_Event evt = {0};
-            evt.text_edit_ended.session_id = win->text_input_session_id;
-            evt.text_edit_ended.canceled = false;
-            _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_TEXT_EDIT_ENDED, (MARU_Window *)win, &evt);
         }
     }
 
@@ -1153,6 +1249,7 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
     }
 
     _maru_cocoa_refresh_window_geometry(win, NULL);
+    _maru_cocoa_post_window_state_changed(win, state_changed_mask);
     win->base.attrs_dirty_mask &= ~field_mask;
     return MARU_SUCCESS;
 }

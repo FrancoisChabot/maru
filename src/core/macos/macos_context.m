@@ -58,6 +58,50 @@ static uint64_t _maru_cocoa_now_ns(void) {
     return (uint64_t)(uptime * 1000000000.0);
 }
 
+static void _maru_cocoa_init_mouse_button_channels(MARU_Context_Cocoa *ctx) {
+    const uint32_t count = MARU_MOUSE_DEFAULT_COUNT;
+    ctx->base.mouse_button_channels = (MARU_ChannelInfo *)maru_context_alloc(
+        &ctx->base, sizeof(MARU_ChannelInfo) * count);
+    if (!ctx->base.mouse_button_channels) {
+        return;
+    }
+    memset(ctx->base.mouse_button_channels, 0,
+           sizeof(MARU_ChannelInfo) * count);
+
+    ctx->base.mouse_button_states = (MARU_ButtonState8 *)maru_context_alloc(
+        &ctx->base, sizeof(MARU_ButtonState8) * count);
+    if (!ctx->base.mouse_button_states) {
+        maru_context_free(&ctx->base, ctx->base.mouse_button_channels);
+        ctx->base.mouse_button_channels = NULL;
+        return;
+    }
+    memset(ctx->base.mouse_button_states, 0,
+           sizeof(MARU_ButtonState8) * count);
+
+    static const struct {
+        const char *name;
+        uint32_t native_code;
+    } defs[MARU_MOUSE_DEFAULT_COUNT] = {
+        {"Left", 0u},
+        {"Right", 1u},
+        {"Middle", 2u},
+        {"Back", 3u},
+        {"Forward", 4u},
+    };
+
+    for (uint32_t i = 0; i < count; ++i) {
+        ctx->base.mouse_button_channels[i].name = defs[i].name;
+        ctx->base.mouse_button_channels[i].native_code = defs[i].native_code;
+        ctx->base.mouse_button_channels[i].flags = MARU_CHANNEL_FLAG_IS_DEFAULT;
+        ctx->base.mouse_button_channels[i].min_value = 0.0f;
+        ctx->base.mouse_button_channels[i].max_value = 1.0f;
+    }
+
+    ctx->base.pub.mouse_button_channels = ctx->base.mouse_button_channels;
+    ctx->base.pub.mouse_button_state = ctx->base.mouse_button_states;
+    ctx->base.pub.mouse_button_count = count;
+}
+
 static const void *g_maru_cocoa_window_assoc_key = &g_maru_cocoa_window_assoc_key;
 
 void _maru_cocoa_associate_window(id ns_window, MARU_Window_Cocoa *window) {
@@ -297,6 +341,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
 
     ctx->base.tuning = create_info->tuning;
     _maru_init_context_base(&ctx->base);
+    _maru_cocoa_init_mouse_button_channels(ctx);
     ctx->base.pub.userdata = create_info->userdata;
     ctx->base.pub.backend_type = MARU_BACKEND_COCOA;
 #ifdef MARU_INDIRECT_BACKEND

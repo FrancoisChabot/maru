@@ -63,3 +63,31 @@ target_compile_features(maru_integration_tests PRIVATE cxx_std_20)
 
 add_test(NAME maru_integration_tests COMMAND maru_integration_tests)
 set_tests_properties(maru_integration_tests PROPERTIES LABELS "desktop_integration")
+
+if (TARGET maru_shared_renderer)
+  add_executable(maru_smoke_tests
+    integration/doctest_main.cpp
+    smoke/test_presentation.cpp
+    integration/support/tracking_allocator.cpp
+  )
+
+  target_include_directories(maru_smoke_tests PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/core
+    ${PROJECT_SOURCE_DIR}/examples/support/shared_renderer
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendor
+  )
+
+  target_link_libraries(maru_smoke_tests
+    PRIVATE
+      maru::maru
+      maru_common_settings
+      ${MARU_ACTIVE_CORE_IFACE}
+      maru_shared_renderer
+  )
+
+  target_compile_features(maru_smoke_tests PRIVATE cxx_std_20)
+
+  add_test(NAME maru_smoke_tests COMMAND $<TARGET_FILE:maru_smoke_tests>)
+  set_tests_properties(maru_smoke_tests PROPERTIES LABELS "desktop_smoke")
+endif()

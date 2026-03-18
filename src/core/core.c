@@ -50,8 +50,23 @@ void _maru_default_free(void *ptr, void *userdata) {
 
 MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
                                MARU_Window *window, const MARU_Event *evt) {
-  if (_maru_event_queue_push(&ctx_base->internal_events, type, window, *evt)) {
+  if (_maru_event_queue_push(&ctx_base->internal_events, type, window, *evt,
+                             NULL, NULL)) {
     return MARU_SUCCESS;
+  }
+  return MARU_FAILURE;
+}
+
+MARU_Status _maru_post_event_internal_owned(
+    MARU_Context_Base *ctx_base, MARU_EventId type, MARU_Window *window,
+    const MARU_Event *evt, MARU_QueuedEventCleanupFn cleanup_cb,
+    void *cleanup_userdata) {
+  if (_maru_event_queue_push(&ctx_base->internal_events, type, window, *evt,
+                             cleanup_cb, cleanup_userdata)) {
+    return MARU_SUCCESS;
+  }
+  if (cleanup_cb) {
+    cleanup_cb(ctx_base, cleanup_userdata);
   }
   return MARU_FAILURE;
 }
@@ -183,11 +198,17 @@ void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {
   MARU_EventId type;
   MARU_Window *window;
   MARU_Event evt;
+  MARU_QueuedEventCleanupFn cleanup_cb;
+  void *cleanup_userdata;
 
-  while (_maru_event_queue_pop(qi, &type, &window, &evt)) {
+  while (_maru_event_queue_pop(qi, &type, &window, &evt, &cleanup_cb,
+                               &cleanup_userdata)) {
     _maru_dispatch_event(ctx_base, type, window, &evt);
+    if (cleanup_cb) {
+      cleanup_cb(ctx_base, cleanup_userdata);
+    }
   }
-  while (_maru_event_queue_pop(qu, &type, &window, &evt)) {
+  while (_maru_event_queue_pop(qu, &type, &window, &evt, NULL, NULL)) {
     _maru_dispatch_event(ctx_base, type, NULL, &evt);
   }
 }
@@ -489,7 +510,8 @@ MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
   memset(&internal_evt, 0, sizeof(internal_evt));
   internal_evt.user = evt;
 
-  if (_maru_event_queue_push(&ctx_base->user_events, type, NULL, internal_evt)) {
+  if (_maru_event_queue_push(&ctx_base->user_events, type, NULL, internal_evt,
+                             NULL, NULL)) {
     return maru_wakeContext(context);
   }
 
