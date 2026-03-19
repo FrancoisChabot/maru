@@ -4,6 +4,7 @@ add_executable(maru_testbed
     app.cpp
     modules/event_log_module.cpp
     modules/event_module.cpp
+    modules/timing_module.cpp
     modules/monitor_module.cpp
     modules/cursor_module.cpp
     modules/window_module.cpp

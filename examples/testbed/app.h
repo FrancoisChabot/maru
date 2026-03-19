@@ -23,6 +23,7 @@ public:
 
     void onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& event);
     void onDiagnostic(const MARU_DiagnosticInfo* info);
+    void onPumpTiming(double timestamp_seconds, double pump_duration_ms);
     AppStatus update(MARU_Context* ctx, MARU_Window* window);
     void renderUi(MARU_Context* ctx, MARU_Window* window);
     void onContextRecreated(MARU_Context* ctx, MARU_Window* window);
@@ -39,4 +40,5 @@ private:
     std::vector<std::unique_ptr<FeatureModule>> modules_;
     class InstrumentationModule* inst_module_ = nullptr;
     class EventModule* event_module_ = nullptr;
+    class TimingModule* timing_module_ = nullptr;
 };

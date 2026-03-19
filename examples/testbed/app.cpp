@@ -10,6 +10,7 @@
 #include "modules/input_module.h"
 #include "modules/controller_module.h"
 #include "modules/instrumentation_module.h"
+#include "modules/timing_module.h"
 #include "modules/composition_module.h"
 #include "modules/dataexchange_module.h"
 #include "modules/context_module.h"
@@ -29,6 +30,9 @@ App::App(MARU_Window* window, VkInstance instance, VkPhysicalDevice physical_dev
     event_module_ = event_module.get();
     modules_.push_back(std::move(event_module));
     modules_.push_back(std::make_unique<EventLogModule>());
+    auto timing_module = std::make_unique<TimingModule>();
+    timing_module_ = timing_module.get();
+    modules_.push_back(std::move(timing_module));
     modules_.push_back(std::make_unique<MonitorModule>());
     modules_.push_back(std::make_unique<CursorModule>());
     modules_.push_back(std::make_unique<WindowModule>(window, instance, physical_device, device, queue_family, queue));
@@ -54,6 +58,12 @@ void App::onEvent(MARU_EventId type, MARU_Window* window, const MARU_Event& even
 void App::onDiagnostic(const MARU_DiagnosticInfo* info) {
     if (inst_module_) {
         inst_module_->onDiagnostic(info);
+    }
+}
+
+void App::onPumpTiming(double timestamp_seconds, double pump_duration_ms) {
+    if (timing_module_) {
+        timing_module_->recordPumpTime(timestamp_seconds, pump_duration_ms);
     }
 }
 

@@ -524,7 +524,13 @@ int main(int, char**) {
 
     while (g_KeepRunning) {
       const MARU_EventMask pump_mask = app.getPumpMask();
+      const double pump_start_seconds = ImGui::GetTime();
+      const auto pump_start = std::chrono::steady_clock::now();
       maru_pumpEvents(context, 0, pump_mask, handle_maru_event, NULL);
+      const auto pump_end = std::chrono::steady_clock::now();
+      const double pump_duration_ms =
+          std::chrono::duration<double, std::milli>(pump_end - pump_start).count();
+      app.onPumpTiming(pump_start_seconds, pump_duration_ms);
 
       if (app.update(context, window) == AppStatus::EXIT) g_KeepRunning = false;
 
