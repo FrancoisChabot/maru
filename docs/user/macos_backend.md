@@ -25,3 +25,11 @@ Tearing down a `MARU_Context` and creating a new one on the main thread is fully
 Vulkan rendering on macOS is supported via `VK_EXT_metal_surface` and MoltenVK. Maru automatically creates a `CAMetalLayer` for each window to serve as the rendering surface.
 
 Note that while the `MARU_Context` must be managed on the main thread, the resulting `VkSurfaceKHR` can be used by Vulkan rendering commands on any thread, as per the Vulkan specification.
+
+## Backend Tuning
+
+`MARU_ContextCreateInfo.tuning.cocoa.forward_key_events_to_appkit` controls whether Maru forwards keyboard NSEvents for Maru windows through `NSApp sendEvent:`.
+
+The default is `false`, which keeps keyboard handling on Maru's lower-latency local path and only routes active text-input `keyDown` events through the view's text-input client.
+
+Set it to `true` if you need native AppKit key-equivalent or menu handling badly enough to accept the extra per-key overhead.

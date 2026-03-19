@@ -162,6 +162,35 @@ static void _maru_cocoa_dispatch_window_event(MARU_Context_Cocoa *active_ctx,
     }
 }
 
+static bool _maru_cocoa_handle_keyboard_event(NSEvent *nsEvent) {
+    if (!nsEvent) return false;
+
+    const NSEventType type = [nsEvent type];
+    if (type != NSEventTypeKeyDown && type != NSEventTypeKeyUp &&
+        type != NSEventTypeFlagsChanged) {
+        return false;
+    }
+
+    MARU_Window_Cocoa *window =
+        _maru_cocoa_window_from_ns_window([nsEvent window]);
+    if (!window) {
+        return false;
+    }
+
+    if (window->base.ctx_base->tuning.cocoa.forward_key_events_to_appkit) {
+        return false;
+    }
+
+    if (type == NSEventTypeKeyDown &&
+        window->base.attrs_effective.text_input_type !=
+            MARU_TEXT_INPUT_TYPE_NONE &&
+        window->ns_view) {
+        [window->ns_view keyDown:nsEvent];
+    }
+
+    return true;
+}
+
 static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
                                       NSEvent *nsEvent) {
     if (!active_ctx || !nsEvent) return;
@@ -198,8 +227,14 @@ static void _maru_cocoa_process_event(MARU_Context_Cocoa *active_ctx,
             if (!window) break;
             MARU_Key key = _maru_cocoa_translate_key([nsEvent keyCode]);
             MARU_ButtonState state = (type == NSEventTypeKeyDown) ? MARU_BUTTON_STATE_PRESSED : MARU_BUTTON_STATE_RELEASED;
+            const bool is_repeat =
+                (type == NSEventTypeKeyDown) && [nsEvent isARepeat];
             
             window->base.ctx_base->keyboard_state[key] = (MARU_ButtonState8)state;
+
+            if (is_repeat) {
+                break;
+            }
 
             MARU_Event event = {0};
             event.key_changed.key = key;
@@ -543,13 +578,17 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
                                                   dequeue:YES];
             if (event) {
                 _maru_cocoa_process_event(ctx, event);
-                [NSApp sendEvent:event];
+                if (!_maru_cocoa_handle_keyboard_event(event)) {
+                    [NSApp sendEvent:event];
+                }
                 while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
                                                      untilDate:[NSDate distantPast]
                                                         inMode:NSDefaultRunLoopMode
                                                        dequeue:YES])) {
                     _maru_cocoa_process_event(ctx, event);
-                    [NSApp sendEvent:event];
+                    if (!_maru_cocoa_handle_keyboard_event(event)) {
+                        [NSApp sendEvent:event];
+                    }
                 }
             }
 

@@ -276,6 +276,16 @@ typedef struct MARU_ContextTuning {
      * affect the entire application.
      */
     MARU_CocoaActivationPolicy activation_policy;
+    /*
+     * When false, Maru consumes keyboard NSEvents for Maru windows locally and
+     * only routes active text-input keyDown events through the view's
+     * NSTextInputClient path.
+     *
+     * When true, keyboard NSEvents are forwarded through `NSApp sendEvent:`,
+     * restoring AppKit key-equivalent / menu handling at the cost of higher
+     * per-key overhead.
+     */
+    bool forward_key_events_to_appkit;
   } cocoa;
 
   struct {
@@ -299,7 +309,8 @@ typedef struct MARU_ContextTuning {
   {                                                                            \
       .user_event_queue_size = 256,                                            \
       .wayland = {.decoration_strategy = MARU_WAYLAND_DECORATION_STRATEGY_AUTO}, \
-      .cocoa = {.activation_policy = MARU_COCOA_ACTIVATION_POLICY_REGULAR},     \
+      .cocoa = {.activation_policy = MARU_COCOA_ACTIVATION_POLICY_REGULAR,      \
+                .forward_key_events_to_appkit = false},                         \
       .x11 = {.selection_query_timeout_ms = 50},                                \
   }
 

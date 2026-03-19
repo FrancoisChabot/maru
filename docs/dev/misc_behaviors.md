@@ -22,3 +22,12 @@ Backends MUST NOT synthesize fallbacks for system cursor shapes. If a backend ca
 The public C API currently exposes only `CLIPBOARD` and `DRAG_DROP` data exchange targets.
 
 `PRIMARY` selection support was intentionally removed instead of being kept as a one-off Linux-skewed target. If a future product requirement brings back an additional selection/data channel, the correct direction is an open-ended data-channel model rather than another hard-coded enum slot in `MARU_DataExchangeTarget`.
+
+## 4. Text Input
+
+### 4.1 Active Text Input Gating
+`MARU_EVENT_TEXT_EDIT_COMMITTED` and `MARU_EVENT_TEXT_EDIT_NAVIGATION` should be treated as text-input-session events, not as general keyboard side effects.
+
+Every backend SHOULD emit them only while the target window has an active text input context, meaning `text_input_type != MARU_TEXT_INPUT_TYPE_NONE`.
+
+The Cocoa backend currently does this already. Other backends are not fully consistent yet and may still emit committed text without an active text input context. That looser behavior should be treated as legacy drift, not as the desired contract.

@@ -14,7 +14,10 @@ Why is it called Maru? This library was built to support a bird-themed game, so 
 
 ## Library status
 
-Ready for early adopters. There hasn't been enough testing on enough OS/Machine configurations to blindly trust this yet.
+Not ready for prime-time yet.
+
+Wayland and X11 are in good shape.
+MacOS and Windows need more testing.
 
 ## Quickstart
 
