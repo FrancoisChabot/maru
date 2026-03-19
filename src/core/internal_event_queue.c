@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "core_event_queue.h"
+#include "internal_event_queue.h"
 #include "maru_mem_internal.h"
 #include <stdatomic.h>
 #include <string.h>
 #include <stdio.h>
 
-bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t capacity_power_of_2) {
+bool _maru_internal_event_queue_init(MARU_InternalEventQueue *q,
+                                     MARU_Context_Base *ctx,
+                                     uint32_t capacity_power_of_2) {
   if (!q) return false;
   
   q->capacity = capacity_power_of_2;
@@ -15,20 +17,22 @@ bool _maru_event_queue_init(MARU_EventQueue *q, MARU_Context_Base *ctx, uint32_t
   atomic_init(&q->head, 0);
   atomic_init(&q->tail, 0);
 
-  q->buffer = maru_context_alloc_aligned64(ctx, sizeof(MARU_QueuedEvent) * capacity_power_of_2);
+  q->buffer = maru_context_alloc_aligned64(
+      ctx, sizeof(MARU_InternalQueuedEvent) * capacity_power_of_2);
   if (!q->buffer) return false;
 
-  memset(q->buffer, 0, sizeof(MARU_QueuedEvent) * capacity_power_of_2);
+  memset(q->buffer, 0, sizeof(MARU_InternalQueuedEvent) * capacity_power_of_2);
   for (uint32_t i = 0; i < capacity_power_of_2; ++i) {
     atomic_init(&q->buffer[i].state, 0);
   }
   return true;
 }
 
-void _maru_event_queue_cleanup(MARU_EventQueue *q, MARU_Context_Base *ctx) {
+void _maru_internal_event_queue_cleanup(MARU_InternalEventQueue *q,
+                                        MARU_Context_Base *ctx) {
   if (q->buffer) {
     for (uint32_t i = 0; i < q->capacity; ++i) {
-      MARU_QueuedEvent *slot = &q->buffer[i];
+      MARU_InternalQueuedEvent *slot = &q->buffer[i];
       if (atomic_load_explicit(&slot->state, memory_order_acquire) == 2 &&
           slot->cleanup_cb) {
         slot->cleanup_cb(ctx, slot->cleanup_userdata);
@@ -41,10 +45,12 @@ void _maru_event_queue_cleanup(MARU_EventQueue *q, MARU_Context_Base *ctx) {
   }
 }
 
-bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type, 
-                            MARU_Window *window, MARU_Event evt,
-                            MARU_QueuedEventCleanupFn cleanup_cb,
-                            void *cleanup_userdata) {
+bool _maru_internal_event_queue_push(MARU_InternalEventQueue *q,
+                                     MARU_EventId type,
+                                     MARU_Window *window,
+                                     MARU_Event evt,
+                                     MARU_InternalQueuedEventCleanupFn cleanup_cb,
+                                     void *cleanup_userdata) {
   if (!q || !q->buffer || q->capacity == 0) return false;
 
   size_t head, tail;
@@ -60,7 +66,7 @@ bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type,
                                                   memory_order_relaxed, memory_order_relaxed));
 
   // We reserved the slot at 'head'
-  MARU_QueuedEvent *slot = &q->buffer[head & q->mask];
+  MARU_InternalQueuedEvent *slot = &q->buffer[head & q->mask];
 
   // Wait until the slot is truly free (state 0).
   // In a correct MPSC with head/tail check above, this should be almost immediate,
@@ -86,14 +92,16 @@ bool _maru_event_queue_push(MARU_EventQueue *q, MARU_EventId type,
   return true;
 }
 
-bool _maru_event_queue_pop(MARU_EventQueue *q, MARU_EventId *out_type, 
-                           MARU_Window **out_window, MARU_Event *out_evt,
-                           MARU_QueuedEventCleanupFn *out_cleanup_cb,
-                           void **out_cleanup_userdata) {
+bool _maru_internal_event_queue_pop(MARU_InternalEventQueue *q,
+                                    MARU_EventId *out_type,
+                                    MARU_Window **out_window,
+                                    MARU_Event *out_evt,
+                                    MARU_InternalQueuedEventCleanupFn *out_cleanup_cb,
+                                    void **out_cleanup_userdata) {
   if (!q || !q->buffer || q->capacity == 0) return false;
 
   size_t tail = atomic_load_explicit(&q->tail, memory_order_relaxed);
-  MARU_QueuedEvent *slot = &q->buffer[tail & q->mask];
+  MARU_InternalQueuedEvent *slot = &q->buffer[tail & q->mask];
 
   int state = atomic_load_explicit(&slot->state, memory_order_acquire);
   if (state != 2) {

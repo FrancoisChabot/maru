@@ -6,7 +6,7 @@
 #endif
 // Core
 #include "../core/core.c"
-#include "../core/core_event_queue.c"
+#include "../core/internal_event_queue.c"
 #include "../core/maru_queue.c"
 
 // Windows Backend

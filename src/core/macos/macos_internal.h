@@ -16,7 +16,7 @@
 #include <objc/message.h>
 #include <objc/runtime.h>
 
-#include "core_event_queue.h"
+#include "internal_event_queue.h"
 #include <pthread.h>
 #import <Cocoa/Cocoa.h>
 #import <IOKit/pwr_mgt/IOPMLib.h>

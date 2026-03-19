@@ -9,7 +9,7 @@
 #include "maru/maru.h"
 #include "maru_vulkan_types.h"
 #include "maru_backend.h"
-#include "core_event_queue.h"
+#include "internal_event_queue.h"
 
 /**
  * @file maru_internal.h
@@ -86,8 +86,8 @@ typedef struct MARU_Context_Base {
   uint32_t window_count;
   MARU_WindowId next_window_id;
 
-  MARU_EventQueue internal_events;
-  MARU_EventQueue user_events;
+  MARU_InternalEventQueue internal_events;
+  MARU_InternalEventQueue user_events;
   MARU_ButtonState8 keyboard_state[MARU_KEY_COUNT];
   MARU_ButtonState8 *mouse_button_states;
   MARU_ChannelInfo *mouse_button_channels;
@@ -222,7 +222,7 @@ MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId 
                                MARU_Window *window, const MARU_Event *evt);
 MARU_Status _maru_post_event_internal_owned(
     MARU_Context_Base *ctx_base, MARU_EventId type, MARU_Window *window,
-    const MARU_Event *evt, MARU_QueuedEventCleanupFn cleanup_cb,
+    const MARU_Event *evt, MARU_InternalQueuedEventCleanupFn cleanup_cb,
     void *cleanup_userdata);
 
 void _maru_monitor_free(MARU_Monitor_Base *monitor);
