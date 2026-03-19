@@ -50,7 +50,7 @@ void _maru_default_free(void *ptr, void *userdata) {
 
 MARU_Status _maru_post_event_internal(MARU_Context_Base *ctx_base, MARU_EventId type,
                                MARU_Window *window, const MARU_Event *evt) {
-  if (_maru_internal_event_queue_push(&ctx_base->internal_events, type, window,
+  if (_maru_internal_event_queue_push(&ctx_base->queued_events, type, window,
                                       *evt, NULL, NULL)) {
     return MARU_SUCCESS;
   }
@@ -61,7 +61,7 @@ MARU_Status _maru_post_event_internal_owned(
     MARU_Context_Base *ctx_base, MARU_EventId type, MARU_Window *window,
     const MARU_Event *evt, MARU_InternalQueuedEventCleanupFn cleanup_cb,
     void *cleanup_userdata) {
-  if (_maru_internal_event_queue_push(&ctx_base->internal_events, type, window,
+  if (_maru_internal_event_queue_push(&ctx_base->queued_events, type, window,
                                       *evt, cleanup_cb, cleanup_userdata)) {
     return MARU_SUCCESS;
   }
@@ -70,8 +70,6 @@ MARU_Status _maru_post_event_internal_owned(
   }
   return MARU_FAILURE;
 }
-
-#define MARU_INTERNAL_EVENT_QUEUE_CAPACITY 256u
 
 #ifdef MARU_ENABLE_DIAGNOSTICS
 void _maru_reportDiagnosticOn(const MARU_Context *ctx,
@@ -121,7 +119,8 @@ void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type,
   ctx->pump_ctx->callback(type, window, event, ctx->pump_ctx->userdata);
 }
 
-void _maru_init_context_base(MARU_Context_Base *ctx_base) {
+void _maru_init_context_base(MARU_Context_Base *ctx_base,
+                             uint32_t backend_event_queue_size) {
   if (ctx_base->allocator.alloc_cb == NULL) {
     ctx_base->allocator.alloc_cb = _maru_default_alloc;
     ctx_base->allocator.realloc_cb = _maru_default_realloc;
@@ -150,20 +149,22 @@ void _maru_init_context_base(MARU_Context_Base *ctx_base) {
   ctx_base->creator_thread = _maru_getCurrentThreadId();
 #endif
 
-  memset(&ctx_base->internal_events, 0, sizeof(ctx_base->internal_events));
-  memset(&ctx_base->user_events, 0, sizeof(ctx_base->user_events));
+  ctx_base->user_events_enabled = ctx_base->tuning.user_event_queue_size != 0;
 
-  if (!_maru_internal_event_queue_init(
-          &ctx_base->internal_events, ctx_base,
-          MARU_INTERNAL_EVENT_QUEUE_CAPACITY)) {
-    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx_base, MARU_DIAGNOSTIC_OUT_OF_MEMORY,
-                           "Failed to initialize internal event queue");
-  }
+  memset(&ctx_base->queued_events, 0, sizeof(ctx_base->queued_events));
 
-  if (!_maru_internal_event_queue_init(&ctx_base->user_events, ctx_base,
-                                       MARU_INTERNAL_EVENT_QUEUE_CAPACITY)) {
+  const uint64_t total_queue_capacity =
+      (uint64_t)ctx_base->tuning.user_event_queue_size +
+      (uint64_t)backend_event_queue_size;
+
+  if (total_queue_capacity > UINT32_MAX) {
     MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx_base, MARU_DIAGNOSTIC_OUT_OF_MEMORY,
-                           "Failed to initialize user event queue");
+                           "Failed to initialize queued event storage");
+  } else if (!_maru_internal_event_queue_init(
+                 &ctx_base->queued_events, ctx_base,
+                 (uint32_t)total_queue_capacity)) {
+    MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx_base, MARU_DIAGNOSTIC_OUT_OF_MEMORY,
+                           "Failed to initialize queued event storage");
   }
 }
 
@@ -194,23 +195,30 @@ void _maru_drain_queued_events(MARU_Context_Base *ctx_base) {
     }
   }
 
-  MARU_InternalEventQueue *qi = &ctx_base->internal_events;
-  MARU_InternalEventQueue *qu = &ctx_base->user_events;
+  MARU_InternalEventQueue *queue = &ctx_base->queued_events;
   MARU_EventId type;
   MARU_Window *window;
   MARU_Event evt;
   MARU_InternalQueuedEventCleanupFn cleanup_cb;
   void *cleanup_userdata;
 
-  while (_maru_internal_event_queue_pop(qi, &type, &window, &evt, &cleanup_cb,
+  while (_maru_internal_event_queue_pop(queue, &type, &window, &evt, &cleanup_cb,
                                         &cleanup_userdata)) {
+#ifdef __linux__
+    if (type >= (MARU_EventId)1000) {
+      _maru_linux_common_handle_internal_event(
+          &((MARU_Context_Linux *)ctx_base)->linux_common,
+          (MARU_InternalEventId)type, window, &evt);
+      if (cleanup_cb) {
+        cleanup_cb(ctx_base, cleanup_userdata);
+      }
+      continue;
+    }
+#endif
     _maru_dispatch_event(ctx_base, type, window, &evt);
     if (cleanup_cb) {
       cleanup_cb(ctx_base, cleanup_userdata);
     }
-  }
-  while (_maru_internal_event_queue_pop(qu, &type, &window, &evt, NULL, NULL)) {
-    _maru_dispatch_event(ctx_base, type, NULL, &evt);
   }
 }
 
@@ -379,8 +387,7 @@ void _maru_cleanup_context_base(MARU_Context_Base *ctx_base) {
   maru_context_free(ctx_base, ctx_base->mouse_button_states);
   maru_context_free(ctx_base, ctx_base->mouse_button_channels);
 
-  _maru_internal_event_queue_cleanup(&ctx_base->internal_events, ctx_base);
-  _maru_internal_event_queue_cleanup(&ctx_base->user_events, ctx_base);
+  _maru_internal_event_queue_cleanup(&ctx_base->queued_events, ctx_base);
 }
 
 void _maru_register_window(MARU_Context_Base *ctx_base, MARU_Window *window) {
@@ -511,7 +518,11 @@ MARU_API MARU_Status maru_postEvent(MARU_Context *context, MARU_EventId type,
   memset(&internal_evt, 0, sizeof(internal_evt));
   internal_evt.user = evt;
 
-  if (_maru_internal_event_queue_push(&ctx_base->user_events, type, NULL,
+  if (!ctx_base->user_events_enabled) {
+    return MARU_FAILURE;
+  }
+
+  if (_maru_internal_event_queue_push(&ctx_base->queued_events, type, NULL,
                                       internal_evt, NULL, NULL)) {
     return maru_wakeContext(context);
   }

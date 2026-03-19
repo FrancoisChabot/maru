@@ -97,7 +97,7 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
     ctx->base.allocator.userdata = NULL;
   }
   ctx->base.tuning = create_info->tuning;
-  _maru_init_context_base(&ctx->base);
+  _maru_init_context_base(&ctx->base, 256u);
   ctx->base.pub.userdata = create_info->userdata;
   ctx->linux_common.controller_snapshot_dirty = true;
 

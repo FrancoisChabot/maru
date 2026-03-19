@@ -86,8 +86,8 @@ typedef struct MARU_Context_Base {
   uint32_t window_count;
   MARU_WindowId next_window_id;
 
-  MARU_InternalEventQueue internal_events;
-  MARU_InternalEventQueue user_events;
+  MARU_InternalEventQueue queued_events;
+  bool user_events_enabled;
   MARU_ButtonState8 keyboard_state[MARU_KEY_COUNT];
   MARU_ButtonState8 *mouse_button_states;
   MARU_ChannelInfo *mouse_button_channels;
@@ -194,7 +194,8 @@ void _maru_reportDiagnosticOn(const MARU_Context *ctx,
 #endif
 
 void _maru_dispatch_event(MARU_Context_Base *ctx, MARU_EventId type, MARU_Window *window, const MARU_Event *event);
-void _maru_init_context_base(MARU_Context_Base *ctx_base);
+void _maru_init_context_base(MARU_Context_Base *ctx_base,
+                             uint32_t backend_event_queue_size);
 void _maru_drain_queued_events(MARU_Context_Base *ctx_base);
 void _maru_update_context_base(MARU_Context_Base *ctx_base, uint64_t field_mask, const MARU_ContextAttributes *attributes);
 void _maru_update_window_base(MARU_Window_Base *win_base, uint64_t field_mask, const MARU_WindowAttributes *attributes);

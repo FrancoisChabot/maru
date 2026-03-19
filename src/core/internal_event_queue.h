@@ -31,7 +31,6 @@ typedef struct MARU_InternalQueuedEvent {
 typedef struct MARU_InternalEventQueue {
   MARU_InternalQueuedEvent *buffer;
   uint32_t capacity;
-  uint32_t mask; // capacity - 1
   
   // We use separate cache lines to avoid false sharing
   alignas(64) _MARU_ATOMIC(size_t) head; // Producers write here
@@ -41,7 +40,7 @@ typedef struct MARU_InternalEventQueue {
 // Returns true on success
 bool _maru_internal_event_queue_init(MARU_InternalEventQueue *q,
                                      MARU_Context_Base *ctx,
-                                     uint32_t capacity_power_of_2);
+                                     uint32_t capacity);
 void _maru_internal_event_queue_cleanup(MARU_InternalEventQueue *q,
                                         MARU_Context_Base *ctx);
 

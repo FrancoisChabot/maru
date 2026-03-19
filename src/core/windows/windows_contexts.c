@@ -85,7 +85,7 @@ MARU_Status maru_createContext_Windows(const MARU_ContextCreateInfo *create_info
     ctx->base.allocator.userdata = NULL;
   }
   ctx->base.tuning = create_info->tuning;
-  _maru_init_context_base(&ctx->base);
+  _maru_init_context_base(&ctx->base, 256u);
   ctx->base.pub.userdata = create_info->userdata;
 
   _maru_windows_init_mouse_button_channels(ctx);

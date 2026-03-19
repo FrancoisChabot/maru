@@ -351,7 +351,7 @@ static inline MARU_Context* maru_test_createContext(const MARU_ContextCreateInfo
     ctx->diagnostic_cb = create_info->attributes.diagnostic_cb;
     ctx->diagnostic_userdata = create_info->attributes.diagnostic_userdata;
 
-    _maru_init_context_base(ctx);
+    _maru_init_context_base(ctx, 0u);
 
 #ifdef MARU_INDIRECT_BACKEND
     ctx->backend = &_maru_mock_backend;

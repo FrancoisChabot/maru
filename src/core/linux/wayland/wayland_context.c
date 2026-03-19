@@ -475,7 +475,7 @@ MARU_Status maru_createContext_WL(const MARU_ContextCreateInfo *create_info,
     ctx->base.allocator = create_info->allocator;
   }
 
-  _maru_init_context_base(&ctx->base);
+  _maru_init_context_base(&ctx->base, 256u);
   ctx->base.pub.userdata = create_info->userdata;
   ctx->linux_common.controller_snapshot_dirty = true;
 

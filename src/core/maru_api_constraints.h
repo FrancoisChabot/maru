@@ -866,6 +866,7 @@ static inline void _maru_validate_postEvent(MARU_Context *context,
                                             MARU_UserDefinedEvent evt) {
   MARU_CONSTRAINT_CHECK(context != NULL);
   MARU_CONSTRAINT_CHECK(maru_isUserEventId(type));
+  MARU_CONSTRAINT_CHECK(((const MARU_Context_Base *)context)->user_events_enabled);
   (void)type;
   (void)evt;
 }

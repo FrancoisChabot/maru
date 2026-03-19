@@ -340,7 +340,7 @@ MARU_Status maru_createContext_Cocoa(const MARU_ContextCreateInfo *create_info,
     }
 
     ctx->base.tuning = create_info->tuning;
-    _maru_init_context_base(&ctx->base);
+    _maru_init_context_base(&ctx->base, 256u);
     _maru_cocoa_init_mouse_button_channels(ctx);
     ctx->base.pub.userdata = create_info->userdata;
     ctx->base.pub.backend_type = MARU_BACKEND_COCOA;

@@ -64,6 +64,29 @@ TEST_CASE("DesktopIntegration.CrossThreadPostEventWithoutWindow") {
   CHECK(tracking.is_clean());
 }
 
+#ifndef MARU_VALIDATE_API_CALLS
+TEST_CASE("DesktopIntegration.PostEventFailsWhenUserEventsDisabled") {
+  MARU_IntegrationTrackingAllocator tracking;
+  MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+  tracking.apply(&create_info);
+  create_info.backend = MARU_BACKEND_UNKNOWN;
+  create_info.tuning.user_event_queue_size = 0;
+
+  MARU_Context *ctx = nullptr;
+  MARU_Status status = maru_createContext(&create_info, &ctx);
+  if (status != MARU_SUCCESS || !ctx) {
+    MESSAGE("Context creation unavailable; skipping disabled postEvent test.");
+    return;
+  }
+
+  MARU_UserDefinedEvent user_evt = {0};
+  CHECK(maru_postEvent(ctx, MARU_EVENT_USER_0, user_evt) == MARU_FAILURE);
+
+  maru_destroyContext(ctx);
+  CHECK(tracking.is_clean());
+}
+#endif
+
 TEST_CASE("DesktopIntegration.CrossThreadWakeContextWithoutWindow") {
   MARU_IntegrationTrackingAllocator tracking;
   MARU_ContextCreateInfo create_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;

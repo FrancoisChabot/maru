@@ -1147,27 +1147,6 @@ void _maru_linux_common_drain_internal_events(MARU_Context_Linux_Common *common)
     } while (overflowed && guard < 4u);
   }
 
-  MARU_EventId type;
-  MARU_Window *window;
-  MARU_Event evt;
-  MARU_InternalQueuedEventCleanupFn cleanup_cb;
-  void *cleanup_userdata;
-
-  while (_maru_internal_event_queue_pop(&common->ctx_base->internal_events,
-                                        &type, &window, &evt, &cleanup_cb,
-                                        &cleanup_userdata)) {
-    if (type >= (MARU_EventId)1000) {
-      _maru_linux_common_handle_internal_event(common, (MARU_InternalEventId)type, window, &evt);
-      if (cleanup_cb) {
-        cleanup_cb(common->ctx_base, cleanup_userdata);
-      }
-    } else {
-      _maru_internal_event_queue_push(&common->ctx_base->internal_events, type,
-                                      window, evt, cleanup_cb,
-                                      cleanup_userdata);
-      break; // Stop at first non-internal event to avoid infinite loop
-    }
-  }
 }
 
 MARU_Status _maru_linux_common_set_haptic_levels(MARU_Context_Linux_Common *common, MARU_LinuxController *ctrl, uint32_t first_haptic, uint32_t count, const MARU_Scalar *intensities) {
