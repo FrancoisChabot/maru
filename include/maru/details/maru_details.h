@@ -233,7 +233,9 @@ static inline void maru_setMonitorUserdata(MARU_Monitor* monitor, void* userdata
 
 static inline const MARU_Context* maru_getMonitorContext(const MARU_Monitor* monitor) {
   MARU_VALIDATE_API(monitor != NULL);
-  return ((const MARU_MonitorPrefix*)monitor)->context;
+  const MARU_Context* context = ((const MARU_MonitorPrefix*)monitor)->context;
+  MARU_ASSUME(context != NULL);
+  return context;
 }
 
 static inline bool maru_isMonitorLost(const MARU_Monitor* monitor) {
@@ -288,7 +290,9 @@ static inline void maru_setWindowUserdata(MARU_Window* window, void* userdata) {
 
 static inline const MARU_Context* maru_getWindowContext(const MARU_Window* window) {
   MARU_VALIDATE_API(window != NULL);
-  return ((const MARU_WindowPrefix*)window)->context;
+  const MARU_Context* context = ((const MARU_WindowPrefix*)window)->context;
+  MARU_ASSUME(context != NULL);
+  return context;
 }
 
 static inline MARU_WindowId maru_getWindowId(const MARU_Window* window) {
@@ -368,7 +372,9 @@ static inline void maru_setControllerUserdata(MARU_Controller* controller, void*
 
 static inline const MARU_Context* maru_getControllerContext(const MARU_Controller* controller) {
   MARU_VALIDATE_API(controller != NULL);
-  return ((const MARU_ControllerPrefix*)controller)->context;
+  const MARU_Context* context = ((const MARU_ControllerPrefix*)controller)->context;
+  MARU_ASSUME(context != NULL);
+  return context;
 }
 
 static inline bool maru_isControllerLost(const MARU_Controller* controller) {

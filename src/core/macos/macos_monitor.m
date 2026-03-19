@@ -109,6 +109,7 @@ void _maru_cocoa_refresh_monitors(MARU_Context_Base *ctx_base) {
             mon = maru_context_alloc(ctx_base, sizeof(MARU_Monitor_Cocoa));
             memset(mon, 0, sizeof(MARU_Monitor_Cocoa));
             mon->base.ctx_base = ctx_base;
+            mon->base.pub.context = (MARU_Context *)ctx_base;
             atomic_init(&mon->base.ref_count, 1u);
 #ifdef MARU_INDIRECT_BACKEND
             mon->base.backend = &maru_backend_Cocoa;
