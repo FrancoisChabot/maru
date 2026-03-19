@@ -16,6 +16,9 @@ static CVReturn _maru_cocoa_display_link_callback(CVDisplayLinkRef displayLink,
                                                   void *displayLinkContext) {
     (void)displayLink; (void)inNow; (void)inOutputTime; (void)flagsIn; (void)flagsOut;
     MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)displayLinkContext;
+    if (!atomic_load_explicit(&win->pending_frame_request, memory_order_acquire)) {
+        return kCVReturnSuccess;
+    }
     atomic_store(&win->pending_frame_vblank, true);
     maru_wakeContext_Cocoa((MARU_Context *)win->base.pub.context);
     return kCVReturnSuccess;
@@ -871,7 +874,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     win->dip_size = create_info->attributes.dip_size;
     win->text_input_session_id = 0;
     win->ime_preedit_active = false;
-    win->pending_frame_request = false;
+    atomic_init(&win->pending_frame_request, false);
     atomic_init(&win->pending_frame_vblank, false);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -1266,7 +1269,7 @@ MARU_Status maru_requestWindowFrame_Cocoa(MARU_Window *window) {
         return MARU_FAILURE;
     }
 
-    win->pending_frame_request = true;
+    atomic_store_explicit(&win->pending_frame_request, true, memory_order_release);
     return MARU_SUCCESS;
 }
 

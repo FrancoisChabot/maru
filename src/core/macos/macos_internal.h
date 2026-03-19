@@ -108,7 +108,7 @@ typedef struct MARU_Window_Cocoa {
   uint32_t drop_available_mime_type_count;
   id current_dragging_info;
 
-  bool pending_frame_request;
+  _Atomic bool pending_frame_request;
   CVDisplayLinkRef display_link;
   _Atomic bool pending_frame_vblank;
   

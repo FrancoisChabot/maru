@@ -7,6 +7,8 @@
 #import <QuartzCore/CAMetalLayer.h>
 #import <stdatomic.h>
 
+static const short kMaruCocoaWakeEventSubtype = 0x1A4D;
+
 static MARU_Key _maru_cocoa_translate_key(unsigned short scancode) {
     static const MARU_Key table[128] = {
         [0x00] = MARU_KEY_A, [0x01] = MARU_KEY_S, [0x02] = MARU_KEY_D, [0x03] = MARU_KEY_F,
@@ -48,14 +50,6 @@ static uint64_t _maru_cocoa_now_ms(void) {
         return 0u;
     }
     return (uint64_t)(uptime * 1000.0);
-}
-
-static uint64_t _maru_cocoa_now_ns(void) {
-    const NSTimeInterval uptime = [NSProcessInfo processInfo].systemUptime;
-    if (uptime <= 0.0) {
-        return 0u;
-    }
-    return (uint64_t)(uptime * 1000000000.0);
 }
 
 static void _maru_cocoa_init_mouse_button_channels(MARU_Context_Cocoa *ctx) {
@@ -469,8 +463,10 @@ static void _maru_cocoa_dispatch_pending_frames(MARU_Context_Cocoa *ctx) {
     while (base) {
         MARU_Window_Cocoa *win = (MARU_Window_Cocoa *)base;
         bool vblank = atomic_exchange(&win->pending_frame_vblank, false);
-        if (win->pending_frame_request && vblank) {
-            win->pending_frame_request = false;
+        if (atomic_load_explicit(&win->pending_frame_request, memory_order_acquire) &&
+            vblank) {
+            atomic_store_explicit(&win->pending_frame_request, false,
+                                  memory_order_release);
 
             MARU_Event evt = {0};
             evt.window_frame.timestamp_ms = (uint32_t)now_ms;
@@ -485,7 +481,6 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
                                   MARU_EventMask mask,
                                   MARU_EventCallback callback, void *userdata) {
     MARU_Context_Cocoa *ctx = (MARU_Context_Cocoa *)context;
-    const uint64_t pump_start_ns = _maru_cocoa_now_ns();
     
     // Invalidate borrowed clipboard MIME types
     for (uint32_t i = 0; i < ctx->clipboard_available_mime_type_count; ++i) {
@@ -549,7 +544,6 @@ MARU_Status maru_pumpEvents_Cocoa(MARU_Context *context, uint32_t timeout_ms,
             if (event) {
                 _maru_cocoa_process_event(ctx, event);
                 [NSApp sendEvent:event];
-
                 while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
                                                      untilDate:[NSDate distantPast]
                                                         inMode:NSDefaultRunLoopMode
@@ -594,7 +588,7 @@ MARU_Status maru_wakeContext_Cocoa(MARU_Context *context) {
                                        timestamp:0
                                     windowNumber:0
                                          context:nil
-                                         subtype:0
+                                         subtype:kMaruCocoaWakeEventSubtype
                                            data1:0
                                            data2:0];
     [NSApp postEvent:event atStart:YES];

@@ -21,27 +21,62 @@ typedef struct MARU_Controller_Cocoa {
   id<CHHapticAdvancedPatternPlayer> high_freq_player;
 } MARU_Controller_Cocoa;
 
+static void _maru_cocoa_handle_controller_connected(MARU_Context_Cocoa *ctx,
+                                                    GCController *gc);
+static void _maru_cocoa_handle_controller_disconnected(MARU_Context_Cocoa *ctx,
+                                                       GCController *gc);
+
 @interface MARU_ControllerObserver : NSObject
 @property (nonatomic, assign) MARU_Context_Cocoa *context;
 @end
 
 @implementation MARU_ControllerObserver
 
-- (void)controllerDidConnect:(NSNotification *)notification {
-    (void)notification;
+- (void)handleControllerConnectedObject:(id)object {
     MARU_Context_Cocoa *ctx = self.context;
-    if (ctx) {
+    if (!ctx) return;
+
+    GCController *gc = [object isKindOfClass:[GCController class]]
+                           ? (GCController *)object
+                           : nil;
+    if (gc) {
+        _maru_cocoa_handle_controller_connected(ctx, gc);
+    } else {
         atomic_store(&ctx->controllers_dirty, true);
-        maru_wakeContext_Cocoa((MARU_Context *)ctx);
+    }
+}
+
+- (void)handleControllerDisconnectedObject:(id)object {
+    MARU_Context_Cocoa *ctx = self.context;
+    if (!ctx) return;
+
+    GCController *gc = [object isKindOfClass:[GCController class]]
+                           ? (GCController *)object
+                           : nil;
+    if (gc) {
+        _maru_cocoa_handle_controller_disconnected(ctx, gc);
+    } else {
+        atomic_store(&ctx->controllers_dirty, true);
+    }
+}
+
+- (void)controllerDidConnect:(NSNotification *)notification {
+    if ([NSThread isMainThread]) {
+        [self handleControllerConnectedObject:notification.object];
+    } else {
+        [self performSelectorOnMainThread:@selector(handleControllerConnectedObject:)
+                               withObject:notification.object
+                            waitUntilDone:NO];
     }
 }
 
 - (void)controllerDidDisconnect:(NSNotification *)notification {
-    (void)notification;
-    MARU_Context_Cocoa *ctx = self.context;
-    if (ctx) {
-        atomic_store(&ctx->controllers_dirty, true);
-        maru_wakeContext_Cocoa((MARU_Context *)ctx);
+    if ([NSThread isMainThread]) {
+        [self handleControllerDisconnectedObject:notification.object];
+    } else {
+        [self performSelectorOnMainThread:@selector(handleControllerDisconnectedObject:)
+                               withObject:notification.object
+                            waitUntilDone:NO];
     }
 }
 
@@ -51,14 +86,15 @@ void _maru_controller_free(MARU_Controller_Base *controller) {
     MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)controller;
     MARU_Context_Base *ctx = controller->ctx_base;
     
-    c->gc_controller.extendedGamepad.valueChangedHandler = nil;
-    [c->gc_controller release];
-    
-    maru_context_free(ctx, c->analog_channel_infos);
-    maru_context_free(ctx, c->analog_states);
-    maru_context_free(ctx, c->button_channel_infos);
-    maru_context_free(ctx, c->button_states);
-    maru_context_free(ctx, c->haptic_channel_infos);
+    if (c->gc_controller.extendedGamepad) {
+        c->gc_controller.extendedGamepad.valueChangedHandler = nil;
+    }
+    if (c->gc_controller.microGamepad) {
+        c->gc_controller.microGamepad.valueChangedHandler = nil;
+    }
+    if (c->gc_controller) {
+        [c->gc_controller release];
+    }
     
     if (c->haptic_engine) {
         [c->low_freq_player release];
@@ -67,6 +103,11 @@ void _maru_controller_free(MARU_Controller_Base *controller) {
         [c->haptic_engine release];
     }
 
+    maru_context_free(ctx, c->analog_channel_infos);
+    maru_context_free(ctx, c->analog_states);
+    maru_context_free(ctx, c->button_channel_infos);
+    maru_context_free(ctx, c->button_states);
+    maru_context_free(ctx, c->haptic_channel_infos);
     maru_context_free(ctx, c);
 }
 
@@ -83,6 +124,82 @@ static void _maru_cocoa_dispatch_button_event(MARU_Controller_Cocoa *c, uint32_t
     _maru_post_event_internal(c->base.ctx_base, MARU_EVENT_CONTROLLER_BUTTON_CHANGED, NULL, &event);
 }
 
+static void _maru_cocoa_release_queued_controller(MARU_Context_Base *ctx_base,
+                                                  void *userdata) {
+    (void)ctx_base;
+    if (!userdata) {
+        return;
+    }
+    maru_releaseController_Cocoa((MARU_Controller *)userdata);
+}
+
+static int32_t _maru_cocoa_find_controller_index(MARU_Context_Cocoa *ctx,
+                                                 GCController *gc) {
+    if (!ctx || !gc) {
+        return -1;
+    }
+
+    for (uint32_t i = 0; i < ctx->controller_cache_count; ++i) {
+        MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)ctx->controller_cache[i];
+        if (c->gc_controller == gc) {
+            return (int32_t)i;
+        }
+    }
+    return -1;
+}
+
+static bool _maru_cocoa_ensure_controller_capacity(MARU_Context_Cocoa *ctx) {
+    if (!ctx) {
+        return false;
+    }
+
+    if (ctx->controller_cache_count < ctx->controller_cache_capacity) {
+        return true;
+    }
+
+    const uint32_t old_cap = ctx->controller_cache_capacity;
+    const uint32_t new_cap = old_cap == 0 ? 4 : old_cap * 2;
+    MARU_Controller_Base **new_cache =
+        maru_context_realloc(&ctx->base,
+                             ctx->controller_cache,
+                             sizeof(MARU_Controller_Base *) * old_cap,
+                             sizeof(MARU_Controller_Base *) * new_cap);
+    if (!new_cache) {
+        return false;
+    }
+
+    ctx->controller_cache = new_cache;
+    ctx->controller_cache_capacity = new_cap;
+    return true;
+}
+
+static void _maru_cocoa_queue_controller_changed_event(MARU_Context_Cocoa *ctx,
+                                                       MARU_Controller_Cocoa *controller,
+                                                       bool connected,
+                                                       bool release_after_dispatch) {
+    if (!ctx || !controller) {
+        return;
+    }
+
+    MARU_Event event = {0};
+    event.controller_changed.controller = (MARU_Controller *)controller;
+    event.controller_changed.connected = connected;
+
+    if (release_after_dispatch) {
+        (void)_maru_post_event_internal_owned(&ctx->base,
+                                              MARU_EVENT_CONTROLLER_CHANGED,
+                                              NULL,
+                                              &event,
+                                              _maru_cocoa_release_queued_controller,
+                                              controller);
+    } else {
+        (void)_maru_post_event_internal(&ctx->base,
+                                        MARU_EVENT_CONTROLLER_CHANGED,
+                                        NULL,
+                                        &event);
+    }
+}
+
 static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *ctx, GCController *gc) {
     MARU_Controller_Cocoa *c = maru_context_alloc(&ctx->base, sizeof(MARU_Controller_Cocoa));
     if (!c) return NULL;
@@ -97,11 +214,20 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     c->base.pub.analog_count = MARU_CONTROLLER_ANALOG_STANDARD_COUNT;
     c->base.pub.button_count = MARU_CONTROLLER_BUTTON_STANDARD_COUNT;
     
-    c->analog_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) * c->base.pub.analog_count);
-    c->analog_states = maru_context_alloc(&ctx->base, sizeof(MARU_AnalogInputState) * c->base.pub.analog_count);
-    c->button_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) * c->base.pub.button_count);
-    c->button_states = maru_context_alloc(&ctx->base, sizeof(MARU_ButtonState8) * c->base.pub.button_count);
-    if (!c->analog_channel_infos || !c->analog_states || !c->button_channel_infos || !c->button_states) {
+    c->analog_channel_infos =
+        maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) *
+                                           c->base.pub.analog_count);
+    c->analog_states =
+        maru_context_alloc(&ctx->base, sizeof(MARU_AnalogInputState) *
+                                           c->base.pub.analog_count);
+    c->button_channel_infos =
+        maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) *
+                                           c->base.pub.button_count);
+    c->button_states =
+        maru_context_alloc(&ctx->base, sizeof(MARU_ButtonState8) *
+                                           c->base.pub.button_count);
+    if (!c->analog_channel_infos || !c->analog_states ||
+        !c->button_channel_infos || !c->button_states) {
         _maru_controller_free(&c->base);
         return NULL;
     }
@@ -164,7 +290,9 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     if (@available(macOS 11.0, *)) {
         if (gc.haptics) {
             c->base.pub.haptic_count = MARU_CONTROLLER_HAPTIC_STANDARD_COUNT;
-            c->haptic_channel_infos = maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) * c->base.pub.haptic_count);
+            c->haptic_channel_infos =
+                maru_context_alloc(&ctx->base, sizeof(MARU_ChannelInfo) *
+                                               c->base.pub.haptic_count);
             if (c->haptic_channel_infos) {
                 c->haptic_channel_infos[MARU_CONTROLLER_HAPTIC_LOW_FREQ].name = "Low Frequency";
                 c->haptic_channel_infos[MARU_CONTROLLER_HAPTIC_LOW_FREQ].min_value = 0.0f;
@@ -237,6 +365,62 @@ static MARU_Controller_Cocoa *_maru_cocoa_create_controller(MARU_Context_Cocoa *
     return c;
 }
 
+static void _maru_cocoa_handle_controller_connected(MARU_Context_Cocoa *ctx,
+                                                    GCController *gc) {
+    if (!ctx || !gc) {
+        return;
+    }
+
+    const int32_t existing_index = _maru_cocoa_find_controller_index(ctx, gc);
+    if (existing_index >= 0) {
+        MARU_Controller_Cocoa *existing =
+            (MARU_Controller_Cocoa *)ctx->controller_cache[existing_index];
+        existing->base.is_active = true;
+        existing->base.pub.flags &= ~((uint64_t)MARU_CONTROLLER_STATE_LOST);
+        return;
+    }
+
+    if (!_maru_cocoa_ensure_controller_capacity(ctx)) {
+        atomic_store(&ctx->controllers_dirty, true);
+        return;
+    }
+
+    MARU_Controller_Cocoa *c = _maru_cocoa_create_controller(ctx, gc);
+    if (!c) {
+        atomic_store(&ctx->controllers_dirty, true);
+        return;
+    }
+
+    ctx->controller_cache[ctx->controller_cache_count++] = &c->base;
+    ctx->controller_snapshot_dirty = true;
+    _maru_cocoa_queue_controller_changed_event(ctx, c, true, false);
+}
+
+static void _maru_cocoa_handle_controller_disconnected(MARU_Context_Cocoa *ctx,
+                                                       GCController *gc) {
+    if (!ctx || !gc) {
+        return;
+    }
+
+    const int32_t index = _maru_cocoa_find_controller_index(ctx, gc);
+    if (index < 0) {
+        atomic_store(&ctx->controllers_dirty, true);
+        return;
+    }
+
+    MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)ctx->controller_cache[index];
+    const uint32_t last = ctx->controller_cache_count - 1u;
+    for (uint32_t i = (uint32_t)index; i < last; ++i) {
+        ctx->controller_cache[i] = ctx->controller_cache[i + 1u];
+    }
+    ctx->controller_cache_count = last;
+    ctx->controller_snapshot_dirty = true;
+
+    c->base.is_active = false;
+    c->base.pub.flags |= MARU_CONTROLLER_STATE_LOST;
+    _maru_cocoa_queue_controller_changed_event(ctx, c, false, true);
+}
+
 static void _maru_cocoa_ensure_observer(MARU_Context_Cocoa *ctx) {
     if (!ctx || ctx->controller_observer) {
         return;
@@ -271,62 +455,24 @@ void _maru_cocoa_sync_controllers(MARU_Context_Base *ctx_base) {
     atomic_store(&ctx->controllers_dirty, false);
     
     NSArray *controllers = [GCController controllers];
-    
-    for (uint32_t i = 0; i < ctx->controller_cache_count; ++i) {
-        ctx->controller_cache[i]->is_active = false;
-    }
-    
-    for (GCController *gc in controllers) {
-        MARU_Controller_Cocoa *found = NULL;
-        for (uint32_t i = 0; i < ctx->controller_cache_count; ++i) {
-            MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)ctx->controller_cache[i];
+
+    for (int32_t i = (int32_t)ctx->controller_cache_count - 1; i >= 0; --i) {
+        MARU_Controller_Cocoa *c = (MARU_Controller_Cocoa *)ctx->controller_cache[i];
+        bool still_present = false;
+        for (GCController *gc in controllers) {
             if (c->gc_controller == gc) {
-                found = c;
+                still_present = true;
                 break;
             }
         }
-        
-        if (found) {
-            found->base.is_active = true;
-            found->base.pub.flags &= ~((uint64_t)MARU_CONTROLLER_STATE_LOST);
-        } else {
-            MARU_Controller_Cocoa *c = _maru_cocoa_create_controller(ctx, gc);
-            if (!c) continue;
-            
-            if (ctx->controller_cache_count == ctx->controller_cache_capacity) {
-                uint32_t old_cap = ctx->controller_cache_capacity;
-                uint32_t new_cap = old_cap == 0 ? 4 : old_cap * 2;
-                MARU_Controller_Base **new_cache =
-                    maru_context_realloc(&ctx->base,
-                                         ctx->controller_cache,
-                                         sizeof(MARU_Controller_Base *) * old_cap,
-                                         sizeof(MARU_Controller_Base *) * new_cap);
-                if (!new_cache) {
-                    _maru_controller_free(&c->base);
-                    continue;
-                }
-                ctx->controller_cache = new_cache;
-                ctx->controller_cache_capacity = new_cap;
-            }
-            ctx->controller_cache[ctx->controller_cache_count++] = &c->base;
-            
-            MARU_Event event = {0};
-            event.controller_changed.controller = (MARU_Controller *)c;
-            event.controller_changed.connected = true;
-            _maru_post_event_internal(&ctx->base, MARU_EVENT_CONTROLLER_CHANGED, NULL, &event);
+
+        if (!still_present) {
+            _maru_cocoa_handle_controller_disconnected(ctx, c->gc_controller);
         }
     }
-    
-    // Mark inactive ones as lost and fire disconnect events if not already marked.
-    for (uint32_t i = 0; i < ctx->controller_cache_count; ++i) {
-        MARU_Controller_Base *c = ctx->controller_cache[i];
-        if (!c->is_active && !(c->pub.flags & MARU_CONTROLLER_STATE_LOST)) {
-            c->pub.flags |= MARU_CONTROLLER_STATE_LOST;
-            MARU_Event event = {0};
-            event.controller_changed.controller = (MARU_Controller *)c;
-            event.controller_changed.connected = false;
-            _maru_post_event_internal(&ctx->base, MARU_EVENT_CONTROLLER_CHANGED, NULL, &event);
-        }
+
+    for (GCController *gc in controllers) {
+        _maru_cocoa_handle_controller_connected(ctx, gc);
     }
 }
 
