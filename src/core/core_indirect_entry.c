@@ -356,6 +356,7 @@ static void *_maru_getWindowNativeHandleRaw(MARU_Window *window) {
   return win_base->backend->getWindowNativeHandle(window);
 }
 
+#ifdef MARU_ENABLE_BACKEND_COCOA
 static void *_maru_getWindowNativeViewRaw(MARU_Window *window) {
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   return win_base->backend->getWindowNativeView(window);
@@ -365,6 +366,7 @@ static void *_maru_getWindowNativeLayerRaw(MARU_Window *window) {
   MARU_Window_Base *win_base = (MARU_Window_Base *)window;
   return win_base->backend->getWindowNativeLayer(window);
 }
+#endif
 
 #ifdef MARU_ENABLE_BACKEND_WAYLAND
 MARU_API MARU_WaylandContextHandle
