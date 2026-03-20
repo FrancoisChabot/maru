@@ -305,18 +305,6 @@ maru_xdg_toplevel_set_min_size(MARU_Context_WL *ctx, struct xdg_toplevel *xdg_to
 }
 
 static inline void
-maru_xdg_toplevel_set_maximized(MARU_Context_WL *ctx, struct xdg_toplevel *xdg_toplevel)
-{
-	ctx->dlib.wl.proxy_marshal_flags((struct wl_proxy *) xdg_toplevel, XDG_TOPLEVEL_SET_MAXIMIZED, NULL, ctx->dlib.wl.proxy_get_version((struct wl_proxy *) xdg_toplevel), 0);
-}
-
-static inline void
-maru_xdg_toplevel_unset_maximized(MARU_Context_WL *ctx, struct xdg_toplevel *xdg_toplevel)
-{
-	ctx->dlib.wl.proxy_marshal_flags((struct wl_proxy *) xdg_toplevel, XDG_TOPLEVEL_UNSET_MAXIMIZED, NULL, ctx->dlib.wl.proxy_get_version((struct wl_proxy *) xdg_toplevel), 0);
-}
-
-static inline void
 maru_xdg_toplevel_set_fullscreen(MARU_Context_WL *ctx, struct xdg_toplevel *xdg_toplevel, struct wl_output *output)
 {
 	ctx->dlib.wl.proxy_marshal_flags((struct wl_proxy *) xdg_toplevel, XDG_TOPLEVEL_SET_FULLSCREEN, NULL, ctx->dlib.wl.proxy_get_version((struct wl_proxy *) xdg_toplevel), 0, output);

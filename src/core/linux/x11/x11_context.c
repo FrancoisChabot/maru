@@ -165,10 +165,6 @@ MARU_Status maru_createContext_X11(const MARU_ContextCreateInfo *create_info,
   ctx->wm_state = ctx->x11_lib.XInternAtom(ctx->display, "WM_STATE", False);
   ctx->net_wm_state_fullscreen =
       ctx->x11_lib.XInternAtom(ctx->display, "_NET_WM_STATE_FULLSCREEN", False);
-  ctx->net_wm_state_maximized_vert = ctx->x11_lib.XInternAtom(
-      ctx->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
-  ctx->net_wm_state_maximized_horz = ctx->x11_lib.XInternAtom(
-      ctx->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
   ctx->net_wm_state_demands_attention = ctx->x11_lib.XInternAtom(
       ctx->display, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
   ctx->net_active_window =

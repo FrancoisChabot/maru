@@ -34,8 +34,6 @@ static const char* formatPresentationState(MARU_WindowPresentationState state) {
         return "NORMAL";
     case MARU_WINDOW_PRESENTATION_FULLSCREEN:
         return "FULLSCREEN";
-    case MARU_WINDOW_PRESENTATION_MAXIMIZED:
-        return "MAXIMIZED";
     case MARU_WINDOW_PRESENTATION_MINIMIZED:
         return "MINIMIZED";
     default:

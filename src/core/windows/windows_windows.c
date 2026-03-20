@@ -393,21 +393,14 @@ LRESULT CALLBACK _maru_window_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
       }
 
       uint32_t changed_fields = 0;
-      if (wParam == SIZE_MAXIMIZED) {
-          if (!(win->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED)) {
-              win->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-              win->base.pub.flags &= ~MARU_WINDOW_STATE_MINIMIZED;
-          changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
-          }
-      } else if (wParam == SIZE_MINIMIZED) {
+      if (wParam == SIZE_MINIMIZED) {
           if (!(win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED)) {
               win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-              win->base.pub.flags &= ~MARU_WINDOW_STATE_MAXIMIZED;
               changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
           }
       } else if (wParam == SIZE_RESTORED) {
-          if ((win->base.pub.flags & (MARU_WINDOW_STATE_MAXIMIZED | MARU_WINDOW_STATE_MINIMIZED))) {
-              win->base.pub.flags &= ~(MARU_WINDOW_STATE_MAXIMIZED | MARU_WINDOW_STATE_MINIMIZED);
+          if ((win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED)) {
+              win->base.pub.flags &= ~MARU_WINDOW_STATE_MINIMIZED;
               changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
           }
       }
@@ -529,11 +522,11 @@ MARU_Status maru_createWindow_Windows(MARU_Context *context,
     wcscpy(title_w, L"Maru Window");
   }
 
-  DWORD style = WS_OVERLAPPEDWINDOW;
+  DWORD style = WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX;
   if (!create_info->has_decorations) {
       style = WS_POPUP;
   } else if (!create_info->attributes.resizable) {
-      style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+      style &= ~WS_THICKFRAME;
   }
 
   DWORD ex_style = WS_EX_APPWINDOW;
@@ -778,9 +771,9 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
   if (field_mask & MARU_WINDOW_ATTR_RESIZABLE) {
       DWORD style = GetWindowLongW(win->hwnd, GWL_STYLE);
       if (attributes->resizable) {
-          style |= (WS_THICKFRAME | WS_MAXIMIZEBOX);
+          style |= WS_THICKFRAME;
       } else {
-          style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+          style &= ~WS_THICKFRAME;
       }
       SetWindowLongW(win->hwnd, GWL_STYLE, style);
       SetWindowPos(win->hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
@@ -837,9 +830,7 @@ MARU_Status maru_updateWindow_Windows(MARU_Window *window, uint64_t field_mask,
 
   if (!win->is_fullscreen) {
       if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
-          if (requested_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
-              ShowWindow(win->hwnd, SW_MAXIMIZE);
-          } else if (requested_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
+          if (requested_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
               ShowWindow(win->hwnd, SW_MINIMIZE);
           } else {
               ShowWindow(win->hwnd, SW_RESTORE);

@@ -193,8 +193,7 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
     }
   }
 
-  if (((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) == 0) &&
-      ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0)) {
+  if ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0) {
     uint32_t constrained_w = (uint32_t)((attrs->dip_size.x > 0) ? attrs->dip_size.x : 1);
     uint32_t constrained_h = (uint32_t)((attrs->dip_size.y > 0) ? attrs->dip_size.y : 1);
     _maru_wayland_enforce_aspect_ratio(&constrained_w, &constrained_h, window);
@@ -226,7 +225,6 @@ static void _maru_wayland_apply_size_constraints(MARU_Window_WL *window) {
   _maru_wayland_update_opaque_region(window);
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame &&
-      ((window->base.pub.flags & MARU_WINDOW_STATE_MAXIMIZED) == 0) &&
       ((window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) == 0)) {
     struct libdecor_state *state = maru_libdecor_state_new(
         ctx, (int)attrs->dip_size.x, (int)attrs->dip_size.y);
@@ -395,14 +393,11 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
   MARU_Context_WL *ctx = (MARU_Context_WL *)window->base.ctx_base;
   MARU_WindowAttributes *effective = &window->base.attrs_effective;
 
-  bool is_maximized = false;
   bool is_fullscreen = false;
   bool is_activated = false;
   const uint32_t *state = NULL;
   wl_array_for_each(state, states) {
-    if (*state == XDG_TOPLEVEL_STATE_MAXIMIZED) {
-      is_maximized = true;
-    } else if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) {
+    if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) {
       is_fullscreen = true;
     } else if (*state == XDG_TOPLEVEL_STATE_ACTIVATED) {
       is_activated = true;
@@ -412,7 +407,7 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
   if (width > 0 && height > 0) {
     uint32_t pending_width = (uint32_t)width;
     uint32_t pending_height = (uint32_t)height;
-    if (!is_maximized && !is_fullscreen) {
+    if (!is_fullscreen) {
       _maru_wayland_enforce_aspect_ratio(&pending_width, &pending_height, window);
     }
     const MARU_Scalar new_width = (MARU_Scalar)pending_width;
@@ -429,15 +424,12 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
   // xdg-shell has no explicit minimized state; many compositors signal it via
   // an inactive 0x0 configure.
   const bool inferred_minimized =
-      (width == 0 && height == 0 && !is_activated && !is_maximized &&
-       !is_fullscreen);
+      (width == 0 && height == 0 && !is_activated && !is_fullscreen);
 
   if (effective->presentation_state !=
       (inferred_minimized ? MARU_WINDOW_PRESENTATION_MINIMIZED
                           : (is_fullscreen ? MARU_WINDOW_PRESENTATION_FULLSCREEN
-                                           : (is_maximized
-                                                  ? MARU_WINDOW_PRESENTATION_MAXIMIZED
-                                                  : MARU_WINDOW_PRESENTATION_NORMAL)))) {
+                                           : MARU_WINDOW_PRESENTATION_NORMAL))) {
     uint32_t changed = 0;
     const bool was_visible =
         (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
@@ -456,17 +448,10 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
       if (is_fullscreen) {
         effective->presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
         window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
-        changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
-      } else if (is_maximized) {
-        effective->presentation_state = MARU_WINDOW_PRESENTATION_MAXIMIZED;
-        window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
         changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
       } else {
         effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
         window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
         changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
       }
 
@@ -585,8 +570,6 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
       output = monitor->output;
     }
     maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
-  } else if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
-    maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
   } else if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED ||
              !attrs->visible) {
     maru_xdg_toplevel_set_minimized(ctx, window->xdg.toplevel);
@@ -633,10 +616,6 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   switch (window->base.attrs_effective.presentation_state) {
   case MARU_WINDOW_PRESENTATION_FULLSCREEN:
     window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-    window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-    break;
-  case MARU_WINDOW_PRESENTATION_MAXIMIZED:
-    window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
     window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
     break;
   case MARU_WINDOW_PRESENTATION_MINIMIZED:
@@ -867,7 +846,6 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 
     if (requested_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
       window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
       window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
       effective->visible = true;
@@ -886,28 +864,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       } else if (window->xdg.toplevel) {
         maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
       }
-    } else if (requested_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-      window->base.pub.flags |= MARU_WINDOW_STATE_MAXIMIZED;
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-      effective->visible = true;
-
-      if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
-          window->libdecor.frame) {
-        if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
-          maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
-        }
-        maru_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
-      } else if (window->xdg.toplevel) {
-        if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
-          maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
-        }
-        maru_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
-      }
     } else if (requested_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
       window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
       effective->visible = false;
@@ -929,21 +887,16 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
       }
     } else {
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MAXIMIZED);
       window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
 
       if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
           window->libdecor.frame) {
         if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
           maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
-        } else if (old_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
-          maru_libdecor_frame_unset_maximized(ctx, window->libdecor.frame);
         }
       } else if (window->xdg.toplevel) {
         if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
           maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
-        } else if (old_state == MARU_WINDOW_PRESENTATION_MAXIMIZED) {
-          maru_xdg_toplevel_unset_maximized(ctx, window->xdg.toplevel);
         }
       }
     }

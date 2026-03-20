@@ -66,7 +66,6 @@ private:
         int size[2] = {640, 480};
         bool has_decorations = true;
         bool fullscreen = false;
-        bool maximized = false;
         bool resizable = true;
         int content_type = 0;
     } secondary_create_;

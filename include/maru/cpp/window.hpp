@@ -30,7 +30,6 @@ public:
     
     bool isReady() const;
     bool isFocused() const;
-    bool isMaximized() const;
     bool isFullscreen() const;
     bool isVisible() const;
     bool isMinimized() const;
@@ -48,7 +47,6 @@ public:
     MARU_Status setTitle(const char* title);
     MARU_Status setDipSize(MARU_Vec2Dip size);
     MARU_Status setFullscreen(bool enabled);
-    MARU_Status setMaximized(bool enabled);
     MARU_Status setVisible(bool enabled);
     MARU_Status setMinimized(bool enabled);
     MARU_Status setCursorMode(MARU_CursorMode mode);

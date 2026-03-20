@@ -31,8 +31,6 @@ void *libdecor_get_userdata(struct libdecor *context);
   MARU_LIB_FN(frame_get_max_content_size)    \
   MARU_LIB_FN(frame_set_fullscreen)          \
   MARU_LIB_FN(frame_unset_fullscreen)        \
-  MARU_LIB_FN(frame_set_maximized)           \
-  MARU_LIB_FN(frame_unset_maximized)         \
   MARU_LIB_FN(frame_translate_coordinate)    \
   MARU_LIB_FN(state_new)                      \
   MARU_LIB_FN(state_free)                     \

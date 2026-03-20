@@ -610,16 +610,6 @@ static inline void maru_libdecor_frame_unset_fullscreen(MARU_Context_WL *ctx,
   ctx->dlib.opt.decor.frame_unset_fullscreen(frame);
 }
 
-static inline void maru_libdecor_frame_set_maximized(MARU_Context_WL *ctx,
-                                                     struct libdecor_frame *frame) {
-  ctx->dlib.opt.decor.frame_set_maximized(frame);
-}
-
-static inline void maru_libdecor_frame_unset_maximized(MARU_Context_WL *ctx,
-                                                        struct libdecor_frame *frame) {
-  ctx->dlib.opt.decor.frame_unset_maximized(frame);
-}
-
 static inline void maru_libdecor_frame_translate_coordinate(MARU_Context_WL *ctx,
                                                              struct libdecor_frame *frame,
                                                              int surface_x, int surface_y,

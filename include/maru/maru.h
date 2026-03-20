@@ -731,8 +731,7 @@ typedef uint32_t MARU_WindowStateChangedFlags;
 typedef enum MARU_WindowPresentationState {
   MARU_WINDOW_PRESENTATION_NORMAL = 0,
   MARU_WINDOW_PRESENTATION_FULLSCREEN = 1,
-  MARU_WINDOW_PRESENTATION_MAXIMIZED = 2,
-  MARU_WINDOW_PRESENTATION_MINIMIZED = 3,
+  MARU_WINDOW_PRESENTATION_MINIMIZED = 2,
 } MARU_WindowPresentationState;
 
 typedef struct MARU_WindowStateChangedEvent {
@@ -1429,7 +1428,6 @@ static inline MARU_WindowId maru_getWindowId(const MARU_Window* window);
 static inline const char* maru_getWindowTitle(const MARU_Window* window);
 static inline bool maru_isWindowReady(const MARU_Window* window);
 static inline bool maru_isWindowFocused(const MARU_Window* window);
-static inline bool maru_isWindowMaximized(const MARU_Window* window);
 static inline bool maru_isWindowFullscreen(const MARU_Window* window);
 static inline bool maru_isWindowVisible(const MARU_Window* window);
 static inline bool maru_isWindowMinimized(const MARU_Window* window);
@@ -1489,12 +1487,11 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
  *
  * Window presentation state contract:
  * - `presentation_state` encodes the mutually exclusive modes
- *   `NORMAL`, `FULLSCREEN`, `MAXIMIZED`, and `MINIMIZED`.
+ *   `NORMAL`, `FULLSCREEN`, and `MINIMIZED`.
  * - When the presentation state is set explicitly, Maru ensures that
- *   `fullscreen`/`maximized`/`minimized` mirror the selected mode.
- * - `FULLSCREEN` and `MAXIMIZED` require `visible == true`, `MINIMIZED`
- *   requires `visible == false`.
- * - `NORMAL` with `visible == false` represents a hidden but non-minimized
+ *   `fullscreen`/`minimized` mirror the selected mode.
+ * - `FULLSCREEN` requires `visible == true`, `MINIMIZED`
+ *   requires `visible == false`. * - `NORMAL` with `visible == false` represents a hidden but non-minimized
  *   window.
  *
  * `maru_updateWindow()` validates partial state updates against the window's
@@ -1874,11 +1871,10 @@ static inline MARU_Status maru_setWindowDipPosition(MARU_Window* window, MARU_Ve
  * Convenience window setters update only the named attribute.
  *
  * For coordinated presentation-state transitions involving multiple fields
- * (`visible`, `minimized`, `maximized`, `fullscreen`), use maru_updateWindow()
+ * (`visible`, `minimized`, `fullscreen`), use maru_updateWindow()
  * directly and submit all affected fields in one call.
  */
 static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool enabled);
-static inline MARU_Status maru_setWindowMaximized(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowCursorMode(MARU_Window* window, MARU_CursorMode mode);
 static inline MARU_Status maru_setWindowCursor(MARU_Window* window, const MARU_Cursor* cursor);
 static inline MARU_Status maru_setWindowMonitor(MARU_Window* window, const MARU_Monitor* monitor);

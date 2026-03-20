@@ -56,7 +56,6 @@ You can query the current state of a window using various "is" functions:
 
 - `maru_isWindowVisible(window)`
 - `maru_isWindowFocused(window)`
-- `maru_isWindowMaximized(window)`
 - `maru_isWindowFullscreen(window)`
 - `maru_isWindowReady(window)`: Returns true once the OS has fully initialized the window and it's ready for rendering.
 

@@ -282,9 +282,7 @@ _maru_validate_presentation_state(MARU_WindowPresentationState state) {
 static inline bool
 _maru_validate_presentation_visibility(MARU_WindowPresentationState state,
                                         bool visible) {
-  if ((state == MARU_WINDOW_PRESENTATION_FULLSCREEN ||
-       state == MARU_WINDOW_PRESENTATION_MAXIMIZED) &&
-      !visible) {
+  if (state == MARU_WINDOW_PRESENTATION_FULLSCREEN && !visible) {
     return false;
   }
   if (state == MARU_WINDOW_PRESENTATION_MINIMIZED && visible) {

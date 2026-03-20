@@ -636,12 +636,6 @@ maru_wl_shell_surface_set_popup(MARU_Context_WL *ctx, struct wl_shell_surface *w
 }
 
 static inline void
-maru_wl_shell_surface_set_maximized(MARU_Context_WL *ctx, struct wl_shell_surface *wl_shell_surface, struct wl_output *output)
-{
-	ctx->dlib.wl.proxy_marshal_flags((struct wl_proxy *) wl_shell_surface, WL_SHELL_SURFACE_SET_MAXIMIZED, NULL, ctx->dlib.wl.proxy_get_version((struct wl_proxy *) wl_shell_surface), 0, output);
-}
-
-static inline void
 maru_wl_shell_surface_set_title(MARU_Context_WL *ctx, struct wl_shell_surface *wl_shell_surface, const char *title)
 {
 	ctx->dlib.wl.proxy_marshal_flags((struct wl_proxy *) wl_shell_surface, WL_SHELL_SURFACE_SET_TITLE, NULL, ctx->dlib.wl.proxy_get_version((struct wl_proxy *) wl_shell_surface), 0, title);

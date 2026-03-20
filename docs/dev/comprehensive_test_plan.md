@@ -73,7 +73,7 @@ coverage.
 - **Window Lookup:** Cover stable `MARU_WindowId` behavior across multiple live
   windows and failure on dead / unknown IDs.
 - **Programmatic State Changes:** Exercise Normal, Hidden, Minimized,
-  Maximized, and Fullscreen transitions, including transitions that require
+  and Fullscreen transitions, including transitions that require
   coordinated `visible` + `presentation_state` updates.
 - **Window Attributes:** Cover set/get semantics for:
   - title
@@ -102,7 +102,7 @@ coverage.
   and payload values match the corresponding accessors.
 - **Resize / State Ordering:** Add checks for ordering between
   `WINDOW_READY`, `WINDOW_RESIZED`, `WINDOW_FRAME`, and
-  `WINDOW_STATE_CHANGED`, especially around maximize/minimize/fullscreen
+  `WINDOW_STATE_CHANGED`, especially around minimize/fullscreen
   transitions.
 - **Close Request Handling:** Verify close requests stay window-scoped and do
   not implicitly destroy windows.
@@ -238,7 +238,7 @@ The remaining work is mostly refinement, not greenfield UI creation.
   the documented manner rather than pretending to succeed.
 - **Multi-Monitor Traversal:** Move windows across monitors with different DPI
   and verify scale / geometry updates.
-- **OS State Changes:** Minimize, restore, maximize, fullscreen, hide, and
+- **OS State Changes:** Minimize, restore, fullscreen, hide, and
   request attention through both MARU APIs and OS window controls.
 - **Secondary Windows:** Open multiple testbed windows, close them in different
   orders, and confirm event routing and teardown are isolated.

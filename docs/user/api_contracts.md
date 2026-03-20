@@ -124,8 +124,8 @@ context is destroyed.
 - Window max size uses `0` as an unbounded sentinel on each axis. When both min
   and max size are supplied together, each nonzero max axis must be greater
   than or equal to the corresponding min axis.
-- Window presentation state requests are exclusive: `fullscreen`, `maximized`,
-  and `minimized` may not overlap. `fullscreen` and `maximized` require
+- Window presentation state requests are exclusive: `fullscreen` and
+  `minimized` may not overlap. `fullscreen` requires
   `visible == true`; `minimized` requires `visible == false`; a hidden
   non-minimized window uses `visible == false` with the others false.
 - `MARU_ImageCreateInfo.stride_bytes` may be `0` for the default tightly packed
