@@ -61,16 +61,18 @@ You can query the current state of a window using various "is" functions:
 
 ### Updating Windows
 
-To change window properties after creation (like title, size, or fullscreen state), use `maru_updateWindow`. You must provide a bitmask indicating which attributes you are updating.
+To change window properties after creation (like title or size), use `maru_updateWindow`. You must provide a bitmask indicating which attributes you are updating.
 
 ```c
 MARU_WindowAttributes attrs = {0};
 attrs.title = "New Title";
-attrs.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+attrs.dip_size = (MARU_Vec2Dip){1024, 768};
 
-// Update both title and fullscreen state
-maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_PRESENTATION_STATE, &attrs);
+// Update both title and size
+maru_updateWindow(window, MARU_WINDOW_ATTR_TITLE | MARU_WINDOW_ATTR_DIP_SIZE, &attrs);
 ```
+
+Note that some properties, such as whether the window has decorations or its fullscreen status, cannot be changed after creation. Fullscreen must be specified via `fullscreen_monitor` in `MARU_WindowCreateInfo` when calling `maru_createWindow`.
 
 ### Window Geometry
 

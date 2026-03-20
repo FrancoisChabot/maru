@@ -18,7 +18,7 @@ This checklist tracks the implementation status of the Maru Windows (Win32) back
 - [x] Title Management (`MARU_WINDOW_ATTR_TITLE`)
 - [x] Visibility Control (`MARU_WINDOW_ATTR_VISIBLE` with white-flash mitigation)
 - [x] Sizing and Positioning (`MARU_WINDOW_ATTR_DIP_SIZE`, `MARU_WINDOW_ATTR_DIP_POSITION`)
-- [x] Min/Fullscreen States (via `MARU_WINDOW_ATTR_PRESENTATION_STATE`)
+- [x] Fullscreen States (via `MARU_WINDOW_ATTR_PRESENTATION_STATE`)
 - [x] Focus Requests (`maru_requestWindowFocus_Windows`)
 - [x] **DONE:** Frame Request (`maru_requestWindowFrame_Windows`)
 - [x] Attention Requests (`maru_requestWindowAttention_Windows` via `FlashWindow`)

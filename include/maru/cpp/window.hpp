@@ -32,7 +32,6 @@ public:
     bool isFocused() const;
     bool isFullscreen() const;
     bool isVisible() const;
-    bool isMinimized() const;
 
     MARU_WindowId getId() const;
     const char* getTitle() const;
@@ -46,9 +45,7 @@ public:
     // Convenience setters
     MARU_Status setTitle(const char* title);
     MARU_Status setDipSize(MARU_Vec2Dip size);
-    MARU_Status setFullscreen(bool enabled);
     MARU_Status setVisible(bool enabled);
-    MARU_Status setMinimized(bool enabled);
     MARU_Status setCursorMode(MARU_CursorMode mode);
     MARU_Status setCursor(const MARU_Cursor* cursor);
 

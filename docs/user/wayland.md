@@ -46,14 +46,6 @@ This page defines the user-facing behavior contract for Maru on Wayland.
   `xdg_activation_v1`.
 - If unavailable, requests return `MARU_FAILURE` + diagnostic.
 
-### Minimize / Restore
-
-- Minimize/restore behavior is compositor and shell-path dependent.
-- If no `xdg_toplevel` is available for the active decoration path, minimize
-  requests return `MARU_FAILURE` + diagnostic.
-- Restore transitions may also rely on focus activation support (`xdg_activation_v1`)
-  and can degrade when unavailable.
-
 ### Clipboard Requirements
 
 - Wayland's `wl_data_device` protocol requires a valid surface for data exchange.

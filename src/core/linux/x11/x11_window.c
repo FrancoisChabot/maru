@@ -217,35 +217,6 @@ static void _maru_x11_reconcile_wm_state_changed(MARU_Context_X11 *ctx,
   const MARU_WindowPresentationState old_state =
       _maru_window_presentation_state_from_flags(win->base.pub.flags);
 
-  bool new_minimized =
-      (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-  bool have_wm_state = false;
-  if (ctx->wm_state != None) {
-    Atom actual_type = None;
-    int actual_format = 0;
-    unsigned long count = 0;
-    unsigned long bytes_after = 0;
-    unsigned char *prop = NULL;
-    if (ctx->x11_lib.XGetWindowProperty(ctx->display, win->handle, ctx->wm_state,
-                                        0, 2, False, AnyPropertyType,
-                                        &actual_type, &actual_format, &count,
-                                        &bytes_after, &prop) == Success) {
-      if (prop && actual_format == 32 && count >= 1) {
-        const long wm_state_value = ((const long *)prop)[0];
-        new_minimized = (wm_state_value == 3); // ICCCM IconicState
-        have_wm_state = true;
-      }
-      if (prop) {
-        ctx->x11_lib.XFree(prop);
-      }
-    }
-  }
-  if (!have_wm_state) {
-    // Fallback: if WM_STATE is unavailable, derive minimized from visibility.
-    new_minimized =
-        (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) == 0;
-  }
-
   bool new_fullscreen =
       (win->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
   Atom actual_type = None;
@@ -267,11 +238,6 @@ static void _maru_x11_reconcile_wm_state_changed(MARU_Context_X11 *ctx,
     }
   }
 
-  if (new_minimized) {
-    win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-  } else {
-    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-  }
   if (new_fullscreen) {
     win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
   } else {
@@ -400,47 +366,10 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
 
   if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
     requested->presentation_state = attributes->presentation_state;
-    const MARU_WindowPresentationState target_state =
-        attributes->presentation_state;
-    const bool want_fullscreen =
-        target_state == MARU_WINDOW_PRESENTATION_FULLSCREEN;
-    const bool want_minimized =
-        target_state == MARU_WINDOW_PRESENTATION_MINIMIZED;
-    const bool was_fullscreen =
-        (win->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0;
-    const bool was_minimized =
-        (win->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
-    const MARU_WindowPresentationState old_state =
-        _maru_window_presentation_state_from_flags(win->base.pub.flags);
-
-    if (want_fullscreen && !was_fullscreen) {
-      win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-      _maru_x11_send_net_wm_state_local(ctx, win, 1,
-                                        ctx->net_wm_state_fullscreen, None);
-    } else if (!want_fullscreen && was_fullscreen) {
-      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-      _maru_x11_send_net_wm_state_local(ctx, win, 0,
-                                        ctx->net_wm_state_fullscreen, None);
-    }
-
-    if (!want_fullscreen) {
-      if (want_minimized && !was_minimized) {
-        (void)ctx->x11_lib.XIconifyWindow(ctx->display, win->handle, ctx->screen);
-        win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-        win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-      } else if (!want_minimized && was_minimized) {
-        ctx->x11_lib.XMapWindow(ctx->display, win->handle);
-        win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-        win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-      }
-    }
-
-    effective->presentation_state = target_state;
-    const MARU_WindowPresentationState new_state =
-        _maru_window_presentation_state_from_flags(win->base.pub.flags);
-    if (old_state != new_state) {
-      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
-    }
+    ctx->x11_lib.XMapWindow(ctx->display, win->handle);
+    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+    effective->presentation_state = attributes->presentation_state;
+    state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_DIP_MIN_SIZE) {
@@ -614,7 +543,6 @@ _maru_x11_apply_attributes(MARU_Window_X11 *win, uint64_t field_mask,
     if (attributes->visible) {
       ctx->x11_lib.XMapWindow(ctx->display, win->handle);
       win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
       effective->visible = true;
     } else {
       ctx->x11_lib.XUnmapWindow(ctx->display, win->handle);
@@ -761,6 +689,15 @@ MARU_Status maru_createWindow_X11(MARU_Context *context,
     win->base.pub.flags |= MARU_WINDOW_STATE_DECORATED;
   }
   _maru_x11_apply_decorations_local(ctx, win);
+
+  if (create_info->fullscreen_monitor) {
+    const MARU_Monitor_X11 *monitor = (const MARU_Monitor_X11 *)create_info->fullscreen_monitor;
+    const int x = (int)monitor->base.pub.dip_position.x;
+    const int y = (int)monitor->base.pub.dip_position.y;
+    ctx->x11_lib.XMoveWindow(ctx->display, win->handle, x, y);
+    win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+    _maru_x11_send_net_wm_state_local(ctx, win, 1, ctx->net_wm_state_fullscreen, None);
+  }
 
   win->server_size.x = (MARU_Scalar)width;
   win->server_size.y = (MARU_Scalar)height;

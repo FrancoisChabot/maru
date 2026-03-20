@@ -190,7 +190,6 @@ inline bool Window::isReady() const { return maru_isWindowReady(m_handle); }
 inline bool Window::isFocused() const { return maru_isWindowFocused(m_handle); }
 inline bool Window::isFullscreen() const { return maru_isWindowFullscreen(m_handle); }
 inline bool Window::isVisible() const { return maru_isWindowVisible(m_handle); }
-inline bool Window::isMinimized() const { return maru_isWindowMinimized(m_handle); }
 inline MARU_WindowId Window::getId() const { return maru_getWindowId(m_handle); }
 inline const char* Window::getTitle() const { return maru_getWindowTitle(m_handle); }
 
@@ -218,26 +217,10 @@ inline MARU_Status Window::setDipSize(MARU_Vec2Dip size) {
     return update(MARU_WINDOW_ATTR_DIP_SIZE, attrs);
 }
 
-inline MARU_Status Window::setFullscreen(bool enabled) {
-    MARU_WindowAttributes attrs = {};
-    attrs.presentation_state =
-        enabled ? MARU_WINDOW_PRESENTATION_FULLSCREEN : MARU_WINDOW_PRESENTATION_NORMAL;
-    attrs.visible = true;
-    return update(MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE, attrs);
-}
-
 inline MARU_Status Window::setVisible(bool enabled) {
     MARU_WindowAttributes attrs = {};
     attrs.visible = enabled;
     return update(MARU_WINDOW_ATTR_VISIBLE, attrs);
-}
-
-inline MARU_Status Window::setMinimized(bool enabled) {
-    MARU_WindowAttributes attrs = {};
-    attrs.presentation_state =
-        enabled ? MARU_WINDOW_PRESENTATION_MINIMIZED : MARU_WINDOW_PRESENTATION_NORMAL;
-    attrs.visible = !enabled;
-    return update(MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE, attrs);
 }
 
 inline MARU_Status Window::setCursorMode(MARU_CursorMode mode) {

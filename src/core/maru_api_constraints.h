@@ -275,27 +275,15 @@ _maru_validate_surrounding_text_tuple(const char *text,
 
 static inline bool
 _maru_validate_presentation_state(MARU_WindowPresentationState state) {
-  return state >= MARU_WINDOW_PRESENTATION_NORMAL &&
-         state <= MARU_WINDOW_PRESENTATION_MINIMIZED;
+  return state == MARU_WINDOW_PRESENTATION_NORMAL;
 }
 
 static inline bool
 _maru_validate_presentation_visibility(MARU_WindowPresentationState state,
                                         bool visible) {
-  if (state == MARU_WINDOW_PRESENTATION_FULLSCREEN && !visible) {
-    return false;
-  }
-  if (state == MARU_WINDOW_PRESENTATION_MINIMIZED && visible) {
-    return false;
-  }
+  (void)state;
+  (void)visible;
   return true;
-}
-
-static inline void
-_maru_window_attributes_apply_presentation_state(
-    MARU_WindowAttributes* attrs, MARU_WindowPresentationState state) {
-  MARU_VALIDATE_API(attrs != NULL);
-  attrs->presentation_state = state;
 }
 
 static inline void
@@ -464,6 +452,16 @@ _maru_validate_createWindow(MARU_Context *context,
   _maru_validate_thread(ctx_base);
   _maru_validate_attributes(ctx_base, MARU_WINDOW_ATTR_ALL,
                             &create_info->attributes);
+
+  if (create_info->fullscreen_monitor) {
+    MARU_CONSTRAINT_CHECK(
+        ((const MARU_Monitor_Base *)create_info->fullscreen_monitor)->ctx_base ==
+        ctx_base);
+    _maru_validate_monitor_not_lost(
+        (const MARU_Monitor *)create_info->fullscreen_monitor);
+    MARU_CONSTRAINT_CHECK(create_info->attributes.visible);
+  }
+
   MARU_CONSTRAINT_CHECK(
       _maru_validate_presentation_state(
           create_info->attributes.presentation_state));

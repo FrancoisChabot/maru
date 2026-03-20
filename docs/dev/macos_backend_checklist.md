@@ -17,7 +17,7 @@ API-surface audit.
 - [x] Emit `MARU_EVENT_WINDOW_STATE_CHANGED` for programmatic `MARU_WINDOW_ATTR_RESIZABLE` changes
 - [x] Emit `MARU_EVENT_WINDOW_STATE_CHANGED` for programmatic `MARU_WINDOW_ATTR_ICON` changes
 - [ ] Verify `MARU_EVENT_WINDOW_STATE_CHANGED` field masks match public contract exactly
-- [ ] Verify `MARU_EVENT_WINDOW_RESIZED` and `MARU_EVENT_WINDOW_STATE_CHANGED` ordering around fullscreen/minimize transitions
+- [ ] Verify `MARU_EVENT_WINDOW_RESIZED` and `MARU_EVENT_WINDOW_STATE_CHANGED` ordering around fullscreen transitions
 - [ ] Verify cross-context event redirection stays correct for all Cocoa-dispatched window events
 
 ## 3. IME / Text Input Semantics
@@ -77,7 +77,6 @@ API-surface audit.
 
 ### Window And Content Enums
 
-- [ ] Verify all `MARU_WindowPresentationState` transitions preserve the visible/minimized contract
 - [ ] Map `MARU_CONTENT_TYPE_NONE`
 - [ ] Map `MARU_CONTENT_TYPE_PHOTO`
 - [ ] Map `MARU_CONTENT_TYPE_VIDEO`

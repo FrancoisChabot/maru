@@ -25,21 +25,6 @@ static void handle_event(MARU_EventId type, MARU_Window *window,
                          const MARU_Event *event, void *userdata) {
     if (type == MARU_EVENT_CLOSE_REQUESTED) {
         keep_running = false;
-    } else if (type == MARU_EVENT_KEY_CHANGED) {
-        // Toggle fullscreen when 'F' is pressed
-        if (event->key_changed.key == MARU_KEY_F &&
-            event->key_changed.state == MARU_BUTTON_STATE_PRESSED) {
-            bool is_fullscreen = maru_isWindowFullscreen(window);
-            
-            MARU_WindowAttributes attrs = {0};
-            attrs.presentation_state = is_fullscreen
-                                           ? MARU_WINDOW_PRESENTATION_NORMAL
-                                           : MARU_WINDOW_PRESENTATION_FULLSCREEN;
-            attrs.visible = true;
-            maru_updateWindow(window,
-                              MARU_WINDOW_ATTR_PRESENTATION_STATE | MARU_WINDOW_ATTR_VISIBLE,
-                              &attrs);
-        }
     }
 }
 

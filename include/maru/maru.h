@@ -730,8 +730,6 @@ typedef uint32_t MARU_WindowStateChangedFlags;
 
 typedef enum MARU_WindowPresentationState {
   MARU_WINDOW_PRESENTATION_NORMAL = 0,
-  MARU_WINDOW_PRESENTATION_FULLSCREEN = 1,
-  MARU_WINDOW_PRESENTATION_MINIMIZED = 2,
 } MARU_WindowPresentationState;
 
 typedef struct MARU_WindowStateChangedEvent {
@@ -1430,7 +1428,6 @@ static inline bool maru_isWindowReady(const MARU_Window* window);
 static inline bool maru_isWindowFocused(const MARU_Window* window);
 static inline bool maru_isWindowFullscreen(const MARU_Window* window);
 static inline bool maru_isWindowVisible(const MARU_Window* window);
-static inline bool maru_isWindowMinimized(const MARU_Window* window);
 static inline bool maru_isWindowResizable(const MARU_Window* window);
 static inline bool maru_isWindowDecorated(const MARU_Window* window);
 static inline MARU_CursorMode maru_getWindowCursorMode(const MARU_Window* window);
@@ -1485,18 +1482,8 @@ static inline MARU_WindowGeometry maru_getWindowGeometry(const MARU_Window* wind
  * - Otherwise, `aspect_ratio.num` and `aspect_ratio.denom` must both be
  *   strictly positive.
  *
- * Window presentation state contract:
- * - `presentation_state` encodes the mutually exclusive modes
- *   `NORMAL`, `FULLSCREEN`, and `MINIMIZED`.
- * - When the presentation state is set explicitly, Maru ensures that
- *   `fullscreen`/`minimized` mirror the selected mode.
- * - `FULLSCREEN` requires `visible == true`, `MINIMIZED`
- *   requires `visible == false`. * - `NORMAL` with `visible == false` represents a hidden but non-minimized
- *   window.
- *
  * `maru_updateWindow()` validates partial state updates against the window's
- * current requested state. When switching between these exclusive modes in one
- * step, update all affected state fields in the same call.
+ * current requested state.
  *
  * `surrounding_text` is optional. When non-NULL, it must point to valid
  * NUL-terminated UTF-8, and `surrounding_cursor_byte` /
@@ -1551,6 +1538,14 @@ typedef struct MARU_WindowCreateInfo {
    * this is a creation-time only property.
    */
   bool has_decorations;
+
+  /*
+   * When non-NULL, the window is created in fullscreen mode on the specified
+   * monitor.
+   *
+   * Fullscreen status cannot be changed after creation.
+   */
+  const MARU_Monitor* fullscreen_monitor;
   void* userdata;
 } MARU_WindowCreateInfo;
 
@@ -1581,6 +1576,7 @@ typedef struct MARU_WindowCreateInfo {
    .app_id = NULL,                                              \
    .content_type = MARU_CONTENT_TYPE_NONE,                      \
    .has_decorations = true,                                     \
+   .fullscreen_monitor = NULL,                                  \
    .userdata = NULL}
 
 
@@ -1869,12 +1865,7 @@ static inline MARU_Status maru_setWindowDipViewportSize(MARU_Window* window, MAR
 static inline MARU_Status maru_setWindowDipPosition(MARU_Window* window, MARU_Vec2Dip position);
 /*
  * Convenience window setters update only the named attribute.
- *
- * For coordinated presentation-state transitions involving multiple fields
- * (`visible`, `minimized`, `fullscreen`), use maru_updateWindow()
- * directly and submit all affected fields in one call.
  */
-static inline MARU_Status maru_setWindowFullscreen(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowCursorMode(MARU_Window* window, MARU_CursorMode mode);
 static inline MARU_Status maru_setWindowCursor(MARU_Window* window, const MARU_Cursor* cursor);
 static inline MARU_Status maru_setWindowMonitor(MARU_Window* window, const MARU_Monitor* monitor);
@@ -1888,7 +1879,6 @@ static inline MARU_Status maru_setWindowDipTextInputRect(MARU_Window* window, MA
 static inline MARU_Status maru_setWindowSurroundingText(MARU_Window* window, const char* text, uint32_t cursor_byte, uint32_t anchor_byte);
 static inline MARU_Status maru_setWindowAcceptDrop(MARU_Window* window, bool enabled);
 static inline MARU_Status maru_setWindowVisible(MARU_Window* window, bool visible);
-static inline MARU_Status maru_setWindowMinimized(MARU_Window* window, bool minimized);
 static inline MARU_Status maru_setWindowIcon(MARU_Window* window, const MARU_Image* icon);
 /*
  * Returns a stable diagnostic label when diagnostics are compiled in.

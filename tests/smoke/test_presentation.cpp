@@ -302,15 +302,19 @@ struct SmokeWindowSession {
     return initialize(info);
   }
 
-  bool initialize(const MARU_WindowCreateInfo &window_info) {
-    MARU_ContextCreateInfo ctx_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
-    tracking.apply(&ctx_info);
-    ctx_info.backend = MARU_BACKEND_UNKNOWN;
+  bool initialize(const MARU_WindowCreateInfo &window_info, MARU_Context* provided_ctx = nullptr) {
+    if (provided_ctx) {
+        ctx = provided_ctx;
+    } else {
+        MARU_ContextCreateInfo ctx_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+        tracking.apply(&ctx_info);
+        ctx_info.backend = MARU_BACKEND_UNKNOWN;
 
-    if (maru_createContext(&ctx_info, &ctx) != MARU_SUCCESS || !ctx) {
-      reason = "desktop context creation failed";
-      reason_is_skip = true;
-      return false;
+        if (maru_createContext(&ctx_info, &ctx) != MARU_SUCCESS || !ctx) {
+          reason = "desktop context creation failed";
+          reason_is_skip = true;
+          return false;
+        }
     }
 
     MARU_StringList extensions = {};
@@ -391,15 +395,13 @@ struct SmokeWindowSession {
   }
 
   bool draw_if_visible() {
-    if (!renderer.ready && maru_isWindowVisible(window) &&
-        !maru_isWindowMinimized(window)) {
+    if (!renderer.ready && maru_isWindowVisible(window)) {
       if (!ensure_renderer_ready()) {
         return false;
       }
     }
 
-    if (renderer.ready && maru_isWindowVisible(window) &&
-        !maru_isWindowMinimized(window)) {
+    if (renderer.ready && maru_isWindowVisible(window)) {
       vulkan_renderer_draw_frame(&renderer);
     }
     return !state.close_requested;
@@ -413,12 +415,6 @@ struct SmokeWindowSession {
   }
 
   MARU_WindowPresentationState current_presentation_state() const {
-    if (maru_isWindowFullscreen(window)) {
-      return MARU_WINDOW_PRESENTATION_FULLSCREEN;
-    }
-    if (maru_isWindowMinimized(window)) {
-      return MARU_WINDOW_PRESENTATION_MINIMIZED;
-    }
     return MARU_WINDOW_PRESENTATION_NORMAL;
   }
 
@@ -519,28 +515,17 @@ struct SmokeWindowSession {
 
   bool check_normal_state() const {
     return current_presentation_state() == MARU_WINDOW_PRESENTATION_NORMAL &&
-           !maru_isWindowFullscreen(window) &&
-           !maru_isWindowMinimized(window);
+           !maru_isWindowFullscreen(window);
   }
 
   bool check_fullscreen_state() const {
-    return current_presentation_state() ==
-               MARU_WINDOW_PRESENTATION_FULLSCREEN &&
-           maru_isWindowFullscreen(window) &&
-           !maru_isWindowMinimized(window);
-  }
-
-  bool check_minimized_state() const {
-    return current_presentation_state() ==
-               MARU_WINDOW_PRESENTATION_MINIMIZED &&
-           maru_isWindowMinimized(window) && !maru_isWindowFullscreen(window);
+    return maru_isWindowFullscreen(window);
   }
 
   bool check_hidden_normal_state() const {
     return !is_visible() &&
            current_presentation_state() == MARU_WINDOW_PRESENTATION_NORMAL &&
-           !maru_isWindowFullscreen(window) &&
-           !maru_isWindowMinimized(window);
+           !maru_isWindowFullscreen(window);
   }
 
   bool last_state_event_matches_accessors() const {
@@ -604,65 +589,6 @@ TEST_CASE("Presentation.InitialStateIsNormalVisible") {
   TRACE_CHECK(session, session.finish());
 }
 
-TEST_CASE("Presentation.FullscreenRoundTrip") {
-  SmokeWindowSession session;
-  if (!initialize_or_skip(&session, "Presentation Fullscreen Test",
-                          "Skipping fullscreen presentation test")) {
-    return;
-  }
-
-  TRACE_CHECK(session, session.pump_and_draw());
-  const int enter_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowFullscreen(session.window, true) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_FULLSCREEN,
-                           enter_event_count, 4000));
-  TRACE_CHECK(session, session.check_fullscreen_state());
-  TRACE_CHECK(session, session.is_visible());
-
-  const int exit_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowFullscreen(session.window, false) == MARU_SUCCESS);
-  TRACE_CHECK(session,
-              session.wait_for_presentation_state(MARU_WINDOW_PRESENTATION_NORMAL,
-                                                  exit_event_count, 4000));
-  TRACE_CHECK(session, session.check_normal_state());
-  TRACE_CHECK(session, session.is_visible());
-  TRACE_CHECK(session, session.finish());
-}
-
-TEST_CASE("Presentation.MinimizeRoundTrip") {
-  SmokeWindowSession session;
-  if (!initialize_or_skip(&session, "Presentation Minimize Test",
-                          "Skipping minimize presentation test")) {
-    return;
-  }
-
-  TRACE_CHECK(session, session.pump_and_draw());
-  const int minimize_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowMinimized(session.window, true) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_MINIMIZED,
-                           minimize_event_count, 4000));
-  TRACE_CHECK(session, session.check_minimized_state());
-  TRACE_CHECK(session, !session.is_visible());
-
-  const int restore_visible_event_count = session.state.visible_event_count;
-  const int restore_presentation_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowMinimized(session.window, false) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_NORMAL,
-                           restore_presentation_event_count, 4000));
-  TRACE_CHECK(session,
-              session.wait_for_visible(true, restore_visible_event_count, 4000));
-  TRACE_CHECK(session, session.check_normal_state());
-  TRACE_CHECK(session, session.is_visible());
-  TRACE_CHECK(session, session.finish());
-}
-
 TEST_CASE("Presentation.HiddenVisibleRoundTrip") {
   SmokeWindowSession session;
   if (!initialize_or_skip(&session, "Presentation Visibility Test",
@@ -686,78 +612,33 @@ TEST_CASE("Presentation.HiddenVisibleRoundTrip") {
   TRACE_CHECK(session, session.finish());
 }
 
-TEST_CASE("Presentation.DirectUpdateFullscreenRoundTrip") {
-  SmokeWindowSession session;
-  if (!initialize_or_skip(&session, "Presentation Direct Update Fullscreen Test",
-                          "Skipping direct-update fullscreen presentation test")) {
-    return;
-  }
-
-  TRACE_CHECK(session, session.pump_and_draw());
-
-  MARU_WindowAttributes attrs = {};
-  attrs.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
-  attrs.visible = true;
-  const int enter_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session, maru_updateWindow(session.window,
-                                         MARU_WINDOW_ATTR_PRESENTATION_STATE |
-                                             MARU_WINDOW_ATTR_VISIBLE,
-                                         &attrs) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_FULLSCREEN,
-                           enter_event_count, 4000));
-  TRACE_CHECK(session, session.check_fullscreen_state());
-
-  attrs.presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
-  attrs.visible = true;
-  const int exit_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session, maru_updateWindow(session.window,
-                                         MARU_WINDOW_ATTR_PRESENTATION_STATE |
-                                             MARU_WINDOW_ATTR_VISIBLE,
-                                         &attrs) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_NORMAL,
-                           exit_event_count, 4000));
-  TRACE_CHECK(session, session.check_normal_state());
-  TRACE_CHECK(session, session.finish());
-}
-
-TEST_CASE("Presentation.DirectUpdateVisibilityRoundTrip") {
-  SmokeWindowSession session;
-  if (!initialize_or_skip(&session, "Presentation Direct Update Visibility Test",
-                          "Skipping direct-update visibility presentation test")) {
-    return;
-  }
-
-  TRACE_CHECK(session, session.pump_and_draw());
-
-  MARU_WindowAttributes attrs = {};
-  attrs.visible = false;
-  const int hide_event_count = session.state.visible_event_count;
-  TRACE_CHECK(session, maru_updateWindow(session.window, MARU_WINDOW_ATTR_VISIBLE,
-                                         &attrs) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_visible(false, hide_event_count));
-  TRACE_CHECK(session, session.check_hidden_normal_state());
-
-  attrs.visible = true;
-  const int show_event_count = session.state.visible_event_count;
-  TRACE_CHECK(session, maru_updateWindow(session.window, MARU_WINDOW_ATTR_VISIBLE,
-                                         &attrs) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_visible(true, show_event_count));
-  TRACE_CHECK(session, session.check_normal_state());
-  TRACE_CHECK(session, session.is_visible());
-  TRACE_CHECK(session, session.finish());
-}
-
 TEST_CASE("Presentation.CreateFullscreen") {
   SmokeWindowSession session;
   MARU_WindowCreateInfo info = MARU_WINDOW_CREATE_INFO_DEFAULT;
   info.attributes.title = "Presentation Create Fullscreen Test";
   info.attributes.dip_size = {320, 240};
   info.attributes.visible = true;
-  info.attributes.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
 
-  if (!session.initialize(info)) {
+  MARU_Context* temp_ctx = nullptr;
+  MARU_ContextCreateInfo ctx_info = MARU_CONTEXT_CREATE_INFO_DEFAULT;
+  if (maru_createContext(&ctx_info, &temp_ctx) != MARU_SUCCESS) {
+      MESSAGE("Skipping create-fullscreen presentation test: failed to create context");
+      return;
+  }
+
+  MARU_MonitorList monitor_list = {};
+  if (maru_getMonitors(temp_ctx, &monitor_list) == MARU_SUCCESS && monitor_list.count > 0) {
+      info.fullscreen_monitor = monitor_list.monitors[0];
+  } else {
+      maru_destroyContext(temp_ctx);
+      MESSAGE("Skipping create-fullscreen presentation test: no monitors available");
+      return;
+  }
+
+  if (!session.initialize(info, temp_ctx)) {
+    // session initialization failed, it might have destroyed temp_ctx or not.
+    // In our implementation of initialize, it assigns temp_ctx to session.ctx.
+    // SmokeWindowSession destructor will destroy it.
     if (session.reason_is_skip) {
       MESSAGE("Skipping create-fullscreen presentation test: ", session.reason);
       return;
@@ -768,40 +649,6 @@ TEST_CASE("Presentation.CreateFullscreen") {
 
   TRACE_CHECK(session, session.pump_and_draw());
   TRACE_CHECK(session, session.check_fullscreen_state());
-  TRACE_CHECK(session, session.is_visible());
-  TRACE_CHECK(session, session.finish());
-}
-
-TEST_CASE("Presentation.CreateMinimized") {
-  SmokeWindowSession session;
-  MARU_WindowCreateInfo info = MARU_WINDOW_CREATE_INFO_DEFAULT;
-  info.attributes.title = "Presentation Create Minimized Test";
-  info.attributes.dip_size = {320, 240};
-  info.attributes.visible = false;
-  info.attributes.presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
-
-  if (!session.initialize(info)) {
-    if (session.reason_is_skip) {
-      MESSAGE("Skipping create-minimized presentation test: ", session.reason);
-      return;
-    }
-    CHECK_MESSAGE(false, session.reason);
-    return;
-  }
-
-  TRACE_CHECK(session, session.check_minimized_state());
-  TRACE_CHECK(session, !session.is_visible());
-
-  const int restore_visible_event_count = session.state.visible_event_count;
-  const int restore_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowMinimized(session.window, false) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_NORMAL,
-                           restore_event_count, 4000));
-  TRACE_CHECK(session,
-              session.wait_for_visible(true, restore_visible_event_count, 4000));
-  TRACE_CHECK(session, session.check_normal_state());
   TRACE_CHECK(session, session.is_visible());
   TRACE_CHECK(session, session.finish());
 }
@@ -859,32 +706,6 @@ TEST_CASE("Presentation.ResizableRoundTrip") {
   TRACE_CHECK(session, session.finish());
 }
 
-TEST_CASE("Presentation.StatePayloadMatchesAccessorsOnFullscreen") {
-  SmokeWindowSession session;
-  if (!initialize_or_skip(&session, "Presentation Payload Fullscreen Test",
-                          "Skipping payload/accessor fullscreen presentation test")) {
-    return;
-  }
-
-  TRACE_CHECK(session, session.pump_and_draw());
-  const int enter_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowFullscreen(session.window, true) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_FULLSCREEN,
-                           enter_event_count, 4000));
-  TRACE_CHECK(session, session.last_state_event_matches_accessors());
-
-  const int exit_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowFullscreen(session.window, false) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_NORMAL,
-                           exit_event_count, 4000));
-  TRACE_CHECK(session, session.last_state_event_matches_accessors());
-  TRACE_CHECK(session, session.finish());
-}
-
 TEST_CASE("Presentation.StatePayloadMatchesAccessorsOnVisibility") {
   SmokeWindowSession session;
   if (!initialize_or_skip(&session, "Presentation Payload Visibility Test",
@@ -929,72 +750,3 @@ TEST_CASE("Presentation.StatePayloadMatchesAccessorsOnResizable") {
   TRACE_CHECK(session, session.finish());
 }
 
-TEST_CASE("Presentation.DirectUpdateMinimizeRoundTrip") {
-  SmokeWindowSession session;
-  if (!initialize_or_skip(&session, "Presentation Direct Update Minimize Test",
-                          "Skipping direct-update minimize presentation test")) {
-    return;
-  }
-
-  TRACE_CHECK(session, session.pump_and_draw());
-
-  MARU_WindowAttributes attrs = {};
-  attrs.presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
-  attrs.visible = false;
-  const int minimize_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session, maru_updateWindow(session.window,
-                                         MARU_WINDOW_ATTR_PRESENTATION_STATE |
-                                             MARU_WINDOW_ATTR_VISIBLE,
-                                         &attrs) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_MINIMIZED,
-                           minimize_event_count, 4000));
-  TRACE_CHECK(session, session.check_minimized_state());
-  TRACE_CHECK(session, !session.is_visible());
-
-  attrs.presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
-  attrs.visible = true;
-  const int restore_visible_event_count = session.state.visible_event_count;
-  const int restore_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session, maru_updateWindow(session.window,
-                                         MARU_WINDOW_ATTR_PRESENTATION_STATE |
-                                             MARU_WINDOW_ATTR_VISIBLE,
-                                         &attrs) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_NORMAL,
-                           restore_event_count, 4000));
-  TRACE_CHECK(session,
-              session.wait_for_visible(true, restore_visible_event_count, 4000));
-  TRACE_CHECK(session, session.check_normal_state());
-  TRACE_CHECK(session, session.is_visible());
-  TRACE_CHECK(session, session.finish());
-}
-
-TEST_CASE("Presentation.StatePayloadMatchesAccessorsOnMinimize") {
-  SmokeWindowSession session;
-  if (!initialize_or_skip(&session, "Presentation Payload Minimize Test",
-                          "Skipping payload/accessor minimize presentation test")) {
-    return;
-  }
-
-  TRACE_CHECK(session, session.pump_and_draw());
-  const int minimize_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowMinimized(session.window, true) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_MINIMIZED,
-                           minimize_event_count, 4000));
-  TRACE_CHECK(session, session.last_state_event_matches_accessors());
-
-  const int restore_visible_event_count = session.state.visible_event_count;
-  const int restore_event_count = session.state.presentation_event_count;
-  TRACE_CHECK(session,
-              maru_setWindowMinimized(session.window, false) == MARU_SUCCESS);
-  TRACE_CHECK(session, session.wait_for_presentation_state(
-                           MARU_WINDOW_PRESENTATION_NORMAL,
-                           restore_event_count, 4000));
-  TRACE_CHECK(session,
-              session.wait_for_visible(true, restore_visible_event_count, 4000));
-  TRACE_CHECK(session, session.last_state_event_matches_accessors());
-  TRACE_CHECK(session, session.finish());
-}

@@ -640,9 +640,8 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     (void)notification;
     MARU_Window_Cocoa *win = self.window;
     win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
     win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-    win->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+    win->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
     win->base.attrs_effective.visible = true;
 
     MARU_WindowGeometry geo = {0};
@@ -654,7 +653,7 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
 
     MARU_Event state_evt = {0};
     state_evt.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE | MARU_WINDOW_STATE_CHANGED_VISIBLE;
-    state_evt.window_state_changed.presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
+    state_evt.window_state_changed.presentation_state = win->base.attrs_effective.presentation_state;
     state_evt.window_state_changed.visible = true;
     state_evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
     state_evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
@@ -678,40 +677,6 @@ static void _maru_cocoa_refresh_window_geometry(MARU_Window_Cocoa *win,
     state_evt.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
     state_evt.window_state_changed.presentation_state = win->base.attrs_effective.presentation_state;
     state_evt.window_state_changed.visible = (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-    state_evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-    state_evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
-    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &state_evt);
-}
-
-- (void)windowDidMiniaturize:(NSNotification *)notification {
-    (void)notification;
-    MARU_Window_Cocoa *win = self.window;
-    win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-    win->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
-    win->base.attrs_effective.visible = false;
-
-    MARU_Event state_evt = {0};
-    state_evt.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE | MARU_WINDOW_STATE_CHANGED_VISIBLE;
-    state_evt.window_state_changed.presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
-    state_evt.window_state_changed.visible = false;
-    state_evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
-    state_evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
-    _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &state_evt);
-}
-
-- (void)windowDidDeminiaturize:(NSNotification *)notification {
-    (void)notification;
-    MARU_Window_Cocoa *win = self.window;
-    win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-    win->base.attrs_effective.presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
-    win->base.attrs_effective.visible = true;
-
-    MARU_Event state_evt = {0};
-    state_evt.window_state_changed.changed_fields = MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE | MARU_WINDOW_STATE_CHANGED_VISIBLE;
-    state_evt.window_state_changed.presentation_state = win->base.attrs_effective.presentation_state;
-    state_evt.window_state_changed.visible = true;
     state_evt.window_state_changed.focused = (win->base.pub.flags & MARU_WINDOW_STATE_FOCUSED) != 0;
     state_evt.window_state_changed.resizable = (win->base.pub.flags & MARU_WINDOW_STATE_RESIZABLE) != 0;
     _maru_post_event_internal(win->base.ctx_base, MARU_EVENT_WINDOW_STATE_CHANGED, (MARU_Window *)win, &state_evt);
@@ -763,15 +728,11 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
 
     win->base.pub.flags = 0;
 
-    if (win->base.attrs_effective.presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
+    if (create_info->fullscreen_monitor) {
       win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
     }
     if (win->base.attrs_effective.visible) {
       win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-    }
-    if (win->base.attrs_effective.presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
-      win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-      win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
     }
     if (win->base.attrs_effective.resizable) {
       win->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
@@ -815,9 +776,15 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
     _maru_register_window(&ctx_cocoa->base, (MARU_Window *)win);
 
     NSRect contentRect = NSMakeRect(0, 0, create_info->attributes.dip_size.x, create_info->attributes.dip_size.y);
+    if (create_info->fullscreen_monitor) {
+        MARU_Monitor_Cocoa *mon = (MARU_Monitor_Cocoa *)create_info->fullscreen_monitor;
+        NSScreen *screen = (NSScreen *)mon->ns_screen;
+        contentRect = [screen frame];
+    }
+
     NSUInteger styleMask = 0;
-    if (create_info->has_decorations) {
-        styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable;
+    if (create_info->has_decorations && !create_info->fullscreen_monitor) {
+        styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable;
         if (create_info->attributes.resizable) {
             styleMask |= NSWindowStyleMaskResizable;
         }
@@ -846,6 +813,10 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
         }
     }
     [nsWindow setReleasedWhenClosed:NO];
+
+    if (create_info->fullscreen_monitor) {
+        [nsWindow toggleFullScreen:nil];
+    }
     MARU_WindowDelegate *delegate = [[MARU_WindowDelegate alloc] init];
     delegate.window = win;
     [nsWindow setDelegate:delegate];
@@ -891,9 +862,7 @@ MARU_Status maru_createWindow_Cocoa(MARU_Context *context,
         maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_VISIBLE, &create_info->attributes);
     }
     
-    if (create_info->attributes.presentation_state != MARU_WINDOW_PRESENTATION_NORMAL &&
-        !(create_info->attributes.presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED &&
-          !create_info->attributes.visible)) {
+    if (create_info->attributes.presentation_state != MARU_WINDOW_PRESENTATION_NORMAL) {
         maru_updateWindow_Cocoa((MARU_Window *)win, MARU_WINDOW_ATTR_PRESENTATION_STATE, &create_info->attributes);
     }
 
@@ -1055,57 +1024,17 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
             effective->presentation_state;
         requested->presentation_state = attributes->presentation_state;
         effective->presentation_state = attributes->presentation_state;
-        const MARU_WindowPresentationState target_state = effective->presentation_state;
-        const bool is_fullscreen = ([nsWindow styleMask] & NSWindowStyleMaskFullScreen) != 0;
-        const bool is_minimized = [nsWindow isMiniaturized];
-
-        switch (target_state) {
-            case MARU_WINDOW_PRESENTATION_FULLSCREEN:
-                win->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-                if (requested->visible) {
-                    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-                }
-                if (!is_fullscreen) {
-                    [nsWindow toggleFullScreen:nil];
-                }
-                break;
-
-            case MARU_WINDOW_PRESENTATION_MINIMIZED:
-                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-                win->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-                if (is_fullscreen) {
-                    [nsWindow toggleFullScreen:nil];
-                }
-                if (!is_minimized) {
-                    [nsWindow miniaturize:nil];
-                }
-                break;
-
-            case MARU_WINDOW_PRESENTATION_NORMAL:
-            default:
-                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-                win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-                if (requested->visible) {
-                    win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-                }
-                if (is_fullscreen) {
-                    [nsWindow toggleFullScreen:nil];
-                }
-                if ([nsWindow isZoomed]) {
-                    [nsWindow zoom:nil];
-                }
-                if (is_minimized) {
-                    [nsWindow deminiaturize:nil];
-                }
-                break;
+        
+        if (requested->visible) {
+            win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+        }
+        if ([nsWindow isMiniaturized]) {
+            [nsWindow deminiaturize:nil];
         }
 
         if (old_presentation_state != effective->presentation_state) {
             state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
         }
-
     }
 
     if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
@@ -1113,10 +1042,8 @@ MARU_Status maru_updateWindow_Cocoa(MARU_Window *window, uint64_t field_mask,
             (win->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
         requested->visible = attributes->visible;
         if (requested->visible) {
-            if (effective->presentation_state != MARU_WINDOW_PRESENTATION_MINIMIZED) {
-                [nsWindow makeKeyAndOrderFront:nil];
-                win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-            }
+            [nsWindow makeKeyAndOrderFront:nil];
+            win->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
         } else {
             [nsWindow orderOut:nil];
             win->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);

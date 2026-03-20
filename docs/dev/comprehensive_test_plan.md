@@ -72,7 +72,7 @@ coverage.
   `MARU_EVENT_WINDOW_READY` and which correctly require a ready window.
 - **Window Lookup:** Cover stable `MARU_WindowId` behavior across multiple live
   windows and failure on dead / unknown IDs.
-- **Programmatic State Changes:** Exercise Normal, Hidden, Minimized,
+- **Programmatic State Changes:** Exercise Normal, Hidden,
   and Fullscreen transitions, including transitions that require
   coordinated `visible` + `presentation_state` updates.
 - **Window Attributes:** Cover set/get semantics for:
@@ -102,7 +102,7 @@ coverage.
   and payload values match the corresponding accessors.
 - **Resize / State Ordering:** Add checks for ordering between
   `WINDOW_READY`, `WINDOW_RESIZED`, `WINDOW_FRAME`, and
-  `WINDOW_STATE_CHANGED`, especially around minimize/fullscreen
+  `WINDOW_STATE_CHANGED`, especially around fullscreen
   transitions.
 - **Close Request Handling:** Verify close requests stay window-scoped and do
   not implicitly destroy windows.
@@ -214,7 +214,7 @@ The remaining work is mostly refinement, not greenfield UI creation.
 
 ### Testbed Required Refinements
 
-1. **Windowing refinements:** Add controls for visibility/minimize toggles,
+1. **Windowing refinements:** Add controls for visibility toggles,
    request-attention, dip position, dip viewport size, monitor targeting, and
    explicit text-input-related attributes.
 2. **Monitor targeting workflow:** Add a UI path to move or fullscreen a window
@@ -238,7 +238,7 @@ The remaining work is mostly refinement, not greenfield UI creation.
   the documented manner rather than pretending to succeed.
 - **Multi-Monitor Traversal:** Move windows across monitors with different DPI
   and verify scale / geometry updates.
-- **OS State Changes:** Minimize, restore, fullscreen, hide, and
+- **OS State Changes:** Restore, fullscreen, hide, and
   request attention through both MARU APIs and OS window controls.
 - **Secondary Windows:** Open multiple testbed windows, close them in different
   orders, and confirm event routing and teardown are isolated.
@@ -309,7 +309,7 @@ Based on the current tree, the most obvious missing coverage is:
 2. Native-handle getter coverage across all backends.
 3. Context-loss behavior tests.
 4. Window attribute coverage for monitor targeting, text-input fields,
-   surrounding text, viewport size, visibility/minimize interactions, and
+   surrounding text, viewport size, visibility interactions, and
    attention requests.
 5. Data-exchange lifetime tests, especially zero-copy and `DATA_RELEASED`.
 6. Monitor/controller retain-release and lost-handle semantics.

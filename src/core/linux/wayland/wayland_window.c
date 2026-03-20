@@ -394,13 +394,10 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
   MARU_WindowAttributes *effective = &window->base.attrs_effective;
 
   bool is_fullscreen = false;
-  bool is_activated = false;
   const uint32_t *state = NULL;
   wl_array_for_each(state, states) {
     if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) {
       is_fullscreen = true;
-    } else if (*state == XDG_TOPLEVEL_STATE_ACTIVATED) {
-      is_activated = true;
     }
   }
 
@@ -421,47 +418,10 @@ static void _xdg_toplevel_handle_configure(void *data, struct xdg_toplevel *xdg_
 
   _maru_wayland_update_opaque_region(window);
 
-  // xdg-shell has no explicit minimized state; many compositors signal it via
-  // an inactive 0x0 configure.
-  const bool inferred_minimized =
-      (width == 0 && height == 0 && !is_activated && !is_fullscreen);
-
-  if (effective->presentation_state !=
-      (inferred_minimized ? MARU_WINDOW_PRESENTATION_MINIMIZED
-                          : (is_fullscreen ? MARU_WINDOW_PRESENTATION_FULLSCREEN
-                                           : MARU_WINDOW_PRESENTATION_NORMAL))) {
-    uint32_t changed = 0;
-    const bool was_visible =
-        (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-
-    if (inferred_minimized) {
-      effective->presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
-      window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-      effective->visible = false;
-      if (was_visible) {
-        changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
-      }
-      changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
-    } else {
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-      if (is_fullscreen) {
-        effective->presentation_state = MARU_WINDOW_PRESENTATION_FULLSCREEN;
-        window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-        changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
-      } else {
-        effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
-        window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-        changed |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
-      }
-
-      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-      effective->visible = true;
-      if (!was_visible) {
-        changed |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
-      }
-    }
-    _maru_wayland_dispatch_state_changed(window, changed);
+  if (is_fullscreen) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
+  } else {
+    window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
   }
 }
 
@@ -562,17 +522,14 @@ bool _maru_wayland_create_xdg_shell_objects(MARU_Window_WL *window,
     maru_xdg_toplevel_set_app_id(ctx, window->xdg.toplevel, create_info->app_id);
   }
 
-  if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
+  if (create_info->fullscreen_monitor) {
     struct wl_output *output = NULL;
-    if (attrs->monitor &&
-        maru_getMonitorContext(attrs->monitor) == window->base.pub.context) {
-      MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)attrs->monitor;
+    if (maru_getMonitorContext(create_info->fullscreen_monitor) ==
+        window->base.pub.context) {
+      MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)create_info->fullscreen_monitor;
       output = monitor->output;
     }
     maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
-  } else if (attrs->presentation_state == MARU_WINDOW_PRESENTATION_MINIMIZED ||
-             !attrs->visible) {
-    maru_xdg_toplevel_set_minimized(ctx, window->xdg.toplevel);
   }
 
   if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_SSD) {
@@ -613,28 +570,13 @@ MARU_Status maru_createWindow_WL(MARU_Context *context,
   window->preferred_buffer_transform = MARU_BUFFER_TRANSFORM_NORMAL;
   maru_getWindowGeometry_WL((MARU_Window *)window, NULL);
 
-  switch (window->base.attrs_effective.presentation_state) {
-  case MARU_WINDOW_PRESENTATION_FULLSCREEN:
+  if (create_info->fullscreen_monitor) {
     window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
     window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-    break;
-  case MARU_WINDOW_PRESENTATION_MINIMIZED:
-    window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-    window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-    break;
-  case MARU_WINDOW_PRESENTATION_NORMAL:
-    if (window->base.attrs_effective.visible) {
-      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-    }
-    break;
+  } else if (window->base.attrs_effective.visible) {
+    window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
   }
-  if (!window->base.attrs_effective.visible) {
-    window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-    if (window->base.attrs_effective.presentation_state ==
-        MARU_WINDOW_PRESENTATION_NORMAL) {
-      window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-    }
-  }
+
   if (window->base.attrs_effective.resizable) {
     window->base.pub.flags |= MARU_WINDOW_STATE_RESIZABLE;
   }
@@ -838,72 +780,10 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_PRESENTATION_STATE) {
-    const MARU_WindowPresentationState requested_state = attributes->presentation_state;
-    const MARU_WindowPresentationState old_state = requested->presentation_state;
-
-    // _maru_update_window_base already updated effective->presentation_state
-    // but we need to apply it to Wayland objects.
-
-    if (requested_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
-      window->base.pub.flags |= MARU_WINDOW_STATE_FULLSCREEN;
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-      window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-      effective->visible = true;
-
-      struct wl_output *output = NULL;
-      if (requested->monitor &&
-          maru_getMonitorContext(requested->monitor) ==
-              window->base.pub.context) {
-        MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)requested->monitor;
-        output = monitor->output;
-      }
-
-      if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
-          window->libdecor.frame) {
-        maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, output);
-      } else if (window->xdg.toplevel) {
-        maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
-      }
-    } else if (requested_state == MARU_WINDOW_PRESENTATION_MINIMIZED) {
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-      window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-      effective->visible = false;
-
-      struct xdg_toplevel *toplevel = window->xdg.toplevel;
-      if (!toplevel &&
-          window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
-          window->libdecor.frame) {
-        toplevel =
-            maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
-      }
-      if (toplevel) {
-        maru_xdg_toplevel_set_minimized(ctx, toplevel);
-      } else {
-        MARU_REPORT_DIAGNOSTIC(
-            (MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-            "Window minimization is unavailable on this compositor setup");
-        status = MARU_FAILURE;
-      }
-    } else {
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_FULLSCREEN);
-      window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-
-      if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD &&
-          window->libdecor.frame) {
-        if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
-          maru_libdecor_frame_unset_fullscreen(ctx, window->libdecor.frame);
-        }
-      } else if (window->xdg.toplevel) {
-        if (old_state == MARU_WINDOW_PRESENTATION_FULLSCREEN) {
-          maru_xdg_toplevel_unset_fullscreen(ctx, window->xdg.toplevel);
-        }
-      }
-    }
-
-    if (old_state != requested_state) {
-      state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
-    }
+    window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
+    effective->visible = true;
+    effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
+    state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
   }
 
   if (field_mask & MARU_WINDOW_ATTR_DIP_SIZE) {
@@ -932,23 +812,9 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
   }
 
   if (field_mask & MARU_WINDOW_ATTR_MONITOR) {
-      if (effective->presentation_state == MARU_WINDOW_PRESENTATION_FULLSCREEN || (window->base.pub.flags & MARU_WINDOW_STATE_FULLSCREEN) != 0) {
-          struct wl_output *output = NULL;
-          if (effective->monitor && maru_getMonitorContext(effective->monitor) == window->base.pub.context) {
-              MARU_Monitor_WL *monitor = (MARU_Monitor_WL *)effective->monitor;
-              output = monitor->output;
-          }
-
-          if (window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
-              maru_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame, output);
-          } else if (window->xdg.toplevel) {
-              maru_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, output);
-          }
-      } else {
-          MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                 "Monitor targeting requires fullscreen on Wayland");
-          status = MARU_FAILURE;
-      }
+      MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                             "Monitor targeting cannot be changed after creation on Wayland");
+      status = MARU_FAILURE;
   }
 
   if (field_mask & (MARU_WINDOW_ATTR_TEXT_INPUT_TYPE | MARU_WINDOW_ATTR_DIP_TEXT_INPUT_RECT |
@@ -991,17 +857,11 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
 
   if (field_mask & MARU_WINDOW_ATTR_VISIBLE) {
       const bool was_visible = (window->base.pub.flags & MARU_WINDOW_STATE_VISIBLE) != 0;
-      const bool was_minimized = (window->base.pub.flags & MARU_WINDOW_STATE_MINIMIZED) != 0;
 
       if (effective->visible) {
           window->base.pub.flags |= MARU_WINDOW_STATE_VISIBLE;
-          window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_MINIMIZED);
-          effective->presentation_state = MARU_WINDOW_PRESENTATION_NORMAL;
           if (!was_visible) {
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
-          }
-          if (was_minimized) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
           }
           const MARU_Status focus_status = maru_requestWindowFocus_WL(window_handle);
           if (focus_status != MARU_SUCCESS) {
@@ -1009,24 +869,8 @@ MARU_Status maru_updateWindow_WL(MARU_Window *window_handle, uint64_t field_mask
           }
       } else {
           window->base.pub.flags &= ~((uint64_t)MARU_WINDOW_STATE_VISIBLE);
-          window->base.pub.flags |= MARU_WINDOW_STATE_MINIMIZED;
-          effective->presentation_state = MARU_WINDOW_PRESENTATION_MINIMIZED;
           if (was_visible) {
               state_changed_mask |= MARU_WINDOW_STATE_CHANGED_VISIBLE;
-          }
-          if (!was_minimized) {
-              state_changed_mask |= MARU_WINDOW_STATE_CHANGED_PRESENTATION_STATE;
-          }
-          struct xdg_toplevel *toplevel = window->xdg.toplevel;
-          if (!toplevel && window->decor_mode == MARU_WAYLAND_DECORATION_STRATEGY_CSD && window->libdecor.frame) {
-              toplevel = maru_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
-          }
-          if (toplevel) {
-              maru_xdg_toplevel_set_minimized(ctx, toplevel);
-          } else {
-              MARU_REPORT_DIAGNOSTIC((MARU_Context *)ctx, MARU_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                     "Window minimization is unavailable on this compositor setup");
-              status = MARU_FAILURE;
           }
       }
   }

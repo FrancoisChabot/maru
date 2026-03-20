@@ -156,9 +156,12 @@ void WindowModule::createSecondaryWindow(MARU_Context* ctx) {
         (MARU_Scalar)secondary_create_.size[0],
         (MARU_Scalar)secondary_create_.size[1]
     };
-    win_info.attributes.presentation_state = secondary_create_.fullscreen
-        ? MARU_WINDOW_PRESENTATION_FULLSCREEN
-        : MARU_WINDOW_PRESENTATION_NORMAL;
+    if (secondary_create_.fullscreen) {
+        MARU_MonitorList monitor_list = {};
+        if (maru_getMonitors(ctx, &monitor_list) == MARU_SUCCESS && monitor_list.count > 0) {
+            win_info.fullscreen_monitor = monitor_list.monitors[0];
+        }
+    }
     win_info.attributes.resizable = secondary_create_.resizable;
     win_info.app_id = secondary_create_.app_id[0] != '\0' ? secondary_create_.app_id : nullptr;
     win_info.content_type = (MARU_ContentType)secondary_create_.content_type;
@@ -369,11 +372,9 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             }
 
             bool is_fs = maru_isWindowFullscreen(target);
-            if (ImGui::Checkbox("Fullscreen", &is_fs)) {
-                MARU_WindowAttributes attrs = {};
-                attrs.presentation_state = is_fs ? MARU_WINDOW_PRESENTATION_FULLSCREEN : MARU_WINDOW_PRESENTATION_NORMAL;
-                maru_updateWindow(target, MARU_WINDOW_ATTR_PRESENTATION_STATE, &attrs);
-            }
+            ImGui::BeginDisabled();
+            ImGui::Checkbox("Fullscreen (Creation-time only)", &is_fs);
+            ImGui::EndDisabled();
 
             bool is_resizable = maru_isWindowResizable(target);
             ImGui::Text("Decorated: %s", maru_isWindowDecorated(target) ? "Yes" : "No");
@@ -463,11 +464,9 @@ void WindowModule::render(MARU_Context* ctx, MARU_Window* window) {
             }
 
             bool is_fs = sw.window ? maru_isWindowFullscreen(sw.window) : false;
-            if (ImGui::Checkbox("Fullscreen", &is_fs) && sw.window && window_ready) {
-                MARU_WindowAttributes attrs = {};
-                attrs.presentation_state = is_fs ? MARU_WINDOW_PRESENTATION_FULLSCREEN : MARU_WINDOW_PRESENTATION_NORMAL;
-                maru_updateWindow(sw.window, MARU_WINDOW_ATTR_PRESENTATION_STATE, &attrs);
-            }
+            ImGui::BeginDisabled();
+            ImGui::Checkbox("Fullscreen (Creation-time only)", &is_fs);
+            ImGui::EndDisabled();
 
             if (sw.window) {
                 sw.is_resizable = maru_isWindowResizable(sw.window);
