@@ -18,7 +18,6 @@ option(MARU_ENABLE_FAULT_INJECTION "Enable fault injection testing hooks" OFF)
 option(MARU_BUILD_EXAMPLES "Build example applications" ${MARU_IS_ROOT_CMAKE_PROJECT})
 option(MARU_BUILD_TESTS "Build test suite" ${MARU_IS_ROOT_CMAKE_PROJECT})
 option(MARU_BUILD_SHARED "Build shared libraries instead of static ones" OFF)
-option(MARU_BUILD_UNITY "Build using unity source files" OFF)
 
 if(MARU_BUILD_SHARED)
   set(MARU_LIB_TYPE SHARED)

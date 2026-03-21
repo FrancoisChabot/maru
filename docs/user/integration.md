@@ -40,30 +40,31 @@ target_link_libraries(your_target PRIVATE maru::maru)
 
 ## 2. Unity Build (BYOBS)
 
-You can also integrate the MARU source directly in your build systems.
+You can also integrate the MARU source directly into your own build system.
 
-### The Masterfile Approach
-A "masterfile" is a single `.c` file that `#include`s the necessary source files for your target platform. When integrating Maru in your build system, you only have to compile the one .c file that matches your target.
+### The Unified Masterfile
+Maru provides a single unified masterfile at `src/unity/maru.c` that automatically detects the target platform and includes the necessary backend code.
 
-In all cases, you need to add Maru's `include/` and `src/` directories to your header search paths.
+When using this approach, you must add Maru's `include/` and `src/core/` directories to your header search paths.
 
 #### Windows (Win32)
-1.  Add `src/unity/maru_windows.c` to your project.
+1.  Add `src/unity/maru.c` to your project.
 2.  Link against system libraries: `user32.lib`, `gdi32.lib`, `shell32.lib`, `ole32.lib`, `uuid.lib`.
 
 #### macOS (Cocoa)
-1.  Add `src/unity/maru_macos.m` (Objective-C) to your project.
-2.  Link against Apple frameworks: `Cocoa`, `CoreGraphics`, `QuartzCore`.
+1.  Add `src/unity/maru.c` to your project.
+2.  **Important:** You must compile this file as Objective-C (e.g., using `-x objective-c` in Clang or by renaming it to `maru.m` in your build tree).
+3.  Link against Apple frameworks: `Cocoa`, `CoreGraphics`, `QuartzCore`.
 
-#### Linux (Dynamic/Indirect)
-This version supports both X11 and Wayland, detecting the environment at runtime.
-1.  Add `src/unity/maru_linux_dynamic.c` to your project.
+#### Linux
+By default, the unified build enables both Wayland and X11 support with runtime detection (Indirect Backend).
+
+1.  Add `src/unity/maru.c` to your project.
 2.  Link against: `libdl`, `libpthread`.
 
-#### Linux (Direct Backend)
-If you want to strip out the dynamic selection and target only one display server:
-1.  Add `src/unity/maru_wayland.c` or `src/unity/maru_x11.c` to your project.
-2.  Link against: `libdl`, `libpthread`.
+If you want to target only one display server to reduce dependencies, you can define the desired backend and undefine the other one before including `maru.c` or via your compiler flags:
+- Wayland only: `-DMARU_ENABLE_BACKEND_WAYLAND=1 -UMARU_ENABLE_BACKEND_X11`
+- X11 only: `-DMARU_ENABLE_BACKEND_X11=1 -UMARU_ENABLE_BACKEND_WAYLAND`
 
 ---
 

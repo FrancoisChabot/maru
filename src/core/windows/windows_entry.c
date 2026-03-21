@@ -20,6 +20,61 @@ static MARU_Window_Windows *maru_getClipboardWindow_Windows(MARU_Context *contex
 
 // --- Contexts (contexts.h) ---
 
+#ifdef MARU_INDIRECT_BACKEND
+const MARU_Backend maru_backend_Windows = {
+  .destroyContext = maru_destroyContext_Windows,
+  .updateContext = maru_updateContext_Windows,
+  .pumpEvents = maru_pumpEvents_Windows,
+  .wakeContext = maru_wakeContext_Windows,
+
+  .createWindow = maru_createWindow_Windows,
+  .destroyWindow = maru_destroyWindow_Windows,
+  .updateWindow = maru_updateWindow_Windows,
+  .requestWindowFocus = maru_requestWindowFocus_Windows,
+  .requestWindowFrame = maru_requestWindowFrame_Windows,
+  .requestWindowAttention = maru_requestWindowAttention_Windows,
+
+  .createCursor = maru_createCursor_Windows,
+  .destroyCursor = maru_destroyCursor_Windows,
+  .createImage = maru_createImage_Windows,
+  .destroyImage = maru_destroyImage_Windows,
+
+  .getControllers = maru_getControllers_Windows,
+  .retainController = maru_retainController_Windows,
+  .releaseController = maru_releaseController_Windows,
+  .setControllerHapticLevels = maru_setControllerHapticLevels_Windows,
+
+  .announceClipboardData = maru_announceClipboardData_Windows_ctx,
+  .announceDragData = maru_announceDragData_Windows_win,
+  .provideData = maru_provideData_Windows,
+  .requestClipboardData = maru_requestClipboardData_Windows_ctx,
+  .requestDropData = maru_requestDropData_Windows_win,
+  .getAvailableClipboardMIMETypes = maru_getAvailableClipboardMIMETypes_Windows_ctx,
+  .getAvailableDropMIMETypes = maru_getAvailableDropMIMETypes_Windows_win,
+  
+  .getMonitors = maru_getMonitors_Windows,
+  .retainMonitor = maru_retainMonitor_Windows,
+  .releaseMonitor = maru_releaseMonitor_Windows,
+  .getMonitorModes = maru_getMonitorModes_Windows,
+  .setMonitorMode = maru_setMonitorMode_Windows,
+
+  .getContextNativeHandle = _maru_getContextNativeHandle_Windows,
+  .getWindowNativeHandle = _maru_getWindowNativeHandle_Windows,
+  .getWindowNativeView = _maru_getWindowNativeView_Windows,
+  .getWindowNativeLayer = _maru_getWindowNativeLayer_Windows,
+
+  .getVkExtensions = maru_getVkExtensions_Windows,
+  .createVkSurface = maru_createVkSurface_Windows,
+};
+
+MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
+                                         MARU_Context **out_context) {
+  MARU_API_VALIDATE(createContext, create_info, out_context);
+  return maru_createContext_Windows(create_info, out_context);
+}
+
+#else
+
 MARU_API MARU_Status maru_createContext(const MARU_ContextCreateInfo *create_info,
                                          MARU_Context **out_context) {
   MARU_API_VALIDATE(createContext, create_info, out_context);

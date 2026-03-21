@@ -8,6 +8,7 @@
 #include "maru/native/wayland.h"
 #include "maru/native/x11.h"
 
+#ifdef MARU_ENABLE_BACKEND_X11
 static inline MARU_X11ContextHandle _maru_stub_x11_context_handle_unsupported(
     void) {
   MARU_X11ContextHandle handle = {0};
@@ -19,7 +20,9 @@ static inline MARU_X11WindowHandle _maru_stub_x11_window_handle_unsupported(
   MARU_X11WindowHandle handle = {0};
   return handle;
 }
+#endif
 
+#ifdef MARU_ENABLE_BACKEND_WAYLAND
 static inline MARU_WaylandContextHandle
 _maru_stub_wayland_context_handle_unsupported(void) {
   MARU_WaylandContextHandle handle = {0};
@@ -31,5 +34,6 @@ _maru_stub_wayland_window_handle_unsupported(void) {
   MARU_WaylandWindowHandle handle = {0};
   return handle;
 }
+#endif
 
 #endif

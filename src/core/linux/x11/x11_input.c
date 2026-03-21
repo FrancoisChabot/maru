@@ -654,8 +654,9 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
       char text_buf[64];
       int text_len = 0;
       bool emit_text = false;
-      if (is_press && win->xic &&
-          win->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) {
+      const bool text_input_enabled = (win->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE);
+
+      if (is_press && win->xic && text_input_enabled) {
         Status lookup_status = 0;
         text_len = ctx->x11_lib.Xutf8LookupString(
             win->xic, &ev->xkey, text_buf, (int)(sizeof(text_buf) - 1u), &keysym,
@@ -685,7 +686,7 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
       } else {
         text_len = ctx->x11_lib.XLookupString(&ev->xkey, text_buf, (int)sizeof(text_buf),
                                               &keysym, NULL);
-        emit_text = is_press && (text_len > 0);
+        emit_text = is_press && text_input_enabled && (text_len > 0);
       }
       const MARU_Key key = _maru_x11_map_keysym(keysym);
       const MARU_ButtonState state =
@@ -703,6 +704,51 @@ bool _maru_x11_process_input_event(MARU_Context_X11 *ctx, XEvent *ev) {
         mevt.key_changed.state = state;
         mevt.key_changed.modifiers = _maru_x11_get_modifiers(ev->xkey.state);
         _maru_dispatch_event(&ctx->base, MARU_EVENT_KEY_CHANGED, (MARU_Window *)win, &mevt);
+      }
+
+      if (is_press && text_input_enabled) {
+        MARU_ModifierFlags mods = _maru_x11_get_modifiers(ev->xkey.state);
+        MARU_TextEditNavigationCommand nav_cmd;
+        bool is_nav = false;
+
+        switch (key) {
+          case MARU_KEY_LEFT:
+            is_nav = true;
+            nav_cmd = (mods & MARU_MODIFIER_CONTROL) ? MARU_TEXT_EDIT_NAVIGATE_WORD_LEFT : MARU_TEXT_EDIT_NAVIGATE_LEFT;
+            break;
+          case MARU_KEY_RIGHT:
+            is_nav = true;
+            nav_cmd = (mods & MARU_MODIFIER_CONTROL) ? MARU_TEXT_EDIT_NAVIGATE_WORD_RIGHT : MARU_TEXT_EDIT_NAVIGATE_RIGHT;
+            break;
+          case MARU_KEY_UP:
+            is_nav = true;
+            nav_cmd = MARU_TEXT_EDIT_NAVIGATE_UP;
+            break;
+          case MARU_KEY_DOWN:
+            is_nav = true;
+            nav_cmd = MARU_TEXT_EDIT_NAVIGATE_DOWN;
+            break;
+          case MARU_KEY_HOME:
+            is_nav = true;
+            nav_cmd = (mods & MARU_MODIFIER_CONTROL) ? MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_START : MARU_TEXT_EDIT_NAVIGATE_LINE_START;
+            break;
+          case MARU_KEY_END:
+            is_nav = true;
+            nav_cmd = (mods & MARU_MODIFIER_CONTROL) ? MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_END : MARU_TEXT_EDIT_NAVIGATE_LINE_END;
+            break;
+          default: break;
+        }
+
+        if (is_nav) {
+          MARU_Event nav_evt = {0};
+          nav_evt.text_edit_navigation.session_id = win->text_input_session_id;
+          nav_evt.text_edit_navigation.command = nav_cmd;
+          nav_evt.text_edit_navigation.extend_selection = (mods & MARU_MODIFIER_SHIFT) != 0;
+          nav_evt.text_edit_navigation.is_repeat = is_repeat;
+          nav_evt.text_edit_navigation.modifiers = mods;
+          _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_NAVIGATION, (MARU_Window *)win, &nav_evt);
+          emit_text = false; // Don't emit text if we emitted navigation
+        }
       }
 
       if (emit_text && text_len > 0) {

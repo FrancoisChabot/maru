@@ -7,10 +7,21 @@
 #define MARU_VERSION_PATCH @Maru_VERSION_PATCH@
 
 // Backends
+#ifndef MARU_ENABLE_BACKEND_WAYLAND
 #cmakedefine MARU_ENABLE_BACKEND_WAYLAND
+#endif
+
+#ifndef MARU_ENABLE_BACKEND_X11
 #cmakedefine MARU_ENABLE_BACKEND_X11
+#endif
+
+#ifndef MARU_ENABLE_BACKEND_COCOA
 #cmakedefine MARU_ENABLE_BACKEND_COCOA
+#endif
+
+#ifndef MARU_ENABLE_BACKEND_WINDOWS
 #cmakedefine MARU_ENABLE_BACKEND_WINDOWS
+#endif
 
 // Diagnostics
 #cmakedefine MARU_ENABLE_DIAGNOSTICS

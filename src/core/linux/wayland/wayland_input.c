@@ -24,7 +24,6 @@
 #define WL_POINTER_BUTTON_STATE_RELEASED 0
 #define WL_POINTER_AXIS_VERTICAL_SCROLL 0
 #define WL_POINTER_AXIS_HORIZONTAL_SCROLL 1
-#define MARU_WL_XKB_KEY_OFFSET 8
 
 
 static MARU_Window_WL *_maru_wayland_resolve_registered_window(
@@ -525,8 +524,11 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
         ctx->clipboard.serial = serial;
         ctx->last_interaction_serial = serial;
     }
+    const bool text_input_enabled =
+        (window->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE);
+
     const bool text_input_active =
-        (window->base.attrs_effective.text_input_type != MARU_TEXT_INPUT_TYPE_NONE) &&
+        text_input_enabled &&
         (window->ext.text_input != NULL) &&
         (ctx->protocols.opt.zwp_text_input_manager_v3 != NULL) &&
         window->ime_preedit_active;
@@ -556,18 +558,68 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
             return;
         }
 
-        char buf[32];
-        int n = maru_xkb_state_key_get_utf8(ctx, ctx->linux_common.xkb.state, keycode, buf, sizeof(buf));
-        if (n > 0) {
-            MARU_Event text_evt = {0};
-            text_evt.text_edit_committed.committed_utf8 = buf;
-            text_evt.text_edit_committed.committed_length_bytes = (uint32_t)n;
-            _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)window, &text_evt);
+        bool handled_as_text = false;
+        if (text_input_enabled) {
+            MARU_TextEditNavigationCommand nav_cmd;
+            MARU_ModifierFlags mods = _maru_wayland_get_modifiers(ctx);
 
+            bool is_nav = false;
+            switch (maru_key) {
+                case MARU_KEY_LEFT:
+                    is_nav = true;
+                    nav_cmd = (mods & MARU_MODIFIER_CONTROL) ? MARU_TEXT_EDIT_NAVIGATE_WORD_LEFT : MARU_TEXT_EDIT_NAVIGATE_LEFT;
+                    break;
+                case MARU_KEY_RIGHT:
+                    is_nav = true;
+                    nav_cmd = (mods & MARU_MODIFIER_CONTROL) ? MARU_TEXT_EDIT_NAVIGATE_WORD_RIGHT : MARU_TEXT_EDIT_NAVIGATE_RIGHT;
+                    break;
+                case MARU_KEY_UP:
+                    is_nav = true;
+                    nav_cmd = MARU_TEXT_EDIT_NAVIGATE_UP;
+                    break;
+                case MARU_KEY_DOWN:
+                    is_nav = true;
+                    nav_cmd = MARU_TEXT_EDIT_NAVIGATE_DOWN;
+                    break;
+                case MARU_KEY_HOME:
+                    is_nav = true;
+                    nav_cmd = (mods & MARU_MODIFIER_CONTROL) ? MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_START : MARU_TEXT_EDIT_NAVIGATE_LINE_START;
+                    break;
+                case MARU_KEY_END:
+                    is_nav = true;
+                    nav_cmd = (mods & MARU_MODIFIER_CONTROL) ? MARU_TEXT_EDIT_NAVIGATE_DOCUMENT_END : MARU_TEXT_EDIT_NAVIGATE_LINE_END;
+                    break;
+                default: break;
+            }
+
+            if (is_nav) {
+                MARU_Event nav_evt = {0};
+                nav_evt.text_edit_navigation.session_id = window->text_input_session_id;
+                nav_evt.text_edit_navigation.command = nav_cmd;
+                nav_evt.text_edit_navigation.extend_selection = (mods & MARU_MODIFIER_SHIFT) != 0;
+                nav_evt.text_edit_navigation.is_repeat = is_repeat;
+                nav_evt.text_edit_navigation.modifiers = mods;
+                _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_NAVIGATION, (MARU_Window *)window, &nav_evt);
+                handled_as_text = true;
+            } else {
+                char buf[32];
+                int n = maru_xkb_state_key_get_utf8(ctx, ctx->linux_common.xkb.state, keycode, buf, sizeof(buf));
+                if (n > 0) {
+                    MARU_Event text_evt = {0};
+                    text_evt.text_edit_committed.session_id = window->text_input_session_id;
+                    text_evt.text_edit_committed.committed_utf8 = buf;
+                    text_evt.text_edit_committed.committed_length_bytes = (uint32_t)n;
+                    _maru_dispatch_event(&ctx->base, MARU_EVENT_TEXT_EDIT_COMMITTED, (MARU_Window *)window, &text_evt);
+                    handled_as_text = true;
+                }
+            }
+        }
+
+        if (handled_as_text) {
             if (ctx->repeat.rate > 0 && ctx->repeat.delay >= 0) {
                 const uint64_t now_ns = _maru_linux_get_monotonic_time_ns();
                 const uint64_t delay_ns = ((uint64_t)(uint32_t)ctx->repeat.delay) * 1000000ull;
-                uint64_t interval_ns = 1000000000ull / (uint64_t)(uint32_t)ctx->repeat.rate;
+                uint64_t interval_ns = 1000000000ull / (uint32_t)(uint32_t)ctx->repeat.rate;
                 if (interval_ns == 0) {
                     interval_ns = 1;
                 }

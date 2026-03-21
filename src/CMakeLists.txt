@@ -52,14 +52,11 @@ else()
     -Wformat=2
     -Wno-unused-parameter
     -Wno-unused-variable
+    -Wno-shadow
   )
   if(MARU_WERROR)
     target_compile_options(maru_common_settings INTERFACE -Werror)
   endif()
-endif()
-
-if(MARU_BUILD_UNITY AND NOT MSVC)
-  target_compile_options(maru_common_settings INTERFACE -Wno-shadow)
 endif()
 
 # Public interface: only public headers
@@ -80,56 +77,69 @@ add_library(maru_core_iface INTERFACE)
 target_link_libraries(maru_core_iface INTERFACE maru_iface maru_common_settings)
 target_include_directories(maru_core_iface INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/linux>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/linux/dlib>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/linux/wayland>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/linux/wayland/dlib/vendor>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/linux/wayland/protocols/generated>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/linux/x11>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/linux/x11/dlib/vendor>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/windows>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/core/macos>
 )
 
-# 4. Final precision-specific interfaces
-set(MARU_ACTIVE_CORE_IFACE "maru_core_iface")
-set(MARU_ACTIVE_IFACE "maru_iface")
-
-install(TARGETS
-    maru_iface
-    maru_common_settings
-    maru_core_iface
-    EXPORT MaruTargets
-)
-
-# 5. Specialized interfaces for direct vs indirect
+# 4. Specialized interfaces for direct vs indirect
 set(target_direct "maru_iface_direct")
 set(target_indirect "maru_iface_indirect")
 
 # Public flavor interfaces
 add_library(${target_direct} INTERFACE)
-target_link_libraries(${target_direct} INTERFACE ${MARU_ACTIVE_IFACE})
+target_link_libraries(${target_direct} INTERFACE maru_iface)
 
 add_library(${target_indirect} INTERFACE)
-target_link_libraries(${target_indirect} INTERFACE ${MARU_ACTIVE_IFACE})
+target_link_libraries(${target_indirect} INTERFACE maru_iface)
 target_compile_definitions(${target_indirect} INTERFACE MARU_INDIRECT_BACKEND)
 
-install(TARGETS ${target_direct} ${target_indirect} EXPORT MaruTargets)
+install(TARGETS
+    maru_iface
+    maru_common_settings
+    maru_core_iface
+    ${target_direct}
+    ${target_indirect}
+    EXPORT MaruTargets
+)
 
-# Base objects for this build
-add_library("maru_base_obj" OBJECT core/core.c core/internal_event_queue.c core/maru_queue.c)
-target_link_libraries("maru_base_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
-
-add_library("maru_base_indirect_obj" OBJECT core/core.c core/internal_event_queue.c core/core_indirect_entry.c core/maru_queue.c)
-target_link_libraries("maru_base_indirect_obj" PRIVATE ${MARU_ACTIVE_CORE_IFACE})
-target_compile_definitions("maru_base_indirect_obj" PRIVATE MARU_INDIRECT_BACKEND)
-
-if (NOT WIN32)
-  target_link_libraries("maru_base_obj" PRIVATE Threads::Threads)
-  target_link_libraries("maru_base_indirect_obj" PRIVATE Threads::Threads)
-endif()
-
-set_property(TARGET "maru_base_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
-set_property(TARGET "maru_base_indirect_obj" PROPERTY POSITION_INDEPENDENT_CODE ${MARU_BUILD_SHARED})
-
-# 6. Add platform-specific subdirectories
+# 5. Core Library Implementation
 if (WIN32)
-  add_subdirectory(core/windows)
+  add_library(maru_windows ${MARU_LIB_TYPE} "unity/maru.c")
+  target_link_libraries(maru_windows PUBLIC ${target_indirect} PRIVATE maru_core_iface)
 elseif (APPLE)
-  add_subdirectory(core/macos)
+  add_library(maru_macos ${MARU_LIB_TYPE} "unity/maru.c")
+  set_source_files_properties("unity/maru.c" PROPERTIES LANGUAGE OBJC)
+  target_link_libraries(maru_macos PUBLIC ${target_indirect} PRIVATE maru_core_iface)
 else()
-  add_subdirectory(core/linux)
+  # Combined Linux library (Indirect)
+  add_library(maru_linux ${MARU_LIB_TYPE} "unity/maru.c")
+  target_link_libraries(maru_linux PUBLIC ${target_indirect} PRIVATE maru_core_iface Threads::Threads ${CMAKE_DL_LIBS})
+
+  # Separate backends
+  add_library(maru_wayland ${MARU_LIB_TYPE} "unity/maru.c")
+  target_compile_definitions(maru_wayland PRIVATE MARU_ENABLE_BACKEND_WAYLAND)
+  target_link_libraries(maru_wayland PUBLIC ${target_direct} PRIVATE maru_core_iface Threads::Threads ${CMAKE_DL_LIBS})
+
+  add_library(maru_x11 ${MARU_LIB_TYPE} "unity/maru.c")
+  target_compile_definitions(maru_x11 PRIVATE MARU_ENABLE_BACKEND_X11)
+  target_link_libraries(maru_x11 PUBLIC ${target_direct} PRIVATE maru_core_iface Threads::Threads ${CMAKE_DL_LIBS})
 endif()
 
-set(MARU_INSTALL_TARGETS ${MARU_INSTALL_TARGETS} PARENT_SCOPE)
+if(MARU_BUILD_SHARED)
+  if (WIN32)
+    target_compile_definitions(maru_windows PRIVATE MARU_BUILDING_DLL)
+  elseif (APPLE)
+    target_compile_definitions(maru_macos PRIVATE MARU_BUILDING_DLL)
+  else()
+    target_compile_definitions(maru_linux PRIVATE MARU_BUILDING_DLL)
+    target_compile_definitions(maru_wayland PRIVATE MARU_BUILDING_DLL)
+    target_compile_definitions(maru_x11 PRIVATE MARU_BUILDING_DLL)
+  endif()
+endif()

@@ -15,6 +15,7 @@
 #define MARU_WL_SEAT_CAPABILITY_POINTER 1u
 #define MARU_WL_SEAT_CAPABILITY_KEYBOARD 2u
 #define MARU_WL_SEAT_CAPABILITY_TOUCH 4u
+#define MARU_WL_XKB_KEY_OFFSET 8
 
 typedef struct MARU_Window_WL MARU_Window_WL;
 typedef struct MARU_Cursor_WL MARU_Cursor_WL;

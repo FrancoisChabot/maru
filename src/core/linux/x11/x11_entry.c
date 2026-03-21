@@ -386,6 +386,7 @@ maru_getX11WindowHandle(const MARU_Window *window) {
   return handle;
 }
 
+#ifdef MARU_ENABLE_BACKEND_WAYLAND
 MARU_API MARU_WaylandContextHandle
 maru_getWaylandContextHandle(const MARU_Context *context) {
   MARU_API_VALIDATE(getWaylandContextHandle, context);
@@ -399,5 +400,6 @@ maru_getWaylandWindowHandle(const MARU_Window *window) {
   (void)window;
   return _maru_stub_wayland_window_handle_unsupported();
 }
+#endif
 
 #endif
