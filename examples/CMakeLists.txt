@@ -19,8 +19,11 @@ add_library(maru_shared_renderer STATIC
     support/shared_renderer/vulkan_renderer.c
     support/shared_renderer/shaders.c
 )
-target_link_libraries(maru_shared_renderer PUBLIC maru::maru Vulkan::Vulkan)
+target_link_libraries(maru_shared_renderer PUBLIC maru::maru Vulkan::Vulkan PRIVATE maru_common_settings)
 target_include_directories(maru_shared_renderer PUBLIC ${EXAMPLES_SUPPORT_DIR}/shared_renderer)
+
+# We want examples to have the same warning levels as the library itself
+set(example_settings maru_common_settings)
 
 # Add each example subfolder
 add_subdirectory(basic_c)

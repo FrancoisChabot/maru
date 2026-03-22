@@ -15,5 +15,5 @@ add_executable(maru_testbed
     modules/dataexchange_module.cpp
     modules/context_module.cpp
 )
-target_link_libraries(maru_testbed PRIVATE maru::maru imgui)
+target_link_libraries(maru_testbed PRIVATE maru::maru imgui ${example_settings})
 target_compile_features(maru_testbed PRIVATE cxx_std_20)

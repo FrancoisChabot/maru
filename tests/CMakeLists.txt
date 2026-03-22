@@ -28,7 +28,6 @@ target_link_libraries(maru_tests
   PRIVATE
     maru::maru
     maru_common_settings
-    ${MARU_ACTIVE_CORE_IFACE}
 )
 
 add_test(NAME maru_tests COMMAND maru_tests)
@@ -56,7 +55,6 @@ target_link_libraries(maru_integration_tests
   PRIVATE
     maru::maru
     maru_common_settings
-    ${MARU_ACTIVE_CORE_IFACE}
 )
 
 target_compile_features(maru_integration_tests PRIVATE cxx_std_20)
@@ -82,7 +80,6 @@ if (TARGET maru_shared_renderer)
     PRIVATE
       maru::maru
       maru_common_settings
-      ${MARU_ACTIVE_CORE_IFACE}
       maru_shared_renderer
   )
 
